@@ -1,0 +1,280 @@
+\documentclass[12pt]{article}
+
+\newcommand{\yy}[1]{\textit{TODO: {#1}}}
+
+\newcommand{\trm}[1]{\textit{#1}}
+\newcommand{\vek}[1]{\textbf{#1}}
+\newcommand{\M}{\textbf{M}}
+\newcommand{\support}[1]{\textit{sup({#1})}}
+\newcommand{\children}{\textit{children}}
+
+
+\begin{document} 
+
+\section{Introduction}
+
+\yy{Motivate logic}: logics let you do things like
+``uncle(X,Y):-parent(X,Z),brother(Z,Y)'' ie follow chains of
+reasoning, join distinct relations. Nice because they are
+compositionally defined,....  Probabilistic logics generalize
+first-order logic to allow for ``soft'' reasoning.
+
+\yy{TensorLog's differences:} Prior probabilistic first-order logics,
+including MLNs, PSL, ProbLog, SLPs, ProPPR, [first-order Bayes
+  nets]... have relied on modeling a joint distribution over the
+Herbrand base, i.e., one binary random variable for each possible
+ground atomic formulae.  The joint distribution is constrained more or
+less directly by the clauses of the program: e.g., in MLNs, a clause
+is a potential. In other logics like SLP and ProPPR the distribution
+is modeled indirectly by proposing a probabilistic process on
+generation of proofs.  Expensive because the graph is huge.
+
+We propose another mapping, where each logical variable is associated
+with a single random variable ranging over the set of constants, and
+each atomic formulae corresponds to a potential.  BP can be used to
+perform inference. \yy{example figure} 
+
+Moreover, a LP together with a ``query mode'' can then be modeled as
+particular probabilistic inference process, where messages have been
+optimized for inference in this particular direction.  Inference in
+this setting can be viewed as computing a function \yy{example}.
+\yy{like a layer of an ANN...}
+
+Below we will describe in detail the subset of logic included in
+TensorLog, and how that subset can be converted into factor graphs.
+We will show that the resulting inference does in fact generalize
+logic.  We will also analyze the complexity \yy{and show....}
+
+\section{Details}
+
+\subsection{Notation and goals}
+
+${\cal T}$ is the intensional part of a logic program, consisting of Horn
+clauses, written $A\leftarrow{}B$ or $A\leftarrow{}B_1,\ldots,B_\ell$.
+In literals, I will use $p,q,\ldots$ for predicate symbols, variables
+like $X$ for inputs and $Y$ for outputs, and letters like $a$, $b$,
+$c$ for constants.
+
+The other part of the logic program is a database ${\cal DB}$ or unit
+clauses, aka facts.  I assume a fixed domain of constant symbols in
+these facts, which I will assume have been mapped to integers (so
+$a,b,\ldots$ also refer to integers.)  For a binary DB predicate
+defined by the facts $p(a_1,b_1),\ldots,p(a_n,b_n)$ there is a
+corresponding sparse matrix $\M_p$ defined as
+\[
+  \M_p[a,b] \equiv \left \{
+   \begin{array}{ll}
+     1 & p(a,b) \in {\cal DB} \\
+     0 & \mbox{else} \\
+   \end{array}
+   \right.
+\]
+For a unary predicate $q$, we will define a \emph{column} vector
+$\vek{c}_q$ as follows
+\[
+  \vek{c}_q[a] \equiv \left \{
+   \begin{array}{ll}
+     1 & q(a) \in {\cal DB} \\
+     0 & \mbox{else} \\
+   \end{array}
+   \right.
+\]
+Likewise we will define for each $a$ a unit \emph{row} vector
+$\vek{u}_a$, aka the one-hot representation representation for $a$, as
+a row vector in which
+\[
+  \vek{u}_a[i] \equiv \left \{
+   \begin{array}{ll}
+     1 & \mbox{$i=a$} \\
+     0 & \mbox{else} \\
+   \end{array}
+   \right.
+\]
+Similarly any set $S=\{a_1,\ldots,a_k\}$ could be encoded as a row
+vector 
+\[ \vek{u}_S \equiv \vek{u}_{a_1} + \ldots + \vek{u}_{a_k}
+\]
+For any vector $\vek{v}$ we define the \trm{support} of $\vek{v}$,
+written $\support{\vek{v}}$, to be the set of non-zero indices, and the
+weight of $a \in \support{\vek{v}}$ to be the value if $\vek{v}[a]$.
+
+A \trm{mode} ${\cal M}$ is a literal with arguments that are the constants
+$i$ or $o$, for input and output: e.g., $p(i,o)$ means that the first
+argument for $p$ will be an input.
+
+The plan is to define a way in which ${\cal T,DB}$ plus a mode ${\cal
+  M}$ can be interpreted as a function $f_{\cal M}$, so that the
+function can be implemented solely with differentiable matrix
+operations.  The function will be defined more-or-less the ``obvious''
+way: for instance for ${\cal M}=p(i,o)$, the function $f_{\cal M}$
+will be
+\[ f_{\cal M}(a) \equiv \{ b : p(a,b) \mbox{~is entailed by~} {\cal T,DB} \}
+\]
+The ``less'' part of the ``more or less'' is that the actual output of
+$f_{\cal M}(a)$ will be a row vector $\vek{v}$ so that 
+\[ \support{\vek{v}} = \{ b : p(a,b) \mbox{~is entailed by~} {\cal T,DB} \}
+\]
+and furthermore, the weight of $b$ in $\vek{v}$ will be the number of
+proofs that entail $p(a,b)$.
+
+\subsection{Case 1: A single chain with the final variable as output}
+
+We will start by assuming that ${\cal T,DB}$ contains only binary and
+unary predicates, and that ${\cal T}$ is a simple ``chain join'' of
+the form
+\[ p(X,Y) \leftarrow q_1(X,Z_1),q_2(Z_2,Z_3),\ldots,q_{k-1}(Z_{k-1},Y)
+\]
+with mode $p(i,o)$.  More conveniently, we could let $Z_0=X$ and
+$Z_k=Y$, so the $j$-th literal in the body is $q_j(Z_{j-1},Z_j)$.
+
+We will build up functions using two tools.  The first is a vocabulary
+of simple \trm{operations}, each of which performs a small computation
+that depend on a few previously-bound vector variables and bind a
+single new vector variable. In the implementation, these vectors are
+bound in an ``Envir'' (environment) object, which wraps a Python
+dictionary.  The second tool is some simple machinery to define a
+function by (a) binding some initial variables in an environment and
+(b) returning a bound variable after a sequence of operations.  Using
+these the function $f(a)$ for a chain can be defined as follows:
+
+\begin{itemize}
+\item Bind $\vek{v}_{Z_0} = \vek{u}_a$
+\item For $j=1,\ldots,k$, bind $\vek{v}_{Z_j} = \vek{v}_{Z_{j-1}} \M_{q_j}$
+\item Return $\vek{v}_{Z_{k}}$
+\end{itemize}
+
+\yy{proof}
+
+\subsection{Case 2: A single chain with the any variable as output}
+
+Now assume a slightly more complex case, in which the output variable
+is some intermediate computation of the chain.
+\[ p(Z_0,Z_j) \leftarrow q_1(Z_0,Z_1),q_2(Z_2,Z_3),\ldots,q_{k-1}(Z_{k-1},Z_k)
+\]
+For instance, we might have
+\[ p(X,Y) \leftarrow q(X,Y),s(Y,Z)
+\]
+which should succeed on $X=a$ for only those $b$'s for which $q(a,b)$
+is true, and $\exists c: s(b,c)$.  To achieve this we need a
+``backwards'' propagation, where we compute, for each point $j$ in the
+chain, the set of constants that could successfully be ``pushed''
+through the chain toward the end.  
+
+Hence we will define a set of column vectors $\vek{b}_{Z_j}$ as
+follows: $\vek{b}_{Z_k}$ is an all-ones column vector, which we
+will denote $\vek{1}^T$, and for all
+$j<k$, 
+\[ \vek{b}_{Z_j} = \M_{q_j} \vek{b}_{Z_j}
+\]
+The computation for $f_{\cal M}$ becomes the following.
+\begin{itemize}
+\item Bind $\vek{v}_{Z_0} = \vek{u}_a$
+\item Bind $\vek{b}_{Z_k} = \vek{1}^T$ 
+\item For $j=1,\ldots,k$, bind $\vek{v}_{Z_j} = \vek{v}_{Z_{j-1}} \M_{q_j}$
+\item For $j=k-1,\ldots,1$, bind $\vek{b}_{Z_j} = \M_{q_j} \vek{b}_{Z_j}$
+\item Return $(\vek{b}_{Z_{k}} \vek{v}_{Z_{k}})^T$, which is the
+  component-wise product of the two vectors.
+\end{itemize}
+
+\yy{proof}
+
+There is an obvious analogy with the forward-backward algorithm,
+which we will return to later.
+
+We note that it would be more efficient to compute $\vek{b}_{Z_{k-1}}$
+as the row-wise sum of $\M_{q_k}$: this avoids building the large
+dense vector $\vek{b}_{Z_k} = \vek{1}^T$, and we do this in the code.
+It is also easy to compute $\vek{b}_{Z_{k-1}}$ for literals
+$q(Z_{k-1},c)$: in this case $\vek{b}_{Z_{k-1}} = \M_{q_k}[:,c]$, the
+$c$-th column of $\M_{q_k}$.
+
+\subsection{Case 3: A tree}
+
+\begin{table}
+\hrule
+
+~\\
+
+A sample clause:
+\[ p(X,Z) \leftarrow q(X,Y),r(Y,Z),s(Z,W_1),t(Z,W_2),v(X,V).
+\] 
+
+The parents of the literals in the clause are as follows:
+
+\begin{tabular}{ll}
+literal & parent\\
+$q(X,Y)$ & $p(X,Z)$ \\
+$r(Y,Z)$ & $q(X,Y)$ \\
+$s(Z,W_1)$ & $r(Y,Z)$ \\
+$t(Z,W_2)$ & $s(Z,W_1)$ \\
+$v(X,V)$ & $p(X,Z)$
+\end{tabular}
+
+\caption{Sample ``tree''-like clause}
+\label{tab:tree}
+\hrule
+\end{table}
+
+Consider a clause $A\leftarrow B_1,\ldots,B_k$.  Define the input
+variable for $A$ as the input variable specified by the mode ${\cal
+  M}$, and likewise the output variable, while for $B_j$, an input
+variable is one appearing in a previous $B_{j'}$, for $j'<j$, and an
+output variable is one that appears for the first time in $B_{j}$.
+
+Consider a case in which each $B_j$ has one input and one output
+variable.  Define \trm{parent} of $B_j$ to be the $B_{j'}$ whose
+output is the input of $B_j$, and consider a clause in which the graph
+defined by these parent edges is a tree, where the output variable $Y$
+of the lefthand side literal $A$ can appear anywhere in the tree.  An
+example appears in Table~\ref{tab:tree}. An example of a non-tree
+would be the clause below, where $s(W,Y)$ has two inputs and two
+parents.
+\[ p(X,Y) \leftarrow q(X,W),r(X,Y),s(W,Y).
+\] 
+
+Returning to the example of the table, we see there are two issues.
+First, we need to check that $X$ is bound to some input $a$ such that
+$v(X,V)$ holds, before completing the ``main chain'' $q(X,Y),r(Y,Z)$
+which will lead to the final output $Z$.  This suggests that some
+additional backward propagation steps are needed.  Second, we need to
+include two sets of ``backward'' constraints on $Z$, as $s(Z,W_1)$ and
+$t(Z,W_2)$ must hold.
+
+To address these problems we extend the operation sequence to include
+some new features.  Above $\vek{b}_{Z_{j}}$ can be thought of as the
+set of variables that are in the ``preimage'' of the function
+associated with the conjunction $B_j,\ldots,B_k$, but it is also
+associated with the variable $Z_j$.  This is inadaquate since $Z_j$
+needs to satisfy the constraints associated with possibly several
+downstream literals: in the example, $Z$ must satisfy $s(Z,W_1)$ and
+$t(Z,W_2)$.  We thus introduce an auxiliary vector $\vek{a}_j$ to
+preimage of the subtree rooted at $B_j$. Let $\children(Z)$ be the set
+of body literals $B_j$ than use $Z$ as input. Then for any variable
+$Z$, we will re-define $\vek{b}_Z$ as
+\[ \vek{b}_Z = \prod_{j' \in \children(Z)} \vek{a}_{j'}
+\]
+where the product is component-wise on the column vectors $\vek{a}_{j'}$,
+which are defined as 
+\[ \vek{a}_{j} = \M_{q_j} \vek{b}_{Z_j}
+\] 
+where $Z_j$ is the output variable for $B_j$.
+
+Returning to the first issue, we also need to incorporate the
+``backward'' constraints at each point in the ``main chain.''  To be
+precise, define the \trm{main chain} literals as those that are on the
+path from the literal generating the output $Y$ of the lefthand side
+literal $A$ to the root of the tree (which is $A$).  The algorithm
+thus be becomes the following.
+
+\begin{itemize}
+\item Bind the input variable $X$ of $A$ to $\vek{u}_a$.
+\item For each literal $B_j$ on the main chain, from left to right:
+   \yy{stopped here}
+\item For $j=1,\ldots,k$, bind $\vek{v}_{Z_j} = \vek{v}_{Z_{j-1}} \M_{q_j}$
+\item For $j=k-1,\ldots,1$, bind $\vek{b}_{Z_j} = \M_{q_j} \vek{b}_{Z_j}$
+\item Return $(\vek{b}_{Z_{k}} \vek{v}_{Z_{k}})^T$, which is the
+  component-wise product of the two vectors.
+\end{itemize}
+
+
+\end{document} 

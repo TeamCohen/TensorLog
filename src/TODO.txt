@@ -1,0 +1,139 @@
+Simplified opcompiler [opcompiler.save1 is old almost-working version, .bp1, .bp2 are broken approximations]
+--------------------
+
+--------------------
+Simple TODO's:
+ - verify tensorlog works on matrix input, not just single rows
+ - bug fix in wamlog cli mode
+ - climode for tensorlog
+ - cache matrixdb transposes ?
+ - program.maxdepth parameter
+ - cli for tensorlog?
+
+Clean up constants:
+
+ - disallow them, but allow multiple chains of variables, so constant {r1} is replaced by eq(r1,R1),weighted(R1)
+and p(X,pos) :- q(X,Y) is replaced with p(X,Pos) :- eq(pos,Pos),q(X,Y) 
+ - track "root variables", which start a chain, and have them be outputs of [-1]....including X the input variables
+ - when doing BP:  
+    output = (message Y -> [0]) * prod_{rootVar R}[message R -> (-1).sum()]   .... this is the only use of sum()
+    -- so for P(X,Pos), Pos is scaled by fb_X
+    -- and for P(X,Y):-s(X,Y) {r} Y is scaled by [message R->(-1).sum]
+
+Simpler learning strategy: just learn weights on DB matrices.
+ - weight M[i,j] is really H[i,j].clipe() so it never goes negative ?
+ - rule weighting:  A:-B1,..,Bk {r} ==> A:-B1,..,Bk, weighted(r)
+   [need to handle chains rooted at a constant]
+ - rule weighting:  A:-B1,..,Bk {all(F):C1,..,Ck} ==> A:-B1,..,Bk, C1,..,Ck,weighted(F)
+   	eg classify(X,yk) :- word(X,W),pair(W,yk,F),weighted(F)
+TODO:
+ - add unary weighted(F) - DONE
+ - add chains that start at constants like weighted(r1)
+Learning:
+ - program specifies learnable DB predicates (parameters), with initializers
+ - theanoPredictFunction method extended to construct theanoTrainFunction
+   ...which takes loss-function argument?
+
+ - scalability test - done (compare to real prolog?)
+ - weighting SG-learned rules with features 
+ --- change parser so features are { all(F) : .... } or {const} -DONE
+ --- compile each rule into a regular rule, and a parallel feature generator - DONE, compilation
+ --- subclass tensorlog.Program as tensorlog.PropprProgram -DONE
+ --- add a weight vector -- TODO
+ --- compile each predicate definition into a WeightedSumOp which does the "right thing" - DONE
+
+
+Learning/training:
+ - parameters could be w, b?
+ - group into minibatches
+ - minibatch contains 
+ -- mode p(i,o), 
+ -- list of query entity id's; converted to a theano T.matrix X where each row is a one-hot vector 
+ -- parallel list of y's, which are sparse outputs for x, +1/-1 if pos/neg
+ -- training expression: predicted = fun.theanoExpr(db,X)>b  ... predicts positives
+ -- loss expression: need to figure this out, but want cross-entropy on the non-zero y's + regularization
+      or could I use softmax????
+ -- this is easier if there is just one mode....
+
+ - textcat toy:
+ -- incoming chains.  how do I interact with the wam? one choice: wam
+ doesn't access the matrixdb at all. I just need an API to compile and
+ query it, and then opcompiler needs to recursively call
+ tensorlog.compile, as before.
+ -- pairs: pairs with constant can be handled in matrixdb --- but need 
+ modes that include constants [for now: disallow constants i,o,i1,o1
+ in symbol table?]
+
+ -- features: 
+ --- given p(X,Y) :- Body1(X,Y) { F : Body2(X,F) } compile p(X,Y) :- Body1(X,Y) and p(X,F) :- Body2(X,Y) separately.
+
+
+
+Bugs:
+ - p(X,X) isn't checked for
+
+Think thru: 
+ - unary predicates or binary predicates with a constant (what's the inferred mode for those?)
+
+  --- (1) disallow unary lhs predicates.  lhs MUST have both inputs
+      and outputs (else, there's no function!) -done
+
+  --- (2) allow constants as: 
+
+      	  (a) outputs of lhs: multipy the backward constraints on the
+          inputs to get a, and let u_c be the oneHot for the output
+          constant: return u_c*a  -DONE
+
+	  (b) outputs of non-mainchain RHS goals: then we just collect
+	  a preimage for the goal+output, eg p(Z,c), and handle it
+	  normally.  (The preimage operator needs an extended notion
+	  of 'mode', I guess, which inputs the constant - maybe
+	  i,o,and c.) Note: These are exactly equivalent to unary
+	  predicates in the RHS.
+
+ - pairs: possibly impossible to do as a gradient.  (note that for classification all I need is
+   pair(X,c,Z) which could be done by just constructing the proper matrix in matrixdb).
+
+  -- M_pair is a matrix: M_pair[i,j] = (i,j)
+  -- pair(i1,i,z) for pair(X,Y,Z): 
+     Z = row vector where indices are the data elements of M_pair[X,:] and values are all 1
+  -- pair(i,i1,z) for pair(X,Y,Z): Z = M_pair[:,Y].transpose()  ... ie  Z is col Y of M_pair
+     Z = ditto but M_pair[:,Y]
+  -- pair(i1,i1,z) for pair(X,Y,Z): Z = onehot(M_pair[X,Y].transpose()  ... ie  Z is col Y of M_pair
+
+  - how to incorporate matrixdb, wam, and the ruleset (does the wam need to know about the rules?)
+
+  - oneHot analysis
+
+  - for theano, do envir's need to include some sort of prefix to keep the var namespaces apart?
+
+  - features for rules: start with single constants { c }, and work from there.  
+  should probably treat the features generated as another sparse vector produced from the 
+  input to the LHS: ie for "p(X,Y) :- ... {c}" construct another clause "P(X,c):-."
+  or for "p(X,Y) :- ... {F: B1,...,Bk}" treat as another clause "P(X,F):-B1,...,Bk"
+
+Test:
+  - recursion
+
+proppr:
+ rules parsed to two functions of input: one that yields outputs Y1...Yk, one that yields feature set F
+ functions include parameters as well as inputs
+ implement weighted SumOp with parameter W ...
+
+pairs:
+ implement pairOp, unpairOp, as Ops
+
+Todo:
+  - incoming chains
+  - matrix plugin?
+ - proppr features
+ -- classify feature generation clause
+ -- ...
+
+Cleanup - recursive opcompiler:
+
+ in compiling a multiple-rule predicate
+ - at depth d=dmax, opcompiler marks rule if it needs to call another predicate, and those rules are not included
+ - at depth d<dmax, opcompiler inserts a call to mode/depth=d+1 into its opseq as a FunOp, and asks for a compilation
+   - so functions are now indexed by mode,depth [f,inputs,outputs,depth]
+   - a funOp.eval will handle binding and recursive call
