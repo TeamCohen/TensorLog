@@ -12,15 +12,6 @@ import theano.sparse.basic as B
 #
 
 #
-# misc interfaces to theano
-#
-
-def columnVectorParam(vec,name):
-    (rows,cols) = vec.get_shape()
-    assert cols==1,'not a column vector'
-    return theano.shared(vec,name=name)
-
-#
 # environment - holds either computed values, or subexpressions
 #
 
@@ -128,43 +119,6 @@ class SumFunction(Function):
         pyfuns = [fun.theanoExpr for fun in self.funs]
         return self.recurselyUse(pyfuns,db,values)
 
-#TODO do I need this, aside from for PropPR?
-class WeightedSumFunction(Function):
-    """Sum of a bunch of functions."""
-    def __init__(self,weights,mainFuns,featureFuns):
-        self.mainFuns = mainFuns
-        self.featureFuns = featureFuns
-        self.weights = weights
-    def __str__(self):
-        return "(" + " + ".join(map(lambda m,f:"%s*W^T*%s"%(m,f), self.mainFuns, self.featureFuns)) + ")"
-    def __repr__(self):
-        return "WeightedSumFunction("+",".join(map(repr,self.mainFuns))+";"+join(map(repr,self.featureFuns))+")"
-    def recurselyUse(self,singleWeightedAddedFun,db,values):
-        assert len(self.mainFuns)>0 and len(self.featureFuns)==len(self.mainFuns)
-        baseValues = singleWeightedAddedFun(0,db,values)
-        for i in range(1,len(self.mainFuns)):
-            moreValues = singleWeightedAddedFun(i,db,values)
-            assert len(moreValues)==len(baseValues)
-            for j in range(len(moreValues)):
-                baseValues[j] = baseValues[j] + moreValues[j]                
-        return baseValues
-    def eval(self,db,values):
-        def weightedEval(i,db,values):
-            unweighted = self.mainFuns[i].eval(db,values)
-            features = self.featureFuns[i].eval(db,values)
-            assert len(unweighted)==1 and len(features)==1,'not implemented'
-            w = features[0].dot(self.weights.get_value())
-            return [unweighted[0]*w[0,0]]
-        return self.recurselyUse(weightedEval,db,values)
-    def theanoExpr(self,db,values):
-        def weightedExpression(i,db,values):
-            unweighted = self.mainFuns[i].theanoExpr(db,values)
-            features = self.featureFuns[i].theanoExpr(db,values)
-            assert len(unweighted)==1 and len(features)==1,'not implemented'
-            w = B.true_dot(features[0],self.weights)
-            return [unweighted[0]*w[0,0]]
-        return self.recurselyUse(weightedExpression,db,values)
-
 #
 # operators
 #
@@ -239,9 +193,7 @@ class AssignPreimageToVar(Op):
     def theanoExpr(self,env):
         env.binding[self.dst] = env.db.matrixPreimage(self.mat)
 
-#TODO rename AssignZerosToVar?
-
-class ClearVar(Op):
+class AssignZeroToVar(Op):
     """Set the dst variable to an all-zeros row."""
     def __init__(self,dst):
         self.dst = dst
@@ -290,45 +242,10 @@ class ComponentwiseVecMulOp(Op):
     def theanoExpr(self,env):
         env.binding[self.dst] = env.binding[self.src] * env.binding[self.src2]
 
-#TODO used?
-
-class ComponentwiseVecMulByOnehotOp(Op):
-    """ Like ComponentwiseVecMulOp but one vector is a oneHot
-    representation of a constant.
-    """
-    def __init__(self,dst,src,onehotConst):
-        self.dst = dst
-        self.src = src
-        self.onehotConst = onehotConst
-    def __str__(self):
-        return "ComponentwiseVecMulByOnehotOp<%s = %s * %s>" % (self.dst,self.src,self.onehotConst)
-    def __repr__(self):
-        return "ComponentwiseVecMulByOnehotOp(%r,%r,%s)" % (self.dst,self.src,self.onehotConst)
-    def eval(self,env):
-        env.binding[self.dst] = env.binding[self.src].multiply( env.db.onehot(self.onehotConst) )
-    def theanoExpr(self,env):
-        c = env.db.onehot(self.onehotConst)
-        theanoConstVec = S.CSR(c.data, c.indices, c.indptr, c.shape)
-        env.binding[self.dst] = env.binding[self.src] * theanoConstVec
-
-class WeightedOnehot(Op):
-    def __init__(self,dst,weighter,onehotConst):
-        self.dst = dst
-        self.weighter = weighter
-        self.onehotConst = onehotConst
-    def __str__(self):
-        return "WeightedOnehot<%s = %s * %s>" % (self.dst,self.weighter,self.onehotConst)
-    def __repr__(self):
-        return "WeightedOnehot<%s,%s,%s>" % (self.dst,self.weighter,self.onehotConst)
-    def eval(self,env):
-        env.binding[self.dst] = env.db.onehot(self.onehotConst) * env.binding[self.weighter].sum()
-    def theanoExpr(self,env):
-        #convert to a sparse vector constant
-        c = env.db.onehot(self.onehotConst)
-        theanoConstVec = S.CSR(c.data, c.indices, c.indptr, c.shape)
-        env.binding[self.dst] = theanoConstVec * B.sp_sum(env.binding[self.weighter],sparse_grad=True)
-
 class WeightedVec(Op):
+    """Implements dst = vec * weighter.sum(), where dst and vec are row
+    vectors.
+    """
     def __init__(self,dst,weighter,vec):
         self.dst = dst
         self.weighter = weighter
@@ -343,7 +260,7 @@ class WeightedVec(Op):
         env.binding[self.dst] = env.binding[self.vec] * B.sp_sum(env.binding[self.weighter],sparse_grad=True)
 
 class VecMatMulOp(Op):
-    """Op of the form "dst = src*mat"
+    """Op of the form "dst = src*mat or dst=src*mat.tranpose()"
     """
     def __init__(self,dst,src,matmode,transpose=False):
         self.dst = dst

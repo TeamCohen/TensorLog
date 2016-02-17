@@ -33,7 +33,7 @@ def fbProgram(rules,db,modes):
     print 'compiled',s,'of',t,'modes successfully'
     return prog
 
-def fbQueries(modes):
+def fbQueries(prog,db,modes):
     modeDict = {}
     for m in modes:
         modeDict[m.functor] = m
@@ -54,8 +54,8 @@ def fbQueries(modes):
     return queries
 
 
-if __name__=="__main__":
-    com = sys.argv[1]
+def runBenchmark(com):
+    print 'benchmark:',com
     if com=="fb-db-serialize":
         db = matrixdb.MatrixDB.loadFile("test/fb15k-valid.cfacts")
         start = time.time()
@@ -80,7 +80,7 @@ if __name__=="__main__":
         prog = fbProgram(rules,db,modes)
         modeDict = {}
         print 'program loaded and compiled'
-        queries = fbQueries(modes)
+        queries = fbQueries(prog,db,modes)
         start = time.time()
         k = 0
         for (m,vx) in queries:
@@ -94,7 +94,7 @@ if __name__=="__main__":
         rules = parser.Parser.parseFile("test/fb15k.ppr")        
         modes = fbModes()
         prog = fbProgram(rules,db,modes)
-        queries = fbQueries(modes)
+        queries = fbQueries(prog,db,modes)
         usedModes = set([m for (m,x) in queries])
         print len(usedModes),'active modes'
         start = time.time()
@@ -106,7 +106,7 @@ if __name__=="__main__":
         rules = parser.Parser.parseFile("test/fb15k.ppr")        
         modes = fbModes()
         prog = fbProgram(rules,db,modes)
-        queries = fbQueries(modes)
+        queries = fbQueries(prog,db,modes)
         usedModes = set([m for (m,x) in queries])
         print len(usedModes),'active modes'
         start = time.time()
@@ -128,3 +128,11 @@ if __name__=="__main__":
     print 'time %.3f' % elapsed
     #raw_input("press enter:")
         
+
+if __name__=="__main__":
+    if len(sys.argv)>1:
+        for com in sys.argv[1:]:
+            runBenchmark(com)
+    else:
+        for com in "fb-db-load fb-rule-compile fb-rule-answer-native fb-rule-compile-theano fb-rule-answer-theano".split():
+            runBenchmark(com)            

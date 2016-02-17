@@ -1,5 +1,9 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
+# compile a rule into a series of operations that perform belief
+# propogation
+#
+
 import sys
 import ops
 import symtab 
@@ -38,7 +42,7 @@ class VarInfo(object):
         return 'VarInfo(var=%r,outputOf=%r,inputTo=%r,connected=%r)' % (self.var,self.outputOf,self.inputTo,self.connected)
     
 class GoalInfo(object):
-    """Node in a factor graph corresponding to a goal."""
+    """Node in a factor graph corresponding to a goal with index j in self.goals."""
     def __init__(self,j):
         self.index = j
         self.inputs = set()         #variables that are inputs for this goal
@@ -57,7 +61,7 @@ def buildNullFunction(lhsMode):
     inputs = [('X%d' % i)  for i in range(lhsMode.arity) if lhsMode.isInput(i)]
     outputs = [('Y%d' % i) for i in range(lhsMode.arity) if lhsMode.isOutput(i)]
     assert len(outputs)==1, 'multiple or zero outputs not implemented yet'
-    return ops.OpFunction(inputs, outputs, ops.ClearVar(outputs[0]))
+    return ops.OpFunction(inputs, outputs, ops.AssignZeroToVar(outputs[0]))
 
 #
 # main class
@@ -74,18 +78,60 @@ class BPCompiler(object):
         self.rule = rule
         self.tensorlogProg = tensorlogProg
         self.depth = depth #used for recursively compiling subpredicates with tensorlogProg
-        self.ops = []      #operations used for BP
-        self.output = None #final outputs of the function associated with BP for the mode
-        self.inputs = None #inputs of the function associated with BP for the mode
-        self.goals = [self.rule.lhs] + self.rule.rhs  #for convenience, in looping over lhs and rhs goals
+        self.ops = []      #generated list of operations used for BP
+        self.output = None #final outputs of the function associated with performing BP for the mode
+        self.inputs = None #inputs of the function associated with performing BP for the mode
+        self.goals = [self.rule.lhs] + self.rule.rhs  #so we can systematically index goals with an int j
         if STRICT: self.validateRuleBeforeAnalysis()
 
-    def validateRuleBeforeAnalysis(self):
-        """Raises error if the rule doesn't satisfy the assumptions made by
-        the compiler.  Can be run before flow analysis."""
-        assert self.rule.lhs.arity==2
-        for goal in self.rule.rhs:
-            assert goal.arity==1 or goal.arity==2
+    #
+    # access the result of compilation
+    # 
+
+    def getOps(self): 
+        """ After compilation, return the operator sequence 
+        """
+        return self.ops
+
+    def getInputs(self): 
+        """ After compilation, return a list of input variables, which should
+        be bound in the environment before eval-ing the ops.
+        """
+        return self.inputs
+
+    def getOutputs(self): 
+        """ After compilation, return a list of output variables, which hold
+        the final results
+        """
+        return [self.output]
+
+    #
+    # debugging tools
+    #
+
+    def showVars(self):
+        print "\t".join("var outOf inputTo outOf inputTo fb".split())
+        for v in sorted(self.varDict.keys()):
+            vin = self.varDict[v]
+            def _gs(j): 
+                if j==None: return 'None'
+                else: return str(self.goals[j])
+            print "\t".join([ v, str(vin.outputOf), ",".join(map(str,vin.inputTo)), 
+                              _gs(vin.outputOf), ",".join(map(_gs,vin.inputTo))])
+
+    def showRule(self):
+        #print "\t".join("id goal ins outs roots".split())
+        def goalStr(j): return str(self.goalDict[j])
+        for j in range(len(self.goals)):
+            print '%2d' % j,'\t ',goalStr(j),'\t',str(self.goals[j]),str(self.toMode(j))
+
+    def showOps(self):
+        print 'inputs:',",".join(self.getInputs())
+        print 'outputs:',",".join(self.getOutputs())
+        print 'compiled to:'
+        for op in self.ops:
+            print '\t',op
+
 
     def compile(self,lhsMode):
         """Top-level analysis routine for a rule.
@@ -103,6 +149,18 @@ class BPCompiler(object):
         if PRODUCE_OPS:
             self.generateOps()
 
+    #
+    # simpler subroutines of compile
+    #
+
+    def validateRuleBeforeAnalysis(self):
+        """Raises error if the rule doesn't satisfy the assumptions made by
+        the compiler.  Can be before flow analysis."""
+        assert self.rule.lhs.arity==2
+        for goal in self.rule.rhs:
+            assert goal.arity==1 or goal.arity==2
+
+
     def inferFlow(self,lhsMode):
         """ Infer flow of information in the clause, by populating a VarInfo
         object for each variable and a GoalInfo object for each goal.
@@ -110,13 +168,13 @@ class BPCompiler(object):
         variable through predicates which map inputs to outputs.
         """
 
-        # (re)populate the varDict and goalDict structures for a rule
+        # populate the varDict and goalDict structures for a rule
         self.varDict = {}
         self.goalDict = {}
-        # lhs goal is is special - it connects to input/outputs of the predicate
+
+        #for lhs, infer inputs/outputs from the known mode
         gin = self.goalDict[0] = GoalInfo(0)
         gin.mode = lhsMode
-        #for lhs, infer inputs/outputs from the known mode
         for i in range(self.rule.lhs.arity):
             v = self.rule.lhs.args[i]
             vin = self.varDict[v] = VarInfo(v)
@@ -178,25 +236,34 @@ class BPCompiler(object):
     #
 
     def generateOps(self):
-        """Emulate BP and emit the sequence of operations needed."""
+        """Emulate BP and emit the sequence of operations needed.  Instead of
+        actually constructing a message from src->dst in the course of
+        BP, what we do instead is emit operations that would construct
+        the message and assign it a 'variable' named 'foo', and then
+        return not the message but the variable-name string 'foo'. """
+
+        #TODO remove caching, as it's not needed
         messages = {}  #cached messages
+
         def addOp(depth,op):
             """Add an operation to self.ops, echo if required"""
             if TRACE: print '%s+%s' % (('| '*depth),op)
             self.ops.append(op)
+
         def cacheMessage((src,dst),msg):
-            """ Send a message, caching it if possible
+            """ Send a message, caching it if necessary
             """
-            if (src,dst) not in messages:
-                messages[(src,dst)] = msg
+            messages[(src,dst)] = msg
             return messages[(src,dst)]
+
         def msgGoal2Var(j,v,depth):
             """Send a message from a goal to a variable.  Note goals can have at
             most one input and at most one output.  This is complex
             because there are several cases, depending on if the goal
             is LHS on RHS, and if the variable is an input or
             output."""
-            if (j,v) in messages: return messages[(j,v)]
+            if (j,v) in messages: 
+                return messages[(j,v)]
             else:
                 gin = self.goalDict[j]
                 if TRACE: print '%smsg: %d->%s' % (('| '*depth),j,v)
@@ -248,10 +315,12 @@ class BPCompiler(object):
                         return cacheMessage((j,v),msgName)
                 else:
                     assert False,'unexpected message goal %d -> %s ins %r outs %r' % (j,v,gin.inputs,gin.outputs)
+
         def msgVar2Goal(v,j,depth):
             """Message from a variable to a goal.
             """
-            if (v,j) in messages: return messages[(v,j)]
+            if (v,j) in messages: 
+                return messages[(v,j)]
             else:
                 vin = self.varDict[v]
                 vin.connected = True
@@ -260,7 +329,7 @@ class BPCompiler(object):
                 vNeighbors = [j2 for j2 in [vin.outputOf]+list(vin.inputTo) if j2!=j]
                 if TRACE: print '%smsg from %s to %d, vNeighbors=%r' % ('| '*depth,v,j,vNeighbors)
                 assert len(vNeighbors),'variables should have >1 neighbor but %s has only one: %d' % (v,j)
-                #form product of the incoming messages, cleverly not
+                #form product of the incoming messages, cleverly
                 #generating only the variables we really need
                 currentProduct = msgGoal2Var(vNeighbors[0],v,depth+1)
                 for j2 in vNeighbors[1:]:
@@ -287,7 +356,8 @@ class BPCompiler(object):
         self.goals.append( parser.Goal('PSEUDO',[]) )
         self.goalDict[psj] = GoalInfo(psj)
         #heuristic - start with the rightmost unconnected variable,
-        #hoping that it's the end of a chain rooted at the input
+        #hoping that it's the end of a chain rooted at the input,
+        #which should be quicker to evaluate
         for j in reversed(range(1,len(self.goals))):
             goalj = self.goals[j]
             for i in range(goalj.arity):
@@ -308,54 +378,6 @@ class BPCompiler(object):
         # save the output and inputs 
         self.output = currentProduct
         self.inputs = list(self.goalDict[0].inputs)
-
-    #
-    # access the result of compilation
-    # 
-
-    def getOps(self): 
-        """ After compilation, return the operator sequence 
-        """
-        return self.ops
-
-    def getInputs(self): 
-        """ After compilation, return a list of input variables, which should
-        be bound in the environment before eval-ing the ops.
-        """
-        return self.inputs
-
-    def getOutputs(self): 
-        """ After compilation, return a list of output variables, which hold
-        the final results
-        """
-        return [self.output]
-
-    #
-    # debugging tools
-    #
-
-    def showVars(self):
-        print "\t".join("var outOf inputTo outOf inputTo fb".split())
-        for v in sorted(self.varDict.keys()):
-            vin = self.varDict[v]
-            def _gs(j): 
-                if j==None: return 'None'
-                else: return str(self.goals[j])
-            print "\t".join([ v, str(vin.outputOf), ",".join(map(str,vin.inputTo)), 
-                              _gs(vin.outputOf), ",".join(map(_gs,vin.inputTo))])
-
-    def showRule(self):
-        #print "\t".join("id goal ins outs roots".split())
-        def goalStr(j): return str(self.goalDict[j])
-        for j in range(len(self.goals)):
-            print '%2d' % j,'\t ',goalStr(j),'\t',str(self.goals[j]),str(self.toMode(j))
-
-    def showOps(self):
-        print 'inputs:',",".join(self.getInputs())
-        print 'outputs:',",".join(self.getOutputs())
-        print 'compiled to:'
-        for op in self.ops:
-            print '\t',op
 
 #
 # a test driver

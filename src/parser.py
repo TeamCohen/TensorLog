@@ -4,6 +4,7 @@ import collections
 
 import symtab as syt
 
+#
 # Parse prolog rules in one of these sample formats
 #
 # p(X,Y) :- q(X,Z), r(Z,X).         # normal prolog clause
@@ -13,6 +14,8 @@ import symtab as syt
 # p(X,Y) :- q(X,Z) {f(W) : g(Y,W)}. # features geberated by a 'findall'
 #                                   #  ie for all solutions of g(Y,W), 
 #                                   #  produce a feature f(W)
+#
+# TODO: remove the stuff that's not supported in TensorLog
 
 ##############################################################################
 ## data structures to encode rules
@@ -105,6 +108,10 @@ class RuleCollection(object):
 
     def rulesFor(self,g):
         return self.index[self._key(g)]
+
+    def mapRules(self,mapfun):
+        for key in self.index:
+            self.index[key] = map(mapfun, self.index[key]) 
 
     def listing(self):
         for key in self.index:

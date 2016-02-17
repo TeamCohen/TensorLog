@@ -10,11 +10,7 @@ import scipy.io
 import collections
 import logging
 
-# TODO: use lists in data_buf[p], row_buf[p], col_buf[p] to create a
-# coo_matrix use coo_matrix.row, coo_matrix.col, coo_matrix.data, to
-# serialize
-#
-# TODO: warn about constants i,o,i1,o1
+# TODO replace set(X,c) with assign(X,c)?
 
 def isSetMode(mode):
     """Is this a proper mode for the 'set' predicate?"""
@@ -33,13 +29,14 @@ class MatrixDB(object):
     def __init__(self):
         #maps symbols to numeric ids
         self.stab = symtab.SymbolTable()
+        self.stab.reservedSymbols.add("i")
+        self.stab.reservedSymbols.add("o")
         # track if the matrix is arity one or arity two
         self.arity = {}
         #matEncoding[p] encodes predicate p as a matrix
         self.matEncoding = {}
-        #preimageEncoding[mode] encodes the preimage of a binary predicate wrt a mode as a matrix
-        self.preimageEncoding = {}
         #buffer data for a sparse matrix: buf[pred][i][j] = f
+        #TODO: would lists and a coo matrix make a nicer buffer?
         def dictOfFloats(): return collections.defaultdict(float)
         def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
         self.buf = collections.defaultdict(dictOfFloatDicts)
@@ -49,7 +46,7 @@ class MatrixDB(object):
     # 
 
     def dim(self):
-        """Number of constants."""
+        """Number of constants in the database, and dimension of all the vectors/matrices."""
         return self.stab.getMaxId() + 1
 
     def onehot(self,s):
@@ -57,9 +54,7 @@ class MatrixDB(object):
         assert self.stab.hasId(s),'constant %s not in db' % s
         n = self.dim()
         i = self.stab.getId(s)
-        result = scipy.sparse.csr_matrix( ([1.0],([0],[i])), shape=(1,n))
-        result[0,i] = 1.0
-        return result
+        return scipy.sparse.csr_matrix( ([1.0],([0],[i])), shape=(1,n))
 
     def zeros(self):
         """An all-zeros row matrix."""
@@ -77,40 +72,36 @@ class MatrixDB(object):
         if leftRight != transpose:
             return self.matEncoding[mode.functor]
         else:
+            #TODO this is a computed variant of the matrix so training might be a problem
             return self.matEncoding[mode.functor].transpose()            
 
+    #TODO this is a computed version of the matrix so training might be a problem
     def matrixPreimage(self,mode):
         """The preimage associated with this mode, eg if mode is p(i,o) then
         return a row vector equivalent to 1 * M_p^T.  Also returns a row vector
         for a unary predicate."""
-        if mode in self.preimageEncoding:
-            #caching
-            return self.preimageEncoding[mode]
-        else:
-            if self.arity[mode.functor]==1:
-                return self.matEncoding[mode.functor]
-            else: 
-                assert self.arity[mode.functor]==2
-                #TODO mode is o,i vs i,o
-                assert mode.isInput(0) and mode.isOutput(1)
-                coo = self.matrix(mode).tocoo()
-                rowsum = collections.defaultdict(float)
-                for i in range(len(coo.data)):
-                    r = coo.row[i]
-                    d = coo.data[i]
-                    rowsum[r] += d
-                items = rowsum.items()
-                data = [d for (r,d) in items]
-                rowids = [0 for (r,d) in items]
-                colids = [r for (r,d) in items]
-                n = self.dim()
-                pre = scipy.sparse.csc_matrix((data,(rowids,colids)),shape=(1,n))
-                self.preimageEncoding[mode] = pre
-                return self.preimageEncoding[mode]
+        if self.arity[mode.functor]==1:
+            return self.matEncoding[mode.functor]
+        else: 
+            assert self.arity[mode.functor]==2
+            #TODO mode is o,i vs i,o
+            assert mode.isInput(0) and mode.isOutput(1)
+            coo = self.matrix(mode).tocoo()
+            rowsum = collections.defaultdict(float)
+            for i in range(len(coo.data)):
+                r = coo.row[i]
+                d = coo.data[i]
+                rowsum[r] += d
+            items = rowsum.items()
+            data = [d for (r,d) in items]
+            rowids = [0 for (r,d) in items]
+            colids = [r for (r,d) in items]
+            n = self.dim()
+            return scipy.sparse.csc_matrix((data,(rowids,colids)),shape=(1,n))
 
 
     #
-    # convert from vectors, matrixes to symbols
+    # convert from vectors, matrixes to symbols - for i/o and debugging
     # 
 
     def rowAsSymbolDict(self,row):
@@ -131,7 +122,7 @@ class MatrixDB(object):
 
     #
     # i/o
-    #TODO save/restore stab, matrices (separately)
+    # TODO save/restore stab, matrices (separately)
     #
 
     def serialize(self,dir):
@@ -141,7 +132,7 @@ class MatrixDB(object):
         for i in range(1,self.dim()):
             fp.write(self.stab.getSymbol(i) + '\n')
         fp.close()
-        scipy.io.savemat(os.path.join(dir,"db.mat"),db.matEncoding,do_compression=True)
+        scipy.io.savemat(os.path.join(dir,"db.mat"),self.matEncoding,do_compression=True)
     
     @staticmethod
     def deserialize(dir):
@@ -195,7 +186,7 @@ class MatrixDB(object):
             k += 1
             line = line0.strip()
             if line and (not line.startswith("#")):
-                if not k%10000: print 'read',k,'lines'
+                if not k%10000: logging.info('read %d lines' % k)
                 self.bufferLine(line)
 
     def flushBuffers(self):
@@ -206,7 +197,7 @@ class MatrixDB(object):
     def flushBuffer(self,p):
         """Flush the triples defining predicate p from the buffer and define
         p's matrix encoding"""
-        print 'flushing',p
+        logging.info('flushing buffers for predicate %s' % p)
         n = self.stab.getMaxId() + 1
         if self.arity[p]==2:
             m = scipy.sparse.lil_matrix((n,n))
@@ -226,6 +217,7 @@ class MatrixDB(object):
             self.matEncoding[p].sort_indices()
 
     def clearBuffers(self):
+        """Save space by removing buffers"""
         self.buf = None
 
     @staticmethod 
@@ -236,6 +228,20 @@ class MatrixDB(object):
         db.flushBuffers()
         db.clearBuffers()
         return db
+
+    #
+    # directly insert a matrix/vector
+    #
+    def insertMatrix(self,mat,name):
+        (nrows,ncols) = mat.get_shape()
+        assert ncols==self.dim(), 'matrix has wrong number of columns: %d seen, %d expected' % (ncols,self.dim())
+        if nrows==1:
+            self.arity[name] = 1
+        else:
+            assert nrows==self.dim(), 'matrix has wrong number of rows: %d seen, %d expected' % (nrows,self.dim())
+            self.arity[name] = 2
+        self.matEncoding[name] = mat
+        self.matEncoding[name].sort_indices()
 
     #
     # debugging
@@ -268,18 +274,3 @@ if __name__ == "__main__":
         print 'loading saved db from ',sys.argv[1]
         db = MatrixDB.deserialize(sys.argv[2])
 
-    #test
-    totDict = {}
-    for s in sys.argv[3:]:
-        tot = scipy.sparse.csr_matrix(([],([],[])),shape=(1,db.dim()))
-        for t in s.split("+"):
-            tot = tot + db.onehot(t)
-        print tot
-        print db.rowAsSymbolDict(tot)
-        totDict[s] = tot
-    for s1 in totDict.keys():
-        for s2 in totDict.keys():
-            if s1<s2:
-                prod = totDict[s1].multiply(totDict[s2])
-                print prod
-                print s1,'*',s2,'=',db.rowAsSymbolDict(prod)

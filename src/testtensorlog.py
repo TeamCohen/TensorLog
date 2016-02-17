@@ -5,6 +5,7 @@ import sys
 import tensorlog 
 import parser
 import matrixdb
+import logging
 
 # can call a single test with, e.g.,
 # python -m unittest testtensorlog.TestSmallProofs.testIf
@@ -63,10 +64,10 @@ class TestSmallProofs(unittest.TestCase):
     def testAltChain(self):
         self.inferenceCheck(['p(X,W) :- spouse(X,W),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
 
-#    def testProppr1(self):
-#        w = 7*self.db.onehot('r1')+3*self.db.onehot('r2')        
-#        self.propprInferenceCheck(w.transpose(),['p(X,Y):-sister(X,Y) {r1}.','p(X,Y):-spouse(X,Y) {r2}.'],'p(i,o)',
-#                                  'william', {'sarah': 7.0, 'rachel': 7.0, 'lottie': 7.0, 'susan': 3.0})
+    def testProppr1(self):
+        w = 7*self.db.onehot('r1')+3*self.db.onehot('r2')        
+        self.propprInferenceCheck(w,['p(X,Y):-sister(X,Y) {r1}.','p(X,Y):-spouse(X,Y) {r2}.'],'p(i,o)',
+                                  'william', {'sarah': 7.0, 'rachel': 7.0, 'lottie': 7.0, 'susan': 3.0})
 
     # support routines
     # 
@@ -80,7 +81,6 @@ class TestSmallProofs(unittest.TestCase):
             rules.add(parser.Parser.parseRule(r))
         prog = tensorlog.Program(db=self.db,rules=rules)
         mode = tensorlog.ModeDeclaration(modeString)
-        print '= calling prog.compile'
         fun = prog.compile(mode)
         print 'native computation'
         y1 = self.only( prog.eval(mode,[inputSymbol]) )

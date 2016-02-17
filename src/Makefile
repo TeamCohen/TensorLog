@@ -19,7 +19,7 @@ snap:
 	ls -alh backup
 
 wc:
-	wc `ls *.py | grep -v pyparsing | grep -v wam | grep -v test`
+	wc `ls *.py | grep -v pyparsing | grep -v wam | grep -v test | grep -v try | grep -v benchmark`
 wc-all:
 	wc `ls *.py | grep -v pyparsing`
 

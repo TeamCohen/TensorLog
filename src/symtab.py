@@ -1,13 +1,13 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
 import logging
-#symbol table - map strings to/from the range 1..N inclusive.
 
 class SymbolTable(object):
     """A symbol table mapping strings to/from integers in the range
     1..N inclusive."""
 
     def __init__(self,initSymbols=[]):
+        self.reservedSymbols = set()
         self._symbolList = [None]
         self._nextId = 0
         self._idDict = {}
@@ -16,7 +16,7 @@ class SymbolTable(object):
 
     def insert(self,symbol):
         """Insert a symbol."""
-        #logging.debug( "symtab: %s" % symbol)
+        assert symbol not in self.reservedSymbols, 'Reserved word %s used as a constant' % symbol
         if symbol not in self._idDict:
             self._nextId += 1
             self._idDict[symbol] = self._nextId
