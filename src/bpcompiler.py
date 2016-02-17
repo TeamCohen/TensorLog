@@ -17,10 +17,12 @@ import logging
 STRICT = True
 
 # print debug info during BP
-TRACE = False
+#TRACE = False
+TRACE = True
 
 # turn off to debug analysis
 PRODUCE_OPS = True
+#PRODUCE_OPS = False
 
 def only(c):
     """Return only member of a singleton set, or raise an error if the set's not a singleton."""
@@ -177,7 +179,11 @@ class BPCompiler(object):
         gin.mode = lhsMode
         for i in range(self.rule.lhs.arity):
             v = self.rule.lhs.args[i]
-            vin = self.varDict[v] = VarInfo(v)
+            if v not in self.varDict: 
+                self.varDict[v] = VarInfo(v)
+            else:
+                assert False,'same variable cannot appear twice in a rule lhs'
+            vin = self.varDict[v]
             assert parser.isVariableAtom(v), 'arguments to defined predicate %s cannot be a constant' % str(rule.lhs)
             if gin.mode.isInput(i):
                 gin.inputs.add(v) #input to predicate means output of lhs
