@@ -1,6 +1,8 @@
 \documentclass[12pt]{article}
 
 \newcommand{\yy}[1]{\textit{TODO: {#1}}}
+\newcommand{\ct}[1]{\textit{cite: {#1}}}
+\newcommand{\cd}[1]{{\small \texttt{#1}}}
 
 \newcommand{\trm}[1]{\textit{#1}}
 \newcommand{\vek}[1]{\textbf{#1}}
@@ -8,42 +10,87 @@
 \newcommand{\support}[1]{\textit{sup({#1})}}
 \newcommand{\children}{\textit{children}}
 
+\title{Differentiable Logic Programs: DRAFT}
 
 \begin{document} 
 
 \section{Introduction}
 
-\yy{Motivate logic}: logics let you do things like
-``uncle(X,Y):-parent(X,Z),brother(Z,Y)'' ie follow chains of
-reasoning, join distinct relations. Nice because they are
-compositionally defined,....  Probabilistic logics generalize
-first-order logic to allow for ``soft'' reasoning.
+Probabilistic first-order logics \ct{MLNs, PSL, ProbLog, SLPs, ProPPR,
+  [first-order Bayes nets]...} model a joint distribution over ground
+atomic formula in the Herbrand base of a logic program (LP).  In other
+words, they generalize logic as follows: whereas an ordinary LP
+assigns a binary value, true or false, to a set of potential beliefs,
+a probabilistic LP defines a joint probability distribution over this
+set of beliefs.  In the simple case the beliefs are ground atomic
+formulae like \cd{uncle(al,chip)} or \cd{mother(bea,chip)},
+and more generally are of the form $p(e_1,\ldots,e_k)$, where $p$ is a
+predicate symbols and the $e_i$'s are constant symbols, typically
+corresponding to entities in some domain of interest.  If the set of
+all potential beliefs of this form is denoted $H$ (the ``Herbrand
+base'') then the deductive closure of a LP is a particular subset of
+$I\subset H$, which is interpreted as the beliefs that implied by the
+program.  In contrast, probabilistic extensions to LPs can generally
+be viewed as defining a joint distribution $D$ over a set of random
+variables $X_1,\ldots,X_{|H|}$, where each $X_b$ corresponds to a
+particular belief $b$.  This joint distribution allows probabilistic
+inferences to be made: so rather than asking if
+\cd{husband(al,bea)$\wedge$mother(bea,chip)} logically implies
+\cd{uncle(al,chip)}, one would answer probabilistic queries like
+\[ Pr_D\left (X_\cd{uncle(al,chip)} | X_\cd{husband(al,bea)} \wedge X_\cd{mother(bea,chip)} \right)
+\] 
+There are number of ways that this distribution $D$ can be defined:
+for instance, MLNs can be thought of as a factor graph where there is
+one binary variable for each belief, and a factor for each ground
+instance of a clause. \yy{add example to fig?}  
 
-\yy{TensorLog's differences:} Prior probabilistic first-order logics,
-including MLNs, PSL, ProbLog, SLPs, ProPPR, [first-order Bayes
-  nets]... have relied on modeling a joint distribution over the
-Herbrand base, i.e., one binary random variable for each possible
-ground atomic formulae.  The joint distribution is constrained more or
-less directly by the clauses of the program: e.g., in MLNs, a clause
-is a potential. In other logics like SLP and ProPPR the distribution
-is modeled indirectly by proposing a probabilistic process on
-generation of proofs.  Expensive because the graph is huge.
+The various types of probabilistic LPs adopt a number of schemes for
+defining $D$, which offer different tradeoffs in efficiency and
+generality.  For example, PSL \ct{...} replaces the Markov-field
+inference of MLNs with a more tractible optimization that is based on
+a hinge loss.  Other logics \ct{ProbLog, suciu's} do not construct all
+variables $X_b$ explicitly, but instead answer probabilistic
+inferences by manipulating the set of logical derivations supported by
+a program, with stochastic LPs \ct{...} and ProPPR \ct{...} actually
+defining $D$ indirectly in terms of the space of derivations.  While
+much progress has been made, inference remains difficult, in part
+because of the huge size of the set of random variables. For instance,
+in a task like knowledge base completion (KBC), the set of potential
+beliefs $H$ is certainly larger than the size of the knowledge base
+(KB), i.e., the set of known ground facts, in realistic KBC problems
+the KB will contain hundreds of millions of facts.
 
-We propose another mapping, where each logical variable is associated
-with a single random variable ranging over the set of constants, and
-each atomic formulae corresponds to a potential.  BP can be used to
-perform inference. \yy{example figure} 
+We propose here another way of extending LPs to probabilities.  Rather
+than introducing a new binary random variable $X_b$ for each potential
+belief $b$, we introduce a new random variable $X_v$ for each logical
+variable $v$ in a program, where the domain of the random variable is
+the set of \emph{constant symbols} appearing in the Herbrand base.  We
+show that a large class of logic programs can be converted to factor
+graphs, that belief propagation (BP) can be used to perform exact
+inference, and that this BP inference is a strict generalization of
+logical inference on the original LP.  
 
-Moreover, a LP together with a ``query mode'' can then be modeled as
-particular probabilistic inference process, where messages have been
-optimized for inference in this particular direction.  Inference in
-this setting can be viewed as computing a function \yy{example}.
-\yy{like a layer of an ANN...}
+\yy{example figure and discussion}
+
+For the class of LPs we will consider, the factor graph that is
+constructed is a polytree, so BP is exact, and converges with a finite
+number of messages.  In fact, given a known query type (which
+corresponds to a particular input-output mode for a known predicate),
+one can easily construct the exact sequence of messages that will be
+sent by the BP system Inference in this setting can be viewed as
+computing a function, the function being defined by the particular
+message sequence constructed.  \yy{example}.  The consequence of this
+is that query-answering in our probabilistic LP system can be reduced
+to computing a function, which is in fact a \emph{differentiable}
+series of matrix-vector operations.  Using deep learning methods on
+this function allows a wide range of learning tasks to be performed,
+and can potentially enable a wide range of possibilities for
+integration between LPs and neural networks.
 
 Below we will describe in detail the subset of logic included in
 TensorLog, and how that subset can be converted into factor graphs.
 We will show that the resulting inference does in fact generalize
-logic.  We will also analyze the complexity \yy{and show....}
+logic.  \yy{discuss relation to ProPPR and SLPs}
 
 \section{Details}
 
@@ -69,8 +116,8 @@ corresponding sparse matrix $\M_p$ defined as
    \end{array}
    \right.
 \]
-For a unary predicate $q$, we will define a \emph{column} vector
-$\vek{c}_q$ as follows
+For a unary predicate $q$, we will define a row vector $\vek{c}_q$ as
+follows
 \[
   \vek{c}_q[a] \equiv \left \{
    \begin{array}{ll}
@@ -79,9 +126,9 @@ $\vek{c}_q$ as follows
    \end{array}
    \right.
 \]
-Likewise we will define for each $a$ a unit \emph{row} vector
-$\vek{u}_a$, aka the one-hot representation representation for $a$, as
-a row vector in which
+Likewise we will define for each $a$ a unit row vector $\vek{u}_a$,
+aka the one-hot representation representation for $a$, as a row vector
+in which
 \[
   \vek{u}_a[i] \equiv \left \{
    \begin{array}{ll}
@@ -98,9 +145,9 @@ For any vector $\vek{v}$ we define the \trm{support} of $\vek{v}$,
 written $\support{\vek{v}}$, to be the set of non-zero indices, and the
 weight of $a \in \support{\vek{v}}$ to be the value if $\vek{v}[a]$.
 
-A \trm{mode} ${\cal M}$ is a literal with arguments that are the constants
-$i$ or $o$, for input and output: e.g., $p(i,o)$ means that the first
-argument for $p$ will be an input.
+A \trm{mode} ${\cal M}$ is a literal with arguments that are the
+constants $i$ or $o$, for input and output: e.g., $p(i,o)$ means that
+the first argument for predicate $p$ will be an input.
 
 The plan is to define a way in which ${\cal T,DB}$ plus a mode ${\cal
   M}$ can be interpreted as a function $f_{\cal M}$, so that the
@@ -116,6 +163,8 @@ $f_{\cal M}(a)$ will be a row vector $\vek{v}$ so that
 \]
 and furthermore, the weight of $b$ in $\vek{v}$ will be the number of
 proofs that entail $p(a,b)$.
+
+\yy{need to rewrite this - maybe just examples}
 
 \subsection{Case 1: A single chain with the final variable as output}
 
@@ -145,7 +194,7 @@ these the function $f(a)$ for a chain can be defined as follows:
 
 \yy{proof}
 
-\subsection{Case 2: A single chain with the any variable as output}
+\subsection{Case 2: A single chain with any variable as output}
 
 Now assume a slightly more complex case, in which the output variable
 is some intermediate computation of the chain.
@@ -186,9 +235,30 @@ as the row-wise sum of $\M_{q_k}$: this avoids building the large
 dense vector $\vek{b}_{Z_k} = \vek{1}^T$, and we do this in the code.
 It is also easy to compute $\vek{b}_{Z_{k-1}}$ for literals
 $q(Z_{k-1},c)$: in this case $\vek{b}_{Z_{k-1}} = \M_{q_k}[:,c]$, the
-$c$-th column of $\M_{q_k}$.
+$c$-th column of $\M_{q_k}$. \yy{also unary predicates}
 
-\subsection{Case 3: A tree}
+\subsection{Case 3: multiple chains}
+
+\yy{next case - two disconnected chains, with proppr clauses
+  p(X,pos):-{F:feature(X,F)} and p(X,Y):-q(X,Y) {r} as examples}
+
+\section{Inference in TensorLog}
+
+\yy{graph construction, BP algorithm}
+
+\section{TensorLog Inference and logical inference}
+
+\yy{proof that inference generalizes proof-counting}
+
+\section{Experimental results}
+
+\subsection{Implementation details}
+
+\yy{theano, etc}
+
+\yy{expt1, expt2, ...}
+
+\section{old tree case - to change}
 
 \begin{table}
 \hrule
