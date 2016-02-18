@@ -17,8 +17,8 @@ import logging
 STRICT = True
 
 # print debug info during BP
-#TRACE = False
-TRACE = True
+TRACE = False
+#TRACE = True
 
 # turn off to debug analysis
 PRODUCE_OPS = True

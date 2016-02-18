@@ -40,6 +40,8 @@ class MatrixDB(object):
         def dictOfFloats(): return collections.defaultdict(float)
         def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
         self.buf = collections.defaultdict(dictOfFloatDicts)
+        #delegate to get matrices that are 'parameters'
+        self.paramDB = ops.ParameterDB()
         
     #
     # retrieve matrixes, vectors, etc
@@ -61,26 +63,36 @@ class MatrixDB(object):
         n = self.dim()
         return scipy.sparse.csr_matrix( ([],([],[])), shape=(1,n))
 
-    def matrix(self,mode,transpose=False):
+    @staticmethod
+    def transposeNeeded(mode,transpose=False):
+        """Figure out if we should use the transpose of a matrix or not."""
+        leftRight = (mode.isInput(0) and mode.isOutput(1))        
+        return leftRight != transpose
+
+    def matrix(self,mode,transpose=False,expressionContext=False):
         """The matrix associated with this mode - eg if mode is p(i,o) return
         a sparse matrix M_p so that v*M_p is appropriate for forward
-        propagation steps from v.
+        propagation steps from v.  The expressionContext flag
+        indicates if what should be returned is a theano expression or
+        a scipy matrix.
         """
-        assert mode.arity<=2,'arity of '+str(mode) + ' is too big: ' + str(mode.arity)
-        assert mode.functor in self.matEncoding,"can't find matrix for %s" % str(mode)
-        leftRight = (mode.isInput(0) and mode.isOutput(1))
-        if leftRight != transpose:
-            return self.matEncoding[mode.functor]
+        result = self.paramDB.matrix(mode,transpose,expressionContext=expressionContext)
+        if result!=None: return result
         else:
-            #TODO this is a computed variant of the matrix so training might be a problem
-            return self.matEncoding[mode.functor].transpose()            
+            assert mode.arity==2,'arity of '+str(mode) + ' is wrong: ' + str(mode.arity)
+            assert mode.functor in self.matEncoding,"can't find matrix for %s" % str(mode)
+            if self.transposeNeeded(mode,transpose):
+                return self.matEncoding[mode.functor]
+            else:
+                return self.matEncoding[mode.functor].transpose()            
 
-    #TODO this is a computed version of the matrix so training might be a problem
-    def matrixPreimage(self,mode):
+    def matrixPreimage(self,mode,expressionContext=False):
         """The preimage associated with this mode, eg if mode is p(i,o) then
         return a row vector equivalent to 1 * M_p^T.  Also returns a row vector
         for a unary predicate."""
-        if self.arity[mode.functor]==1:
+        result = self.paramDB.matrixPreimage(mode,expressionContext=expressionContext)
+        if result!=None: return result        
+        elif self.arity[mode.functor]==1:
             return self.matEncoding[mode.functor]
         else: 
             assert self.arity[mode.functor]==2
@@ -232,16 +244,18 @@ class MatrixDB(object):
     #
     # directly insert a matrix/vector
     #
-    def insertMatrix(self,mat,name):
+    def insertPredicate(self,mat,predicateFunctor,predicateArity):
+        self.arity[predicateFunctor] = 1
+        self.matEncoding[predicateFunctor] = mat
+        self.matEncoding[predicateFunctor].sort_indices()
         (nrows,ncols) = mat.get_shape()
-        assert ncols==self.dim(), 'matrix has wrong number of columns: %d seen, %d expected' % (ncols,self.dim())
-        if nrows==1:
-            self.arity[name] = 1
-        else:
-            assert nrows==self.dim(), 'matrix has wrong number of rows: %d seen, %d expected' % (nrows,self.dim())
-            self.arity[name] = 2
-        self.matEncoding[name] = mat
-        self.matEncoding[name].sort_indices()
+        assert (nrows==1 and predicateArity==1) or (nrows==self.dim() and predicateArity==2)
+
+    def insertParam(self,mat,predicateFunctor,predicateArity):
+        result = self.paramDB.insert(mat,predicateFunctor,predicateArity)
+        (nrows,ncols) = mat.get_shape()
+        assert (nrows==1 and predicateArity==1) or (nrows==self.dim() and predicateArity==2)
+        return result
 
     #
     # debugging

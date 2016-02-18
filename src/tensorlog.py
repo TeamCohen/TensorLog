@@ -121,8 +121,8 @@ class ProPPRProgram(Program):
     def __init__(self, db=None, rules=parser.RuleCollection(),weights=None):
         super(ProPPRProgram,self).__init__(db=db, rules=rules)
         #expand the syntactic sugar used by ProPPR
-        db.insertMatrix(weights,"weighted")
         self.rules.mapRules(ProPPRProgram._moveFeaturesToRHS)
+        self.params = [db.insertParam(weights,"weighted",1)]
         
     @staticmethod
     def _moveFeaturesToRHS(rule0):

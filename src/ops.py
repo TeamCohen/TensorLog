@@ -8,12 +8,18 @@ import theano.sparse.basic as B
 #
 # A slightly higher-level wrapper around Theano, for generality and
 # convenience.  All the operations here can also be evaluated directly
-# with scipy.
+# with scipy so theano is less than 100% necessary.  
 #
+# This is also the only module in tensorlog that should directly use
+# theano.  (If I was being less lazy there would be a subclass of this
+# which includes the theano stuff and a factory and such for
+# operators.)
 
+##############################################################################
 #
 # environment - holds either computed values, or subexpressions
 #
+##############################################################################
 
 class Envir(object):
     """Holds a MatrixDB object and a group of variable bindings.
@@ -32,9 +38,11 @@ class Envir(object):
                 print 'variable',v,'row',r,':'
                 for s,w in d[r].items():
                     print '\t%s\t%g' % (s,w)
+##############################################################################
 #
 # functions
 #
+##############################################################################
 
 class Function(object):
     """The tensorlog representation of a function.  """
@@ -119,9 +127,54 @@ class SumFunction(Function):
         pyfuns = [fun.theanoExpr for fun in self.funs]
         return self.recurselyUse(pyfuns,db,values)
 
+##############################################################################
+#
+# parameter database - the regular database will delegate to this so
+# that matrices can be 'parameters', if necessary.
+# 
+##############################################################################
+
+class ParameterDB(object):
+    def __init__(self):
+        self.paramEncoding = {}
+        self.arity = {}
+
+    def insert(self,mat,predicateFunctor,predicateArity):
+        theanoShared = theano.shared(mat,name=predicateFunctor)
+        self.paramEncoding[predicateFunctor] = theanoShared
+        self.arity[predicateFunctor] = predicateArity
+        return theanoShared
+
+    def matrix(self,mode,transpose=False,expressionContext=False):
+        if not mode.functor in self.paramEncoding: return None
+        else: 
+            assert self.arity[mode.functor]==2
+            if matrixdb.MatrixDB.transposeNeeded(mode,transpose):
+                if expressionContext:
+                    return self.paramEncoding[mode.functor].transpose()
+                else:
+                    return self.paramEncoding[mode.functor].get_value().transpose()            
+            else:
+                if expressionContext:
+                    return self.paramEncoding[mode.functor]
+                else:
+                    return self.paramEncoding[mode.functor].get_value()
+
+    def matrixPreimage(self,mode,expressionContext=False):
+        if not mode.functor in self.paramEncoding: return None
+        else: 
+            assert self.arity[mode.functor]==1,'p(X,Y) for unbound or constant Y not implemented for parameters'
+            if expressionContext:
+                return self.paramEncoding[mode.functor]
+            else:
+                return self.paramEncoding[mode.functor].get_value()
+
+
+##############################################################################
 #
 # operators
 #
+##############################################################################
 
 class Op(object):
     """Like a function but side-effects an environment.  More
@@ -191,7 +244,7 @@ class AssignPreimageToVar(Op):
     def eval(self,env):
         env.binding[self.dst] = env.db.matrixPreimage(self.mat)
     def theanoExpr(self,env):
-        env.binding[self.dst] = env.db.matrixPreimage(self.mat)
+        env.binding[self.dst] = env.db.matrixPreimage(self.mat,expressionContext=True)
 
 class AssignZeroToVar(Op):
     """Set the dst variable to an all-zeros row."""
@@ -275,5 +328,5 @@ class VecMatMulOp(Op):
     def eval(self,env):
         env.binding[self.dst] = env.binding[self.src] * env.db.matrix(self.matmode,self.transpose)
     def theanoExpr(self,env):
-        env.binding[self.dst] = B.true_dot(env.binding[self.src], env.db.matrix(self.matmode,self.transpose))
+        env.binding[self.dst] = B.true_dot(env.binding[self.src], env.db.matrix(self.matmode,self.transpose,expressionContext=True))
 

@@ -6,13 +6,24 @@ Simple TODO's:
  - test sparsity of theano stuff
  - scalability test - compare to real prolog?
 
+Note: fuel seems hard to install....?
+
 Learning/training:
  - textcat toy w/o incoming chains
+ -- data/theory prep
+ -- matrixdb wrapper around theano shared variables DONE
+ --- db contains a parameterDB sub-object, to which it delegates matrix and matrixpreimage requests
+ --- matrixpreimage, matrix requests must include a context, eval or expression
+     and returns shared.get_value() or just shared
+ --- parameterDB also returns a set of parameters
+ -- weighted facts/matrices - not needed yet
+
  - some KBC task
  - some binary predicate tuning task
 
 Bugs:
  - p(X,X) isn't handled correctly.  should I split j=0 into (0,'i') and (0,'o') in the factor graph?
+ - should there actually be 'factors' and not goals?
 
 Think thru: 
  - blocks
