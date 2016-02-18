@@ -1,7 +1,8 @@
 Simple TODO's:
+ - add a proof_failed constant so I never get a zero vector?
  - verify tensorlog works on matrix input, not just single rows
  - tensorlog CLI
- - cache matrixdb transposes 
+ - cache matrixdb transposes and preimages
  - program.maxdepth parameter
  - test sparsity of theano stuff
  - scalability test - compare to real prolog?

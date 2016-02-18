@@ -5,6 +5,8 @@ import ops
 import parser
 import matrixdb
 import bpcompiler
+import getopt
+
 
 ##############################################################################
 ## declarations
@@ -100,6 +102,7 @@ class Program(object):
         """ After compilation, evaluate a function.  Input is a list of symbols
         that will be converted to onehot vectors.
         """
+        if (mode,0) not in self.function: self.compile(mode)
         fun = self.function[(mode,0)]
         return fun.eval(self.db, [self.db.onehot(s) for s in symbols])
 
@@ -109,8 +112,36 @@ class Program(object):
         compiled ops.Function object. To evaluate f, call
         f(x1,...,xk) where xi's are onehot representations.
         """
+        if (mode,0) not in self.function: self.compile(mode)
         fun = self.function[(mode,0)]
         return fun.theanoPredictFunction(self.db, symbols)
+
+    @staticmethod 
+    def _load(fileNames):
+        ruleFiles = [f for f in fileNames if f.endswith(".ppr") or f.endswith(".tlog")]
+        dbFiles = [f for f in fileNames if f.endswith(".db")]
+        factFiles = [f for f in fileNames if f.endswith(".cfacts")]
+        assert (not dbFiles) or (not factFiles), 'cannot combine a serialized database and .cfacts files'
+        assert (not dbFiles) or (len(dbFiles)==1), 'cannot combine multiple serialized databases'
+        assert dbFiles or factFiles,'no db specified'
+        assert ruleFiles,'no rules specified'
+        rules = None
+        for f in ruleFiles:
+            rules = parser.Parser.parseFile(f,rules)
+        if dbFiles:
+            db = matrixdb.MatrixDB.deserialize(dbFiles[0])
+        if factFiles:
+            db = matrixdb.MatrixDB()
+            for f in factFiles:
+                db.bufferFile(f)
+                db.flushBuffers()
+                db.clearBuffers()
+        return (db,rules)
+
+    @staticmethod
+    def load(fileNames):
+        (db,rules) = Program._load(fileNames)
+        return Program(db,rules)
 
 #
 # subclass of Program that corresponds more or less to Proppr....
@@ -122,8 +153,11 @@ class ProPPRProgram(Program):
         super(ProPPRProgram,self).__init__(db=db, rules=rules)
         #expand the syntactic sugar used by ProPPR
         self.rules.mapRules(ProPPRProgram._moveFeaturesToRHS)
-        self.params = [db.insertParam(weights,"weighted",1)]
+        if weights!=None: self.setWeights(weights)
         
+    def setWeights(self,weights):
+        self.params = [self.db.insertParam(weights,"weighted",1)]        
+
     @staticmethod
     def _moveFeaturesToRHS(rule0):
         rule = parser.Rule(rule0.lhs, rule0.rhs)
@@ -145,40 +179,45 @@ class ProPPRProgram(Program):
                 rule.rhs.append( parser.Goal('weighted',[outputVar]) )
         return rule
 
+    @staticmethod
+    def load(fileNames):
+        (db,rules) = Program._load(fileNames)
+        return ProPPRProgram(db,rules)
+
+
+def answerStringQuery(p,a,nativeMode=False):
+    g = parser.Parser.parseGoal(a)
+    assert (not parser.isVariableAtom(g.args[0]) and parser.isVariableAtom(g.args[1])), 'mode of query should be p(i,o): %s' % str(g)
+    mode = ModeDeclaration(parser.Goal(g.functor,['i','o']))
+    x = g.args[0]
+    if nativeMode:
+        result = p.eval(mode,[x])
+        for val in result:
+            print p.db.rowAsSymbolDict(val)
+    else:
+        f = p.theanoPredictFunction(mode,['x'])
+        result = f(p.db.onehot(x))
+        for val in result:            
+            print p.db.rowAsSymbolDict(val)
+
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william
 #
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        print 'usage factfile rule1 ... mode x1 ...'
-    else:
-        db = matrixdb.MatrixDB.loadFile(sys.argv[1])
-        mode = None
-        rules = parser.RuleCollection()
-        xs = []
-        for a in sys.argv[2:]:
-            if a.find(":-") >= 0:
-                rules.add(parser.Parser.parseRule(a))
-            elif a.find("(") >=0:
-                assert mode==None, 'only one mode allowed'
-                mode = ModeDeclaration(a)
-            else:
-                xs.append(a)
-        p = Program(db=db,rules=rules)
-        p.functionListing()
-        assert mode,'mode must be defined'
-        f = p.compile(mode)
-        p.functionListing()
+    
+    argspec = ["programFiles=", "native"]
+    try:
+        optlist,args = getopt.getopt(sys.argv[1:], 'x', argspec)
+    except getopt.GetoptError:
+        logging.fatal('bad option: use "--help" to get help')
+        sys.exit(-1)
+    optdict = dict(optlist)
 
-        for x in xs:
-            print 'native result on input "%s":' % x
-            result = p.eval(mode,[x])
-            for val in result:
-                print db.rowAsSymbolDict(val)
-            print 'theano result on input "%s":' % x
-            f = p.theanoPredictFunction(mode,['x'])
-            result = f(db.onehot(x))
-            for val in result:            
-                print db.rowAsSymbolDict(val)
+    assert '--programFiles' in optdict, '--programFiles f1:f2:... is a required option'
+
+    p = Program.load(optdict['--programFiles'].split(":"))
+
+    for a in args:
+        answerStringQuery(p,a,nativeMode=optdict.get('--nativeMode'))
 

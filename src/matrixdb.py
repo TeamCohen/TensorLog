@@ -234,7 +234,7 @@ class MatrixDB(object):
 
     @staticmethod 
     def loadFile(filename):
-        """Return a MatrixDB created by loading a single file."""
+        """Return a MatrixDB created by loading a files."""
         db = MatrixDB()
         db.bufferFile(filename)
         db.flushBuffers()
