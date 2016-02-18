@@ -1,5 +1,0 @@
-predict(X,Pos) :- set(pos,Pos),hasWord(X,W),posPair(W,WPos),weighted(WPos).
-
-
-predict(X,Y) :- hasWord(X,W),isLabel(Y),related(W,Y)  {r}.
-related(W,Y) :- {w(W,Y)}.

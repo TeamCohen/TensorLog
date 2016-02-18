@@ -83,7 +83,7 @@ class TestSmallProofs(unittest.TestCase):
         mode = tensorlog.ModeDeclaration(modeString)
         fun = prog.compile(mode)
         print 'native computation'
-        y1 = self.only( prog.eval(mode,[inputSymbol]) )
+        y1 = self.only( prog.evalSymbols(mode,[inputSymbol]) )
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
 
         print 'theano computation'
@@ -101,7 +101,7 @@ class TestSmallProofs(unittest.TestCase):
         fun = prog.compile(mode)
 
         print 'native computation'
-        y1 = self.only( prog.eval(mode,[inputSymbol]) )
+        y1 = self.only( prog.evalSymbols(mode,[inputSymbol]) )
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
         print 'theano computation'
         thFun = prog.theanoPredictFunction(mode, ['x'])

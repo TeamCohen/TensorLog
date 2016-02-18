@@ -63,6 +63,11 @@ class MatrixDB(object):
         n = self.dim()
         return scipy.sparse.csr_matrix( ([],([],[])), shape=(1,n))
 
+    def ones(self):
+        """An all-zeros row matrix."""
+        n = self.dim()
+        return scipy.sparse.csr_matrix( ([1]*n,([0]*n,[j for j in range(n)])), shape=(1,n))
+
     @staticmethod
     def transposeNeeded(mode,transpose=False):
         """Figure out if we should use the transpose of a matrix or not."""
@@ -137,6 +142,10 @@ class MatrixDB(object):
     # TODO save/restore stab, matrices (separately)
     #
 
+    def listing(self):
+        for name,m in self.matEncoding.items():
+            print "DB: %s/%d" % (name,self.arity[name])
+
     def serialize(self,dir):
         if not os.path.exists(dir):
             os.mkdir(dir)
@@ -177,7 +186,7 @@ class MatrixDB(object):
             a2 = None
             self._checkArity(p,1)
         else:
-            logging.error("bad line '"+line+"'" + repr(parts))
+            logging.error("bad line '"+line+" '" + repr(parts)+"'")
             return
         if (p in self.matEncoding):
             logging.error("predicate encoding is already completed for "+p+ " at line: "+line)

@@ -94,17 +94,29 @@ class Program(object):
                 self.function[(mode,depth)] = ops.SumFunction(ruleFuns)
         return self.function[(mode,depth)]
 
+    def listing(self):
+        self.rules.listing()
+        self.db.listing()
+
     def functionListing(self):
         for (m,d) in sorted(self.function.keys()):
             print '> mode',m,'depth',d,'fun:',self.function[(m,d)]
 
-    def eval(self,mode,symbols):
+    def evalSymbols(self,mode,symbols):
         """ After compilation, evaluate a function.  Input is a list of symbols
         that will be converted to onehot vectors.
         """
         if (mode,0) not in self.function: self.compile(mode)
         fun = self.function[(mode,0)]
         return fun.eval(self.db, [self.db.onehot(s) for s in symbols])
+
+    def eval(self,mode,inputs):
+        """ After compilation, evaluate a function.  Input is a list of symbols
+        that will be converted to onehot vectors.
+        """
+        if (mode,0) not in self.function: self.compile(mode)
+        fun = self.function[(mode,0)]
+        return fun.eval(self.db, inputs)
 
     def theanoPredictFunction(self,mode,symbols):
         """ After compilation, produce a theano function f which computes the
@@ -125,8 +137,8 @@ class Program(object):
         assert (not dbFiles) or (len(dbFiles)==1), 'cannot combine multiple serialized databases'
         assert dbFiles or factFiles,'no db specified'
         assert ruleFiles,'no rules specified'
-        rules = None
-        for f in ruleFiles:
+        rules = parser.Parser.parseFile(ruleFiles[0])
+        for f in ruleFiles[1:]:
             rules = parser.Parser.parseFile(f,rules)
         if dbFiles:
             db = matrixdb.MatrixDB.deserialize(dbFiles[0])
@@ -176,7 +188,7 @@ class ProPPRProgram(Program):
             outputVar = featureLHS.args[0] 
             for goal in rule0.findall:
                 rule.rhs.append(goal)
-                rule.rhs.append( parser.Goal('weighted',[outputVar]) )
+            rule.rhs.append( parser.Goal('weighted',[outputVar]) )
         return rule
 
     @staticmethod
@@ -191,7 +203,7 @@ def answerStringQuery(p,a,nativeMode=False):
     mode = ModeDeclaration(parser.Goal(g.functor,['i','o']))
     x = g.args[0]
     if nativeMode:
-        result = p.eval(mode,[x])
+        result = p.evalSymbols(mode,[x])
         for val in result:
             print p.db.rowAsSymbolDict(val)
     else:
