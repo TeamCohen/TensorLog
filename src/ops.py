@@ -1,9 +1,14 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
+import scipy.sparse
+import numpy
+
 import theano
 import theano.tensor as T
 import theano.sparse as S
 import theano.sparse.basic as B
+
+TRACE=True
 
 #
 # A slightly higher-level wrapper around Theano, for generality and
@@ -60,7 +65,7 @@ class Function(object):
         routine."""
         inputs = map(lambda s:S.csr_matrix(s), symbols)
         outputs = self.theanoExpr(db,inputs)
-        return theano.function(inputs=inputs,outputs=outputs)
+        return theano.function(inputs=inputs,outputs=outputs,on_unused_input='ignore')
     def recurselyUse(self,pyfunction,db,values):
         """Implements either eval, if pyfunction is self.op.eval and the
         values are inputs, or theanoExpr, if pyfunction is
@@ -242,6 +247,7 @@ class AssignPreimageToVar(Op):
     def __repr__(self):
         return "AssignPreimageToVar(%s,%s)" % (self.dst,self.mat)
     def eval(self,env):
+        if TRACE: print 'op:',self
         env.binding[self.dst] = env.db.matrixPreimage(self.mat)
     def theanoExpr(self,env):
         env.binding[self.dst] = env.db.matrixPreimage(self.mat,expressionContext=True)
@@ -255,6 +261,7 @@ class AssignZeroToVar(Op):
     def __repr__(self):
         return "ClearVar(%r)" % (self.dst)
     def eval(self,env):
+        if TRACE: print 'op:',self
         env.binding[self.dst] = env.db.zeros()
     def theanoExpr(self,env):
         env.binding[self.dst] = env.db.zeros()
@@ -272,6 +279,7 @@ class AssignOnehotToVar(Op):
     def __repr__(self):
         return "AssignOnehotToVar(%s,%s)" % (self.dst,self.onehotConst)
     def eval(self,env):
+        if TRACE: print 'op:',self
         env.binding[self.dst] = env.db.onehot(self.onehotConst)
     def theanoExpr(self,env):
         c = env.db.onehot(self.onehotConst)
@@ -291,9 +299,22 @@ class ComponentwiseVecMulOp(Op):
     def __repr__(self):
         return "ComponentwiseVecMulOp(%r,%r,%s)" % (self.dst,self.src,self.src2)
     def eval(self,env):
-        env.binding[self.dst] = env.binding[self.src].multiply( env.binding[self.src2] )
+        if TRACE: 
+            print 'op:',self
+            #this works for one example in a row, but doesn't broadcast properly for multiple examples
+            #in a matrix so I'm explicitly broadcasting when I need to:
+            #env.binding[self.dst] = env.binding[self.src].multiply( env.binding[self.src2] )
+        (r,c) = env.binding[self.src].get_shape()
+        if r==1:
+            multiplicand = env.binding[self.src2]
+        else:
+            multiplicand = scipy.sparse.vstack([env.binding[self.src2]]*r, dtype='float64')
+        env.binding[self.dst] = env.binding[self.src].multiply( multiplicand )
     def theanoExpr(self,env):
-        env.binding[self.dst] = env.binding[self.src] * env.binding[self.src2]
+        #TODO not working
+        #multiplicand = B.vstack([env.binding[self.src2]]*env.binding[self.src2].get_shape()[0], dtype='float64')
+        #can I use B.mul?
+        env.binding[self.dst] = env.binding[self.src] * env.binding[self.src2] 
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
@@ -308,8 +329,22 @@ class WeightedVec(Op):
     def __repr__(self):
         return "WeightedVec<%s,%s,%s>" % (self.dst,self.weighter,self.vec)
     def eval(self,env):
-        env.binding[self.dst] = env.binding[self.vec] * env.binding[self.weighter].sum()
+        if TRACE: 
+            print 'op:',self
+        #similar broadcast bug as in ComponentwiseVecMulOp - vr can be a single row
+        (vr,vc) = env.binding[self.vec].get_shape()
+        weighterSum = scipy.sparse.csr_matrix(env.binding[self.weighter].sum(1))
+        if TRACE: print 'weighterSum shape',weighterSum.get_shape()
+        (wr,wc) = weighterSum.shape
+        if (vr==1 and wr>1):
+            bvec = scipy.sparse.vstack([env.binding[self.vec]]*wr, dtype='float64')
+            #print 'vr',vr,'wr',wr,'bvec shape',bvec.get_shape()
+            env.binding[self.dst] =  bvec.multiply(weighterSum)
+        else:
+            #second .sum() turns the row sum into a scalar
+            env.binding[self.dst] = env.binding[self.vec].multiply(weighterSum.sum())
     def theanoExpr(self,env):
+        #TODO broadcast not working
         env.binding[self.dst] = env.binding[self.vec] * B.sp_sum(env.binding[self.weighter],sparse_grad=True)
 
 class VecMatMulOp(Op):
@@ -326,6 +361,7 @@ class VecMatMulOp(Op):
     def __repr__(self):
         return "VecMatMulOp(%r,%r,%s,%r)" % (self.dst,self.src,self.matmode,self.transpose)
     def eval(self,env):
+        if TRACE: print 'op:',self
         env.binding[self.dst] = env.binding[self.src] * env.db.matrix(self.matmode,self.transpose)
     def theanoExpr(self,env):
         env.binding[self.dst] = B.true_dot(env.binding[self.src], env.db.matrix(self.matmode,self.transpose,expressionContext=True))

@@ -5,6 +5,7 @@ import ops
 import parser
 import matrixdb
 import bpcompiler
+import logging
 import getopt
 
 
@@ -202,6 +203,7 @@ def answerStringQuery(p,a,nativeMode=False):
     assert (not parser.isVariableAtom(g.args[0]) and parser.isVariableAtom(g.args[1])), 'mode of query should be p(i,o): %s' % str(g)
     mode = ModeDeclaration(parser.Goal(g.functor,['i','o']))
     x = g.args[0]
+    print 'X',x,'nativeMode',nativeMode
     if nativeMode:
         result = p.evalSymbols(mode,[x])
         for val in result:
@@ -218,7 +220,7 @@ def answerStringQuery(p,a,nativeMode=False):
 
 if __name__ == "__main__":
     
-    argspec = ["programFiles=", "native"]
+    argspec = ["programFiles=", "nativeMode"]
     try:
         optlist,args = getopt.getopt(sys.argv[1:], 'x', argspec)
     except getopt.GetoptError:
@@ -231,5 +233,5 @@ if __name__ == "__main__":
     p = Program.load(optdict['--programFiles'].split(":"))
 
     for a in args:
-        answerStringQuery(p,a,nativeMode=optdict.get('--nativeMode'))
+        answerStringQuery(p,a,nativeMode=optdict.get('--nativeMode')!=None)
 

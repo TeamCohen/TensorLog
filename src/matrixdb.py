@@ -294,6 +294,6 @@ if __name__ == "__main__":
         print 'saving to',sys.argv[2]
         db.serialize(sys.argv[2])
     else:
-        print 'loading saved db from ',sys.argv[1]
+        print 'loading saved db from ',sys.argv[2]
         db = MatrixDB.deserialize(sys.argv[2])
 

@@ -1,3 +1,11 @@
+Minibatch computation:
+ - ComponentwiseVecMulOp and WeightedVec are difficulties
+ -- ComponentwiseVecMulOp occurs ONLY when we multiply messages for a variable in BP
+ -- WeightedVec occurs ONLY when we multiply all the messages at the 'top level' in BP
+ -- if we knew minibatch size K in env could we just start the backward messages as vstacks of K rows?
+    then no resizing is needed when you do the multiplication?
+
+
 Simple TODO's:
  - add a proof_failed constant so I never get a zero vector?
  - verify tensorlog works on matrix input, not just single rows
