@@ -10,8 +10,6 @@ import theano.sparse.basic as B
 
 TRACE=True
 
-def numRows(v): return v.get_shape()[0]
-
 #
 # A slightly higher-level wrapper around Theano, for generality and
 # convenience.  All the operations here can also be evaluated directly
@@ -31,13 +29,11 @@ def numRows(v): return v.get_shape()[0]
 class Envir(object):
     """Holds a MatrixDB object and a group of variable bindings.
     Variables are used in message-passing and are normally
-    row matrices - or more exactly, they are M x N matrices
-    where M is minibatchSize and N is database dimension.
+    row matrices
     """
     def __init__(self,db):
         self.binding = {}
         self.db = db
-        self.minibatchSize = 1
     def bind(self,name,val):
         self.binding[name] = val
     def binding(self,name):
@@ -93,11 +89,9 @@ class OpFunction(Function):
         return "Function(%r,%r,%r)" % (self.inputs,self.outputs,self.op)
     def __repr__(self):
         return "Function(%r,%r,%r)" % (self.inputs,self.outputs,self.op)
+    #TODO combine these
     def eval(self,db,values):
         env = Envir(db)
-        nRows = [v.get_shape()[0] for v in values]
-        assert min(nRows)==max(nRows), 'all input matrixes should have the same shape'
-        env.minibatchSize = nRows[0]
         for i,v in enumerate(values):
             env.binding[self.inputs[i]] = v
         self.op.eval(env)
@@ -106,7 +100,6 @@ class OpFunction(Function):
         env = Envir(db)
         for i,v in enumerate(subexprs):
             env.binding[self.inputs[i]] = v
-#        self.minibatchSize = T.iscalar("minibatchSize")
         self.op.theanoExpr(env)
         return [env.binding[y] for y in self.outputs]
 
@@ -320,8 +313,7 @@ class VecMatMulOp(Op):
 
 class ComponentwiseVecMulOp(Op):
     """ Computes dst = src*Diag(src2), i.e., the component-wise product of
-    two row vectors.  It's ok for src2 to be a row and src2 to have size
-    env.minibatchSize, in this case broadcasting will be done.
+    two row vectors.  
     """
     def __init__(self,dst,src,src2):
         self.dst = dst
@@ -334,27 +326,9 @@ class ComponentwiseVecMulOp(Op):
     def eval(self,env):
         if TRACE: 
             print 'op:',self
-        #this is ok for minibatchSize==1
-        #env.binding[self.dst] = env.binding[self.src].multiply( env.binding[self.src2] )
-        env.binding[self.dst] = self._broadcastingComponentWiseMultiply(env, env.binding[self.src],  env.binding[self.src2])
-    def _broadcastingComponentWiseMultiply(self,env,v1,v2):
-        if numRows(v1)==1 and numRows(v2)==1:
-            return v1.multiply(v2)
-        elif numRows(v1)==env.minibatchSize and numRows(v2)==1:
-            m = v1.tocoo()
-            print m.data,m.row,m.col
-            return scipy.sparse.vstack([v1.getrow(i).multiply(v2) for i in range(env.minibatchSize)], dtype='float64')
-        else:
-            assert False,'cannot broadcast for ComponentwiseVecMulOp: shapes %r and %r' % (v1.get_shape(),v2.get_shape())
+        env.binding[self.dst] = env.binding[self.src].multiply( env.binding[self.src2] )
     def theanoExpr(self,env):
-        #ok for minibatchSize==1
         env.binding[self.dst] = env.binding[self.src] * env.binding[self.src2] 
-#        v1 = env.binding[self.src]
-#        v2 = env.binding[self.src2]
-#        env.binding[self.dst] = v1 * B.vstack([env.binding[self.src2]]*11) #maybe works?
-#        dstRows = theano.map(fn=lambda i:v1[i,:] * v2, sequences=[T.arange(B.csm_shape(v1)[0])])
-#        env.binding[self.dst] = B.vstack(dstRows)
-
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
@@ -369,24 +343,7 @@ class WeightedVec(Op):
     def __repr__(self):
         return "WeightedVec<%s,%s,%s>" % (self.dst,self.weighter,self.vec)
     def eval(self,env):
-        #ok for minibatchSize==1 
-        #env.binding[self.dst] =  env.binding[self.vec].multiply(env.binding[self.weighter].sum())
-        env.binding[self.dst] =  self._broadcastingWeightedVec(env, env.binding[self.vec], env.binding[self.weighter])
-    def _broadcastingWeightedVec(self,env,v,w):
-        if numRows(v)==1 and numRows(w)==1:
-            return v.multiply(w.sum())
-        elif numRows(v)==1 and numRows(w)==env.minibatchSize:
-            return scipy.sparse.vstack([v * w.getrow(i).sum() for i in range(env.minibatchSize)], dtype='float64')
-        elif numRows(v)==env.minibatchSize and numRows(w)==1:
-            s = w.sum()
-            return scipy.sparse.vstack([v.getrow(i) * s for i in range(env.minibatchSize)], dtype='float64')
-        else:
-            assert False,'cannot broadcast for WeightedVec: shapes %r and %r' % (v.get_shape(),w.get_shape())
-
+        env.binding[self.dst] =  env.binding[self.vec].multiply(env.binding[self.weighter].sum())
     def theanoExpr(self,env):
-        #ok for minibatchSize==1
         env.binding[self.dst] = env.binding[self.vec] * B.sp_sum(env.binding[self.weighter],sparse_grad=True)
-#        v = env.binding[self.vec]
-#        s = B.sp_sum(env.binding[self.weighter], sparse_grad=True)
-#        dstRows = theano.map(fn=lambda i:v.getrow(i) * s, sequences=[T.arange(v)])
-#        env.binding[self.dst] = B.vstack(dstRows)
+

@@ -15,10 +15,7 @@
 #  def sp_sum(x, axis=None, sparse_grad=False):
 #  def mul(x, y):
 
-
-
 NATIVE=False
-ROW=False
 
 import tensorlog
 
@@ -35,29 +32,12 @@ def loadExamples(file,db):
         sx,sy = line.strip().split("\t")
         xs.append(db.onehot(sx))
         ys.append(db.onehot(sy))
-    if ROW:
-        return xs[0],ys[0]
-    else:
-        return scipy.sparse.vstack(xs),scipy.sparse.vstack(ys)
+    return xs,ys
 
 p = tensorlog.ProPPRProgram.load(["test/textcat.ppr","test/textcattoy.cfacts"])
 p.setWeights(p.db.ones())
-
 p.listing()
 
-X,Y = loadExamples("test/textcattoy-train.examples",p.db)
-print 'X shape',X.get_shape()
-print 'Y shape',Y.get_shape()
-
+xs,ys = loadExamples("test/textcattoy-train.examples",p.db)
 mode = tensorlog.ModeDeclaration('predict(i,o)')
-if NATIVE:
-    prediction = p.eval(mode,[X])[0]
-else:
-    f = p.theanoPredictFunction(mode,['x'])
-    prediction = f(X)[0]
-
-
-p = p.db.matrixAsSymbolDict(prediction)
-for r,d in p.items():
-    print r,d
 
