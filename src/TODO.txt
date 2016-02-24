@@ -5,6 +5,21 @@ Minibatch computation:
  -- if we knew minibatch size K in env could we just start the backward messages as vstacks of K rows?
     then no resizing is needed when you do the multiplication?
 
+ -- or maybe I should just give up and do the scan in the loss function level
+ http://deeplearning.net/software/theano/library/scan.html --- except that gives up on
+ using bricks, I guess?
+
+examples of finding rows of a sparse matrix in http://www.deeplearning.net/software/theano/library/sparse/:
+
+>>> m.indices[m.indptr[i]:m.indptr[i+1]], m.data[m.indptr[i]:m.indptr[i+1]]
+(array([0, 1], dtype=int32), array([7, 8]))
+>>> i = 1
+>>> m.indices[m.indptr[i]:m.indptr[i+1]], m.data[m.indptr[i]:m.indptr[i+1]]
+(array([2], dtype=int32), array([9]))
+>>> i = 2
+>>> m.indices[m.indptr[i]:m.indptr[i+1]], m.data[m.indptr[i]:m.indptr[i+1]]
+(array([], dtype=int32), array([], dtype=int64))
+
 
 Simple TODO's:
  - add a proof_failed constant so I never get a zero vector?
@@ -48,3 +63,4 @@ Think thru:
   - oneHot analysis
   - for theano, do envir's need to include some sort of prefix to keep the var namespaces apart?
 
+------------------------------------------------------------------------------

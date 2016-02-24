@@ -1,11 +1,19 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
 import unittest
+import logging
 import sys
+
+import theano
+import theano.tensor as T
+import theano.sparse as S
+import theano.sparse.basic as B
+import scipy.sparse
+
 import tensorlog 
 import parser
 import matrixdb
-import logging
+import ops
 
 # can call a single test with, e.g.,
 # python -m unittest testtensorlog.TestSmallProofs.testIf
@@ -121,6 +129,88 @@ class TestSmallProofs(unittest.TestCase):
             for k in actual.keys():
                 self.assertEqual(actual[k], expected[k])
 
+class TestProPPR(unittest.TestCase):
+
+    def setUp(self):
+        self.prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr","test/textcattoy.cfacts"])
+        self.prog.setWeights(self.prog.db.ones())
+        self.xsyms,self.X,self.Y = self.loadExamples("test/textcattoy-train.examples",self.prog.db)
+        self.numExamples = self.X.get_shape()[0] 
+        self.numFeatures = self.X.get_shape()[1] 
+        self.mode = tensorlog.ModeDeclaration('predict(i,o)')
+        self.numWords = {'dh':4.0, 'ft':5.0, 'rw':3.0, 'sc':5.0, 'bk':5.0, 'rb':4.0, 'mv':8.0, 'hs':9.0, 'ji':6.0, 'tf':8.0, 'jm':8.0 }
+    
+    def testNativeRow(self):
+        for i in range(self.numExamples):
+            ops.TRACE = False
+            pred = self.prog.eval(self.mode,[self.X.getrow(i)])[0]
+            d = self.prog.db.rowAsSymbolDict(pred)
+            if i<4: print 'native row',i,self.xsyms[i],d
+            self.checkClass(d,self.xsyms[i],'pos',self.numWords)
+            self.checkClass(d,self.xsyms[i],'neg',self.numWords)
+
+    def testNativeMatrix(self):
+        ops.TRACE = False
+        pred = self.prog.eval(self.mode,[self.X])[0]
+        d0 = self.prog.db.matrixAsSymbolDict(pred)
+        for i,d in d0.items():
+            if i<4: print 'native matrix',i,self.xsyms[i],d
+            self.checkClass(d,self.xsyms[i],'pos',self.numWords)
+            self.checkClass(d,self.xsyms[i],'neg',self.numWords)
+
+    def testTheanoRow(self):
+        if (self.mode,0) not in self.prog.function: self.prog.compile(self.mode)
+        fun = self.prog.theanoPredictFunction(self.mode,['x'])
+        for i in range(self.numExamples):
+            pred = fun(self.X.getrow(i))[0]
+            d = self.prog.db.rowAsSymbolDict(pred)
+            if i<4: print 'native row',i,self.xsyms[i],d
+            self.checkClass(d,self.xsyms[i],'pos',self.numWords)
+            self.checkClass(d,self.xsyms[i],'neg',self.numWords)
+
+    #doesn't work yet!
+    def failing_testTheanoMatrix(self):
+        if (self.mode,0) not in self.prog.function: self.prog.compile(self.mode)
+        fun = self.prog.theanoPredictFunction(self.mode,['x'])
+        pred = fun(self.X)[0]
+        d0 = self.prog.db.matrixAsSymbolDict(pred)
+        for i,d in d0.items():
+            if i<4: print 'native row',i,self.xsyms[i],d
+            self.checkClass(d,self.xsyms[i],'pos',self.numWords)
+            self.checkClass(d,self.xsyms[i],'neg',self.numWords)
+
+    def checkClass(self,d,sym,lab,expected):
+        self.assertEqual(d[lab], expected[sym])
+
+    def loadExamples(self,filename,db):
+        xsyms = []
+        xs = []
+        ys = []
+        for line in open(filename):
+            sx,sy = line.strip().split("\t")
+            xsyms.append(sx)
+            xs.append(db.onehot(sx))
+            ys.append(db.onehot(sy))
+        return xsyms,scipy.sparse.vstack(xs),scipy.sparse.vstack(ys)
+
+#for debugging scans
+class TestScan(unittest.TestCase):
+    def setUp(self):
+        r = [0,0,0,0,1,1,1,1,1,2,2,2,3,3,3,3,3,4,4,4,4,4,5,5,5,5,6,6,6,6,6,6,6,6,7,7,7,7,7,7,7,7,7,8,8,8,8,8,8,
+             9,9,9,9,9,9,9,9,10,10,10,10,10,10,10,10]
+        c = [80,115,94,100,80,107,118,97,127,80,118,128,80,115,118,120,90,116,117,86,82,105,80,107,118,88,80,
+             87,78,109,129,81,84,125,80,100,87,129,102,123,121,93,110,80,103,98,106,83,79,80,101,113,111,122,
+             99,95,132,82,101,113,111,104,108,89,91]
+        d = [1]*len(r)
+        self.v1 = scipy.sparse.coo_matrix((d,(r,c)),shape=(11,189))
+        self.v2 = scipy.sparse.coo_matrix(([1.5,2.5],([0,0],[132,97])), shape=(1,189))
+
+    def testComponentWiseBroadcastingMul(self):
+        baseline = scipy.sparse.vstack([self.v1.getrow(i).multiply(self.v2) for i in range(11)], dtype='float64')
+        print baseline
+        t1 = S.csr_matrix('v1')
+        t2 = S.csr_matrix('v2')
+        
 
 if __name__=="__main__":
     if len(sys.argv)==1:

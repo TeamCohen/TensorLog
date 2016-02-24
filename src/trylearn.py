@@ -17,7 +17,7 @@
 
 
 
-NATIVE=True 
+NATIVE=False
 ROW=False
 
 import tensorlog

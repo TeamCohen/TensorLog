@@ -104,16 +104,16 @@ class Program(object):
             print '> mode',m,'depth',d,'fun:',self.function[(m,d)]
 
     def evalSymbols(self,mode,symbols):
-        """ After compilation, evaluate a function.  Input is a list of symbols
-        that will be converted to onehot vectors.
+        """ After compilation, evaluate a function.  Input is a list of
+        symbols that will be converted to onehot vectors, and bound to
+        the corresponding input arguments.
         """
-        if (mode,0) not in self.function: self.compile(mode)
-        fun = self.function[(mode,0)]
-        return fun.eval(self.db, [self.db.onehot(s) for s in symbols])
+        return self.eval(mode, [self.db.onehot(s) for s in symbols])
 
     def eval(self,mode,inputs):
-        """ After compilation, evaluate a function.  Input is a list of symbols
-        that will be converted to onehot vectors.
+        """ After compilation, evaluate a function.  Input is a list of onehot
+        vectors, which will be bound to the corresponding input
+        arguments.
         """
         if (mode,0) not in self.function: self.compile(mode)
         fun = self.function[(mode,0)]
@@ -170,6 +170,7 @@ class ProPPRProgram(Program):
         
     def setWeights(self,weights):
         self.params = [self.db.insertParam(weights,"weighted",1)]        
+        #self.db.insertPredicate(weights,"weighted",1)
 
     @staticmethod
     def _moveFeaturesToRHS(rule0):
