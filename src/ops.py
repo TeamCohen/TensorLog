@@ -62,6 +62,9 @@ class Function(object):
         """Return a theano expression that computes the output from a list of
         subexpressions."""
         assert False, 'abstract method called.'
+    def theanoPredictExpr(self,db,symbols):
+        inputs = map(lambda s:S.csr_matrix(s), symbols)        
+        return inputs,self.theanoExpr(db,inputs)
     def theanoPredictFunction(self,db,symbols):
         """A theano.function that implements the same function as the eval
         routine."""
@@ -346,4 +349,5 @@ class WeightedVec(Op):
         env.binding[self.dst] =  env.binding[self.vec].multiply(env.binding[self.weighter].sum())
     def theanoExpr(self,env):
         env.binding[self.dst] = env.binding[self.vec] * B.sp_sum(env.binding[self.weighter],sparse_grad=True)
+
 

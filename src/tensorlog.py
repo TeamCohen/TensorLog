@@ -129,6 +129,15 @@ class Program(object):
         fun = self.function[(mode,0)]
         return fun.theanoPredictFunction(self.db, symbols)
 
+    def theanoPredictExpr(self,mode,symbols):
+        """ After compilation, produce a theano function f which computes the
+        appropriate output values, by delegation to the appropriate
+        compiled ops.Function object. To evaluate f, call
+        f(x1,...,xk) where xi's are onehot representations.
+        """
+        if (mode,0) not in self.function: self.compile(mode)
+        fun = self.function[(mode,0)]
+        return fun.theanoPredictExpr(self.db, symbols)
     @staticmethod 
     def _load(fileNames):
         ruleFiles = [f for f in fileNames if f.endswith(".ppr") or f.endswith(".tlog")]
@@ -171,6 +180,9 @@ class ProPPRProgram(Program):
     def setWeights(self,weights):
         self.params = [self.db.insertParam(weights,"weighted",1)]        
         #self.db.insertPredicate(weights,"weighted",1)
+
+    def getParams(self):
+        return self.params
 
     @staticmethod
     def _moveFeaturesToRHS(rule0):
