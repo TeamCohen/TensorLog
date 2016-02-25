@@ -40,7 +40,9 @@ class MatrixDB(object):
         def dictOfFloats(): return collections.defaultdict(float)
         def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
         self.buf = collections.defaultdict(dictOfFloatDicts)
-        #delegate to get matrices that are 'parameters'
+        #mark which matrices are 'parameters' by (functor,arity) pair
+        self.params = {}
+
         
     #
     # retrieve matrixes, vectors, etc

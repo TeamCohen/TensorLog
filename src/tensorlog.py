@@ -61,7 +61,6 @@ class Program(object):
         self.program = []
         self.function = {}
         self.rules = rules
-        self.params = {}
 
     def findPredDef(self,mode):
         """Find the set of rules with a lhs that match the given mode."""
@@ -120,6 +119,22 @@ class Program(object):
         fun = self.function[(mode,0)]
         return fun.eval(self.db, inputs)
 
+    def evalGradSymbols(self,mode,symbols):
+        """ After compilation, evaluate a function.  Input is a list of
+        symbols that will be converted to onehot vectors, and bound to
+        the corresponding input arguments.
+        """
+        return self.evalGrad(mode, [self.db.onehot(s) for s in symbols])
+
+    def evalGrad(self,mode,inputs):
+        """ After compilation, evaluate a function.  Input is a list of onehot
+        vectors, which will be bound to the corresponding input
+        arguments.
+        """
+        if (mode,0) not in self.function: self.compile(mode)
+        fun = self.function[(mode,0)]
+        return fun.evalGrad(self.db, inputs)
+
     @staticmethod 
     def _load(fileNames):
         ruleFiles = [f for f in fileNames if f.endswith(".ppr") or f.endswith(".tlog")]
@@ -159,12 +174,11 @@ class ProPPRProgram(Program):
         self.rules.mapRules(ProPPRProgram._moveFeaturesToRHS)
         if weights!=None: self.setWeights(weights)
 
-        
     def setWeights(self,weights):
-        self.params[("weighted",1)] = self.db.insertPredicate(weights,"weighted",1)
+        self.db.params[("weighted",1)] = self.db.insertPredicate(weights,"weighted",1)
 
     def getParams(self):
-        return self.params
+        return self.db.params
 
     @staticmethod
     def _moveFeaturesToRHS(rule0):

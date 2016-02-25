@@ -5,6 +5,23 @@ import numpy
 
 TRACE=True
 
+class Partial(object):
+    """Encapsulate a variable name for the partial derivative of f wrt x"""
+    def __init__(self,f,x):
+        self.f = f
+        self.x = x
+    def __str__(self):
+        return "d%s/d%s" % (self.f,self.x)
+    def __repr__(self):
+        return "Partial(%r,%r)" % (self.f,self.x)
+    def __hash__(self):
+        return hash((self.f,self.x))
+    def __eq__(self,other):
+        return self.f==other.f and self.x==other.x
+
+def isParamMode(db,mat):
+    return (mat.functor,mat.arity) in db.params
+    
 ##############################################################################
 #
 # environment - holds either computed values, or subexpressions
@@ -30,6 +47,7 @@ class Envir(object):
                 print 'variable',v,'row',r,':'
                 for s,w in d[r].items():
                     print '\t%s\t%g' % (s,w)
+
 ##############################################################################
 #
 # functions
@@ -42,6 +60,12 @@ class Function(object):
         """When called with a MatrixDB and a list of input values v1,...,xk,
         executes some function f(v1,..,vk) and return the output of f,
         which is a list of output values."""
+        assert False, 'abstract method called.'
+    def evalGrad(self,db,values):
+        """Return a dictionary mapping Partial(f,w)=>the partial deriv of f
+        wrt w for param w at the specified input values. Will also
+        compute and return the value of the function
+        """
         assert False, 'abstract method called.'
     def recurselyUse(self,pyfunction,db,values):
         """Implements an eval, if pyfunction is self.op.eval and the values
@@ -63,11 +87,27 @@ class OpFunction(Function):
     def __repr__(self):
         return "Function(%r,%r,%r)" % (self.inputs,self.outputs,self.op)
     def eval(self,db,values):
-        env = Envir(db)
+        env = self._envAfter(self.op.eval,db,values,Envir(db))
+        return [env.binding[y] for y in self.outputs]
+    def evalGrad(self,db,values):
+        initEnv = Envir(db)
+        for x in self.inputs:
+            for p,k in db.params:
+                initEnv.binding[Partial(x,(p,k))] = db.zeros()
+        env = self._envAfter(self.op.evalGrad,db,values,initEnv)
+        #collect the needed bindings in a dict
+        gradDict = {}
+        for y in self.outputs:
+            gradDict[y] = env.binding[y]
+            for w in env.db.params.keys():
+                p_yw = Partial(y,w)
+                gradDict[p_yw] = env.binding[p_yw]
+        return gradDict
+    def _envAfter(self,pyfun,db,values,env):
         for i,v in enumerate(values):
             env.binding[self.inputs[i]] = v
-        self.op.eval(env)
-        return [env.binding[y] for y in self.outputs]
+        pyfun(env)
+        return env
 
 class SumFunction(Function):
     """Sum of a bunch of functions."""
@@ -77,22 +117,21 @@ class SumFunction(Function):
         return "(" + " + ".join(map(repr,self.funs)) + ")"
     def __repr__(self):
         return "SumFunction("+repr(self.funs)+")"
-    def recurselyUse(self,pyfunctions,db,values):
-        """Pyfunctions is list of python functions, not one as in other
-        instances.  Add up the results of these applying functions on
-        the list of values and return the result.
-        """
-        assert len(pyfunctions)>1
-        baseValues = pyfunctions[0](db,values)
-        for f in pyfunctions[1:]:
-            moreValues = f(db,values)
+    def eval(self,db,values):
+        baseValues = self.funs[0].eval(db,values)
+        for f in self.funs[1:]:
+            moreValues = f.eval(db,values)
             assert len(moreValues)==len(baseValues)
             for j in range(len(moreValues)):
                 baseValues[j] = baseValues[j] + moreValues[j]
         return baseValues
-    def eval(self,db,values):
-        pyfuns = [fun.eval for fun in self.funs]
-        return self.recurselyUse(pyfuns,db,values)
+    def evalGrad(self,db,values):
+        baseDict = self.funs[0].evalGrad(db,values)
+        for f in self.funs[1:]:
+            moreDict = f.evalGrad(db,values)
+            for var,val in moreDict.items():
+                baseDict[var] = baseDict[var] + moreDict[var]
+        return baseDict
 
 ##############################################################################
 #
@@ -110,6 +149,9 @@ class Op(object):
     """
     def eval(self,env):
         assert False,'abstract method called'
+    def evalGrad(self,env):
+        #these should all call eval first
+        assert False,'abstract method called'
 
 class SeqOp(object):
     """Sequence of other operations."""
@@ -122,6 +164,10 @@ class SeqOp(object):
     def eval(self,env):
         for op in self.ops:
             op.eval(env)
+    def evalGrad(self,env):
+        self.eval(env)
+        for op in self.ops:
+            op.evalGrad(env)
 
 # calls a function
 
@@ -137,13 +183,17 @@ class DefinedPredOp(Op):
         return "DefinedPredOp<%s = %s(%s,%d)>" % (self.dst,self.mode,self.src,self.depth)
     def __repr__(self):
         return "DefinedPredOp(%r,%r,%s,%d)" % (self.dst,self.src,str(self.mode),self.depth)
-    def modifyEnvironment(self,pyfunction,env):
-        vals = [env.binding[self.src]]
-        outputs = pyfunction(self.tensorlogProg.db, vals)
-        env.binding[self.dst] = outputs[0]
     def eval(self,env):
         subfun = self.tensorlogProg.function[(self.mode,self.depth)]
-        self.modifyEnvironment(subfun.eval,env)
+        vals = [env.binding[self.src]]
+        outputs = subfun.eval(self.tensorlogProg.db, vals)
+        env.binding[self.dst] = outputs[0]
+    def evalGrad(self,env):
+        subfun = self.tensorlogProg.function[(self.mode,self.depth)]
+        vals = [env.binding[self.src]]
+        gradDict = subfun.evalGrad(self.tensorlogProg.db, vals)
+        for var,val in gradDict.items():
+            env.binding[var] = val
 
 class AssignPreimageToVar(Op):
     """Mat is a like p(X,Y) where Y is not used 'downstream' or p(X,c)
@@ -160,7 +210,14 @@ class AssignPreimageToVar(Op):
     def eval(self,env):
         if TRACE: print 'op:',self
         env.binding[self.dst] = env.db.matrixPreimage(self.mat)
-
+    def evalGrad(self,env):
+        self.eval(env)
+        for p,k in env.db.params:
+            if TRACE: print 'evalGrad',self.dst,'/',(p,k),'dict',env.binding.keys()
+            if p==self.mat.functor and k==self.mat.arity:
+                env.binding[Partial(self.dst,(p,k))] = env.db.ones()
+            else:
+                env.binding[Partial(self.dst,(p,k))] = env.db.zeros()
 
 class AssignZeroToVar(Op):
     """Set the dst variable to an all-zeros row."""
@@ -173,6 +230,10 @@ class AssignZeroToVar(Op):
     def eval(self,env):
         if TRACE: print 'op:',self
         env.binding[self.dst] = env.db.zeros()
+    def evalGrad(self,env):
+        self.eval(env)
+        for p,k in env.db.params:
+            env.binding[Partial(self.dst,(p,k))] = env.db.ones()
 
 class AssignOnehotToVar(Op):
     """Mat is a like p(X,Y) where Y is not used 'downstream' or p(X,c)
@@ -189,6 +250,10 @@ class AssignOnehotToVar(Op):
     def eval(self,env):
         if TRACE: print 'op:',self
         env.binding[self.dst] = env.db.onehot(self.onehotConst)
+    def evalGrad(self,env):
+        self.eval(env)
+        for p,k in env.db.params:
+            env.binding[Partial(self.dst,(p,k))] = env.db.ones()
 
 class VecMatMulOp(Op):
     """Op of the form "dst = src*mat or dst=src*mat.tranpose()"
@@ -206,7 +271,20 @@ class VecMatMulOp(Op):
     def eval(self,env):
         if TRACE: print 'op:',self
         env.binding[self.dst] = env.binding[self.src] * env.db.matrix(self.matmode,self.transpose)
-
+    def evalGrad(self,env):
+        self.eval(env)
+        for p,k in env.db.params:
+            if TRACE: print 'evalGrad',self.dst,'/',(p,k),'dict',env.binding.keys()
+            if p==self.matmode.functor and k==self.matmode.arity:
+                # df/dp r*M = (df/dp r) * M + r (df/dp M)
+                #           = (df/dp r) * M + r I            if p==M
+                #           = (df/dp r) * M + r I            else
+                env.binding[Partial(self.dst,(p,k))] = \
+                    env.binding[Partial(self.src,(p,k))] * env.db.matrix(self.matmode,self.transpose)  + env.binding[self.src] 
+            else:
+                env.binding[Partial(self.dst,(p,k))] = \
+                    env.binding[Partial(self.src,(p,k))] * env.db.matrix(self.matmode,self.transpose)
+                
 #
 # the ones that are tricky with minibatch inputs
 #
@@ -227,6 +305,12 @@ class ComponentwiseVecMulOp(Op):
         if TRACE: 
             print 'op:',self
         env.binding[self.dst] = env.binding[self.src].multiply( env.binding[self.src2] )
+    def evalGrad(self,env):
+        self.eval(env)
+        for p,k in env.db.params:
+            env.binding[Partial(self.dst,(p,k))] = \
+                 env.binding[Partial(self.src,(p,k))].multiply( env.binding[self.src2] )  \
+                 + env.binding[self.src].multiply( env.binding[Partial(self.src2,(p,k))] )
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
@@ -242,5 +326,9 @@ class WeightedVec(Op):
         return "WeightedVec<%s,%s,%s>" % (self.dst,self.weighter,self.vec)
     def eval(self,env):
         env.binding[self.dst] =  env.binding[self.vec].multiply(env.binding[self.weighter].sum())
-
-
+    def evalGrad(self,env):
+        self.eval(env)
+        for p,k in env.db.params:
+            env.binding[Partial(self.dst,(p,k))] = \
+                env.binding[Partial(self.vec,(p,k))].multiply(env.binding[self.weighter].sum()) \
+                + env.binding[self.vec].multiply(env.binding[Partial(self.weighter,(p,k))].sum())

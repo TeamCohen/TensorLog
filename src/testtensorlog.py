@@ -88,7 +88,6 @@ class TestSmallProofs(unittest.TestCase):
         prog = tensorlog.Program(db=self.db,rules=rules)
         mode = tensorlog.ModeDeclaration(modeString)
         fun = prog.compile(mode)
-        print 'native computation'
         y1 = self.only( prog.evalSymbols(mode,[inputSymbol]) )
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
 
@@ -102,9 +101,13 @@ class TestSmallProofs(unittest.TestCase):
         mode = tensorlog.ModeDeclaration(modeString)
         fun = prog.compile(mode)
 
-        print 'native computation'
         y1 = self.only( prog.evalSymbols(mode,[inputSymbol]) )
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
+
+        gd = prog.evalGradSymbols(mode,[inputSymbol])
+        for k,v in gd.items():
+            print 'grad',k,'...'
+            print v
 
     def only(self,group):
         self.assertEqual(len(group), 1)
