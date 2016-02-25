@@ -54,6 +54,12 @@ mode = tensorlog.ModeDeclaration('predict(i,o)')
 ins,outs = p.theanoPredictExpr(mode,['x'])
 scorex = outs[0]  #the actual score vector for x
 
+# something simple to try differentiating
+toyLoss = B.sp_sum(scorex,sparse_grad=True)
+print 'gradToyLoss...'
+gradToyLoss = T.grad(toyLoss, p.getParams())
+
+
 #
 # now define a theano function that computes loss for ONE example
 #

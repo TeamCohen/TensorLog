@@ -15,6 +15,8 @@ import parser
 import matrixdb
 import ops
 
+TEST_GRADIENTS = False
+
 # can call a single test with, e.g.,
 # python -m unittest testtensorlog.TestSmallProofs.testIf
 
@@ -116,6 +118,11 @@ class TestSmallProofs(unittest.TestCase):
         y2 = self.only( thFun(self.db.onehot(inputSymbol)) )
         self.checkDicts(self.db.rowAsSymbolDict(y2), expectedResultDict)
 
+        if TEST_GRADIENTS:
+            ins,outs = prog.theanoPredictExpr(mode,['x'])
+            scorex = outs[0]  #the actual score vector for x
+            scalarScore = B.sp_sum(scorex,sparse_grad=True)
+            gradientAtX = T.grad(scalarScore, prog.getParams())
 
     def only(self,group):
         self.assertEqual(len(group), 1)
