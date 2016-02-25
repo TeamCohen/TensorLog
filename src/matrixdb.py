@@ -41,7 +41,6 @@ class MatrixDB(object):
         def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
         self.buf = collections.defaultdict(dictOfFloatDicts)
         #delegate to get matrices that are 'parameters'
-        self.paramDB = ops.ParameterDB()
         
     #
     # retrieve matrixes, vectors, etc
@@ -81,23 +80,18 @@ class MatrixDB(object):
         indicates if what should be returned is a theano expression or
         a scipy matrix.
         """
-        result = self.paramDB.matrix(mode,transpose,expressionContext=expressionContext)
-        if result!=None: return result
+        assert mode.arity==2,'arity of '+str(mode) + ' is wrong: ' + str(mode.arity)
+        assert mode.functor in self.matEncoding,"can't find matrix for %s" % str(mode)
+        if self.transposeNeeded(mode,transpose):
+            return self.matEncoding[mode.functor]
         else:
-            assert mode.arity==2,'arity of '+str(mode) + ' is wrong: ' + str(mode.arity)
-            assert mode.functor in self.matEncoding,"can't find matrix for %s" % str(mode)
-            if self.transposeNeeded(mode,transpose):
-                return self.matEncoding[mode.functor]
-            else:
-                return self.matEncoding[mode.functor].transpose()            
+            return self.matEncoding[mode.functor].transpose()            
 
     def matrixPreimage(self,mode,expressionContext=False):
         """The preimage associated with this mode, eg if mode is p(i,o) then
         return a row vector equivalent to 1 * M_p^T.  Also returns a row vector
         for a unary predicate."""
-        result = self.paramDB.matrixPreimage(mode,expressionContext=expressionContext)
-        if result!=None: return result        
-        elif self.arity[mode.functor]==1:
+        if self.arity[mode.functor]==1:
             return self.matEncoding[mode.functor]
         else: 
             assert self.arity[mode.functor]==2
@@ -259,12 +253,7 @@ class MatrixDB(object):
         self.matEncoding[predicateFunctor].sort_indices()
         (nrows,ncols) = mat.get_shape()
         assert (nrows==1 and predicateArity==1) or (nrows==self.dim() and predicateArity==2)
-
-    def insertParam(self,mat,predicateFunctor,predicateArity):
-        result = self.paramDB.insert(mat,predicateFunctor,predicateArity)
-        (nrows,ncols) = mat.get_shape()
-        assert (nrows==1 and predicateArity==1) or (nrows==self.dim() and predicateArity==2)
-        return result
+        return mat
 
     #
     # debugging

@@ -4,10 +4,6 @@ import unittest
 import logging
 import sys
 
-import theano
-import theano.tensor as T
-import theano.sparse as S
-import theano.sparse.basic as B
 import scipy.sparse
 
 import tensorlog 
@@ -96,10 +92,6 @@ class TestSmallProofs(unittest.TestCase):
         y1 = self.only( prog.evalSymbols(mode,[inputSymbol]) )
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
 
-        print 'theano computation'
-        thFun = prog.theanoPredictFunction(mode, ['x'])
-        y2 = self.only( thFun(self.db.onehot(inputSymbol)) )
-        self.checkDicts(self.db.rowAsSymbolDict(y2), expectedResultDict)
 
     def propprInferenceCheck(self,weightVec,ruleStrings,modeString,inputSymbol,expectedResultDict):
         print 'testing inference for mode',modeString,'on input',inputSymbol,'with proppr rules:'
@@ -113,16 +105,6 @@ class TestSmallProofs(unittest.TestCase):
         print 'native computation'
         y1 = self.only( prog.evalSymbols(mode,[inputSymbol]) )
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
-        print 'theano computation'
-        thFun = prog.theanoPredictFunction(mode, ['x'])
-        y2 = self.only( thFun(self.db.onehot(inputSymbol)) )
-        self.checkDicts(self.db.rowAsSymbolDict(y2), expectedResultDict)
-
-        if TEST_GRADIENTS:
-            ins,outs = prog.theanoPredictExpr(mode,['x'])
-            scorex = outs[0]  #the actual score vector for x
-            scalarScore = B.sp_sum(scorex,sparse_grad=True)
-            gradientAtX = T.grad(scalarScore, prog.getParams())
 
     def only(self,group):
         self.assertEqual(len(group), 1)
@@ -151,16 +133,6 @@ class TestProPPR(unittest.TestCase):
         for i in range(self.numExamples):
             ops.TRACE = False
             pred = self.prog.eval(self.mode,[self.X.getrow(i)])[0]
-            d = self.prog.db.rowAsSymbolDict(pred)
-            if i<4: print 'native row',i,self.xsyms[i],d
-            self.checkClass(d,self.xsyms[i],'pos',self.numWords)
-            self.checkClass(d,self.xsyms[i],'neg',self.numWords)
-
-    def testTheanoRow(self):
-        if (self.mode,0) not in self.prog.function: self.prog.compile(self.mode)
-        fun = self.prog.theanoPredictFunction(self.mode,['x'])
-        for i in range(self.numExamples):
-            pred = fun(self.X.getrow(i))[0]
             d = self.prog.db.rowAsSymbolDict(pred)
             if i<4: print 'native row',i,self.xsyms[i],d
             self.checkClass(d,self.xsyms[i],'pos',self.numWords)

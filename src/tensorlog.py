@@ -61,6 +61,7 @@ class Program(object):
         self.program = []
         self.function = {}
         self.rules = rules
+        self.params = {}
 
     def findPredDef(self,mode):
         """Find the set of rules with a lhs that match the given mode."""
@@ -119,25 +120,6 @@ class Program(object):
         fun = self.function[(mode,0)]
         return fun.eval(self.db, inputs)
 
-    def theanoPredictFunction(self,mode,symbols):
-        """ After compilation, produce a theano function f which computes the
-        appropriate output values, by delegation to the appropriate
-        compiled ops.Function object. To evaluate f, call
-        f(x1,...,xk) where xi's are onehot representations.
-        """
-        if (mode,0) not in self.function: self.compile(mode)
-        fun = self.function[(mode,0)]
-        return fun.theanoPredictFunction(self.db, symbols)
-
-    def theanoPredictExpr(self,mode,symbols):
-        """ After compilation, produce a theano function f which computes the
-        appropriate output values, by delegation to the appropriate
-        compiled ops.Function object. To evaluate f, call
-        f(x1,...,xk) where xi's are onehot representations.
-        """
-        if (mode,0) not in self.function: self.compile(mode)
-        fun = self.function[(mode,0)]
-        return fun.theanoPredictExpr(self.db, symbols)
     @staticmethod 
     def _load(fileNames):
         ruleFiles = [f for f in fileNames if f.endswith(".ppr") or f.endswith(".tlog")]
@@ -176,10 +158,10 @@ class ProPPRProgram(Program):
         #expand the syntactic sugar used by ProPPR
         self.rules.mapRules(ProPPRProgram._moveFeaturesToRHS)
         if weights!=None: self.setWeights(weights)
+
         
     def setWeights(self,weights):
-        self.params = [self.db.insertParam(weights,"weighted",1)]        
-        #self.db.insertPredicate(weights,"weighted",1)
+        self.params[("weighted",1)] = self.db.insertPredicate(weights,"weighted",1)
 
     def getParams(self):
         return self.params
@@ -211,21 +193,14 @@ class ProPPRProgram(Program):
         return ProPPRProgram(db,rules)
 
 
-def answerStringQuery(p,a,nativeMode=False):
+def answerStringQuery(p,a):
     g = parser.Parser.parseGoal(a)
     assert (not parser.isVariableAtom(g.args[0]) and parser.isVariableAtom(g.args[1])), 'mode of query should be p(i,o): %s' % str(g)
     mode = ModeDeclaration(parser.Goal(g.functor,['i','o']))
     x = g.args[0]
-    print 'X',x,'nativeMode',nativeMode
-    if nativeMode:
-        result = p.evalSymbols(mode,[x])
-        for val in result:
-            print p.db.rowAsSymbolDict(val)
-    else:
-        f = p.theanoPredictFunction(mode,['x'])
-        result = f(p.db.onehot(x))
-        for val in result:            
-            print p.db.rowAsSymbolDict(val)
+    result = p.evalSymbols(mode,[x])
+    for val in result:
+        print p.db.rowAsSymbolDict(val)
 
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william
@@ -233,7 +208,7 @@ def answerStringQuery(p,a,nativeMode=False):
 
 if __name__ == "__main__":
     
-    argspec = ["programFiles=", "nativeMode"]
+    argspec = ["programFiles="]
     try:
         optlist,args = getopt.getopt(sys.argv[1:], 'x', argspec)
     except getopt.GetoptError:
@@ -246,5 +221,5 @@ if __name__ == "__main__":
     p = Program.load(optdict['--programFiles'].split(":"))
 
     for a in args:
-        answerStringQuery(p,a,nativeMode=optdict.get('--nativeMode')!=None)
+        answerStringQuery(p,a)
 

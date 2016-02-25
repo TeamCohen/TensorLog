@@ -3,22 +3,7 @@
 import scipy.sparse
 import numpy
 
-import theano
-import theano.tensor as T
-import theano.sparse as S
-import theano.sparse.basic as B
-
 TRACE=True
-
-#
-# A slightly higher-level wrapper around Theano, for generality and
-# convenience.  All the operations here can also be evaluated directly
-# with scipy so theano is less than 100% necessary.  
-#
-# This is also the only module in tensorlog that should directly use
-# theano.  (If I was being less lazy there would be a subclass of this
-# which includes the theano stuff and a factory and such for
-# operators.)
 
 ##############################################################################
 #
@@ -58,24 +43,9 @@ class Function(object):
         executes some function f(v1,..,vk) and return the output of f,
         which is a list of output values."""
         assert False, 'abstract method called.'
-    def theanoExpr(self,db,subexprs):
-        """Return a theano expression that computes the output from a list of
-        subexpressions."""
-        assert False, 'abstract method called.'
-    def theanoPredictExpr(self,db,symbols):
-        inputs = map(lambda s:S.csr_matrix(s), symbols)        
-        return inputs,self.theanoExpr(db,inputs)
-    def theanoPredictFunction(self,db,symbols):
-        """A theano.function that implements the same function as the eval
-        routine."""
-        inputs = map(lambda s:S.csr_matrix(s), symbols)
-        outputs = self.theanoExpr(db,inputs)
-        return theano.function(inputs=inputs,outputs=outputs,on_unused_input='ignore')
     def recurselyUse(self,pyfunction,db,values):
-        """Implements either eval, if pyfunction is self.op.eval and the
-        values are inputs, or theanoExpr, if pyfunction is
-        self.op.theanoExpr, if the 'values' are subexpressions.  In
-        eval mode, it bBinds input variables to values, in order,
+        """Implements an eval, if pyfunction is self.op.eval and the values
+        are inputs. It binds input variables to values, in order,
         executes the inner op, and returns a dictionary mapping output
         variables to outputs.
         """
@@ -92,18 +62,11 @@ class OpFunction(Function):
         return "Function(%r,%r,%r)" % (self.inputs,self.outputs,self.op)
     def __repr__(self):
         return "Function(%r,%r,%r)" % (self.inputs,self.outputs,self.op)
-    #TODO combine these
     def eval(self,db,values):
         env = Envir(db)
         for i,v in enumerate(values):
             env.binding[self.inputs[i]] = v
         self.op.eval(env)
-        return [env.binding[y] for y in self.outputs]
-    def theanoExpr(self,db,subexprs):
-        env = Envir(db)
-        for i,v in enumerate(subexprs):
-            env.binding[self.inputs[i]] = v
-        self.op.theanoExpr(env)
         return [env.binding[y] for y in self.outputs]
 
 class SumFunction(Function):
@@ -125,59 +88,11 @@ class SumFunction(Function):
             moreValues = f(db,values)
             assert len(moreValues)==len(baseValues)
             for j in range(len(moreValues)):
-                #warning: when used to produce a theanoExpr this
-                #assumes we can use the '+' operator
                 baseValues[j] = baseValues[j] + moreValues[j]
         return baseValues
     def eval(self,db,values):
         pyfuns = [fun.eval for fun in self.funs]
         return self.recurselyUse(pyfuns,db,values)
-    def theanoExpr(self,db,values):
-        pyfuns = [fun.theanoExpr for fun in self.funs]
-        return self.recurselyUse(pyfuns,db,values)
-
-##############################################################################
-#
-# parameter database - the regular database will delegate to this so
-# that matrices can be 'parameters', if necessary.
-# 
-##############################################################################
-
-class ParameterDB(object):
-    def __init__(self):
-        self.paramEncoding = {}
-        self.arity = {}
-
-    def insert(self,mat,predicateFunctor,predicateArity):
-        theanoShared = theano.shared(mat,name=predicateFunctor)
-        self.paramEncoding[predicateFunctor] = theanoShared
-        self.arity[predicateFunctor] = predicateArity
-        return theanoShared
-
-    def matrix(self,mode,transpose=False,expressionContext=False):
-        if not mode.functor in self.paramEncoding: return None
-        else: 
-            assert self.arity[mode.functor]==2
-            if matrixdb.MatrixDB.transposeNeeded(mode,transpose):
-                if expressionContext:
-                    return self.paramEncoding[mode.functor].transpose()
-                else:
-                    return self.paramEncoding[mode.functor].get_value().transpose()            
-            else:
-                if expressionContext:
-                    return self.paramEncoding[mode.functor]
-                else:
-                    return self.paramEncoding[mode.functor].get_value()
-
-    def matrixPreimage(self,mode,expressionContext=False):
-        if not mode.functor in self.paramEncoding: return None
-        else: 
-            assert self.arity[mode.functor]==1,'p(X,Y) for unbound or constant Y not implemented for parameters'
-            if expressionContext:
-                return self.paramEncoding[mode.functor]
-            else:
-                return self.paramEncoding[mode.functor].get_value()
-
 
 ##############################################################################
 #
@@ -188,14 +103,12 @@ class ParameterDB(object):
 class Op(object):
     """Like a function but side-effects an environment.  More
     specifically, this is the tensorlog encoding for matrix-db
-    'operations' which can be 'eval'ed, or implemented by a theano
-    subexpression.  Operations typically specify src and dst variable
-    names and eval-ing them will side-effect an environment, by
-    binding the src to some function of the dst's binding.
+    'operations' which can be 'eval'ed or differentiated. Operations
+    typically specify src and dst variable names and eval-ing them
+    will side-effect an environment, by binding the src to some
+    function of the dst's binding.
     """
     def eval(self,env):
-        assert False,'abstract method called'
-    def theanoExpr(self,env):
         assert False,'abstract method called'
 
 class SeqOp(object):
@@ -209,9 +122,6 @@ class SeqOp(object):
     def eval(self,env):
         for op in self.ops:
             op.eval(env)
-    def theanoExpr(self,env):
-        for op in self.ops:
-            op.theanoExpr(env)
 
 # calls a function
 
@@ -234,9 +144,6 @@ class DefinedPredOp(Op):
     def eval(self,env):
         subfun = self.tensorlogProg.function[(self.mode,self.depth)]
         self.modifyEnvironment(subfun.eval,env)
-    def theanoExpr(self,env):
-        subfun = self.tensorlogProg.function[(self.mode,self.depth)]
-        self.modifyEnvironment(subfun.theanoExpr,env)
 
 class AssignPreimageToVar(Op):
     """Mat is a like p(X,Y) where Y is not used 'downstream' or p(X,c)
@@ -253,8 +160,6 @@ class AssignPreimageToVar(Op):
     def eval(self,env):
         if TRACE: print 'op:',self
         env.binding[self.dst] = env.db.matrixPreimage(self.mat)
-    def theanoExpr(self,env):
-        env.binding[self.dst] = env.db.matrixPreimage(self.mat,expressionContext=True)
 
 
 class AssignZeroToVar(Op):
@@ -267,8 +172,6 @@ class AssignZeroToVar(Op):
         return "ClearVar(%r)" % (self.dst)
     def eval(self,env):
         if TRACE: print 'op:',self
-        env.binding[self.dst] = env.db.zeros()
-    def theanoExpr(self,env):
         env.binding[self.dst] = env.db.zeros()
 
 class AssignOnehotToVar(Op):
@@ -286,10 +189,6 @@ class AssignOnehotToVar(Op):
     def eval(self,env):
         if TRACE: print 'op:',self
         env.binding[self.dst] = env.db.onehot(self.onehotConst)
-    def theanoExpr(self,env):
-        c = env.db.onehot(self.onehotConst)
-        theanoConstVec = S.CSR(c.data, c.indices, c.indptr, c.shape)
-        env.binding[self.dst] = theanoConstVec
 
 class VecMatMulOp(Op):
     """Op of the form "dst = src*mat or dst=src*mat.tranpose()"
@@ -307,8 +206,6 @@ class VecMatMulOp(Op):
     def eval(self,env):
         if TRACE: print 'op:',self
         env.binding[self.dst] = env.binding[self.src] * env.db.matrix(self.matmode,self.transpose)
-    def theanoExpr(self,env):
-        env.binding[self.dst] = B.true_dot(env.binding[self.src], env.db.matrix(self.matmode,self.transpose,expressionContext=True))
 
 #
 # the ones that are tricky with minibatch inputs
@@ -330,8 +227,6 @@ class ComponentwiseVecMulOp(Op):
         if TRACE: 
             print 'op:',self
         env.binding[self.dst] = env.binding[self.src].multiply( env.binding[self.src2] )
-    def theanoExpr(self,env):
-        env.binding[self.dst] = env.binding[self.src] * env.binding[self.src2] 
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
@@ -347,7 +242,5 @@ class WeightedVec(Op):
         return "WeightedVec<%s,%s,%s>" % (self.dst,self.weighter,self.vec)
     def eval(self,env):
         env.binding[self.dst] =  env.binding[self.vec].multiply(env.binding[self.weighter].sum())
-    def theanoExpr(self,env):
-        env.binding[self.dst] = env.binding[self.vec] * B.sp_sum(env.binding[self.weighter],sparse_grad=True)
 
 
