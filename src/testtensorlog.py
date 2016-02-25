@@ -137,7 +137,10 @@ class TestProPPR(unittest.TestCase):
             ops.TRACE = False
             pred = self.prog.eval(self.mode,[self.X.getrow(i)])[0]
             d = self.prog.db.rowAsSymbolDict(pred)
-            if i<4: print 'native row',i,self.xsyms[i],d
+            gradDict = self.prog.evalGrad(self.mode,[self.X.getrow(i)])
+            if i<4: 
+                print 'native row',i,self.xsyms[i],d
+                print 'grad w_Pos vs w_Neg',gradDict[ops.Partial('w_Pos',('weighted',1))].sum()/gradDict[ops.Partial('w_Pos',('weighted',1))].sum()
             self.checkClass(d,self.xsyms[i],'pos',self.numWords)
             self.checkClass(d,self.xsyms[i],'neg',self.numWords)
 

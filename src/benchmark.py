@@ -89,39 +89,6 @@ def runBenchmark(com):
             k += 1
             if not k%100: print 'answered',k,'queries'
         print 'answered',len(queries),'queries at',len(queries)/(time.time() - start),'qps'
-    elif com=="fb-rule-compile-theano":
-        db = matrixdb.MatrixDB.deserialize("fb15k-valid.db")
-        rules = parser.Parser.parseFile("test/fb15k.ppr")        
-        modes = fbModes()
-        prog = fbProgram(rules,db,modes)
-        queries = fbQueries(prog,db,modes)
-        usedModes = set([m for (m,x) in queries])
-        print len(usedModes),'active modes'
-        start = time.time()
-        for m in usedModes:
-            fun = prog.theanoPredictFunction(m,['x'])
-        print 'compiled',len(usedModes),'predictFunction expressions at',len(modes)/(time.time() - start),'expressions/sec'
-    elif com=="fb-rule-answer-theano":
-        db = matrixdb.MatrixDB.deserialize("fb15k-valid.db")
-        rules = parser.Parser.parseFile("test/fb15k.ppr")        
-        modes = fbModes()
-        prog = fbProgram(rules,db,modes)
-        queries = fbQueries(prog,db,modes)
-        usedModes = set([m for (m,x) in queries])
-        print len(usedModes),'active modes'
-        start = time.time()
-        for m in usedModes:
-            fun = prog.theanoPredictFunction(m,['x'])
-        print 'compiled',len(usedModes),'predictFunction expressions at',len(modes)/(time.time() - start),'expressions/sec'
-        print 'timing performance'
-        start = time.time()
-        k = 0
-        for (m,vx) in queries:
-            fun = prog.theanoPredictFunction(m,['x'])
-            fun(vx)
-            k += 1
-            if not k%100: print 'answered',k,'queries'
-        print 'answered',len(queries),'queries at',len(queries)/(time.time() - start),'qps'
     else:
         assert False,'illegal benchmark task'
     elapsed = time.time() - start
@@ -134,5 +101,5 @@ if __name__=="__main__":
         for com in sys.argv[1:]:
             runBenchmark(com)
     else:
-        for com in "fb-db-load fb-rule-compile fb-rule-answer-native fb-rule-compile-theano fb-rule-answer-theano".split():
+        for com in "fb-db-load fb-rule-compile fb-rule-answer-native".split():
             runBenchmark(com)            

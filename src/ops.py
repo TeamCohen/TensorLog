@@ -3,7 +3,7 @@
 import scipy.sparse
 import numpy
 
-TRACE=True
+TRACE=False
 
 class Partial(object):
     """Encapsulate a variable name for the partial derivative of f wrt x"""
@@ -127,10 +127,11 @@ class SumFunction(Function):
         return baseValues
     def evalGrad(self,db,values):
         baseDict = self.funs[0].evalGrad(db,values)
+        constZeros = db.zeros()
         for f in self.funs[1:]:
             moreDict = f.evalGrad(db,values)
             for var,val in moreDict.items():
-                baseDict[var] = baseDict[var] + moreDict[var]
+                baseDict[var] = baseDict.get(var,constZeros) + moreDict.get(var,constZeros)
         return baseDict
 
 ##############################################################################

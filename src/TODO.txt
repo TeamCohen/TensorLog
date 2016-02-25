@@ -1,32 +1,11 @@
 Theano currently seems to throw an error when the gradient computation happens....
+This uses a native gradient computation (up to the normalization stage)
 
-My own gradient computation would actually be pretty simple.  Basic idea:
- - mark db matrixes as parameters, and keep a list of parameters in
-   the DB
- - eval(self,env) doesn't just set env.binding[self.dst], but also
-   sets env.binding[partial(self.dest,pi)] for each parameter pi
- - maybe I can use the matrix version
+TODO: optimize away zero vectors
 
- DefinedPredOp(Op): compiled out?
- AssignPreimageToVar(Op): dst = columnVector
-    grad(dst,w): eye if columnVector==w, 0 else
- AssignZeroToVar(Op): dst = const
-    grad(dst,w): zeros
- AssignOnehotToVar(Op): dst = const
-    grad(dst,w): zeros
- VecMatMulOp(Op): dst = src * M or dst=src.M^T
-    grad(dst,w): grad(src,w)*M + src*grad(M,w)
-                 = grad(src,w)*M if M!=w, src if M=w
- ComponentwiseVecMulOp(Op): dst = src1 o src2
-                 = grad(dst,w) = grad(src1,w) o src2 + src1 o grad(src2,w) 
- WeightedVec(Op): dst = vec * weighter.sum()
- 		 = grad(vec,w) * weighter.sum() + vec * grad(weighter.w).sum()
+should I make the theano-free version a theano "operator"?
 
 ----------
-Minibatches: I should just give up and do the scan in the loss function level
- http://deeplearning.net/software/theano/library/scan.html --- except that gives up on
- using bricks, I guess?
-
 Learning/training:
  - textcat toy w/o incoming chains DONE
  -- data/theory prep DONE
