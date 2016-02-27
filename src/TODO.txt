@@ -1,9 +1,8 @@
-Theano currently seems to throw an error when the gradient computation happens....
-This uses a native gradient computation (up to the normalization stage)
+- add normalization operator?
+- revive matrix computation
 
-TODO: optimize away zero vectors
-
-should I make the theano-free version a theano "operator"?
+- should I make the theano-free version a theano "operator"?
+- should I arrange that parameters can be theano shared variables?
 
 ----------
 Learning/training:
