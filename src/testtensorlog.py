@@ -144,6 +144,15 @@ class TestProPPR(unittest.TestCase):
             self.checkClass(d,self.xsyms[i],'pos',self.numWords)
             self.checkClass(d,self.xsyms[i],'neg',self.numWords)
 
+    def testNativeMatrix(self):
+        ops.TRACE = False
+        pred = self.prog.eval(self.mode,[self.X])[0]
+        d0 = self.prog.db.matrixAsSymbolDict(pred)
+        for i,d in d0.items():
+            if i<4: print 'native matrix',i,self.xsyms[i],d
+            self.checkClass(d,self.xsyms[i],'pos',self.numWords)
+            self.checkClass(d,self.xsyms[i],'neg',self.numWords)
+
     def checkClass(self,d,sym,lab,expected):
         self.assertEqual(d[lab], expected[sym])
 

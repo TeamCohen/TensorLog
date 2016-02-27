@@ -1,5 +1,5 @@
 - add normalization operator?
-- revive matrix computation
+- revive matrix computation -done
 
 - should I make the theano-free version a theano "operator"?
 - should I arrange that parameters can be theano shared variables?

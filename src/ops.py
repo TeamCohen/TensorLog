@@ -1,6 +1,6 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
-import scipy.sparse
+import scipy.sparse as SS
 import numpy
 
 TRACE=False
@@ -290,6 +290,20 @@ class VecMatMulOp(Op):
 # the ones that are tricky with minibatch inputs
 #
 
+def numRows(m): return m.get_shape()[0]
+
+def broadcastBinding(env,k1,k2):
+    m1 = env.binding[k1]
+    m2 = env.binding[k2]
+    r1 = numRows(m1)
+    r2 = numRows(m2)
+    if r1==r2:
+        return m1,m2
+    elif r1>1 and r2==1:
+        return m1,SS.vstack([m2]*r1)
+    elif r1==1 and r2>1:
+        return SS.vstack([m1]*r2),m2
+
 class ComponentwiseVecMulOp(Op):
     """ Computes dst = src*Diag(src2), i.e., the component-wise product of
     two row vectors.  
@@ -305,13 +319,14 @@ class ComponentwiseVecMulOp(Op):
     def eval(self,env):
         if TRACE: 
             print 'op:',self
-        env.binding[self.dst] = env.binding[self.src].multiply( env.binding[self.src2] )
+        m1,m2 = broadcastBinding(env, self.src, self.src2)
+        env.binding[self.dst] = m1.multiply(m2)
     def evalGrad(self,env):
         self.eval(env)
         for p,k in env.db.params:
-            env.binding[Partial(self.dst,(p,k))] = \
-                 env.binding[Partial(self.src,(p,k))].multiply( env.binding[self.src2] )  \
-                 + env.binding[self.src].multiply( env.binding[Partial(self.src2,(p,k))] )
+            m1a,m2a = broadcastBinding(env, Partial(self.src,(p,k)), self.src2)
+            m1b,m2b = broadcastBinding(env, self.src, Partial(self.src2,(p,k)))
+            env.binding[Partial(self.dst,(p,k))] = m1a.multiply(m2a) + m1b.multiply(m2b)
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
@@ -326,10 +341,22 @@ class WeightedVec(Op):
     def __repr__(self):
         return "WeightedVec<%s,%s,%s>" % (self.dst,self.weighter,self.vec)
     def eval(self,env):
-        env.binding[self.dst] =  env.binding[self.vec].multiply(env.binding[self.weighter].sum())
+        m1,m2 = broadcastBinding(env, self.vec, self.weighter)
+        r = numRows(m1)  #also m2
+        if r==1:
+            env.binding[self.dst] =  m1.multiply(m2.sum())
+        else:
+            env.binding[self.dst] =  \
+                SS.vstack([m1.getrow(i).multiply(m2.getrow(i).sum()) for i in range(r)], dtype='float64')
     def evalGrad(self,env):
         self.eval(env)
         for p,k in env.db.params:
-            env.binding[Partial(self.dst,(p,k))] = \
-                env.binding[Partial(self.vec,(p,k))].multiply(env.binding[self.weighter].sum()) \
-                + env.binding[self.vec].multiply(env.binding[Partial(self.weighter,(p,k))].sum())
+            m1a,m2a = broadcastBinding(env, Partial(self.vec,(p,k)), self.weighter)
+            m1b,m2b = broadcastBinding(env,self.vec,Partial(self.weighter,(p,k)))
+            r = numRows(m1a) #and all the rest
+            if r==1:
+                env.binding[Partial(self.dst,(p,k))] =  m1a.multiply(m2a.sum()) + m1b.multiply(m2b.sum())
+            else:
+                env.binding[Partial(self.dst,(p,k))] = \
+                    SS.vstack([m1a.getrow(i).multiply(m2a.getrow(i).sum()) for i in range(r)], dtype='float64') \
+                    + SS.vstack([m1b.getrow(i).multiply(m2b.getrow(i).sum()) for i in range(r)], dtype='float64') \
