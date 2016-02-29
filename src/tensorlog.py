@@ -83,7 +83,7 @@ class Program(object):
                 #for this single predicate
                 c = bpcompiler.BPCompiler(self,depth,predDef[0])
                 c.compile(mode)
-                self.function[(mode,depth)] = ops.OpFunction(c.getInputs(), c.getOutputs(), ops.SeqOp(c.getOps()))            
+                self.function[(mode,depth)] = ops.OpSeqFunction(c.getInputs(), c.getOutput(), c.getOps())
             else:
                 #compute a function that will sum up the values of the
                 #clauses
@@ -91,7 +91,7 @@ class Program(object):
                 for r in predDef:
                     c = bpcompiler.BPCompiler(self,depth,r)
                     c.compile(mode)
-                    ruleFuns.append( ops.OpFunction(c.getInputs(),c.getOutputs(),ops.SeqOp(c.getOps())) )
+                    ruleFuns.append( ops.OpSeqFunction(c.getInputs(),c.getOutput(),c.getOps()) )
                 self.function[(mode,depth)] = ops.SumFunction(ruleFuns)
         return self.function[(mode,depth)]
 
@@ -213,8 +213,7 @@ def answerStringQuery(p,a):
     mode = ModeDeclaration(parser.Goal(g.functor,['i','o']))
     x = g.args[0]
     result = p.evalSymbols(mode,[x])
-    for val in result:
-        print p.db.rowAsSymbolDict(val)
+    print p.db.rowAsSymbolDict(result)
 
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william

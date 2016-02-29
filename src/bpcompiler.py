@@ -24,6 +24,9 @@ TRACE = False
 PRODUCE_OPS = True
 #PRODUCE_OPS = False
 
+# if true normalize the bp vectors for depth=0 computations to have sum to 1.0
+NORMALIZE = False
+
 def only(c):
     """Return only member of a singleton set, or raise an error if the set's not a singleton."""
     assert len(c)==1,'non-singleton ' + repr(c)
@@ -63,7 +66,7 @@ def buildNullFunction(lhsMode):
     inputs = [('X%d' % i)  for i in range(lhsMode.arity) if lhsMode.isInput(i)]
     outputs = [('Y%d' % i) for i in range(lhsMode.arity) if lhsMode.isOutput(i)]
     assert len(outputs)==1, 'multiple or zero outputs not implemented yet'
-    return ops.OpFunction(inputs, outputs, ops.AssignZeroToVar(outputs[0]))
+    return ops.OpSeqFunction(inputs, outputs[0], [ops.AssignZeroToVar(outputs[0])])
 
 #
 # main class
@@ -101,11 +104,11 @@ class BPCompiler(object):
         """
         return self.inputs
 
-    def getOutputs(self): 
+    def getOutput(self): 
         """ After compilation, return a list of output variables, which hold
         the final results
         """
-        return [self.output]
+        return self.output
 
     #
     # debugging tools
@@ -248,7 +251,10 @@ class BPCompiler(object):
         the message and assign it a 'variable' named 'foo', and then
         return not the message but the variable-name string 'foo'. """
 
-        #TODO remove caching, as it's not needed
+        #these routines pass around a second depth value which is used
+        #only for printing debugging traces. TODO rename to traceDepth
+
+        #TODO remove caching, as it's actually not needed
         messages = {}  #cached messages
 
         def addOp(depth,op):
@@ -380,6 +386,11 @@ class BPCompiler(object):
             multiplicand = msg
             addOp(0,ops.WeightedVec(nextProd,multiplicand,currentProduct))
             currentProduct = nextProd
+
+        if NORMALIZE and self.depth==0:
+            normProduct = 'norm_%s' % outputVar
+            addOp(0,ops.Normalize(normProduct,currentProduct))
+            currentProduct = normProduct
 
         # save the output and inputs 
         self.output = currentProduct

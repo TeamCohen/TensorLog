@@ -1,4 +1,12 @@
 - add normalization operator?
+
+-- seems tricky to do cleanly.  a normalization op added by bpcompiler
+   doesn't work for multi-clause predicates.  a normalization function
+   doesn't know enough about partial deriv names to easily implement
+   evalGrad.
+   - track subfunction names in SumFunction?
+   - go to SumOp and NormalizeOp?
+
 - revive matrix computation -done
 
 - should I make the theano-free version a theano "operator"?

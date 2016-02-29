@@ -9,6 +9,7 @@ import scipy.sparse
 import tensorlog 
 import parser
 import matrixdb
+import bpcompiler
 import ops
 
 TEST_GRADIENTS = False
@@ -63,7 +64,7 @@ class TestSmallProofs(unittest.TestCase):
         self.inferenceCheck(['p(X,S) :- set(S,susan),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
 
     def testConstChain2(self):
-        self.inferenceCheck(['p(X,Pos) :- set(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','rachel',{'pos':0.0})
+        #self.inferenceCheck(['p(X,Pos) :- set(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','rachel',{'pos':0.0})
         self.inferenceCheck(['p(X,Pos) :- set(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','sarah',{'pos':1.0})
         self.inferenceCheck(['p(X,Pos) :- set(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','lottie',{'pos':2.0})
 
@@ -78,8 +79,16 @@ class TestSmallProofs(unittest.TestCase):
     # support routines
     # 
 
+    def maybeNormalize(self,expectedResultDict):
+        if bpcompiler.NORMALIZE:
+            norm = sum(expectedResultDict.values())
+            for c in expectedResultDict:
+                expectedResultDict[c] /= norm
+
+
     def inferenceCheck(self,ruleStrings,modeString,inputSymbol,expectedResultDict):
         print 'testing inference for mode',modeString,'on input',inputSymbol,'with rules:'
+        self.maybeNormalize(expectedResultDict)
         for r in ruleStrings:
             print '>',r
         rules = parser.RuleCollection()
@@ -88,12 +97,13 @@ class TestSmallProofs(unittest.TestCase):
         prog = tensorlog.Program(db=self.db,rules=rules)
         mode = tensorlog.ModeDeclaration(modeString)
         fun = prog.compile(mode)
-        y1 = self.only( prog.evalSymbols(mode,[inputSymbol]) )
+        y1 = prog.evalSymbols(mode,[inputSymbol]) 
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
 
 
     def propprInferenceCheck(self,weightVec,ruleStrings,modeString,inputSymbol,expectedResultDict):
         print 'testing inference for mode',modeString,'on input',inputSymbol,'with proppr rules:'
+        self.maybeNormalize(expectedResultDict)
         rules = parser.RuleCollection()
         for r in ruleStrings:
             rules.add(parser.Parser.parseRule(r))
@@ -101,7 +111,7 @@ class TestSmallProofs(unittest.TestCase):
         mode = tensorlog.ModeDeclaration(modeString)
         fun = prog.compile(mode)
 
-        y1 = self.only( prog.evalSymbols(mode,[inputSymbol]) )
+        y1 = prog.evalSymbols(mode,[inputSymbol]) 
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
 
         gd = prog.evalGradSymbols(mode,[inputSymbol])
@@ -138,9 +148,9 @@ class TestProPPR(unittest.TestCase):
             pred = self.prog.eval(self.mode,[self.X.getrow(i)])[0]
             d = self.prog.db.rowAsSymbolDict(pred)
             gradDict = self.prog.evalGrad(self.mode,[self.X.getrow(i)])
-            if i<4: 
-                print 'native row',i,self.xsyms[i],d
-                print 'grad w_Pos vs w_Neg',gradDict[ops.Partial('w_Pos',('weighted',1))].sum()/gradDict[ops.Partial('w_Pos',('weighted',1))].sum()
+#            if i<4: 
+#                print 'native row',i,self.xsyms[i],d
+#                print 'grad w_Pos vs w_Neg',gradDict[ops.Partial('w_Pos',('weighted',1))].sum()/gradDict[ops.Partial('w_Pos',('weighted',1))].sum()
             self.checkClass(d,self.xsyms[i],'pos',self.numWords)
             self.checkClass(d,self.xsyms[i],'neg',self.numWords)
 
