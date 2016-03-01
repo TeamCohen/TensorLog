@@ -4,6 +4,8 @@ import sys
 import time
 import resource
 
+import scipy.sparse as SS
+
 import matrixdb
 import tensorlog
 import parser
@@ -89,6 +91,22 @@ def runBenchmark(com):
             k += 1
             if not k%100: print 'answered',k,'queries'
         print 'answered',len(queries),'queries at',len(queries)/(time.time() - start),'qps'
+    elif com=="fb-rule-answer-matrix":
+        db = matrixdb.MatrixDB.deserialize("fb15k-valid.db")
+        rules = parser.Parser.parseFile("test/fb15k.ppr")        
+        modes = fbModes()
+        prog = fbProgram(rules,db,modes)
+        modeDict = {}
+        print 'program loaded and compiled'
+        queries = fbQueries(prog,db,modes)
+        #a list of (m,vx)
+        qMode = queries[0][0]
+        Xs = [vx for m,vx in queries]
+        qX = SS.vstack(Xs, dtype='float64')
+        start = time.time()
+        fun = prog.function[(qMode,0)]
+        fun.eval(db, [qX])
+        print 'answered',len(queries),'queries at',len(queries)/(1000*(time.time() - start)),'kilo qps'
     else:
         assert False,'illegal benchmark task'
     elapsed = time.time() - start
@@ -101,5 +119,5 @@ if __name__=="__main__":
         for com in sys.argv[1:]:
             runBenchmark(com)
     else:
-        for com in "fb-db-load fb-rule-compile fb-rule-answer-native".split():
+        for com in "fb-db-load fb-rule-compile fb-rule-answer-native fb-rule-answer-matrix".split():
             runBenchmark(com)            

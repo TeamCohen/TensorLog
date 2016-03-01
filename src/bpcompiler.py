@@ -6,6 +6,7 @@
 
 import sys
 import ops
+import funs
 import symtab 
 import collections
 import parser
@@ -66,7 +67,7 @@ def buildNullFunction(lhsMode):
     inputs = [('X%d' % i)  for i in range(lhsMode.arity) if lhsMode.isInput(i)]
     outputs = [('Y%d' % i) for i in range(lhsMode.arity) if lhsMode.isOutput(i)]
     assert len(outputs)==1, 'multiple or zero outputs not implemented yet'
-    return ops.OpSeqFunction(inputs, outputs[0], [ops.AssignZeroToVar(outputs[0])])
+    return funs.OpSeqFunction(inputs, outputs[0], [ops.AssignZeroToVar(outputs[0])])
 
 #
 # main class

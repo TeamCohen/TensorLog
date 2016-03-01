@@ -2,6 +2,7 @@
 
 import sys
 import ops
+import funs
 import parser
 import matrixdb
 import bpcompiler
@@ -83,7 +84,7 @@ class Program(object):
                 #for this single predicate
                 c = bpcompiler.BPCompiler(self,depth,predDef[0])
                 c.compile(mode)
-                self.function[(mode,depth)] = ops.OpSeqFunction(c.getInputs(), c.getOutput(), c.getOps())
+                self.function[(mode,depth)] = funs.OpSeqFunction(c.getInputs(), c.getOutput(), c.getOps())
             else:
                 #compute a function that will sum up the values of the
                 #clauses
@@ -91,8 +92,8 @@ class Program(object):
                 for r in predDef:
                     c = bpcompiler.BPCompiler(self,depth,r)
                     c.compile(mode)
-                    ruleFuns.append( ops.OpSeqFunction(c.getInputs(),c.getOutput(),c.getOps()) )
-                self.function[(mode,depth)] = ops.SumFunction(ruleFuns)
+                    ruleFuns.append( funs.OpSeqFunction(c.getInputs(),c.getOutput(),c.getOps()) )
+                self.function[(mode,depth)] = funs.SumFunction(ruleFuns)
         return self.function[(mode,depth)]
 
     def listing(self):
