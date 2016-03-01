@@ -17,6 +17,12 @@ TEST_GRADIENTS = False
 # can call a single test with, e.g.,
 # python -m unittest testtensorlog.TestSmallProofs.testIf
 
+def maybeNormalize(expectedResultDict):
+    if tensorlog.NORMALIZE:
+        norm = sum(expectedResultDict.values())
+        for c in expectedResultDict:
+            expectedResultDict[c] /= norm
+
 class TestSmallProofs(unittest.TestCase):
     
     def setUp(self):
@@ -80,7 +86,7 @@ class TestSmallProofs(unittest.TestCase):
     # 
 
     def maybeNormalize(self,expectedResultDict):
-        if bpcompiler.NORMALIZE:
+        if tensorlog.NORMALIZE:
             norm = sum(expectedResultDict.values())
             for c in expectedResultDict:
                 expectedResultDict[c] /= norm
@@ -88,7 +94,7 @@ class TestSmallProofs(unittest.TestCase):
 
     def inferenceCheck(self,ruleStrings,modeString,inputSymbol,expectedResultDict):
         print 'testing inference for mode',modeString,'on input',inputSymbol,'with rules:'
-        self.maybeNormalize(expectedResultDict)
+        maybeNormalize(expectedResultDict)
         for r in ruleStrings:
             print '>',r
         rules = parser.RuleCollection()
@@ -103,7 +109,7 @@ class TestSmallProofs(unittest.TestCase):
 
     def propprInferenceCheck(self,weightVec,ruleStrings,modeString,inputSymbol,expectedResultDict):
         print 'testing inference for mode',modeString,'on input',inputSymbol,'with proppr rules:'
-        self.maybeNormalize(expectedResultDict)
+        maybeNormalize(expectedResultDict)
         rules = parser.RuleCollection()
         for r in ruleStrings:
             rules.add(parser.Parser.parseRule(r))
@@ -129,7 +135,9 @@ class TestSmallProofs(unittest.TestCase):
             print 'expected:',expected
             self.assertEqual(len(actual.keys()), len(expected.keys()))
             for k in actual.keys():
-                self.assertEqual(actual[k], expected[k])
+                self.assertAlmostEqual(actual[k], expected[k], delta=0.0001)
+
+#TODO write tests for grad
 
 class TestProPPR(unittest.TestCase):
 
@@ -140,28 +148,40 @@ class TestProPPR(unittest.TestCase):
         self.numExamples = self.X.get_shape()[0] 
         self.numFeatures = self.X.get_shape()[1] 
         self.mode = tensorlog.ModeDeclaration('predict(i,o)')
-        self.numWords = {'dh':4.0, 'ft':5.0, 'rw':3.0, 'sc':5.0, 'bk':5.0, 'rb':4.0, 'mv':8.0, 'hs':9.0, 'ji':6.0, 'tf':8.0, 'jm':8.0 }
+        self.numWords = \
+            {'dh':4.0, 'ft':5.0, 'rw':3.0, 'sc':5.0, 'bk':5.0, 
+             'rb':4.0, 'mv':8.0,  'hs':9.0, 'ji':6.0, 'tf':8.0, 'jm':8.0 }
     
     def testNativeRow(self):
         for i in range(self.numExamples):
             ops.TRACE = False
-            pred = self.prog.eval(self.mode,[self.X.getrow(i)])[0]
+            pred = self.prog.eval(self.mode,[self.X.getrow(i)])
             d = self.prog.db.rowAsSymbolDict(pred)
+            print '= d',d
             gradDict = self.prog.evalGrad(self.mode,[self.X.getrow(i)])
 #            if i<4: 
 #                print 'native row',i,self.xsyms[i],d
 #                print 'grad w_Pos vs w_Neg',gradDict[ops.Partial('w_Pos',('weighted',1))].sum()/gradDict[ops.Partial('w_Pos',('weighted',1))].sum()
-            self.checkClass(d,self.xsyms[i],'pos',self.numWords)
-            self.checkClass(d,self.xsyms[i],'neg',self.numWords)
+            if tensorlog.NORMALIZE:
+                uniform = {'pos':0.5,'neg':0.5}
+                self.checkDicts(d,uniform)
+            else:
+                self.checkClass(d,self.xsyms[i],'pos',self.numWords)
+                self.checkClass(d,self.xsyms[i],'neg',self.numWords)
 
     def testNativeMatrix(self):
         ops.TRACE = False
-        pred = self.prog.eval(self.mode,[self.X])[0]
+        pred = self.prog.eval(self.mode,[self.X])
         d0 = self.prog.db.matrixAsSymbolDict(pred)
         for i,d in d0.items():
             if i<4: print 'native matrix',i,self.xsyms[i],d
-            self.checkClass(d,self.xsyms[i],'pos',self.numWords)
-            self.checkClass(d,self.xsyms[i],'neg',self.numWords)
+            if tensorlog.NORMALIZE:
+                uniform = {'pos':0.5,'neg':0.5}
+                self.checkDicts(d,uniform)
+            else:
+                self.checkClass(d,self.xsyms[i],'pos',self.numWords)
+                self.checkClass(d,self.xsyms[i],'neg',self.numWords)
+
 
     def checkClass(self,d,sym,lab,expected):
         self.assertEqual(d[lab], expected[sym])
@@ -176,6 +196,14 @@ class TestProPPR(unittest.TestCase):
             xs.append(db.onehot(sx))
             ys.append(db.onehot(sy))
         return xsyms,scipy.sparse.vstack(xs),scipy.sparse.vstack(ys)
+
+    def checkDicts(self,actual, expected):
+        print 'actual:  ',actual
+        if expected:
+            print 'expected:',expected
+            self.assertEqual(len(actual.keys()), len(expected.keys()))
+            for k in actual.keys():
+                self.assertAlmostEqual(actual[k], expected[k], 0.0001)
 
 if __name__=="__main__":
     if len(sys.argv)==1:

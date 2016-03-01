@@ -10,11 +10,12 @@ import logging
 import getopt
 
 
+MAXDEPTH=10
+NORMALIZE=True
+
 ##############################################################################
 ## declarations
 ##############################################################################
-
-MAXDEPTH=10
 
 class AbstractDeclaration(object):
     def __init__(self,goal):
@@ -86,12 +87,10 @@ class Program(object):
             else:
                 #compute a function that will sum up the values of the
                 #clauses
-
-                ruleFuns = []
-                for r in predDef:
-                    c = bpcompiler.BPCompiler(mode,self,depth,r)
-                    ruleFuns.append( c.getFunction() )
+                ruleFuns = map(lambda r:bpcompiler.BPCompiler(mode,self,depth,r).getFunction(), predDef)
                 self.function[(mode,depth)] = funs.SumFunction(ruleFuns)
+            if depth==0 and NORMALIZE:
+                self.function[(mode,0)] = funs.NormalizedFunction(self.function[(mode,0)])
         return self.function[(mode,depth)]
 
     def listing(self):

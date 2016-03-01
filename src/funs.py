@@ -41,10 +41,12 @@ class OpSeqFunction(Function):
         # execute ops with evalGrad
         for op in self.ops:
             op.evalGrad(env)
+        #collect and rename the partial derivatives
         registersForDerivsOfOut = [ops.Partial(self.opOutput,w) for w in db.params]
-        return dict([(r,env[r]) for r in registersForDerivsOfOut])
+        return dict([(r.f,env[r]) for r in registersForDerivsOfOut])
 
 class NullFunction(OpSeqFunction):
+    """Returns an all-zeros vector."""
     def __init__(self,lhsMode):
         self.opInputs = [('X%d' % i)  for i in range(lhsMode.arity) if lhsMode.isInput(i)]
         self.opOutput = 'Y'
@@ -69,24 +71,36 @@ class SumFunction(Function):
         return accumDict
 
 class NormalizedFunction(Function):
+
     """A function which normalizes the result of another function."""
     def __init__(self,fun):
         self.fun = fun
-    def __str__(self):
-        return "||%r||_1" % self.fun
-    def __repr__(self):
-        return "NormalizedFunction("+repr(self.fun)+")"
-    def eval(self,db,values):
-        outs = self.fun.eval(db,values)
-        assert len(outs)==0, 'cannot normalize multiple-output function'
-        m = outs[0]
-        r = numRows(m)
-        if r==1:
-            return [m.multiply(1.0/m.sum())]
-        else:
-            rows = [m.getrow(i) for i in range(r)]
-            return SS.vstack([ri.multiply( 1.0/ri.sum()) for ri in rows], dtype='float64')
-    def evalGrad(self,db,values):
-        #TODO still in a box here - not clear how to find f(x) and f'(x) 
-        pass
 
+    def eval(self,db,values):
+        m = self.fun.eval(db,values)
+        numr = m.get_shape()[0]
+        if numr==1:
+            return m.multiply(1.0/m.sum())
+        else:
+            rows = [m.getrow(i) for i in range(numr)]
+            return SS.vstack([r.multiply( 1.0/r.sum()) for r in rows], dtype='float64')
+
+    def evalGrad(self,db,values):
+        # (f/g)' = (gf' - fg')/g^2
+        def gradrow(f,df):
+            g = f.sum()
+            dg = df.sum()
+            return df.multiply(1.0/g) - f.multiply(dg/(g*g))
+        m = self.fun.eval(db,values)
+        dmDict = self.fun.evalGrad(db,values)
+        gradDict = {}
+        for w in db.params:
+            dm = dmDict.get(w, db.zeros())
+            numr = m.get_shape()[0]
+            if numr==1:
+                gradDict[w] = gradrow(m,dm)
+            else:
+                mrows = [m.getrow(i) for i in range(numr)]
+                dmrows = [dm.getrow(i) for i in range(numr)]
+                gradDict[w] = SS.vstack([gradrow(mrows[i],dmrows[i]) for i in range(numr)], dtype='float64')
+        return gradDict

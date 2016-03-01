@@ -258,39 +258,3 @@ class WeightedVec(Op):
                     SS.vstack([m1a.getrow(i).multiply(m2a.getrow(i).sum()) for i in range(r)], dtype='float64') \
                     + SS.vstack([m1b.getrow(i).multiply(m2b.getrow(i).sum()) for i in range(r)], dtype='float64') \
 
-class Normalize(Op):
-    """ Implements dst = src/src.sum() """
-    def __init__(self,dst,src):
-        self.dst = dst
-        self.src = src
-    def __str__(self):
-        return "Normalize<%s = %s>" % (self.dst,self.src)
-    def __repr__(self):
-        return "Normalize(%r,%r)" % (self.dst,self.wrc)
-    def eval(self,env):
-        m = env[self.src]
-        r = numRows(m)
-        if r==1:
-            env[self.dst] = m.multiply( 1.0/m.sum() )
-        else:
-            rows = [m.getrow(i) for i in range(r)]
-            env[self.dst] = SS.vstack([ri.multiply( 1.0/ri.sum()) for ri in rows], dtype='float64')
-    def evalGrad(self,env):
-        # (f/g)' = (gf' - fg')/g^2
-        def gradrow(f,df):
-            g = f.sum()
-            dg = df.sum()
-            return df.multiply(1.0/g) - f.multiply(dg/(g*g))
-        self.eval(env)
-        f = env[self.src]
-        nr = numRows(f)
-        for w in env.db.params:
-            df = env[Partial(self.src,w)]
-            if nr==1:
-                env[Partial(self.dst,w)] = gradrow(f,df)
-            else:
-                frows = [m.getrow(i) for i in range(nr)]
-                dfrows = [df.getrow(i) for i in range(nr)]
-                env[Partial(self.dst,w)] = \
-                    SS.vstack([gradrow(frows[i],dfrows[i]) for i in range(nr)], dtype='float64')
-
