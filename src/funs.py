@@ -44,6 +44,12 @@ class OpSeqFunction(Function):
         registersForDerivsOfOut = [ops.Partial(self.opOutput,w) for w in db.params]
         return dict([(r,env[r]) for r in registersForDerivsOfOut])
 
+class NullFunction(OpSeqFunction):
+    def __init__(self,lhsMode):
+        self.opInputs = [('X%d' % i)  for i in range(lhsMode.arity) if lhsMode.isInput(i)]
+        self.opOutput = 'Y'
+        self.ops = [ops.AssignZeroToVar(self.opOutput)]
+
 class SumFunction(Function):
     """A function which computes the sum of a bunch of other functions."""
     def __init__(self,funs):

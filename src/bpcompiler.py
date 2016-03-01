@@ -60,14 +60,6 @@ class GoalInfo(object):
     def __repr__(self):
         return 'GoalInfo(index=%d,inputs=%r,outputs=%r,defined=%r)' % (self.index,self.inputs,self.outputs,self.definedPred)
 
-def buildNullFunction(lhsMode):
-    """Build a OpFunction which returns an empty set
-    """
-    #TODO something wonky about the x/y indices?
-    inputs = [('X%d' % i)  for i in range(lhsMode.arity) if lhsMode.isInput(i)]
-    outputs = [('Y%d' % i) for i in range(lhsMode.arity) if lhsMode.isOutput(i)]
-    assert len(outputs)==1, 'multiple or zero outputs not implemented yet'
-    return funs.OpSeqFunction(inputs, outputs[0], [ops.AssignZeroToVar(outputs[0])])
 
 #
 # main class
@@ -76,40 +68,33 @@ def buildNullFunction(lhsMode):
 class BPCompiler(object):
     """Compiles a logical rule + a mode into a sequence of ops.py operations."""
 
-    def __init__(self,tensorlogProg,depth,rule):
+    def __init__(self,lhsMode,tensorlogProg,depth,rule):
         """ Build a compiler for a rule.  The tensorlogProg is used to
         recursively compile any intensionally-defined predicates.
         The depth is a depth bound.
         """
         self.rule = rule
+        self.lhsMode = lhsMode
         self.tensorlogProg = tensorlogProg
         self.depth = depth #used for recursively compiling subpredicates with tensorlogProg
         self.ops = []      #generated list of operations used for BP
         self.output = None #final outputs of the function associated with performing BP for the mode
         self.inputs = None #inputs of the function associated with performing BP for the mode
         self.goals = [self.rule.lhs] + self.rule.rhs  #so we can systematically index goals with an int j
+        self.compiled = False
         if STRICT: self.validateRuleBeforeAnalysis()
 
     #
     # access the result of compilation
     # 
 
-    def getOps(self): 
-        """ After compilation, return the operator sequence 
+    def getFunction(self): 
+        """ After compilation, return a function that performs BP
         """
-        return self.ops
+        if not self.compiled: 
+            self.compile()
+        return funs.OpSeqFunction(self.inputs, self.output, self.ops)
 
-    def getInputs(self): 
-        """ After compilation, return a list of input variables, which should
-        be bound in the environment before eval-ing the ops.
-        """
-        return self.inputs
-
-    def getOutput(self): 
-        """ After compilation, return a list of output variables, which hold
-        the final results
-        """
-        return self.output
 
     #
     # debugging tools
@@ -139,13 +124,14 @@ class BPCompiler(object):
             print '\t',op
 
 
-    def compile(self,lhsMode):
+    def compile(self):
         """Top-level analysis routine for a rule.
         """
         #infer the information flow for all the variables and goals,
         #and store in the varDict/goalDict under vin.outputOf,
         #vin.inputTo, gin.outputs, gin.inputs
-        self.inferFlow(lhsMode)
+
+        self.inferFlow()
         
         #recursively call the tensorlog program to compile 
         #any intensionally-defined subpredicates
@@ -154,6 +140,8 @@ class BPCompiler(object):
         # generate an operation sequence that implements the BP algorithm
         if PRODUCE_OPS:
             self.generateOps()
+
+        self.compiled = True
 
     #
     # simpler subroutines of compile
@@ -167,7 +155,7 @@ class BPCompiler(object):
             assert goal.arity==1 or goal.arity==2
 
 
-    def inferFlow(self,lhsMode):
+    def inferFlow(self):
         """ Infer flow of information in the clause, by populating a VarInfo
         object for each variable and a GoalInfo object for each goal.
         Information flows from the lhs's input variable, to the output
@@ -180,7 +168,7 @@ class BPCompiler(object):
 
         #for lhs, infer inputs/outputs from the known mode
         gin = self.goalDict[0] = GoalInfo(0)
-        gin.mode = lhsMode
+        gin.mode = self.lhsMode
         for i in range(self.rule.lhs.arity):
             v = self.rule.lhs.args[i]
             if v not in self.varDict: 
@@ -230,7 +218,7 @@ class BPCompiler(object):
                 self.tensorlogProg.compile(mode,self.depth+1)
 
     def toMode(self,j):
-        """Return a mode declaration for the j-th goal of the rule"""
+        """Helper - Return a mode declaration for the j-th goal of the rule"""
         goal = self.goals[j]
         gin = self.goalDict[j]
         def argIOMode(x): 

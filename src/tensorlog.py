@@ -73,8 +73,7 @@ class Program(object):
         #find the rules which define this predicate/function
         
         if depth>MAXDEPTH:
-            nullFun = bpcompiler.buildNullFunction(mode)
-            self.function[(mode,depth)] = nullFun
+            self.function[(mode,depth)] = funs.NullFunction(mode)
         else:
             predDef = self.findPredDef(mode)
             if len(predDef)==0:
@@ -82,17 +81,16 @@ class Program(object):
             elif len(predDef)==1:
                 #instead of a sum of one function, just find the function
                 #for this single predicate
-                c = bpcompiler.BPCompiler(self,depth,predDef[0])
-                c.compile(mode)
-                self.function[(mode,depth)] = funs.OpSeqFunction(c.getInputs(), c.getOutput(), c.getOps())
+                c = bpcompiler.BPCompiler(mode,self,depth,predDef[0])
+                self.function[(mode,depth)] = c.getFunction()
             else:
                 #compute a function that will sum up the values of the
                 #clauses
+
                 ruleFuns = []
                 for r in predDef:
-                    c = bpcompiler.BPCompiler(self,depth,r)
-                    c.compile(mode)
-                    ruleFuns.append( funs.OpSeqFunction(c.getInputs(),c.getOutput(),c.getOps()) )
+                    c = bpcompiler.BPCompiler(mode,self,depth,r)
+                    ruleFuns.append( c.getFunction() )
                 self.function[(mode,depth)] = funs.SumFunction(ruleFuns)
         return self.function[(mode,depth)]
 
