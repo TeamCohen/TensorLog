@@ -3,8 +3,14 @@
 import scipy.sparse as SS
 import numpy
 
+import bcast
+
+# if true print ops as they are executed
 TRACE=False
 
+# TODO: a listing routine
+
+#TODO shorter name?
 class Partial(object):
     """Encapsulate a variable name for the partial derivative of f wrt x"""
     def __init__(self,f,x):
@@ -18,9 +24,6 @@ class Partial(object):
         return hash((self.f,self.x))
     def __eq__(self,other):
         return self.f==other.f and self.x==other.x
-
-def numRows(m): 
-    return m.get_shape()[0]
 
 def paramMatchMode(w,mode):
     (p,k) = w
@@ -189,18 +192,6 @@ class VecMatMulOp(Op):
 # the ones that are tricky with minibatch inputs
 #
 
-def broadcastBinding(env,k1,k2):
-    m1 = env[k1]
-    m2 = env[k2]
-    r1 = numRows(m1)
-    r2 = numRows(m2)
-    if r1==r2:
-        return m1,m2
-    elif r1>1 and r2==1:
-        return m1,SS.vstack([m2]*r1)
-    elif r1==1 and r2>1:
-        return SS.vstack([m1]*r2),m2
-
 class ComponentwiseVecMulOp(Op):
     """ Computes dst = src*Diag(src2), i.e., the component-wise product of
     two row vectors.  
@@ -216,13 +207,15 @@ class ComponentwiseVecMulOp(Op):
     def eval(self,env):
         if TRACE: 
             print 'op:',self
-        m1,m2 = broadcastBinding(env, self.src, self.src2)
+        m1,m2 = bcast.broadcastBinding(env, self.src, self.src2)
         env[self.dst] = m1.multiply(m2)
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:
-            m1a,m2a = broadcastBinding(env, Partial(self.src,w), self.src2)
-            m1b,m2b = broadcastBinding(env, self.src, Partial(self.src2,w))
+            m1a,m2a = bcast.broadcastBinding(env, Partial(self.src,w), self.src2)
+            m1b,m2b = bcast.broadcastBinding(env, self.src, Partial(self.src2,w))
+            m1a,m2a,m1b,m2b = bcast.broadcast4(m1a,m2a,m1b,m2b)
+            print '=shapes a1 a2 b1 b2',m1a.get_shape(),m2a.get_shape(),m1b.get_shape(),m2b.get_shape()
             env[Partial(self.dst,w)] = m1a.multiply(m2a) + m1b.multiply(m2b)
 
 class WeightedVec(Op):
@@ -238,8 +231,8 @@ class WeightedVec(Op):
     def __repr__(self):
         return "WeightedVec<%s,%s,%s>" % (self.dst,self.weighter,self.vec)
     def eval(self,env):
-        m1,m2 = broadcastBinding(env, self.vec, self.weighter)
-        r = numRows(m1)  #also m2
+        m1,m2 = bcast.broadcastBinding(env, self.vec, self.weighter)
+        r = bcast.numRows(m1)  #also m2
         if r==1:
             env[self.dst] =  m1.multiply(m2.sum())
         else:
@@ -248,13 +241,13 @@ class WeightedVec(Op):
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:
-            m1a,m2a = broadcastBinding(env, Partial(self.vec,w), self.weighter)
-            m1b,m2b = broadcastBinding(env,self.vec,Partial(self.weighter,w))
-            r = numRows(m1a) #and all the rest
+            m1a,m2a = bcast.broadcastBinding(env, Partial(self.vec,w), self.weighter)
+            m1b,m2b = bcast.broadcastBinding(env,self.vec,Partial(self.weighter,w))
+            m1a,m2a,m1b,m2b = bcast.broadcast4(m1a,m2a,m1b,m2b)
+            r = bcast.numRows(m1a)
             if r==1:
                 env[Partial(self.dst,w)] =  m1a.multiply(m2a.sum()) + m1b.multiply(m2b.sum())
             else:
                 env[Partial(self.dst,w)] = \
                     SS.vstack([m1a.getrow(i).multiply(m2a.getrow(i).sum()) for i in range(r)], dtype='float64') \
-                    + SS.vstack([m1b.getrow(i).multiply(m2b.getrow(i).sum()) for i in range(r)], dtype='float64') \
-
+                    + SS.vstack([m1b.getrow(i).multiply(m2b.getrow(i).sum()) for i in range(r)], dtype='float64')

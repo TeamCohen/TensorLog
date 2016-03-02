@@ -12,8 +12,6 @@ import matrixdb
 import bpcompiler
 import ops
 
-TEST_GRADIENTS = False
-
 # can call a single test with, e.g.,
 # python -m unittest testtensorlog.TestSmallProofs.testIf
 
@@ -120,6 +118,7 @@ class TestSmallProofs(unittest.TestCase):
         y1 = prog.evalSymbols(mode,[inputSymbol]) 
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
 
+        #TODO test correctness
         gd = prog.evalGradSymbols(mode,[inputSymbol])
         for k,v in gd.items():
             print 'grad',k,'...'
@@ -158,10 +157,11 @@ class TestProPPR(unittest.TestCase):
             pred = self.prog.eval(self.mode,[self.X.getrow(i)])
             d = self.prog.db.rowAsSymbolDict(pred)
             print '= d',d
+            #TODO test grad correctness
             gradDict = self.prog.evalGrad(self.mode,[self.X.getrow(i)])
-#            if i<4: 
-#                print 'native row',i,self.xsyms[i],d
-#                print 'grad w_Pos vs w_Neg',gradDict[ops.Partial('w_Pos',('weighted',1))].sum()/gradDict[ops.Partial('w_Pos',('weighted',1))].sum()
+            if i<4: 
+                print 'native row',i,self.xsyms[i],d
+                print 'gradDict',gradDict
             if tensorlog.NORMALIZE:
                 uniform = {'pos':0.5,'neg':0.5}
                 self.checkDicts(d,uniform)
@@ -172,6 +172,8 @@ class TestProPPR(unittest.TestCase):
     def testNativeMatrix(self):
         ops.TRACE = False
         pred = self.prog.eval(self.mode,[self.X])
+        #TODO test grad correctness
+        gradDict = self.prog.evalGrad(self.mode,[self.X])
         d0 = self.prog.db.matrixAsSymbolDict(pred)
         for i,d in d0.items():
             if i<4: print 'native matrix',i,self.xsyms[i],d

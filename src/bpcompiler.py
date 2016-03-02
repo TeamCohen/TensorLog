@@ -73,19 +73,19 @@ class BPCompiler(object):
         recursively compile any intensionally-defined predicates.
         The depth is a depth bound.
         """
-        self.rule = rule
-        self.lhsMode = lhsMode
-        self.tensorlogProg = tensorlogProg
+        self.rule = rule                    #rule to be compiled
+        self.lhsMode = lhsMode              #mode with respect to which this will be compiled
+        self.tensorlogProg = tensorlogProg  #need back pointer to this to compile subpredicates
         self.depth = depth #used for recursively compiling subpredicates with tensorlogProg
         self.ops = []      #generated list of operations used for BP
         self.output = None #final outputs of the function associated with performing BP for the mode
         self.inputs = None #inputs of the function associated with performing BP for the mode
         self.goals = [self.rule.lhs] + self.rule.rhs  #so we can systematically index goals with an int j
-        self.compiled = False
+        self.compiled = False               #set to True when compilation is finihe
         if STRICT: self.validateRuleBeforeAnalysis()
 
     #
-    # access the result of compilation
+    # compile and then access the result of compilation
     # 
 
     def getFunction(self): 
@@ -94,7 +94,6 @@ class BPCompiler(object):
         if not self.compiled: 
             self.compile()
         return funs.OpSeqFunction(self.inputs, self.output, self.ops)
-
 
     #
     # debugging tools

@@ -10,6 +10,7 @@ import logging
 import getopt
 
 
+#TODO make parameters of a program
 MAXDEPTH=10
 NORMALIZE=True
 
@@ -206,6 +207,7 @@ class ProPPRProgram(Program):
 
 
 def answerStringQuery(p,a):
+    """Use a program to answer a query and print the result - used in the sample main"""
     g = parser.Parser.parseGoal(a)
     assert (not parser.isVariableAtom(g.args[0]) and parser.isVariableAtom(g.args[1])), 'mode of query should be p(i,o): %s' % str(g)
     mode = ModeDeclaration(parser.Goal(g.functor,['i','o']))

@@ -4,6 +4,7 @@ import scipy.sparse as SS
 import numpy
 
 import ops
+import bcast
 
 class Function(object):
     """The tensorlog representation of a function. This supports eval and
@@ -67,7 +68,8 @@ class SumFunction(Function):
         for f in self.funs[1:]:
             deltaDict = f.evalGrad(db,values)
             for var,val in deltaDict.items():
-                accumDict[var] = accumDict.get(var,constZeros) + deltaDict.get(var,constZeros)
+                #accumDict[var] = accumDict.get(var,constZeros) + deltaDict.get(var,constZeros)
+                accumDict[var] = bcast.broadcastingDictSum(accumDict,deltaDict,var)
         return accumDict
 
 class NormalizedFunction(Function):
@@ -78,12 +80,7 @@ class NormalizedFunction(Function):
 
     def eval(self,db,values):
         m = self.fun.eval(db,values)
-        numr = m.get_shape()[0]
-        if numr==1:
-            return m.multiply(1.0/m.sum())
-        else:
-            rows = [m.getrow(i) for i in range(numr)]
-            return SS.vstack([r.multiply( 1.0/r.sum()) for r in rows], dtype='float64')
+        return bcast.rowNormalize(m)
 
     def evalGrad(self,db,values):
         # (f/g)' = (gf' - fg')/g^2
@@ -96,7 +93,8 @@ class NormalizedFunction(Function):
         gradDict = {}
         for w in db.params:
             dm = dmDict.get(w, db.zeros())
-            numr = m.get_shape()[0]
+            m,dm = bcast.broadcast2(m,dm)
+            numr = bcast.numRows(m)
             if numr==1:
                 gradDict[w] = gradrow(m,dm)
             else:
