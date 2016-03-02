@@ -3,7 +3,7 @@
 import scipy.sparse as SS
 import numpy
 
-# broadcast utilities
+# miscellaneous broadcast utilities used my ops.py and funs.py
 
 def numRows(m): 
     """Number of rows in matrix"""
@@ -62,6 +62,8 @@ def broadcastingDictSum(d1,d2,var):
             return broadcast(d1[var], r2) + d2[var]
         elif r2==1:
             return d1[var] + broadcast(d2[var], r1)
+
+#TODO check div by zero
 
 def rowNormalize(m):
     """Row-normalize a matrix m and return a sparse matrix. This doesn't

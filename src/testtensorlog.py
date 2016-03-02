@@ -184,7 +184,6 @@ class TestProPPR(unittest.TestCase):
                 self.checkClass(d,self.xsyms[i],'pos',self.numWords)
                 self.checkClass(d,self.xsyms[i],'neg',self.numWords)
 
-
     def checkClass(self,d,sym,lab,expected):
         self.assertEqual(d[lab], expected[sym])
 

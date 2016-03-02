@@ -215,8 +215,9 @@ class ComponentwiseVecMulOp(Op):
             m1a,m2a = bcast.broadcastBinding(env, Partial(self.src,w), self.src2)
             m1b,m2b = bcast.broadcastBinding(env, self.src, Partial(self.src2,w))
             m1a,m2a,m1b,m2b = bcast.broadcast4(m1a,m2a,m1b,m2b)
-            print '=shapes a1 a2 b1 b2',m1a.get_shape(),m2a.get_shape(),m1b.get_shape(),m2b.get_shape()
             env[Partial(self.dst,w)] = m1a.multiply(m2a) + m1b.multiply(m2b)
+
+#TODO move some of this logic into bcast so I can optimize later
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
