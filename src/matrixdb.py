@@ -5,6 +5,7 @@ import os
 import os.path
 import ops
 import symtab 
+import parser
 import scipy.sparse
 import scipy.io
 import collections
@@ -12,10 +13,13 @@ import logging
 
 # TODO replace set(X,c) with assign(X,c)?
 
-def isSetMode(mode):
-    """Is this a proper mode for the 'set' predicate?"""
-    if mode.arity==2 and mode.functor=='set':
-        assert mode.isOutput(0) and mode.isConst(1), 'proper usage for set/2 is set(Var,const) not %s' % mode
+def assignGoal(var,const):
+    return parser.Goal('assign',[var,const])
+
+def isAssignMode(mode):
+    """Is this a proper mode for the 'assign' predicate?"""
+    if mode.arity==2 and mode.functor=='assign':
+        assert mode.isOutput(0) and mode.isConst(1), 'proper usage for assign/2 is assign(Var,const) not %s' % mode
         return True
     else:
         return False

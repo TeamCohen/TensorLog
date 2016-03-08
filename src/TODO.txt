@@ -1,12 +1,18 @@
-- add normalization operator?
-
+- add normalization operator -done
 - revive matrix computation -done
 - stripped out multiple function outputs - done
 - make bpcompiler.py return a Fun
 - make tensorlog.py manipulate Funs, not Ops
 
+TODO: also return partial(output,input)
+
 - should I make the theano-free version a theano "operator"?
 - should I arrange that parameters can be theano shared variables?
+
+api:
+   tlog.infer("p(i,o)", input=X, params={'weight':W})
+or f = tlog.inferenceFunction("p(i,o)", params={'weights':W})
+   f(X,weights=W)
 
 ----------
 Learning/training:

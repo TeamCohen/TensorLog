@@ -281,7 +281,7 @@ class BPCompiler(object):
                     mode = self.toMode(j)
                     if not gin.inputs:
                         # special case - binding a variable to a constant with set(Var,const)
-                        assert matrixdb.isSetMode(mode),'output variables without inputs are only allowed for set/2'
+                        assert matrixdb.isAssignMode(mode),'output variables without inputs are only allowed for set/2'
                         addOp(depth,ops.AssignOnehotToVar(msgName,mode))
                         return cacheMessage((j,v),msgName)
                     else:

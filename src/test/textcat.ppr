@@ -1,3 +1,3 @@
-predict(X,Pos) :- set(Pos,pos) {all(F): hasWord(X,W),posPair(W,F)}.
-predict(X,Neg) :- set(Neg,neg) {all(F): hasWord(X,W),negPair(W,F)}.
+predict(X,Pos) :- assign(Pos,pos) {all(F): hasWord(X,W),posPair(W,F)}.
+predict(X,Neg) :- assign(Neg,neg) {all(F): hasWord(X,W),negPair(W,F)}.
 

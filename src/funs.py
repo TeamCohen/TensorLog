@@ -8,15 +8,15 @@ import bcast
 
 class Function(object):
     """The tensorlog representation of a function. This supports eval and
-    evalGrad operations, take a list of input values as the inputs.
+    evalGrad operations, and take a list of input values as the inputs.
     """
     def eval(self,db,values):
         """When called with a MatrixDB and a list of input values v1,...,xk,
-        executes some function f(v1,..,vk) and return the output of
+        executes some function f(v1,..,vk) and return the output of the function.
         """
         assert False, 'abstract method called.'
     def evalGrad(self,db,values):
-        """Return a dictionary mapping w=>the partial deriv of f wrt w for
+        """Return a dictionary mapping w to the partial deriv of f wrt w for
         every param w, at the specified input values.
         """
         assert False, 'abstract method called.'
@@ -71,6 +71,8 @@ class SumFunction(Function):
                 #accumDict[var] = accumDict.get(var,constZeros) + deltaDict.get(var,constZeros)
                 accumDict[var] = bcast.broadcastingDictSum(accumDict,deltaDict,var)
         return accumDict
+
+#TODO softmax?
 
 class NormalizedFunction(Function):
 

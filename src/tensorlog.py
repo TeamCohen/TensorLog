@@ -187,7 +187,7 @@ class ProPPRProgram(Program):
             assert len(rule0.features)==1,'multiple constant features not supported'
             constFeature = rule0.features[0].functor
             constAsVar = constFeature.upper()
-            rule.rhs.append( parser.Goal('set',[constAsVar,constFeature]) )
+            rule.rhs.append( matrixdb.assignGoal(constAsVar,constFeature) )
             rule.rhs.append( parser.Goal('weighted',[constAsVar]) )
         else:
             #format is {all(F):-...}

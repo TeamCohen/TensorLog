@@ -57,20 +57,20 @@ class TestSmallProofs(unittest.TestCase):
         self.inferenceCheck(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
 
     def testConstOutput(self):
-        self.inferenceCheck(['sis(X,W):-set(W,william),child(X,Y).'], 'sis(i,o)', 'sarah', {'william': 1.0})
-        self.inferenceCheck(['sis(X,W):-set(W,william),child(X,Y).'], 'sis(i,o)', 'lottie', {'william': 2.0})
+        self.inferenceCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'sarah', {'william': 1.0})
+        self.inferenceCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'lottie', {'william': 2.0})
 
 #    def testTrivConstOutput(self):
-#        self.inferenceCheck(['sis(X,W):-set(W,william).'], 'sis(i,o)', 'sarah', {'william': 1.0})
-#        self.inferenceCheck(['sis(X,W):-set(W,william).'], 'sis(i,o)', 'lottie', {'william': 1.0})
+#        self.inferenceCheck(['sis(X,W):-assign(W,william).'], 'sis(i,o)', 'sarah', {'william': 1.0})
+#        self.inferenceCheck(['sis(X,W):-assign(W,william).'], 'sis(i,o)', 'lottie', {'william': 1.0})
 
     def testConstChain1(self):
-        self.inferenceCheck(['p(X,S) :- set(S,susan),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
+        self.inferenceCheck(['p(X,S) :- assign(S,susan),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
 
     def testConstChain2(self):
-        #self.inferenceCheck(['p(X,Pos) :- set(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','rachel',{'pos':0.0})
-        self.inferenceCheck(['p(X,Pos) :- set(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','sarah',{'pos':1.0})
-        self.inferenceCheck(['p(X,Pos) :- set(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','lottie',{'pos':2.0})
+        #self.inferenceCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','rachel',{'pos':0.0})
+        self.inferenceCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','sarah',{'pos':1.0})
+        self.inferenceCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','lottie',{'pos':2.0})
 
     def testAltChain(self):
         self.inferenceCheck(['p(X,W) :- spouse(X,W),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
