@@ -104,3 +104,25 @@ class NormalizedFunction(Function):
                 dmrows = [dm.getrow(i) for i in range(numr)]
                 gradDict[w] = SS.vstack([gradrow(mrows[i],dmrows[i]) for i in range(numr)], dtype='float64')
         return gradDict
+
+class CrossEntropy(Function):
+    def __init__(self,Y,fun):
+        self.Y = y
+        self.fun = fun
+    def eval(self,db,values):
+        X = self.fun.eval(db,values)
+        logX = SS.csr_matrix((numpy.log(X.data),X.indices,X.indptr),shape=X.get_shape())
+        result = (-self.Y * logX).sum()
+        return result
+    def evalGrad(self,db,values):
+        dXdw = self.fun.evalGrad(db,values)
+        gradDict = {}
+        oneByX = SS.csr_matrix(((1.0/X.data),X.indices,X.indptr),shape=X.get_shape())
+        negYTimesOneByX = -self.Y * oneByX
+        for w in db.params:
+            # d/dw sum_{nz ij} log X[i,j] * -Y[i,j]
+            # = sum_{nz ij} -Y[i,j] * 1/X[i,j] * d/dw X[i,j]
+            gradDict[w] = (negYTimesOneByX * dXdw.get(w,0.0)).sum()
+        return gradDict
+
+

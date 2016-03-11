@@ -1,8 +1,16 @@
+To think through: forward vs reverse-mode differentiation
+
+Theano-free learning:
 - add normalization operator -done
 - revive matrix computation -done
 - stripped out multiple function outputs - done
-- make bpcompiler.py return a Fun
-- make tensorlog.py manipulate Funs, not Ops
+- make bpcompiler.py return a Fun -done
+- make tensorlog.py manipulate Funs, not Ops -done
+
+learn.py:
+ - dataset loader (see testtensorlog.py)
+ - loss function in funs? in learn?
+   loss = B.sp_sum(-y * B.structured_log(prob),sparse_grad=True)   #cross-entropy loss
 
 TODO: also return partial(output,input)
 
