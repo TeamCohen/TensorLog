@@ -1,3 +1,7 @@
+dlogP[r,y]/dW[i,j] = 1/P[r,y] * dP[r,y]/dW[i,j]
+dlogP[r,y]/dW[R,j] = 1/P[r,y] * dP[r,y]/dW[r,j]  since partial is 0 for r!=i
+
+
 To think through: forward vs reverse-mode differentiation
 
 Theano-free learning:
@@ -11,6 +15,32 @@ learn.py:
  - dataset loader (see testtensorlog.py)
  - loss function in funs? in learn?
    loss = B.sp_sum(-y * B.structured_log(prob),sparse_grad=True)   #cross-entropy loss
+
+   0 <= Y[i,y] <= 1  hard labels
+   0 <= P[i,y] <= 1  predictions
+   
+   loss = sum_{i,y nonz in P} { -Y[i,y]*log(P[i,y]) }
+
+   chain rule: dloss/dw = { -Y[i,y] * 1/P[i,y] * dP[i,y]/dw }
+
+   generally when I have a matrix function like P(w) there will be
+   dP[i,y]/dw for every P[i,y] and every w.
+
+   reverse mode: focusing deeper computations by at each level, have a
+   matrix of [i,j] pairs of interest, and always return a new set of
+   pairs of interest which have been extended by using the chain rule.
+
+   level by level:
+   - top: -Y*fun focus is 1, pass Y to dfun/dw
+   - next: logP focus is Y, pass Y*1/P to dP/dw
+   - next  norm(P) focus is Y*(1/P) pass Y*(1/P)*(1/g^2)(gf' - fg') to f'=dP/dw, g'=P.sum()/dw
+           OK ths is a little complicated....
+	   -   pass Y*(1/P)*(1/g^2)(g) to f'
+	   -   pass Y*(1/P)*(1/g^2)(-f) to g'
+	   -   sum results
+   - next focus is .... pass to Sum
+     	  = sum results
+
 
 TODO: also return partial(output,input)
 

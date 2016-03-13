@@ -102,6 +102,11 @@ class Program(object):
         for (m,d) in sorted(self.function.keys()):
             print '> mode',m,'depth',d,'fun:',self.function[(m,d)]
 
+    def getPredictFunction(self,mode):
+        if (mode,0) not in self.function: self.compile(mode)
+        fun = self.function[(mode,0)]
+        return fun
+
     def evalSymbols(self,mode,symbols):
         """ After compilation, evaluate a function.  Input is a list of
         symbols that will be converted to onehot vectors, and bound to

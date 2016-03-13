@@ -48,6 +48,8 @@ class Envir(object):
         assert len(vars)==len(vals)
         for i in range(len(vars)):
             self[vars[i]] = vals[i]
+    def __repr__(self):
+        return 'Envir(%r)' % self.register
     #override env[var] to access the binding array
     def __getitem__(self,key):
         return self.register[key]
