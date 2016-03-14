@@ -83,8 +83,8 @@ def rowNormalize(m):
     """
     numr = numRows(m)
     if numr==1:
-        return m.multiply(1.0/m.sum())
+        return (1.0/m.sum()) * m
     else:
         rows = [m.getrow(i) for i in range(numr)]
-        return stack([r.multiply( 1.0/r.sum()) for r in rows])
+        return stack([r * (1.0/r.sum()) for r in rows])
 

@@ -237,10 +237,10 @@ class WeightedVec(Op):
         m1,m2 = bcast.broadcastBinding(env, self.vec, self.weighter)
         r = bcast.numRows(m1)  #also m2
         if r==1:
-            env[self.dst] =  m1.multiply(m2.sum())
+            env[self.dst] =  m1 * m2.sum()
         else:
             env[self.dst] =  \
-                SS.vstack([m1.getrow(i).multiply(m2.getrow(i).sum()) for i in range(r)], dtype='float64')
+                SS.vstack([m2.getrow(i).sum() * m1.getrow(i) for i in range(r)], dtype='float64')
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:
@@ -249,8 +249,8 @@ class WeightedVec(Op):
             m1a,m2a,m1b,m2b = bcast.broadcast4(m1a,m2a,m1b,m2b)
             r = bcast.numRows(m1a)
             if r==1:
-                env[Partial(self.dst,w)] =  m1a.multiply(m2a.sum()) + m1b.multiply(m2b.sum())
+                env[Partial(self.dst,w)] =  m1a*m2a.sum() + m1b*m2b.sum()
             else:
                 env[Partial(self.dst,w)] = \
-                    SS.vstack([m1a.getrow(i).multiply(m2a.getrow(i).sum()) for i in range(r)], dtype='float64') \
-                    + SS.vstack([m1b.getrow(i).multiply(m2b.getrow(i).sum()) for i in range(r)], dtype='float64')
+                    SS.vstack([m2a.getrow(i).sum() * m1a.getrow(i) for i in range(r)], dtype='float64') \
+                    + SS.vstack([m2b.getrow(i).sum() * m1b.getrow(i) for i in range(r)], dtype='float64')
