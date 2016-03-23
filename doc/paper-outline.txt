@@ -1,0 +1,13 @@
+Intro
+ - Probabilistic LP: surveys (Kersting & De Readt, Roth)
+ -- approach 1: MLNs, PSL. 
+ --- one binary random variable per atomic formula
+ --- factors between random variables that produce a distribution (eg, ground clause)
+ --- downside: size of graph, inference cost for MLNs
+ - approach 2: restrict to probabilistic inference deductive closure of theory: ProbLog, SLPs, ProPPR
+ -- still one binary random variable per atomic formula
+ --- used in SLP and ProPPR to define joint distribution indirectly
+ --- used in ProbLog and Sucio's probabilistic DBs (cite) to compute probabilities more directly
+ -- downside: need to explore full space of proofs, since typically all proofs influence truth/falsity
+
+
