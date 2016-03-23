@@ -213,7 +213,6 @@ class ProPPRProgram(Program):
         (db,rules) = Program._load(fileNames)
         return ProPPRProgram(db,rules)
 
-
 def answerStringQuery(p,a):
     """Use a program to answer a query and print the result - used in the sample main"""
     g = parser.Parser.parseGoal(a)

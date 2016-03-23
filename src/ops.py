@@ -6,7 +6,8 @@ import numpy
 import bcast
 
 # if true print ops as they are executed
-TRACE=False
+# TODO: abstract the trace routine somewhat
+TRACE=True
 
 # TODO: a listing routine
 
@@ -115,6 +116,7 @@ class AssignPreimageToVar(Op):
     def eval(self,env):
         if TRACE: print 'op:',self
         env[self.dst] = env.db.matrixPreimage(self.matMode)
+        if TRACE: print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:
@@ -135,6 +137,7 @@ class AssignZeroToVar(Op):
     def eval(self,env):
         if TRACE: print 'op:',self
         env[self.dst] = env.db.zeros()
+        if TRACE: print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:
@@ -155,6 +158,7 @@ class AssignOnehotToVar(Op):
     def eval(self,env):
         if TRACE: print 'op:',self
         env[self.dst] = env.db.onehot(self.onehotConst)
+        if TRACE: print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:
@@ -176,6 +180,7 @@ class VecMatMulOp(Op):
     def eval(self,env):
         if TRACE: print 'op:',self
         env[self.dst] = env[self.src] * env.db.matrix(self.matmode,self.transpose)
+        if TRACE: print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:
@@ -211,6 +216,7 @@ class ComponentwiseVecMulOp(Op):
             print 'op:',self
         m1,m2 = bcast.broadcastBinding(env, self.src, self.src2)
         env[self.dst] = m1.multiply(m2)
+        if TRACE: print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:

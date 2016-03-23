@@ -66,8 +66,6 @@ def broadcastingDictSum(d1,d2,var):
         elif r2==1:
             return d1[var] + broadcast(d2[var], r1)
 
-#TODO check div by zero
-
 def rowSum(m):
     numr = numRows(m)
     if numr==1:
@@ -76,6 +74,8 @@ def rowSum(m):
         rows = [m.getrow(i) for i in range(numr)]
         return stack([r.sum() for r in rows])
 
+#TODO check div by zero
+
 def rowNormalize(m):
     """Row-normalize a matrix m and return a sparse matrix. This doesn't
     really require 'broadcasting' but it seems like you need special
@@ -83,6 +83,8 @@ def rowNormalize(m):
     """
     numr = numRows(m)
     if numr==1:
+        z = m.sum()
+        assert z>0, "z<=0"
         return (1.0/m.sum()) * m
     else:
         rows = [m.getrow(i) for i in range(numr)]

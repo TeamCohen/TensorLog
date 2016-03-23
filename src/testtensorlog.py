@@ -136,8 +136,10 @@ class TestSmallProofs(unittest.TestCase):
             for k in actual.keys():
                 self.assertAlmostEqual(actual[k], expected[k], delta=0.0001)
 
-#TODO write tests for grad
-
+class TestGrad(unittest.TestCase):
+    def setUp(self):
+        self.prog = tensorlog.ProPPRProgram.load(["test/testgrad.ppr","test/testgrad.cfacts"])
+    
 class TestProPPR(unittest.TestCase):
 
     def setUp(self):
