@@ -2,14 +2,14 @@
 
 import scipy.sparse as SS
 import numpy
+import logging
 
 import bcast
 
 # if true print ops as they are executed
-# TODO: abstract the trace routine somewhat
-TRACE=True
+# TODO: abstract the trace routine?
 
-# TODO: a listing routine
+def trace(): return logging.getLogger().isEnabledFor(logging.DEBUG)
 
 #TODO shorter name?
 class Partial(object):
@@ -114,13 +114,13 @@ class AssignPreimageToVar(Op):
     def __repr__(self):
         return "AssignPreimageToVar(%s,%s)" % (self.dst,self.matMode)
     def eval(self,env):
-        if TRACE: print 'op:',self
+        if trace(): print 'op:',self
         env[self.dst] = env.db.matrixPreimage(self.matMode)
-        if TRACE: print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
+        if trace(): print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:
-            if TRACE: print 'evalGrad',self.dst,'/',w,'dict',env.keys()
+            if trace(): print 'evalGrad',self.dst,'/',w,'dict',env.keys()
             if paramMatchMode(w,self.matMode):
                 env[Partial(self.dst,w)] = env.db.ones()
             else:
@@ -135,9 +135,9 @@ class AssignZeroToVar(Op):
     def __repr__(self):
         return "ClearVar(%r)" % (self.dst)
     def eval(self,env):
-        if TRACE: print 'op:',self
+        if trace(): print 'op:',self
         env[self.dst] = env.db.zeros()
-        if TRACE: print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
+        if trace(): print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:
@@ -156,9 +156,9 @@ class AssignOnehotToVar(Op):
     def __repr__(self):
         return "AssignOnehotToVar(%s,%s)" % (self.dst,self.onehotConst)
     def eval(self,env):
-        if TRACE: print 'op:',self
+        if trace(): print 'op:',self
         env[self.dst] = env.db.onehot(self.onehotConst)
-        if TRACE: print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
+        if trace(): print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:
@@ -178,13 +178,13 @@ class VecMatMulOp(Op):
     def __repr__(self):
         return "VecMatMulOp(%r,%r,%s,%r)" % (self.dst,self.src,self.matmode,self.transpose)
     def eval(self,env):
-        if TRACE: print 'op:',self
+        if trace(): print 'op:',self
         env[self.dst] = env[self.src] * env.db.matrix(self.matmode,self.transpose)
-        if TRACE: print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
+        if trace(): print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:
-            if TRACE: print 'evalGrad',self.dst,'/',w,'dict',env.keys()
+            if trace(): print 'evalGrad',self.dst,'/',w,'dict',env.keys()
             if paramMatchMode(w,self.matmode):
                 # df/dp r*M = (df/dp r) * M + r (df/dp M)
                 #           = (df/dp r) * M + r I            if p==M
@@ -212,11 +212,11 @@ class ComponentwiseVecMulOp(Op):
     def __repr__(self):
         return "ComponentwiseVecMulOp(%r,%r,%s)" % (self.dst,self.src,self.src2)
     def eval(self,env):
-        if TRACE: 
+        if trace(): 
             print 'op:',self
         m1,m2 = bcast.broadcastBinding(env, self.src, self.src2)
         env[self.dst] = m1.multiply(m2)
-        if TRACE: print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
+        if trace(): print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
     def evalGrad(self,env):
         self.eval(env)
         for w in env.db.params:

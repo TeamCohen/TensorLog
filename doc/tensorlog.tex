@@ -12,6 +12,69 @@
 
 \title{Differentiable Logic Programs: DRAFT}
 
+\iffalse
+
+
+INTRO
+
+ - motivation/background.  H is Herbrand base, model is for Pr(phi in
+ H|theory,DB).
+
+ - approach:
+
+ -- limit ourselves to arity 1 and two predicates.  usually we answer
+ queries q of the form: r(x,Y) or r(Y,x), where r and x are given at
+ query time. So the query response R involves only a small part H -
+ that matching (unifying with) the query.  Further, we often only care
+ about the relative scores of fmla in R: ie for \phi in R, we don't
+ need Pr(\phi) according to Pr_H(phi) but 1/Z Pr_H(phi), where Z =
+ Pr_H(R).
+
+ -- so don't model a distribution over the Herbrand base. instead,
+ consider specific families Q, and build ``response strategies'' that
+ work for all q in Q.  Q will be relation + input/output pattern.  A
+ RS for Q will return a distribution over the free variables.  For the
+ binary single-input case, this is a distribution over bindings for
+ the single output variable.  QRS is consistent with some Pr_H.
+
+ - road map
+
+QRS FOR ONE CLAUSE THEORIES
+
+- algorithmic QRS based on BP
+
+consider one clause theories and a proof-counting distribution. Then
+QRS can be defined using BP over a graph where random vars are logical
+vars and literals are factors - factor for r(X,Y) has # inputs =
+arity, and #non-zero terms in factor just the number of facts for R.
+[Examples] This is an algorithmic QRS.
+
+- functional QRS
+
+for any clause where graph is a forest of polytrees, BP will send a
+deterministic sequence of messages. We can simulate BP and obtain this
+message sequence. [Examples] This is an functional QRS: a known
+function f:q->v_R that provides the response to query.  This
+differentiable.
+
+FUNCTIONAL QRS FOR MORE COMPLEX THEORIES
+
+- multiple clauses for a predicate
+- recursive theories, with recursion carried out to fixed depth
+- weighted proof-counting
+
+LEARNING
+
+- adding a loss function
+- can learn weights for any predicate 
+- rule-weighting as in SLPs - syntactic sugar
+- feature-based rule-weighting as in ProPPR - syntactic sugar
+
+
+
+\fi
+
+
 \begin{document} 
 
 \section{Introduction}

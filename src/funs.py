@@ -2,10 +2,12 @@
 
 import scipy.sparse as SS
 import numpy
+import logging
 
 import ops
 import bcast
 
+def trace(): return logging.getLogger().isEnabledFor(logging.DEBUG)
 
 class ComputationNode(object):
     def __init__(self,fun,db,values,result,children=[]):
@@ -20,27 +22,31 @@ class ComputationNode(object):
             c.grad()
         self.fun.grad(self)
         return self.gradResult
-    def show(self,depth=0):
-        def about(m): return (type(m),m.data.shape)
-        tab = '| '*(depth)
-        print '%s %r' % (tab,self.fun)
-        print '%s val %r:' % (tab,about(self.result))
+    def pprint(self,depth=0):
+        """Returns list of lines"""
+        def about(m): return ('type=%r shape=%r' % (type(m),m.data.shape))
+        tab = '| '*depth
+        lines = ['%s%r' % (tab,self.fun)]
+        lines += ['%sval %s:' % (tab,about(self.result))]
         for w in self.gradResult:
-            print '%s %s: %r' % (tab,w,about(self.gradResult[w]))
+            lines += ['%s %s: %s' % (tab,w,about(self.gradResult[w]))]
         for c in self.children:
-            c.show(depth+1)
-
+            lines += c.pprint(depth+1)
+        return lines
 
 class Function(object):
     """The tensorlog representation of a function. This supports eval and
     evalGrad operations, and take a list of input values as the inputs.
     """
     def eval(self,db,values):
-        return self.computationTree(db,values).result
-
+        tree = self.computationTree(db,values)
+        if trace(): 
+            logging.debug('Computation tree on function %r' % (self))
+            logging.debug('\n' + '\n'.join(tree.pprint()))
+        return tree.result
     def evalGrad(self,db,values):
-        return self.computationTree(db,values).grad()
-
+        tree = self.computationTree(db,values)
+        return tree.grad()
     def computationTree(self,db,values):
         """When called with a MatrixDB and a list of input values v1,...,xk,
         executes some function f(v1,..,vk) and returns a computation
@@ -49,6 +55,10 @@ class Function(object):
         assert False, 'abstract method called.'
     def gradResult(self,root,w):
         """Add derivatives to a computation tree.
+        """
+        assert False, 'abstract method called.'
+    def pprint(self,depth=0):
+        """Return list of lines in a pretty-print of the function.
         """
         assert False, 'abstract method called.'
 
@@ -63,6 +73,9 @@ class OpSeqFunction(Function):
     def __repr__(self):
         shortOps = '[%r,...,%r]' % (self.ops[0],self.ops[-1])
         return 'OpSeqFunction(%r,%r,%r)' % (self.opInputs,self.opOutput,shortOps)
+
+    def pprint(self,depth=0):
+        return [('| '*depth) + 'OpSeqFunction:'] + map(lambda o:('| '*(depth+1))+repr(o), self.ops)
 
     def computationTree(self,db,values):
         #eval expression
@@ -100,6 +113,8 @@ class NullFunction(OpSeqFunction):
         self.ops = [ops.AssignZeroToVar(self.opOutput)]
     def __repr__(self):
         return 'NullFunction()'
+    def pprint(self,depth=0):
+        return [('| '*depth) + repr(self)]
 
 class SumFunction(Function):
     """A function which computes the sum of a bunch of other functions."""
@@ -107,6 +122,8 @@ class SumFunction(Function):
         self.funs = funs
     def __repr__(self):
         return 'SumFunction(%r)' % self.funs
+    def pprint(self,depth=0):
+        return [('| '*depth) + 'SumFunction:'] + reduce(lambda x,y:x+y, map(lambda f:f.pprint(depth=depth+1), self.funs))
     def computationTree(self,db,values):
         subtrees = map(lambda f:f.computationTree(db,values), self.funs)
         accum = subtrees[0].result
@@ -126,6 +143,8 @@ class NormalizedFunction(Function):
         self.fun = fun
     def __repr__(self):
         return 'NormalizedFunction(%r)' % self.fun
+    def pprint(self,depth=0):
+        return [('| '*depth) + 'NormalizedFunction:'] + self.fun.pprint(depth=depth+1)
     def computationTree(self,db,values):
         subtree = self.fun.computationTree(db,values)
         result =  bcast.rowNormalize(subtree.result)

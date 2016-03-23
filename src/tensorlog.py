@@ -14,6 +14,8 @@ import getopt
 MAXDEPTH=10
 NORMALIZE=True
 
+TRACE=True
+
 ##############################################################################
 ## declarations
 ##############################################################################
@@ -112,6 +114,7 @@ class Program(object):
         symbols that will be converted to onehot vectors, and bound to
         the corresponding input arguments.
         """
+        if TRACE: logging.debug('evalSymbols %s inputs %r' % (str(mode),symbols))
         return self.eval(mode, [self.db.onehot(s) for s in symbols])
 
     def eval(self,mode,inputs):
@@ -121,6 +124,8 @@ class Program(object):
         """
         if (mode,0) not in self.function: self.compile(mode)
         fun = self.function[(mode,0)]
+        if TRACE: logging.debug('eval function %s' % str(fun))
+        if TRACE: logging.debug('\n'.join(fun.pprint()))
         return fun.eval(self.db, inputs)
 
     def evalGradSymbols(self,mode,symbols):
@@ -228,17 +233,23 @@ def answerStringQuery(p,a):
 
 if __name__ == "__main__":
     
-    argspec = ["programFiles="]
+    argspec = ["programFiles=","debug", "proppr"]
     try:
         optlist,args = getopt.getopt(sys.argv[1:], 'x', argspec)
     except getopt.GetoptError:
         logging.fatal('bad option: use "--help" to get help')
         sys.exit(-1)
     optdict = dict(optlist)
+    if "--debug" in optdict:
+        logging.basicConfig(level=logging.DEBUG)        
 
     assert '--programFiles' in optdict, '--programFiles f1:f2:... is a required option'
 
-    p = Program.load(optdict['--programFiles'].split(":"))
+    if "--proppr" in optdict:
+        p = ProPPRProgram.load(optdict['--programFiles'].split(":"))
+        p.setWeights(p.db.ones())
+    else:
+        p = Program.load(optdict['--programFiles'].split(":"))
 
     for a in args:
         answerStringQuery(p,a)

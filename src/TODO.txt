@@ -1,6 +1,8 @@
 dlogP[r,y]/dW[i,j] = 1/P[r,y] * dP[r,y]/dW[i,j]
 dlogP[r,y]/dW[R,j] = 1/P[r,y] * dP[r,y]/dW[r,j]  since partial is 0 for r!=i
 
+this involves tensors - maybe the best approach is to write a scalar
+CrossEntropy function with a custom, non-matrix valued grad() method.
 
 To think through: forward vs reverse-mode differentiation
 
