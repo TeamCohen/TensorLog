@@ -1,3 +1,5 @@
+python tensorlog.py --proppr --debug --programFiles test/textcat.ppr:test/textcattoy.cfacts 'predict(rw,Y)' 
+
 dlogP[r,y]/dW[i,j] = 1/P[r,y] * dP[r,y]/dW[i,j]
 dlogP[r,y]/dW[R,j] = 1/P[r,y] * dP[r,y]/dW[r,j]  since partial is 0 for r!=i
 
