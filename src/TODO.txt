@@ -1,6 +1,19 @@
-dlogP[r,y]/dW[i,j] = 1/P[r,y] * dP[r,y]/dW[i,j]
-dlogP[r,y]/dW[R,j] = 1/P[r,y] * dP[r,y]/dW[r,j]  since partial is 0 for r!=i
+Note 1: for matrix P, Y where P is unnormalized BP score passed through
+a softmax function 
 
+  P_ij = exp(S_ij) / sum_k exp(S_ik)
+
+and J = cross-entropy loss then 
+
+  partial J/partial S_ij = (P_ij(sum_k Y_ik) - Y_ij)
+
+and you can drop the sum_k Y_ik if Y_i* is a unit vector [or, if it's stochastic]
+
+Note 2: partial y/partial X where X is a matrix is a matrix M where
+
+  M_ij = partial y/partial X_ji
+
+See https://en.wikipedia.org/wiki/Matrix_calculus - note the transpose!
 
 To think through: forward vs reverse-mode differentiation
 

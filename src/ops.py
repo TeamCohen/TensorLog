@@ -121,6 +121,7 @@ class AssignPreimageToVar(Op):
         self.eval(env)
         for w in env.db.params:
             if TRACE: print 'evalGrad',self.dst,'/',w,'dict',env.keys()
+            #TODO should be onesLike(w)
             if paramMatchMode(w,self.matMode):
                 env[Partial(self.dst,w)] = env.db.ones()
             else:
@@ -161,6 +162,7 @@ class AssignOnehotToVar(Op):
         if TRACE: print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
     def evalGrad(self,env):
         self.eval(env)
+        #TODO should be onesLike ==> just the oneHot vector itself
         for w in env.db.params:
             env[Partial(self.dst,w)] = env.db.ones()
 
@@ -185,10 +187,11 @@ class VecMatMulOp(Op):
         self.eval(env)
         for w in env.db.params:
             if TRACE: print 'evalGrad',self.dst,'/',w,'dict',env.keys()
+            #TODO: should be onesLike(self.mat) not I
             if paramMatchMode(w,self.matmode):
                 # df/dp r*M = (df/dp r) * M + r (df/dp M)
                 #           = (df/dp r) * M + r I            if p==M
-                #           = (df/dp r) * M + r I            else
+                #           = (df/dp r) * M                 else
                 env[Partial(self.dst,w)] = \
                     env[Partial(self.src,w)] * env.db.matrix(self.matmode,self.transpose)  + env[self.src] 
             else:
@@ -219,6 +222,7 @@ class ComponentwiseVecMulOp(Op):
         if TRACE: print self.dst,'=>',env.db.matrixAsSymbolDict(env[self.dst])
     def evalGrad(self,env):
         self.eval(env)
+        #TODO check - but this should be ok
         for w in env.db.params:
             m1a,m2a = bcast.broadcastBinding(env, Partial(self.src,w), self.src2)
             m1b,m2b = bcast.broadcastBinding(env, self.src, Partial(self.src2,w))
