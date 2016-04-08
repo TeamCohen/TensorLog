@@ -5,6 +5,11 @@ import tensorlog
 
 import scipy.sparse as SS
 import numpy.random as NR
+import collections
+
+#for backprop updates
+def updateAccumulator():
+    return collections.defaultdict(list)
 
 class Learner(object):
 
@@ -41,45 +46,14 @@ class Learner(object):
         dm = self.prog.db.matrixAsSymbolDict(m)
         for r,d in dm.items():
             print msg,r,d
-            
 
-    def update(self):
+    def crossEntropyUpdate(self):
         self.predictFun = self.prog.getPredictFunction(self.mode)
-        print 'predictFun',self.predictFun
+        assert isinstance(self.predictFun,funs.SoftmaxFunction),'crossEntropyUpdate specialized to work for softmax normalization'
+        #forward propagation
         P = self.predictFun.eval(self.prog.db, [self.X])
-        self.showMat('P',P)
-        dPs = self.predictFun.evalGrad(self.prog.db,[self.X])
-        dP = dPs[('weighted',1)]
-        #self.showMat('dP',dP)
-        crossEntFun = funs.CrossEntropy(self.Y,self.predictFun)
-        print 'crossEntFun',crossEntFun
-        xent = crossEntFun.eval(self.prog.db, [self.X])
-        self.showMat('xent',xent)
-        dCrossEnt = crossEntFun.evalGrad(self.prog.db, [self.X])[('weighted',1)]
-        print 'dCrossEnt',dCrossEnt
-        self.showMat('dCrossEnt',dCrossEnt)
-        t = crossEntFun.computationTree(self.prog.db,[self.X])
-        t.grad()
-        t.show()
-
-#        predGrads = self.predictFun.evalGrad(self.prog.db, [self.X])
-        #preds is a matrix P where P[i,y] is the normalized score for
-        #class y on example i
-
-        #predGrads[w] is a matrix G so that G[i,f] is the gradient of the
-        #f-th feature for the prediction for the ....?
-#        for w in predGrads:
-#            dm = self.prog.db.matrixAsSymbolDict(SS.csr_matrix(predGrads[w]))
-#            for r,d in dm.items():
-#                print 'grad',w,r,d
-#        self.lossFun = funs.CrossEntropy(self.Y,self.predictFun)
-#        loss = self.lossFun.eval(self.prog.db, [self.X])
-#        print 'training loss',loss
-#        gradDict = self.lossFun.evalGrad(self.prog.db, [self.X])
-#        print 'training gradient',gradDict
-#        for w in gradDict:
-#            print 'gradient',w,':',self.prog.db.matrixAsSymbolDict(gradDict[w])
-
+        paramUpdates = updateAccumulator()
+        self.predictFun.fun.backprop([self.Y - P],paramUpdates)
 
 if __name__ == "__main__":
     prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr","test/textcattoy.cfacts"])
@@ -87,5 +61,5 @@ if __name__ == "__main__":
     learner.addData(tensorlog.ModeDeclaration('predict(i,o)'), 'test/textcattoy-train.examples')
     learner.initializeWeights()
     print 'params',learner.prog.db.params
-    learner.update()
+    learner.crossEntropyUpdate()
 

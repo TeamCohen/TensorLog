@@ -12,6 +12,10 @@ def numRows(m):
     """Number of rows in matrix"""
     return m.get_shape()[0]
 
+def numCols(m): 
+    """Number of colunms in matrix"""
+    return m.get_shape()[1]
+
 def broadcastBinding(env,var1,var2):
     """Return a pair of shape-compatible matrices for the matrices stored
     in environment registers var1 and var2. """
@@ -67,6 +71,7 @@ def broadcastingDictSum(d1,d2,var):
             return d1[var] + broadcast(d2[var], r1)
 
 def rowSum(m):
+    """Sum of each row as a column vector."""
     numr = numRows(m)
     if numr==1:
         return m.sum()
@@ -74,34 +79,23 @@ def rowSum(m):
         rows = [m.getrow(i) for i in range(numr)]
         return stack([r.sum() for r in rows])
 
-#TODO check div by zero
-
-def rowNormalize(m):
-    """Row-normalize a matrix m and return a sparse matrix. This doesn't
-    really require 'broadcasting' but it seems like you need special
-    case handling to deal with multiple rows efficiently.
-    """
-    numr = numRows(m)
-    if numr==1:
-        z = m.sum()
-        assert z>0, "z<=0"
-        return (1.0/m.sum()) * m
-    else:
-        rows = [m.getrow(i) for i in range(numr)]
-        return stack([r * (1.0/r.sum()) for r in rows])
-
-#TODO check what to do with empty rows
-
 def softmax(m):
-    """Row-normalize a matrix m and return a sparse matrix. This doesn't
-    really require 'broadcasting' but it seems like you need special
-    case handling to deal with multiple rows efficiently.
+    """Row-wise softmax of a sparse matrix, returned as a sparse matrix.
+    This doesn't really require 'broadcasting' but it seems like you
+    need special case handling to deal with multiple rows efficiently.
     """
     def softmaxRow(r):
-        d = r.data
-        e_d = np.exp(d - np.max(d))
-        d_sm = e_d / e_d.sum()
-        return SS.csr_matrix((d_sm,r.indices,r.indptr),shape=r.shape)
+        if not r.nnz:
+            # evals to uniform
+            n = numCols(r)
+            return SS.csr_matrix( ([1.0/n]*n,([0]*n,[j for j in range(n)])), shape=(1,n))
+        else:
+            d = r.data
+            e_d = np.exp(d - np.max(d))
+            #TODO should I correct the denominator for the (r.numCols()-r.nnz) zeros in the row?
+            #that would be: d_sm = e_d / (e_d.sum() + numCols(r) - r.nnz)
+            d_sm = e_d / e_d.sum()
+            return SS.csr_matrix((d_sm,r.indices,r.indptr),shape=r.shape)
 
     assert isinstance(m,SS.csr_matrix),'bad type for %r' % m
     numr = numRows(m)
