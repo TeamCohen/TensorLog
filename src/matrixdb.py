@@ -114,7 +114,7 @@ class MatrixDB(object):
             rowids = [0 for (r,d) in items]
             colids = [r for (r,d) in items]
             n = self.dim()
-            return scipy.sparse.csc_matrix((data,(rowids,colids)),shape=(1,n))
+            return scipy.sparse.csr_matrix((data,(rowids,colids)),shape=(1,n))
 
 
     #
@@ -226,7 +226,7 @@ class MatrixDB(object):
                 for j in self.buf[p][i]:
                     m[i,j] = self.buf[p][i][j]
             del self.buf[p]
-            self.matEncoding[p] = scipy.sparse.csc_matrix(m)
+            self.matEncoding[p] = scipy.sparse.csr_matrix(m)
             self.matEncoding[p].sort_indices()
         elif self.arity[p]==1:
             m = scipy.sparse.lil_matrix((1,n))

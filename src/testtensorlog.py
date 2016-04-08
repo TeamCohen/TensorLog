@@ -3,6 +3,7 @@
 import unittest
 import logging
 import sys
+import math
 
 import scipy.sparse
 
@@ -17,6 +18,9 @@ import ops
 
 def maybeNormalize(expectedResultDict):
     if tensorlog.NORMALIZE:
+        #softmax normalization
+        for k in expectedResultDict:
+            expectedResultDict[k] = math.exp(expectedResultDict[k])
         norm = sum(expectedResultDict.values())
         for c in expectedResultDict:
             expectedResultDict[c] /= norm
@@ -119,10 +123,10 @@ class TestSmallProofs(unittest.TestCase):
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
 
         #TODO test correctness
-        gd = prog.evalGradSymbols(mode,[inputSymbol])
-        for k,v in gd.items():
-            print 'grad',k,'...'
-            print v
+#        gd = prog.evalGradSymbols(mode,[inputSymbol])
+#        for k,v in gd.items():
+#            print 'grad',k,'...'
+#            print v
 
     def only(self,group):
         self.assertEqual(len(group), 1)
@@ -160,10 +164,10 @@ class TestProPPR(unittest.TestCase):
             d = self.prog.db.rowAsSymbolDict(pred)
             print '= d',d
             #TODO test grad correctness
-            gradDict = self.prog.evalGrad(self.mode,[self.X.getrow(i)])
+#            gradDict = self.prog.evalGrad(self.mode,[self.X.getrow(i)])
             if i<4: 
                 print 'native row',i,self.xsyms[i],d
-                print 'gradDict',gradDict
+#                print 'gradDict',gradDict
             if tensorlog.NORMALIZE:
                 uniform = {'pos':0.5,'neg':0.5}
                 self.checkDicts(d,uniform)
@@ -175,7 +179,7 @@ class TestProPPR(unittest.TestCase):
         ops.TRACE = False
         pred = self.prog.eval(self.mode,[self.X])
         #TODO test grad correctness
-        gradDict = self.prog.evalGrad(self.mode,[self.X])
+#        gradDict = self.prog.evalGrad(self.mode,[self.X])
         d0 = self.prog.db.matrixAsSymbolDict(pred)
         for i,d in d0.items():
             if i<4: print 'native matrix',i,self.xsyms[i],d

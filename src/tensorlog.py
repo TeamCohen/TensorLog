@@ -93,7 +93,7 @@ class Program(object):
                 ruleFuns = map(lambda r:bpcompiler.BPCompiler(mode,self,depth,r).getFunction(), predDef)
                 self.function[(mode,depth)] = funs.SumFunction(ruleFuns)
             if depth==0 and NORMALIZE:
-                self.function[(mode,0)] = funs.NormalizedFunction(self.function[(mode,0)])
+                self.function[(mode,0)] = funs.SoftmaxFunction(self.function[(mode,0)])
         return self.function[(mode,depth)]
 
     def listing(self):

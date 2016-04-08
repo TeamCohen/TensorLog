@@ -1,7 +1,7 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
 import scipy.sparse as SS
-import numpy
+import numpy as np
 import logging
 
 import ops
@@ -17,11 +17,6 @@ class ComputationNode(object):
         self.values = values
         self.result = result
         self.gradResult = {}
-    def grad(self):
-        for c in self.children:
-            c.grad()
-        self.fun.grad(self)
-        return self.gradResult
     def pprint(self,depth=0):
         """Returns list of lines"""
         def about(m): return ('type=%r shape=%r' % (type(m),m.data.shape))
@@ -44,9 +39,6 @@ class Function(object):
             logging.debug('Computation tree on function %r' % (self))
             logging.debug('\n' + '\n'.join(tree.pprint()))
         return tree.result
-    def evalGrad(self,db,values):
-        tree = self.computationTree(db,values)
-        return tree.grad()
     def computationTree(self,db,values):
         """When called with a MatrixDB and a list of input values v1,...,xk,
         executes some function f(v1,..,vk) and returns a computation
@@ -69,14 +61,11 @@ class OpSeqFunction(Function):
         self.opInputs = opInputs    #initial bindings to insert in Envir
         self.opOutput = opOutput  #finding bindings which indicate the output
         self.ops = ops
-
     def __repr__(self):
         shortOps = '[%r,...,%r]' % (self.ops[0],self.ops[-1])
         return 'OpSeqFunction(%r,%r,%r)' % (self.opInputs,self.opOutput,shortOps)
-
     def pprint(self,depth=0):
         return [('| '*depth) + 'OpSeqFunction:'] + map(lambda o:('| '*(depth+1))+repr(o), self.ops)
-
     def computationTree(self,db,values):
         #eval expression
         env = ops.Envir(db)
@@ -84,26 +73,6 @@ class OpSeqFunction(Function):
         for op in self.ops:
             op.eval(env)
         return ComputationNode(self,db,values,env[self.opOutput])
-
-    def grad(self,root):
-        env = ops.Envir(root.db)
-        env.bindList(self.opInputs,root.values)
-        #initialize d(input)/d(param)=0 for each input/param pair
-        registersForDerivsOfInputs = [ops.Partial(x,w) for x in self.opInputs for w in root.db.params]
-        valuesForDerivsOfInputs = map(lambda r:root.db.ones() if r.f==r.x else root.db.zeros(), registersForDerivsOfInputs)
-        env.bindList(registersForDerivsOfInputs,valuesForDerivsOfInputs)
-        # execute ops with evalGrad
-        for op in self.ops:
-            op.evalGrad(env)
-#        print 'ops',self.ops
-#        print 'sample gradient:',env.register.keys()
-        #rename the partial derivative from register are dopOutput/dParam, f=opOutput, x=param
-        registersForDerivsOfOut = [ops.Partial(self.opOutput,w) for w in root.db.params]
-        for r in registersForDerivsOfOut:
-            root.gradResult[r.x] = env[r]
-            m = root.db.matrixAsSymbolDict(env[r])
-#            for r in m: print r,m[r].items()[0:3]
-#            assert False
 
 class NullFunction(OpSeqFunction):
     """Returns an all-zeros vector."""
@@ -130,57 +99,18 @@ class SumFunction(Function):
         for i in range(1,len(subtrees)):
             accum = accum + subtrees[i].result
         return ComputationNode(self,db,values,accum,subtrees)
-    def grad(self,root):
-        for w in root.db.params:
-            accum = root.children[0].gradResult[w]
-            for i in range(1,len(root.children)):
-                accum = accum + root.children[i].gradResult[w]
-            root.gradResult[w] = accum
 
-class NormalizedFunction(Function):
+class SoftmaxFunction(Function):
     """A function which normalizes the result of another function."""
     def __init__(self,fun):
         self.fun = fun
     def __repr__(self):
-        return 'NormalizedFunction(%r)' % self.fun
+        return 'SoftmaxFunction(%r)' % self.fun
     def pprint(self,depth=0):
-        return [('| '*depth) + 'NormalizedFunction:'] + self.fun.pprint(depth=depth+1)
+        return [('| '*depth) + 'SoftmaxFunction:'] + self.fun.pprint(depth=depth+1)
     def computationTree(self,db,values):
         subtree = self.fun.computationTree(db,values)
-        result =  bcast.rowNormalize(subtree.result)
-        return ComputationNode(self,db,values,result,children=[subtree])
-    def grad(self,root):
-        for subtree in root.children:
-            subtree.fun.grad(subtree)
-        # (f/g)' = (gf' - fg')/g^2
-        def rowGrad(f,df):
-            dg = df.sum()
-            g = f.sum()
-            return (g*df - f*dg)/(g*g)
-        for w in root.db.params:
-            f = root.children[0].result
-            df = root.children[0].gradResult[w]
-            f,df = bcast.broadcast2(f,df)
-            numr = bcast.numRows(f)
-            root.gradResult[w] = bcast.stack([rowGrad(f.getrow(i),df.getrow(i)) for i in range(numr)])
-
-
-class StructuredLog(Function):
-    def __init__(self,fun):
-        self.fun = fun
-    def __repr__(self):
-        return 'StructuredLog(%r)' % self.fun
-    def computationTree(self,db,values):
-        subtree = self.fun.computationTree(db,values)
-        P = subtree.result
-        logP = SS.csr_matrix((numpy.log(P.data),P.indices,P.indptr),shape=P.get_shape())
-        return ComputationNode(self,db,values,logP,children=[subtree])
-    def grad(self,root):
-        P = root.children[0].result
-        oneByP = SS.csr_matrix(((1.0/P.data),P.indices,P.indptr),shape=P.get_shape())
-        #TODO wrong?
-        for w in root.db.params:        
-            root.gradResult[w] = oneByP.multiply(root.children[0].gradResult[w])
+        return ComputationNode(self,db,values,bcast.softmax(subtree.result),children=[subtree])
 
 class CrossEntropy(Function):
     def __init__(self,Y,fun):
@@ -195,7 +125,4 @@ class CrossEntropy(Function):
         logP = root.children[0].result
         for w in root.db.params:        
             root.gradResult[w] = (-self.Y).multiply(root.children[0].gradResult[w])
-
-        
-
 

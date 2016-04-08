@@ -1,7 +1,7 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
 import scipy.sparse as SS
-import numpy
+import numpy as np
 
 # miscellaneous broadcast utilities used my ops.py and funs.py
 
@@ -89,4 +89,26 @@ def rowNormalize(m):
     else:
         rows = [m.getrow(i) for i in range(numr)]
         return stack([r * (1.0/r.sum()) for r in rows])
+
+#TODO check what to do with empty rows
+
+def softmax(m):
+    """Row-normalize a matrix m and return a sparse matrix. This doesn't
+    really require 'broadcasting' but it seems like you need special
+    case handling to deal with multiple rows efficiently.
+    """
+    def softmaxRow(r):
+        d = r.data
+        e_d = np.exp(d - np.max(d))
+        d_sm = e_d / e_d.sum()
+        return SS.csr_matrix((d_sm,r.indices,r.indptr),shape=r.shape)
+
+    assert isinstance(m,SS.csr_matrix),'bad type for %r' % m
+    numr = numRows(m)
+    if numr==1:
+        return softmaxRow(m)
+    else:
+        rows = [m.getrow(i) for i in range(numr)]
+        return stack([softmaxRow(r) for r in rows])
+
 
