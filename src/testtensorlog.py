@@ -12,6 +12,7 @@ import parser
 import matrixdb
 import bpcompiler
 import ops
+import learn
 
 # can call a single test with, e.g.,
 # python -m unittest testtensorlog.TestSmallProofs.testIf
@@ -140,9 +141,36 @@ class TestSmallProofs(unittest.TestCase):
             for k in actual.keys():
                 self.assertAlmostEqual(actual[k], expected[k], delta=0.0001)
 
-class TestGrad(unittest.TestCase):
+class TestFamGrad(unittest.TestCase):
+
     def setUp(self):
-        self.prog = tensorlog.ProPPRProgram.load(["test/testgrad.ppr","test/testgrad.cfacts"])
+        #TODO test for this also
+        #self.prog = tensorlog.ProPPRProgram.load(["test/testgrad.ppr","test/testgrad.cfacts"])
+        self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
+    
+    def testIf(self):
+        self.gradCheck(['p(X,Y):-sister(X,Y).'], 'p(i,o)', [('sister',2)], [('william',['rachel','sarah'])], None)
+
+    def gradCheck(self,ruleStrings,modeString,params,xyPairs,expected):
+        #build program
+        rules = parser.RuleCollection()
+        for r in ruleStrings:
+            rules.add(parser.Parser.parseRule(r))
+        prog = tensorlog.Program(db=self.db,rules=rules)
+        #build dataset
+        data = learn.Dataset(self.db)
+        for x,ys in xyPairs:
+            data.addDataSymbols(modeString,x,ys)
+        #mark params: should be pairs ("predName",arity)
+        for pred,arity in params:
+            prog.db.markAsParam(pred,arity)
+        #compute gradient
+        learner = learn.Learner(prog,data)
+        updates = learner.crossEntropyUpdate(modeString)
+        print 'updates:'
+        for w,wUpdates in updates.items():
+            for up in wUpdates:
+                print w,prog.db.matrixAsSymbolDict(up.transpose())
     
 class TestProPPR(unittest.TestCase):
 
@@ -163,11 +191,8 @@ class TestProPPR(unittest.TestCase):
             pred = self.prog.eval(self.mode,[self.X.getrow(i)])
             d = self.prog.db.rowAsSymbolDict(pred)
             print '= d',d
-            #TODO test grad correctness
-#            gradDict = self.prog.evalGrad(self.mode,[self.X.getrow(i)])
             if i<4: 
                 print 'native row',i,self.xsyms[i],d
-#                print 'gradDict',gradDict
             if tensorlog.NORMALIZE:
                 uniform = {'pos':0.5,'neg':0.5}
                 self.checkDicts(d,uniform)
@@ -179,7 +204,6 @@ class TestProPPR(unittest.TestCase):
         ops.TRACE = False
         pred = self.prog.eval(self.mode,[self.X])
         #TODO test grad correctness
-#        gradDict = self.prog.evalGrad(self.mode,[self.X])
         d0 = self.prog.db.matrixAsSymbolDict(pred)
         for i,d in d0.items():
             if i<4: print 'native matrix',i,self.xsyms[i],d

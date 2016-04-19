@@ -262,6 +262,12 @@ class MatrixDB(object):
         return mat
 
     #
+    # mark a predicate as a parameter
+    # 
+    def markAsParam(self,predicateFunctor,predicateArity):
+        self.params[(predicateFunctor,predicateArity)] = self.matEncoding[predicateFunctor]
+
+    #
     # debugging
     # 
     #
