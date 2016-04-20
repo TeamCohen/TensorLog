@@ -265,9 +265,9 @@ class MatrixDB(object):
         return db
 
     #
-    # directly insert a matrix/vector
     #
     def insertPredicate(self,mat,functor,arity):
+        """ Directly insert a matrix or vector into the database"""
         self.arity[functor] = arity
         self.matEncoding[(functor,arity)] = mat
         self.matEncoding[(functor,arity)].sort_indices()
@@ -275,11 +275,13 @@ class MatrixDB(object):
         assert (nrows==1 and arity==1) or (nrows==self.dim() and arity==2)
         return mat
 
-    #
-    # mark a predicate as a parameter
-    # 
     def markAsParam(self,functor,arity):
+        """ Mark a predicate as a parameter """
         self.params[(functor,arity)] = self.matEncoding[(functor,arity)]
+
+    def clearParamMarkings(self):
+        """ Clear previously marked parameters"""
+        self.params = {}
 
     #
     # debugging

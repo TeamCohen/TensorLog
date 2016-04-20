@@ -44,6 +44,8 @@ class TestSmallProofs(unittest.TestCase):
     def testChain(self):
         self.inferenceCheck(['p(X,Z):-spouse(X,Y),sister(Y,Z).'], 'p(i,o)', 'susan', 
                             {'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
+        self.inferenceCheck(['p(X,Z):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
+                            {'charlotte':1.0, 'lucas':1.0, 'poppy':1.0, 'caroline':1.0, 'elizabeth':1.0})
 
     def testMid(self):
         self.inferenceCheck(['p(X,Y):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
@@ -164,6 +166,32 @@ class TestGrad(unittest.TestCase):
                        [('lottie',['charlotte'])], 
                        {'parent(charlotte,lottie)': +1,'parent(lucas,lottie)': -1})
 
+    def testChain1(self):
+        rules = ['p(X,Z):-sister(X,Y),child(Y,Z).']
+        mode = 'p(i,o)'  
+        self.gradCheck(rules,mode,
+                       [('sister',2)], 
+                       [('william',['caroline','elizabeth'])],
+                       {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
+        self.gradCheck(rules,mode,
+                       [('child',2)], 
+                       [('william',['caroline','elizabeth'])],
+                       {'child(rachel,elizabeth)': +1,'child(lottie,lucas)': -1})
+
+        self.gradCheck(rules,mode,
+                       [('child',2),('sister',2)], 
+                       [('william',['caroline','elizabeth'])],
+                       {'child(rachel,elizabeth)': +1,'child(lottie,lucas)': -1, 'sister(william,rachel)': +1,'sister(william,lottie)': -1})
+
+    def testChain2(self):
+        rules = ['p(X,Z):-spouse(X,Y),sister(Y,Z).']
+        mode = 'p(i,o)'  
+        self.gradCheck(rules,mode,
+                       [('sister',2)], 
+                       [('susan',['rachel'])],
+                       {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
+
+
     def gradCheck(self,ruleStrings,modeString,params,xyPairs,expected):
         """
         ruleStrings - a list of tensorlog rules to use with the db.
@@ -182,16 +210,19 @@ class TestGrad(unittest.TestCase):
         for x,ys in xyPairs:
             data.addDataSymbols(modeString,x,ys)
         #mark params: should be pairs (functor,arity)
+        prog.db.clearParamMarkings()
         for functor,arity in params:
             prog.db.markAsParam(functor,arity)
         #compute gradient
         learner = learn.Learner(prog,data)
         updates = learner.crossEntropyUpdate(modeString)
-        #check the gradient
+        #put the gradient into a single fact-string-indexed dictionary
+        updatesWithStringKeys = {}
         for (functor,arity),up in updates.items():
             upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
-            upDictWithStringKeys = dict(map(lambda (f,gf):(str(f),gf), upDict.items()))
-            self.checkDirections(upDictWithStringKeys,expected)
+            for fact,gradOfFact in upDict.items():
+                updatesWithStringKeys[str(fact)] = gradOfFact
+        self.checkDirections(updatesWithStringKeys,expected)
     
     def checkDirections(self,actualGrad,expectedDir):
         #TODO allow expected to contain zeros?

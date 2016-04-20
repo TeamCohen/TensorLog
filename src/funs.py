@@ -52,10 +52,11 @@ class OpSeqFunction(Function):
         return self.result
     def backprop(self,delta,updates):
         self.opEnv.delta[self.opOutput] = delta
-        for i in range(len(self.ops),0,-1):
-            op = self.ops[i-1]
-            print 'op',op
-            return op.backprop(self.opEnv,updates)
+        n = len(self.ops)
+        for i in range(n):
+            op = self.ops[n-i-1]
+            #print 'fun bp op',n-i-1,op
+            op.backprop(self.opEnv,updates)
 
 class NullFunction(OpSeqFunction):
     """Returns an all-zeros vector."""
