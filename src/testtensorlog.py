@@ -149,9 +149,24 @@ class TestFamGrad(unittest.TestCase):
         self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
     
     def testIf(self):
-        self.gradCheck(['p(X,Y):-sister(X,Y).'], 'p(i,o)', [('sister',2)], [('william',['rachel','sarah'])], None)
+        rules = ['p(X,Y):-sister(X,Y).']
+        mode = 'p(i,o)'  
+        params = [('sister',2)] 
+        self.gradCheck(rules, mode, params,
+                       [('william',['rachel','sarah'])], 
+                       {'sister(william,rachel)': +1,'sister(william,sarah)': +1,'sister(william,lottie)': -1})
+        self.gradCheck(rules, mode, params, 
+                       [('william',['lottie'])], 
+                       {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
 
     def gradCheck(self,ruleStrings,modeString,params,xyPairs,expected):
+        """
+        ruleStrings - a list of tensorlog rules to use with the db.
+        modeString - mode for the data.
+        params - list of (predicateName,arity) pairs that gradients will be computed for
+        xyPairs - list of pairs (x,[y1,..,yk]) such that the desired result for x is uniform dist over y's
+        expected - dict mapping strings encoding facts to expected sign of the gradient
+        """
         #build program
         rules = parser.RuleCollection()
         for r in ruleStrings:
@@ -167,11 +182,20 @@ class TestFamGrad(unittest.TestCase):
         #compute gradient
         learner = learn.Learner(prog,data)
         updates = learner.crossEntropyUpdate(modeString)
-        print 'updates:'
-        for w,wUpdates in updates.items():
+        #check the gradient
+        for (pred,arity),wUpdates in updates.items():
             for up in wUpdates:
-                print w,prog.db.matrixAsSymbolDict(up.transpose())
+                upDict = prog.db.matrixAsPredicateFacts(pred,arity,up)
+                upDictWithStringKeys = dict(map(lambda (f,gf):(str(f),gf), upDict.items()))
+                self.checkDirections(upDictWithStringKeys,expected)
     
+    def checkDirections(self,actualGrad,expectedDir):
+        #TODO allow expected to contain zeros?
+        for fact,sign in expectedDir.items():
+            print fact,'expected sign',sign,'grad',actualGrad[fact]
+            self.assertTrue(fact in actualGrad)
+            self.assertTrue(actualGrad[fact] * sign > 0)
+
 class TestProPPR(unittest.TestCase):
 
     def setUp(self):

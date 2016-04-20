@@ -44,6 +44,10 @@ class Goal(object):
         if self.arity: return "%s(%s)" % (self.functor,",".join(map(str,self.args)))
         else: return self.functor
 
+    def __repr__(self):
+        return 'Goal(%r,%r)' % (self.functor,self.args)
+        
+
 class Rule(object):
     """A prolog rule.  The lhs is a goal, the rhs a list of goals, so the
     rule's format is "lhs :- rhs."  The features for a rule are, in

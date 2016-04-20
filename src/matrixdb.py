@@ -137,6 +137,18 @@ class MatrixDB(object):
             result[r] = self.rowAsSymbolDict(m.getrow(r))
         return result
 
+    def matrixAsPredicateFacts(self,predicateFunctor,arity,m):
+        result = {}
+        if arity==2:
+            m1 = scipy.sparse.coo_matrix(m)
+            for i in range(len(m1.data)):
+                a = self.stab.getSymbol(m1.row[i])
+                b = self.stab.getSymbol(m1.col[i])
+                w = m1.data[i]
+                result[parser.Goal(predicateFunctor,[a,b])] = w
+        else:
+            assert False,'not implemented'
+        return result
     #
     # i/o
     # TODO save/restore stab, matrices (separately)
