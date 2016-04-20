@@ -145,7 +145,7 @@ class TestGrad(unittest.TestCase):
         #self.prog = tensorlog.ProPPRProgram.load(["test/testgrad.ppr","test/testgrad.cfacts"])
         self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
     
-    def notestIf(self):
+    def testIf(self):
         rules = ['p(X,Y):-sister(X,Y).']
         mode = 'p(i,o)'  
         params = [('sister',2)] 
@@ -156,7 +156,7 @@ class TestGrad(unittest.TestCase):
                        [('william',['lottie'])], 
                        {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
 
-    def notestRevIf(self):
+    def testRevIf(self):
         rules = ['p(X,Y):-parent(Y,X).']
         mode = 'p(i,o)'  
         params = [('parent',2)] 
@@ -168,7 +168,7 @@ class TestGrad(unittest.TestCase):
         """
         ruleStrings - a list of tensorlog rules to use with the db.
         modeString - mode for the data.
-        params - list of (predicateName,arity) pairs that gradients will be computed for
+        params - list of (functor,arity) pairs that gradients will be computed for
         xyPairs - list of pairs (x,[y1,..,yk]) such that the desired result for x is uniform dist over y's
         expected - dict mapping strings encoding facts to expected sign of the gradient
         """
@@ -181,15 +181,15 @@ class TestGrad(unittest.TestCase):
         data = learn.Dataset(self.db)
         for x,ys in xyPairs:
             data.addDataSymbols(modeString,x,ys)
-        #mark params: should be pairs ("predName",arity)
-        for pred,arity in params:
-            prog.db.markAsParam(pred,arity)
+        #mark params: should be pairs (functor,arity)
+        for functor,arity in params:
+            prog.db.markAsParam(functor,arity)
         #compute gradient
         learner = learn.Learner(prog,data)
         updates = learner.crossEntropyUpdate(modeString)
         #check the gradient
-        for (pred,arity),up in updates.items():
-            upDict = prog.db.matrixAsPredicateFacts(pred,arity,up)
+        for (functor,arity),up in updates.items():
+            upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
             upDictWithStringKeys = dict(map(lambda (f,gf):(str(f),gf), upDict.items()))
             self.checkDirections(upDictWithStringKeys,expected)
     

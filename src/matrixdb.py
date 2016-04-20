@@ -11,9 +11,6 @@ import scipy.io
 import collections
 import logging
 
-# TODO index matEncoding by (pred,arity) pairs
-# TODO use functor,arity pair names throughout
-
 def assignGoal(var,const):
     return parser.Goal('assign',[var,const])
 
@@ -78,7 +75,7 @@ class MatrixDB(object):
     def transposeNeeded(mode,transpose=False):
         """Figure out if we should use the transpose of a matrix or not."""
         leftRight = (mode.isInput(0) and mode.isOutput(1))        
-        return leftRight != transpose
+        return leftRight == transpose
 
     def matrix(self,mode,transpose=False):
         """The matrix associated with this mode - eg if mode is p(i,o) return
@@ -87,7 +84,7 @@ class MatrixDB(object):
         """
         assert mode.arity==2,'arity of '+str(mode) + ' is wrong: ' + str(mode.arity)
         assert (mode.functor,mode.arity) in self.matEncoding,"can't find matrix for %s" % str(mode)
-        if self.transposeNeeded(mode,transpose):
+        if not self.transposeNeeded(mode,transpose):
             return self.matEncoding[(mode.functor,mode.arity)]
         else:
             return self.matEncoding[(mode.functor,mode.arity)].transpose()            
@@ -136,7 +133,7 @@ class MatrixDB(object):
             result[r] = self.rowAsSymbolDict(m.getrow(r))
         return result
 
-    def matrixAsPredicateFacts(self,predicateFunctor,arity,m):
+    def matrixAsPredicateFacts(self,functor,arity,m):
         result = {}
         m1 = scipy.sparse.coo_matrix(m)
         if arity==2:
@@ -144,14 +141,14 @@ class MatrixDB(object):
                 a = self.stab.getSymbol(m1.row[i])
                 b = self.stab.getSymbol(m1.col[i])
                 w = m1.data[i]
-                result[parser.Goal(predicateFunctor,[a,b])] = w
+                result[parser.Goal(functor,[a,b])] = w
         else:
             assert arity==1
             for i in range(len(m1.data)):
                 assert m1.row[i]==0
                 b = self.stab.getSymbol(m1.col[i])
                 w = m1.data[i]
-                result[parser.Goal(predicateFunctor,[b])] = w
+                result[parser.Goal(functor,[b])] = w
         return result
     #
     # i/o
@@ -193,23 +190,23 @@ class MatrixDB(object):
         parts = line.split("\t")
         #TODO add weights
         if len(parts)==3:
-            p,a1,a2 = parts[0],parts[1],parts[2]
+            f,a1,a2 = parts[0],parts[1],parts[2]
             arity = 2
             w = 1.0
         elif len(parts)==2:
-            p,a1,a2 = parts[0],parts[1],None
+            f,a1,a2 = parts[0],parts[1],None
             arity = 1
             w = 1.0
         else:
             logging.error("bad line '"+line+" '" + repr(parts)+"'")
             return
-        self._checkArity(p,arity)
-        if ((p,arity) in self.matEncoding):
-            logging.error("predicate encoding is already completed for "+(p,arity)+ " at line: "+line)
+        self._checkArity(f,arity)
+        if ((f,arity) in self.matEncoding):
+            logging.error("predicate encoding is already completed for "+(f,arity)+ " at line: "+line)
             return
         i = self.stab.getId(a1)
         j = self.stab.getId(a2) if a2 else -1
-        self.buf[(p,arity)][i][j] = w
+        self.buf[(f,arity)][i][j] = w
 
     def bufferLines(self,lines):
         """Load triples from a list of lines and buffer them internally"""
@@ -228,30 +225,31 @@ class MatrixDB(object):
 
     def flushBuffers(self):
         """Flush all triples from the buffer."""
-        for p,arity in self.buf.keys():
-            self.flushBuffer(p,arity)
+        for f,arity in self.buf.keys():
+            self.flushBuffer(f,arity)
 
-    def flushBuffer(self,p,arity):
+    def flushBuffer(self,f,arity):
         """Flush the triples defining predicate p from the buffer and define
         p's matrix encoding"""
-        logging.info('flushing buffers for predicate %s' % p)
+        logging.info('flushing buffers for predicate %s' % f)
         n = self.stab.getMaxId() + 1
         if arity==2:
             m = scipy.sparse.lil_matrix((n,n))
-            for i in self.buf[(p,arity)]:
-                for j in self.buf[(p,arity)][i]:
-                    m[i,j] = self.buf[(p,arity)][i][j]
-            del self.buf[(p,arity)]
-            self.matEncoding[(p,arity)] = scipy.sparse.csr_matrix(m)
-            self.matEncoding[(p,arity)].sort_indices()
+            for i in self.buf[(f,arity)]:
+                for j in self.buf[(f,arity)][i]:
+                    m[i,j] = self.buf[(f,arity)][i][j]
+            del self.buf[(f,arity)]
+            self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m)
+            self.matEncoding[(f,arity)].sort_indices()
         elif arity==1:
             m = scipy.sparse.lil_matrix((1,n))
-            for i in self.buf[(p,arity)]:
-                for j in self.buf[(p,arity)][i]:
-                    m[0,i] = self.buf[(p,arity)][i][j]
-            del self.buf[(p,arity)]
-            self.matEncoding[(p,arity)] = scipy.sparse.csr_matrix(m)
-            self.matEncoding[(p,arity)].sort_indices()
+            for i in self.buf[(f,arity)]:
+                for j in self.buf[(f,arity)][i]:
+                    m[0,i] = self.buf[(f,arity)][i][j]
+            del self.buf[(f,arity)]
+            self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m)
+            self.matEncoding[(f,arity
+)].sort_indices()
 
     def clearBuffers(self):
         """Save space by removing buffers"""
