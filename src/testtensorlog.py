@@ -34,6 +34,9 @@ class TestSmallProofs(unittest.TestCase):
     def testIf(self):
         self.inferenceCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
 
+    def testRevIf(self):
+        self.inferenceCheck(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
+
     def testOr(self):
         self.inferenceCheck(['p(X,Y):-spouse(X,Y).', 'p(X,Y):-sister(X,Y).'], 'p(i,o)', 'william', 
                             {'susan':1.0, 'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
@@ -183,11 +186,10 @@ class TestFamGrad(unittest.TestCase):
         learner = learn.Learner(prog,data)
         updates = learner.crossEntropyUpdate(modeString)
         #check the gradient
-        for (pred,arity),wUpdates in updates.items():
-            for up in wUpdates:
-                upDict = prog.db.matrixAsPredicateFacts(pred,arity,up)
-                upDictWithStringKeys = dict(map(lambda (f,gf):(str(f),gf), upDict.items()))
-                self.checkDirections(upDictWithStringKeys,expected)
+        for (pred,arity),up in updates.items():
+            upDict = prog.db.matrixAsPredicateFacts(pred,arity,up)
+            upDictWithStringKeys = dict(map(lambda (f,gf):(str(f),gf), upDict.items()))
+            self.checkDirections(upDictWithStringKeys,expected)
     
     def checkDirections(self,actualGrad,expectedDir):
         #TODO allow expected to contain zeros?

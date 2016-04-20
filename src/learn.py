@@ -7,9 +7,20 @@ import scipy.sparse as SS
 import numpy.random as NR
 import collections
 
-#for backprop updates
-def updateAccumulator():
-    return collections.defaultdict(list)
+class UpdateAccumulator(object):
+    def __init__(self):
+        self.updates = collections.defaultdict(list) #for debug
+        self.runningSum = {}
+    def keys(self):
+        return self.runningSum.keys()
+    def items(self):
+        return self.runningSum.items()
+    def accum(self,paramName,deltaGradient):
+        self.updates[paramName].append(deltaGradient)
+        if not paramName in self.runningSum:
+            self.runningSum[paramName] = deltaGradient
+        else:
+            self.runningSum[paramName] += deltaGradient
 
 #TODO modes should be objects not strings
 class Dataset(object):
@@ -64,7 +75,7 @@ class Learner(object):
         predictFun = self.prog.getPredictFunction(mode)
         assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyUpdate specialized to work for softmax normalization'
         P = predictFun.eval(self.prog.db, [X])
-        paramUpdates = updateAccumulator()
+        paramUpdates = UpdateAccumulator()
         delta = Y - P
         predictFun.fun.backprop(delta,paramUpdates)
         return paramUpdates
