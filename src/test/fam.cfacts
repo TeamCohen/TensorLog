@@ -11,6 +11,12 @@ child	sarah	poppy
 child	rachel	caroline
 child	rachel	elizabeth
 
+parent	charlotte	lottie
+parent	lucas	lottie
+parent	poppy	sarah
+parent	caroline	rachel
+parent	elizabeth	rachel
+
 feat	r1
 feat	r2
 

@@ -11,7 +11,8 @@ import scipy.io
 import collections
 import logging
 
-# TODO replace set(X,c) with assign(X,c)?
+# TODO index matEncoding by (pred,arity) pairs
+# TODO use functor,arity pair names throughout
 
 def assignGoal(var,const):
     return parser.Goal('assign',[var,const])
@@ -37,7 +38,7 @@ class MatrixDB(object):
         self.stab.reservedSymbols.add("o")
         # track if the matrix is arity one or arity two
         self.arity = {}
-        #matEncoding[p] encodes predicate p as a matrix
+        #matEncoding[(functor,arity)] encodes predicate as a matrix
         self.matEncoding = {}
         #buffer data for a sparse matrix: buf[pred][i][j] = f
         #TODO: would lists and a coo matrix make a nicer buffer?
@@ -79,26 +80,24 @@ class MatrixDB(object):
         leftRight = (mode.isInput(0) and mode.isOutput(1))        
         return leftRight != transpose
 
-    def matrix(self,mode,transpose=False,expressionContext=False):
+    def matrix(self,mode,transpose=False):
         """The matrix associated with this mode - eg if mode is p(i,o) return
         a sparse matrix M_p so that v*M_p is appropriate for forward
-        propagation steps from v.  The expressionContext flag
-        indicates if what should be returned is a theano expression or
-        a scipy matrix.
+        propagation steps from v.  
         """
         assert mode.arity==2,'arity of '+str(mode) + ' is wrong: ' + str(mode.arity)
-        assert mode.functor in self.matEncoding,"can't find matrix for %s" % str(mode)
+        assert (mode.functor,mode.arity) in self.matEncoding,"can't find matrix for %s" % str(mode)
         if self.transposeNeeded(mode,transpose):
-            return self.matEncoding[mode.functor]
+            return self.matEncoding[(mode.functor,mode.arity)]
         else:
-            return self.matEncoding[mode.functor].transpose()            
+            return self.matEncoding[(mode.functor,mode.arity)].transpose()            
 
-    def matrixPreimage(self,mode,expressionContext=False):
+    def matrixPreimage(self,mode):
         """The preimage associated with this mode, eg if mode is p(i,o) then
         return a row vector equivalent to 1 * M_p^T.  Also returns a row vector
         for a unary predicate."""
         if self.arity[mode.functor]==1:
-            return self.matEncoding[mode.functor]
+            return self.matEncoding[(mode.functor,mode.arity)]
         else: 
             assert self.arity[mode.functor]==2
             #TODO mode is o,i vs i,o
@@ -139,15 +138,20 @@ class MatrixDB(object):
 
     def matrixAsPredicateFacts(self,predicateFunctor,arity,m):
         result = {}
+        m1 = scipy.sparse.coo_matrix(m)
         if arity==2:
-            m1 = scipy.sparse.coo_matrix(m)
             for i in range(len(m1.data)):
                 a = self.stab.getSymbol(m1.row[i])
                 b = self.stab.getSymbol(m1.col[i])
                 w = m1.data[i]
                 result[parser.Goal(predicateFunctor,[a,b])] = w
         else:
-            assert False,'not implemented'
+            assert arity==1
+            for i in range(len(m1.data)):
+                assert m1.row[i]==0
+                b = self.stab.getSymbol(m1.col[i])
+                w = m1.data[i]
+                result[parser.Goal(predicateFunctor,[b])] = w
         return result
     #
     # i/o
@@ -155,8 +159,8 @@ class MatrixDB(object):
     #
 
     def listing(self):
-        for name,m in self.matEncoding.items():
-            print "DB: %s/%d" % (name,self.arity[name])
+        for (functor,arity),m in self.matEncoding.items():
+            print "DB: %s/%d" % (functor,arity)
 
     def serialize(self,dir):
         if not os.path.exists(dir):
@@ -190,22 +194,22 @@ class MatrixDB(object):
         #TODO add weights
         if len(parts)==3:
             p,a1,a2 = parts[0],parts[1],parts[2]
+            arity = 2
             w = 1.0
-            self._checkArity(p,2)
         elif len(parts)==2:
-            p,a1 = parts[0],parts[1]
+            p,a1,a2 = parts[0],parts[1],None
+            arity = 1
             w = 1.0
-            a2 = None
-            self._checkArity(p,1)
         else:
             logging.error("bad line '"+line+" '" + repr(parts)+"'")
             return
-        if (p in self.matEncoding):
-            logging.error("predicate encoding is already completed for "+p+ " at line: "+line)
+        self._checkArity(p,arity)
+        if ((p,arity) in self.matEncoding):
+            logging.error("predicate encoding is already completed for "+(p,arity)+ " at line: "+line)
             return
         i = self.stab.getId(a1)
         j = self.stab.getId(a2) if a2 else -1
-        self.buf[p][i][j] = w
+        self.buf[(p,arity)][i][j] = w
 
     def bufferLines(self,lines):
         """Load triples from a list of lines and buffer them internally"""
@@ -224,30 +228,30 @@ class MatrixDB(object):
 
     def flushBuffers(self):
         """Flush all triples from the buffer."""
-        for p in self.buf.keys():
-            self.flushBuffer(p)
+        for p,arity in self.buf.keys():
+            self.flushBuffer(p,arity)
 
-    def flushBuffer(self,p):
+    def flushBuffer(self,p,arity):
         """Flush the triples defining predicate p from the buffer and define
         p's matrix encoding"""
         logging.info('flushing buffers for predicate %s' % p)
         n = self.stab.getMaxId() + 1
-        if self.arity[p]==2:
+        if arity==2:
             m = scipy.sparse.lil_matrix((n,n))
-            for i in self.buf[p]:
-                for j in self.buf[p][i]:
-                    m[i,j] = self.buf[p][i][j]
-            del self.buf[p]
-            self.matEncoding[p] = scipy.sparse.csr_matrix(m)
-            self.matEncoding[p].sort_indices()
-        elif self.arity[p]==1:
+            for i in self.buf[(p,arity)]:
+                for j in self.buf[(p,arity)][i]:
+                    m[i,j] = self.buf[(p,arity)][i][j]
+            del self.buf[(p,arity)]
+            self.matEncoding[(p,arity)] = scipy.sparse.csr_matrix(m)
+            self.matEncoding[(p,arity)].sort_indices()
+        elif arity==1:
             m = scipy.sparse.lil_matrix((1,n))
-            for i in self.buf[p]:
-                for j in self.buf[p][i]:
-                    m[0,i] = self.buf[p][i][j]
-            del self.buf[p]
-            self.matEncoding[p] = scipy.sparse.csr_matrix(m)
-            self.matEncoding[p].sort_indices()
+            for i in self.buf[(p,arity)]:
+                for j in self.buf[(p,arity)][i]:
+                    m[0,i] = self.buf[(p,arity)][i][j]
+            del self.buf[(p,arity)]
+            self.matEncoding[(p,arity)] = scipy.sparse.csr_matrix(m)
+            self.matEncoding[(p,arity)].sort_indices()
 
     def clearBuffers(self):
         """Save space by removing buffers"""
@@ -265,19 +269,19 @@ class MatrixDB(object):
     #
     # directly insert a matrix/vector
     #
-    def insertPredicate(self,mat,predicateFunctor,predicateArity):
-        self.arity[predicateFunctor] = 1
-        self.matEncoding[predicateFunctor] = mat
-        self.matEncoding[predicateFunctor].sort_indices()
+    def insertPredicate(self,mat,functor,arity):
+        self.arity[functor] = arity
+        self.matEncoding[(functor,arity)] = mat
+        self.matEncoding[(functor,arity)].sort_indices()
         (nrows,ncols) = mat.get_shape()
-        assert (nrows==1 and predicateArity==1) or (nrows==self.dim() and predicateArity==2)
+        assert (nrows==1 and arity==1) or (nrows==self.dim() and arity==2)
         return mat
 
     #
     # mark a predicate as a parameter
     # 
-    def markAsParam(self,predicateFunctor,predicateArity):
-        self.params[(predicateFunctor,predicateArity)] = self.matEncoding[predicateFunctor]
+    def markAsParam(self,functor,arity):
+        self.params[(functor,arity)] = self.matEncoding[(functor,arity)]
 
     #
     # debugging
@@ -291,22 +295,28 @@ class MatrixDB(object):
             print 'indptr ',p,self.matEncoding[p].indptr
         print "ids:"," ".join(self.stab.getSymbolList())
 
-    def showFacts(self, rel):
-        m = scipy.sparse.coo_matrix(fc.matEncoding[rel])
-        for i in range(len(m.data)):
-            print "\t".join([rel, self.stab.getSymbol(m.row[i]), self.stab.getSymbol(m.col[i]), str(m.data[i])])
-
 #
 # test main
 #
 
 if __name__ == "__main__":
-    if not os.path.exists(sys.argv[2]):
-        print 'loading cfacts from ',sys.argv[1]
-        db = MatrixDB.loadFile(sys.argv[1])
-        print 'saving to',sys.argv[2]
-        db.serialize(sys.argv[2])
-    else:
+    if sys.argv[1]=='--serialize':
+        print 'loading cfacts from ',sys.argv[2]
+        db = MatrixDB.loadFile(sys.argv[2])
+        print 'saving to',sys.argv[3]
+        db.serialize(sys.argv[3])
+    elif sys.argv[1]=='--deserialize':
         print 'loading saved db from ',sys.argv[2]
         db = MatrixDB.deserialize(sys.argv[2])
-
+    elif sys.argv[1]=='--loadEcho':
+        logging.basicConfig(level=logging.INFO)
+        print 'loading cfacts from ',sys.argv[2]
+        db = MatrixDB.loadFile(sys.argv[2])
+        print db.matEncoding
+        for (f,a),m in db.matEncoding.items():
+            print f,a,m
+            d = db.matrixAsPredicateFacts(f,a,m)
+            print 'd for ',f,a,'is',d
+            for k,w in d.items():
+                print k,w
+            
