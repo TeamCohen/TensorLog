@@ -2,6 +2,7 @@
 
 import unittest
 import logging
+import logging.config
 import sys
 import math
 
@@ -192,6 +193,46 @@ class TestGrad(unittest.TestCase):
                        {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
 
 
+    def testCall1(self):
+        rules = ['q(X,Y):-sister(X,Y).','p(Z,W):-q(Z,W).']
+        mode = 'p(i,o)'  
+        params = [('sister',2)] 
+        self.gradCheck(rules, mode, params,
+                       [('william',['rachel','sarah'])], 
+                       {'sister(william,rachel)': +1,'sister(william,sarah)': +1,'sister(william,lottie)': -1})
+        self.gradCheck(rules, mode, params, 
+                       [('william',['lottie'])], 
+                       {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
+
+    def testCall2(self):
+        rules = ['q(X,Y):-sister(X,Y).','p(Z,W):-r(Z,W).','r(Z,W):-q(Z,W).']
+        mode = 'p(i,o)'  
+        params = [('sister',2)] 
+        self.gradCheck(rules, mode, params,
+                       [('william',['rachel','sarah'])], 
+                       {'sister(william,rachel)': +1,'sister(william,sarah)': +1,'sister(william,lottie)': -1})
+        self.gradCheck(rules, mode, params, 
+                       [('william',['lottie'])], 
+                       {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
+
+
+    def testOr(self):
+        rules = ['p(X,Y):-child(X,Y).', 'p(X,Y):-sister(X,Y).']
+        mode = 'p(i,o)'
+        params = [('sister',2)]
+        self.gradCheck(rules, mode, params,
+                       [('william',['charlie','rachel'])],
+                       {'sister(william,rachel)': +1,'sister(william,sarah)': -1,'sister(william,lottie)': -1})
+        params = [('child',2)]
+        self.gradCheck(rules, mode, params,
+                       [('william',['charlie','rachel'])],
+                       {'child(william,charlie)': +1,'child(william,josh)': -1})
+        params = [('child',2),('sister',2)]
+        self.gradCheck(rules, mode, params,
+                       [('william',['charlie','rachel'])],
+                       {'child(william,charlie)': +1,'child(william,josh)': -1,'sister(william,rachel)': +1,'sister(william,sarah)': -1})
+
+
     def gradCheck(self,ruleStrings,modeString,params,xyPairs,expected):
         """
         ruleStrings - a list of tensorlog rules to use with the db.
@@ -297,6 +338,7 @@ class TestProPPR(unittest.TestCase):
                 self.assertAlmostEqual(actual[k], expected[k], 0.0001)
 
 if __name__=="__main__":
+    ops.TRACE = True
     if len(sys.argv)==1:
         unittest.main()
 

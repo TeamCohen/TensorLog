@@ -72,7 +72,7 @@ class NullFunction(OpSeqFunction):
         self.result = db.zeros()
         return self.result
     def backprop(self,delta,updates):
-        return self.result #a zeros vector
+        pass
 
 class SumFunction(Function):
     """A function which computes the sum of a bunch of other functions."""
@@ -91,11 +91,8 @@ class SumFunction(Function):
         self.result = accum
         return self.result
     def backprop(self,delta,updates):
-        addends = map(lambda f:f.backprop(delta,updates), self.funs)
-        accum = addends[0]
-        for i in range(1,len(addends)):
-            accum = accum + addends[i]
-        return accum
+        for f in self.funs:
+            f.backprop(delta,updates)
 
 class SoftmaxFunction(Function):
     """A function which computes row-wise softmax."""

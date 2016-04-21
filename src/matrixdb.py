@@ -43,7 +43,7 @@ class MatrixDB(object):
         def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
         self.buf = collections.defaultdict(dictOfFloatDicts)
         #mark which matrices are 'parameters' by (functor,arity) pair
-        self.params = {}
+        self.params = set()
 
         
     #
@@ -70,6 +70,9 @@ class MatrixDB(object):
         """An all-zeros row matrix."""
         n = self.dim()
         return scipy.sparse.csr_matrix( ([1]*n,([0]*n,[j for j in range(n)])), shape=(1,n))
+
+    def isParameter(self,mode):
+        return (mode.functor,mode.arity) in self.params
 
     @staticmethod
     def transposeNeeded(mode,transpose=False):
@@ -98,7 +101,7 @@ class MatrixDB(object):
         else: 
             assert self.arity[mode.functor]==2
             #TODO mode is o,i vs i,o
-            assert mode.isInput(0) and mode.isOutput(1)
+            assert mode.isInput(0) and mode.isOutput(1), 'preimages only implemented for mode p(i,o)'
             coo = self.matrix(mode).tocoo()
             rowsum = collections.defaultdict(float)
             for i in range(len(coo.data)):
@@ -188,7 +191,7 @@ class MatrixDB(object):
     def bufferLine(self,line):
         """Load a single triple encoded as a tab-separated line.."""
         parts = line.split("\t")
-        #TODO add weights
+        #TODO add ability to read in weights
         if len(parts)==3:
             f,a1,a2 = parts[0],parts[1],parts[2]
             arity = 2
@@ -277,11 +280,11 @@ class MatrixDB(object):
 
     def markAsParam(self,functor,arity):
         """ Mark a predicate as a parameter """
-        self.params[(functor,arity)] = self.matEncoding[(functor,arity)]
+        self.params.add((functor,arity))
 
     def clearParamMarkings(self):
         """ Clear previously marked parameters"""
-        self.params = {}
+        self.params = set()
 
     #
     # debugging
