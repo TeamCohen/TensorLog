@@ -245,6 +245,22 @@ class TestGrad(unittest.TestCase):
                        {'child(william,charlie)': +1,'child(william,josh)': -1,'sister(william,rachel)': +1,'sister(william,sarah)': -1})
 
 
+    def notestWeightedVec(self):
+        rules = ['p(X,Y):-sister(X,Y),assign(R,r1),feat(R).','p(X,Y):-child(X,Y),assign(R,r2),feat(R).']
+        mode = 'p(i,o)'
+        params = [('sister',2)]
+        self.gradCheck(rules, mode, params,
+                       [('william',['rachel','charlie'])],
+                       {'sister(william,rachel)': +1,'sister(william,sarah)': -1})
+        params = [('child',2)]
+        self.gradCheck(rules, mode, params,
+                       [('william',['rachel','charlie'])],
+                       {'child(william,charlie)': +1,'child(william,josh)': -1})
+        params = [('feat',1)]
+        self.gradCheck(rules, mode, params,
+                       [('william',['josh','charlie'])],
+                       {'feat(r1)': -1,'feat(r2)': +1})
+
     def gradCheck(self,ruleStrings,modeString,params,xyPairs,expected):
         """
         expected - dict mapping strings encoding facts to expected sign of the gradient
@@ -253,7 +269,9 @@ class TestGrad(unittest.TestCase):
         #put the gradient into a single fact-string-indexed dictionary
         updatesWithStringKeys = {}
         for (functor,arity),up in updates.items():
+            #print 'up for',functor,arity,'is',up
             upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
+            #print 'upDict',upDict,'updates keys',updates.keys()
             for fact,gradOfFact in upDict.items():
                 updatesWithStringKeys[str(fact)] = gradOfFact
         self.checkDirections(updatesWithStringKeys,expected)
@@ -308,10 +326,8 @@ class TestProPPR(unittest.TestCase):
     
     def testNativeRow(self):
         for i in range(self.numExamples):
-            ops.TRACE = False
             pred = self.prog.eval(self.mode,[self.X.getrow(i)])
             d = self.prog.db.rowAsSymbolDict(pred)
-            print '= d',d
             if i<4: 
                 pass
 #                print 'native row',i,self.xsyms[i],d
@@ -323,7 +339,6 @@ class TestProPPR(unittest.TestCase):
                 self.checkClass(d,self.xsyms[i],'neg',self.numWords)
 
     def testNativeMatrix(self):
-        ops.TRACE = False
         pred = self.prog.eval(self.mode,[self.X])
         d0 = self.prog.db.matrixAsSymbolDict(pred)
         for i,d in d0.items():
@@ -358,7 +373,6 @@ class TestProPPR(unittest.TestCase):
                 self.assertAlmostEqual(actual[k], expected[k], 0.0001)
 
 if __name__=="__main__":
-    ops.TRACE = True
     if len(sys.argv)==1:
         unittest.main()
 

@@ -20,7 +20,8 @@ class UpdateAccumulator(object):
         if not paramName in self.runningSum:
             self.runningSum[paramName] = deltaGradient
         else:
-            self.runningSum[paramName] += deltaGradient
+            #print '!!! paramName increment',paramName,'by',deltaGradient
+            self.runningSum[paramName] = self.runningSum[paramName] + deltaGradient
 
 #TODO modes should be objects not strings
 class Dataset(object):
