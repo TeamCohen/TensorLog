@@ -149,13 +149,11 @@ class MatrixDB(object):
                 result[parser.Goal(functor,[a,b])] = w
         else:
             assert arity==1
-            print 'matrixAsPredicateFacts arity len',arity,len(m1.data)
             for i in range(len(m1.data)):
                 assert m1.row[i]==0
                 b = self.stab.getSymbol(m1.col[i])
                 w = m1.data[i]
                 result[parser.Goal(functor,[b])] = w
-        print 'matrixAsPredicateFacts',result
         return result
     #
     # i/o

@@ -245,7 +245,7 @@ class TestGrad(unittest.TestCase):
                        {'child(william,charlie)': +1,'child(william,josh)': -1,'sister(william,rachel)': +1,'sister(william,sarah)': -1})
 
 
-    def notestWeightedVec(self):
+    def testWeightedVec(self):
         rules = ['p(X,Y):-sister(X,Y),assign(R,r1),feat(R).','p(X,Y):-child(X,Y),assign(R,r2),feat(R).']
         mode = 'p(i,o)'
         params = [('sister',2)]
@@ -260,6 +260,9 @@ class TestGrad(unittest.TestCase):
         self.gradCheck(rules, mode, params,
                        [('william',['josh','charlie'])],
                        {'feat(r1)': -1,'feat(r2)': +1})
+        self.gradCheck(rules, mode, params,
+                       [('william',['rachel','sarah','lottie'])],
+                       {'feat(r1)': +1,'feat(r2)': -1})
 
     def gradCheck(self,ruleStrings,modeString,params,xyPairs,expected):
         """
