@@ -51,6 +51,7 @@ def broadcast4(m1a,m2a,m1b,m2b):
         assert False,'broadcast fails'
     return result
 
+#TODO unused?
 def broadcastingDictSum(d1,d2,var):
     """ Given dicts d1 and d2, return the result of d1[var]+d2[var], after
     broadcasting, and defaulting missing values to zero.
@@ -70,6 +71,8 @@ def broadcastingDictSum(d1,d2,var):
         elif r2==1:
             return d1[var] + broadcast(d2[var], r1)
 
+
+#TODO unused?
 def rowSum(m):
     """Sum of each row as a column vector."""
     numr = numRows(m)
@@ -105,4 +108,10 @@ def softmax(m):
         rows = [m.getrow(i) for i in range(numr)]
         return stack([softmaxRow(r) for r in rows])
 
-
+def weightByRowSum(m1,m2):
+    r = numRows(m1)  #also m2
+    if r==1:
+        return  m1 * m2.sum()
+    else:
+        return SS.vstack([m2.getrow(i).sum() * m1.getrow(i) for i in range(r)], dtype='float64')
+    
