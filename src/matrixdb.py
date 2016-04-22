@@ -92,28 +92,30 @@ class MatrixDB(object):
         else:
             return self.matEncoding[(mode.functor,mode.arity)].transpose()            
 
+    def vector(self,mode):
+        """Returns a row vector for a unary predicate."""
+        assert self.arity[mode.functor]==1
+        return self.matEncoding[(mode.functor,mode.arity)]
+
     def matrixPreimage(self,mode):
         """The preimage associated with this mode, eg if mode is p(i,o) then
         return a row vector equivalent to 1 * M_p^T.  Also returns a row vector
         for a unary predicate."""
-        if self.arity[mode.functor]==1:
-            return self.matEncoding[(mode.functor,mode.arity)]
-        else: 
-            assert self.arity[mode.functor]==2
-            #TODO mode is o,i vs i,o
-            assert mode.isInput(0) and mode.isOutput(1), 'preimages only implemented for mode p(i,o)'
-            coo = self.matrix(mode).tocoo()
-            rowsum = collections.defaultdict(float)
-            for i in range(len(coo.data)):
-                r = coo.row[i]
-                d = coo.data[i]
-                rowsum[r] += d
-            items = rowsum.items()
-            data = [d for (r,d) in items]
-            rowids = [0 for (r,d) in items]
-            colids = [r for (r,d) in items]
-            n = self.dim()
-            return scipy.sparse.csr_matrix((data,(rowids,colids)),shape=(1,n))
+        assert self.arity[mode.functor]==2
+        #TODO mode is o,i vs i,o
+        assert mode.isInput(0) and mode.isOutput(1), 'preimages only implemented for mode p(i,o)'
+        coo = self.matrix(mode).tocoo()
+        rowsum = collections.defaultdict(float)
+        for i in range(len(coo.data)):
+            r = coo.row[i]
+            d = coo.data[i]
+            rowsum[r] += d
+        items = rowsum.items()
+        data = [d for (r,d) in items]
+        rowids = [0 for (r,d) in items]
+        colids = [r for (r,d) in items]
+        n = self.dim()
+        return scipy.sparse.csr_matrix((data,(rowids,colids)),shape=(1,n))
 
 
     #

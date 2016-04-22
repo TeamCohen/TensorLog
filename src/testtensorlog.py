@@ -216,6 +216,18 @@ class TestGrad(unittest.TestCase):
                        {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
 
 
+    def testSplit(self):
+        rules = ['p(X,Y):-sister(X,Y),child(Y,Z),young(Z).']
+        mode = 'p(i,o)'
+        params = [('child',2)]
+        self.gradCheck(rules, mode, params,
+                       [('william',['lottie'])],
+                       {'child(lottie,lucas)': +1,'child(lottie,charlotte)': +1,'child(sarah,poppy)': -1})
+        params = [('sister',2)]
+        self.gradCheck(rules, mode, params,
+                       [('william',['lottie'])],
+                       {'sister(william,lottie)': +1,'sister(william,sarah)': -1})
+
     def testOr(self):
         rules = ['p(X,Y):-child(X,Y).', 'p(X,Y):-sister(X,Y).']
         mode = 'p(i,o)'
@@ -235,11 +247,33 @@ class TestGrad(unittest.TestCase):
 
     def gradCheck(self,ruleStrings,modeString,params,xyPairs,expected):
         """
+        expected - dict mapping strings encoding facts to expected sign of the gradient
+        """
+        (prog,updates) = self.gradUpdates(ruleStrings,modeString,params,xyPairs)
+        #put the gradient into a single fact-string-indexed dictionary
+        updatesWithStringKeys = {}
+        for (functor,arity),up in updates.items():
+            upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
+            for fact,gradOfFact in upDict.items():
+                updatesWithStringKeys[str(fact)] = gradOfFact
+        self.checkDirections(updatesWithStringKeys,expected)
+
+    def checkDirections(self,actualGrad,expectedDir):
+        #TODO allow expected to contain zeros?
+        for fact,sign in expectedDir.items():
+            print fact,'expected sign',sign,'grad',actualGrad.get(fact)
+            if not fact in actualGrad: print 'actualGrad',actualGrad
+            self.assertTrue(fact in actualGrad)
+            self.assertTrue(actualGrad[fact] * sign > 0)
+
+    def gradUpdates(self,ruleStrings,modeString,params,xyPairs):
+        """
         ruleStrings - a list of tensorlog rules to use with the db.
         modeString - mode for the data.
         params - list of (functor,arity) pairs that gradients will be computed for
         xyPairs - list of pairs (x,[y1,..,yk]) such that the desired result for x is uniform dist over y's
-        expected - dict mapping strings encoding facts to expected sign of the gradient
+
+        return (program,updates)
         """
         #build program
         rules = parser.RuleCollection()
@@ -257,22 +291,8 @@ class TestGrad(unittest.TestCase):
         #compute gradient
         learner = learn.Learner(prog,data)
         updates = learner.crossEntropyUpdate(modeString)
-        #put the gradient into a single fact-string-indexed dictionary
-        updatesWithStringKeys = {}
-        for (functor,arity),up in updates.items():
-            upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
-            for fact,gradOfFact in upDict.items():
-                updatesWithStringKeys[str(fact)] = gradOfFact
-        self.checkDirections(updatesWithStringKeys,expected)
+        return prog,updates
     
-    def checkDirections(self,actualGrad,expectedDir):
-        #TODO allow expected to contain zeros?
-        for fact,sign in expectedDir.items():
-            print fact,'expected sign',sign,'grad',actualGrad.get(fact)
-            if not fact in actualGrad: print 'actualGrad',actualGrad
-            self.assertTrue(fact in actualGrad)
-            self.assertTrue(actualGrad[fact] * sign > 0)
-
 class TestProPPR(unittest.TestCase):
 
     def setUp(self):

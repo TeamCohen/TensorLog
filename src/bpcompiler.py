@@ -107,7 +107,8 @@ class BPCompiler(object):
                 if j==None: return 'None'
                 else: return str(self.goals[j])
             print "\t".join([ v, str(vin.outputOf), ",".join(map(str,vin.inputTo)), 
-                              _gs(vin.outputOf), ",".join(map(_gs,vin.inputTo))])
+                              _gs(vin.outputOf), ",".join(map(_gs,vin.inputTo)),
+                              str(vin.connected)])
 
     def showRule(self):
         #print "\t".join("id goal ins outs roots".split())
@@ -116,8 +117,8 @@ class BPCompiler(object):
             print '%2d' % j,'\t ',goalStr(j),'\t',str(self.goals[j]),str(self.toMode(j))
 
     def showOps(self):
-        print 'inputs:',",".join(self.getInputs())
-        print 'outputs:',",".join(self.getOutputs())
+        print 'inputs:',",".join(self.inputs)
+        print 'output:',",".join(self.output)
         print 'compiled to:'
         for op in self.ops:
             print '\t',op
@@ -304,14 +305,17 @@ class BPCompiler(object):
                         addOp(depth,ops.VecMatMulOp(msgName,bx,mode,transpose=True))
                         return cacheMessage((j,v),msgName)
                     else:
-                        #optimize away the message from the output var
-                        # of gin.  note that this would be a dense
-                        # all-ones vector.
                         if gin.outputs:
+                            #optimize away the message from the output
+                            # var of gin, since it would be a dense
+                            # all-ones vector
                             assert len(gin.outputs)==1, 'need single output from %s' % self.goals[j]
                             #this variable now is connected to the main chain
                             self.varDict[only(gin.outputs)].connected = True
-                        addOp(depth,ops.AssignPreimageToVar(msgName,mode))
+                            addOp(depth,ops.AssignPreimageToVar(msgName,mode))
+                        else:
+                            addOp(depth,ops.AssignVectorToVar(msgName,mode))
+                            
                         return cacheMessage((j,v),msgName)
                 else:
                     assert False,'unexpected message goal %d -> %s ins %r outs %r' % (j,v,gin.inputs,gin.outputs)
@@ -404,8 +408,8 @@ if __name__ == "__main__":
     rules.add(rule)
     prog = tensorlog.Program(db=None,rules=rules)
 
-    c = BPCompiler(prog,0,rule)
-    c.compile(mode)
+    c = BPCompiler(mode,prog,0,rule)
+    c.compile()
     c.showRule()
     c.showVars()
     c.showOps()
