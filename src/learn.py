@@ -15,6 +15,8 @@ class UpdateAccumulator(object):
         return self.runningSum.keys()
     def items(self):
         return self.runningSum.items()
+    def getUpdate(self,paramName):
+        return self.runningSum[paramName]
     def accum(self,paramName,deltaGradient):
         self.updates[paramName].append(deltaGradient)
         if not paramName in self.runningSum:
@@ -46,6 +48,8 @@ class Dataset(object):
     def getData(self,mode):
         """Return matrix pair X,Y - inputs and corresponding outputs of the
         function for the given mode."""
+        assert self.xs[mode], 'no data inserted for mode %r' % mode
+        assert self.ys[mode], 'no labels inserted for mode %r' % mode
         return SS.vstack(self.xs[mode]), SS.vstack(self.ys[mode])
 
 

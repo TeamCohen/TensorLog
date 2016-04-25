@@ -14,6 +14,7 @@ import matrixdb
 import bpcompiler
 import ops
 import learn
+import bcast
 
 # can call a single test with, e.g.,
 # python -m unittest testtensorlog.TestSmallProofs.testIf
@@ -352,6 +353,43 @@ class TestProPPR(unittest.TestCase):
             else:
                 self.checkClass(d,self.xsyms[i],'pos',self.numWords)
                 self.checkClass(d,self.xsyms[i],'neg',self.numWords)
+
+    def testGradMatrix(self):
+        rawPos = "dh ft rw sc bk rb".split()
+        rawNeg = "mv hs ji tf jm".split()
+        rawData = {'dh':	'a	pricy	doll	house',
+                   'ft':	'a	little	red	fire	truck',
+                   'rw':	'a	red	wagon',
+                   'sc':	'a	pricy	red	sports	car',
+                   'bk':	'punk	queen	barbie	and	ken',
+                   'rb':	'a	little	red	bike',
+                   'mv':	'a	big	7-seater	minivan	with	an	automatic	transmission',
+                   'hs':	'a	big	house	in	the	suburbs	with	crushing	mortgage',
+                   'ji':	'a	job	for	life	at	IBM',
+                   'tf':	'a	huge	pile	of	tax	forms	due	yesterday',
+                   'jm':	'huge	pile	of	junk	mail	bills	and	catalogs'}
+        data = learn.Dataset(self.prog.db)
+        for s in rawPos:
+            data.addDataSymbols('predict(i,o)',s,['pos'])
+        for s in rawNeg:
+            data.addDataSymbols('predict(i,o)',s,['neg'])
+        learner = learn.Learner(self.prog,data)
+        updates =  learner.crossEntropyUpdate('predict(i,o)')
+        w = updates.getUpdate(('weighted',1))
+        def checkGrad(i,x,psign,nsign):
+            ri = w.getrow(i)            
+            di = self.prog.db.rowAsSymbolDict(ri)
+            for toki in rawData[x].split("\t"):
+                posToki = toki+'_pos'
+                negToki = toki+'_neg'
+                self.assertTrue(posToki in di)
+                self.assertTrue(negToki in di)
+                self.assertTrue(di[posToki]*psign > 0)
+                self.assertTrue(di[negToki]*nsign > 0)
+        for i,x in enumerate(rawPos):
+            checkGrad(i,x,+1,-1)
+        for i,x in enumerate(rawNeg):
+            checkGrad(i+len(rawPos),x,-1,+1)
 
     def checkClass(self,d,sym,lab,expected):
         self.assertEqual(d[lab], expected[sym])
