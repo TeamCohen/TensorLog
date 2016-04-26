@@ -28,6 +28,28 @@ def maybeNormalize(expectedResultDict):
         for c in expectedResultDict:
             expectedResultDict[c] /= norm
 
+def toyTrain():
+    rawPos = "dh ft rw sc bk rb".split()
+    rawNeg = "mv hs ji tf jm".split()
+    rawData = {'dh':	'a	pricy	doll	house',
+               'ft':	'a	little	red	fire	truck',
+               'rw':	'a	red	wagon',
+               'sc':	'a	pricy	red	sports	car',
+               'bk':	'punk	queen	barbie	and	ken',
+               'rb':	'a	little	red	bike',
+               'mv':	'a	big	7-seater	minivan	with	an	automatic	transmission',
+               'hs':	'a	big	house	in	the	suburbs	with	crushing	mortgage',
+               'ji':	'a	job	for	life	at	IBM',
+               'tf':	'a	huge	pile	of	tax	forms	due	yesterday',
+               'jm':	'huge	pile	of	junk	mail	bills	and	catalogs'}
+    return rawPos,rawNeg,rawData
+
+def loadRaw(data,rawPos,rawNeg):
+    for s in rawPos:
+        data.addDataSymbols('predict(i,o)',s,['pos'])
+    for s in rawNeg:
+        data.addDataSymbols('predict(i,o)',s,['neg'])
+
 class TestSmallProofs(unittest.TestCase):
     
     def setUp(self):
@@ -355,27 +377,12 @@ class TestProPPR(unittest.TestCase):
                 self.checkClass(d,self.xsyms[i],'neg',self.numWords)
 
     def testGradMatrix(self):
-        rawPos = "dh ft rw sc bk rb".split()
-        rawNeg = "mv hs ji tf jm".split()
-        rawData = {'dh':	'a	pricy	doll	house',
-                   'ft':	'a	little	red	fire	truck',
-                   'rw':	'a	red	wagon',
-                   'sc':	'a	pricy	red	sports	car',
-                   'bk':	'punk	queen	barbie	and	ken',
-                   'rb':	'a	little	red	bike',
-                   'mv':	'a	big	7-seater	minivan	with	an	automatic	transmission',
-                   'hs':	'a	big	house	in	the	suburbs	with	crushing	mortgage',
-                   'ji':	'a	job	for	life	at	IBM',
-                   'tf':	'a	huge	pile	of	tax	forms	due	yesterday',
-                   'jm':	'huge	pile	of	junk	mail	bills	and	catalogs'}
+        rawPos,rawNeg,rawData = toyTrain()
         data = learn.Dataset(self.prog.db)
-        for s in rawPos:
-            data.addDataSymbols('predict(i,o)',s,['pos'])
-        for s in rawNeg:
-            data.addDataSymbols('predict(i,o)',s,['neg'])
+        loadRaw(data,rawPos,rawNeg)
         learner = learn.Learner(self.prog,data)
         updates =  learner.crossEntropyUpdate('predict(i,o)')
-        w = updates.getUpdate(('weighted',1))
+        w = updates[('weighted',1)]
         def checkGrad(i,x,psign,nsign):
             ri = w.getrow(i)            
             di = self.prog.db.rowAsSymbolDict(ri)
@@ -390,6 +397,13 @@ class TestProPPR(unittest.TestCase):
             checkGrad(i,x,+1,-1)
         for i,x in enumerate(rawNeg):
             checkGrad(i+len(rawPos),x,-1,+1)
+
+    def notestLearn(self):
+        rawPos,rawNeg,rawData = toyTrain()
+        data = learn.Dataset(self.prog.db)
+        loadRaw(data,rawPos,rawNeg)
+        learner = learn.FixedRateSGDLearner(self.prog,data)
+        learner.train('predict(i,o)')
 
     def checkClass(self,d,sym,lab,expected):
         self.assertEqual(d[lab], expected[sym])

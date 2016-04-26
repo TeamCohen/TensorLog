@@ -5,7 +5,10 @@ import tensorlog
 
 import scipy.sparse as SS
 import numpy.random as NR
+import numpy as NP
 import collections
+
+#TODO clean up mode/modeString
 
 class UpdateAccumulator(object):
     def __init__(self):
@@ -15,14 +18,15 @@ class UpdateAccumulator(object):
         return self.runningSum.keys()
     def items(self):
         return self.runningSum.items()
-    def getUpdate(self,paramName):
+    def __getitem__(self,paramName):
         return self.runningSum[paramName]
+    def __setitem__(self,paramName,gradient):
+        self.runningSum[paramName] = gradient
     def accum(self,paramName,deltaGradient):
         self.updates[paramName].append(deltaGradient)
         if not paramName in self.runningSum:
             self.runningSum[paramName] = deltaGradient
         else:
-            #print '!!! paramName increment',paramName,'by',deltaGradient
             self.runningSum[paramName] = self.runningSum[paramName] + deltaGradient
 
 #TODO modes should be objects not strings
@@ -59,15 +63,6 @@ class Learner(object):
     def __init__(self,prog,data):
         self.prog = prog
         self.data = data
-        #TODO functions for these
-        self.empiricalLoss = None
-#       self.regularizationLoss = None
-
-#    def initializeWeights(self):
-#        ones = self.prog.db.ones()
-#        n = self.prog.db.dim()
-#        initWeights = SS.csc_matrix(ones + 0.01*NR.randn(n))
-#        self.prog.setWeights(initWeights)
 
     def showMat(self,msg,m):
         dm = self.prog.db.matrixAsSymbolDict(m)
@@ -84,6 +79,32 @@ class Learner(object):
         delta = Y - P
         predictFun.fun.backprop(delta,paramUpdates)
         return paramUpdates
+
+    def applyMeanUpdate(self,updates,rate):
+        for (functor,arity),delta in updates.items():
+            m0 = self.prog.db.getParameter(functor,arity)
+            print 'm0',type(m0),m0
+            print 'delta',type(delta),delta
+            #TODO - mean returns a dense matrix, can I avoid that
+            m = m0 + SS.csr_matrix(delta.mean(axis=1))*rate
+            #clip negative entries to zero
+            print 'm',type(m),m
+            clippedData = NP.clip(m.data,0.0,NP.finfo('float64'))
+            m = SS.csr_matrix((clippedData, m.indices, m.indptr), shape=m.shape)
+            m.prog.db.setParameter(functor,arity,m)
+
+class FixedRateSGDLearner(Learner):
+
+    def __init__(self,prog,data,epochs=10,rate=0.01):
+        super(FixedRateSGDLearner,self).__init__(prog,data)
+        self.epochs=epochs
+        self.rate=rate
+    
+    def train(self,modeString):
+        for i in range(self.epochs):
+            print 'epoch',i+1,'of',self.epochs
+            updates = self.crossEntropyUpdate(modeString)
+            self.applyMeanUpdate(updates,self.rate)
 
 if __name__ == "__main__":
     prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr","test/textcattoy.cfacts"])

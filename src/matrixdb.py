@@ -253,8 +253,7 @@ class MatrixDB(object):
                     m[0,i] = self.buf[(f,arity)][i][j]
             del self.buf[(f,arity)]
             self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m)
-            self.matEncoding[(f,arity
-)].sort_indices()
+            self.matEncoding[(f,arity)].sort_indices()
 
     def clearBuffers(self):
         """Save space by removing buffers"""
@@ -287,6 +286,15 @@ class MatrixDB(object):
     def clearParamMarkings(self):
         """ Clear previously marked parameters"""
         self.params = set()
+
+    def getParameter(self,functor,arity):
+        assert (functor,arity) in self.params,'%s/%d not a parameter' % (functor,arity)
+        return self.matEncoding[(functor,arity)]
+        
+    def setParameter(self,functor,arity,replacement):
+        assert (functor,arity) in self.params,'%s/%d not a parameter' % (functor,arity)
+        self.matEncoding[(functor,arity)] = replacement
+
 
     #
     # debugging
