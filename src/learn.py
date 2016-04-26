@@ -80,23 +80,27 @@ class Learner(object):
         predictFun.fun.backprop(delta,paramUpdates)
         return paramUpdates
 
+    #TODO clean up
     def applyMeanUpdate(self,updates,rate):
         for (functor,arity),delta in updates.items():
             m0 = self.prog.db.getParameter(functor,arity)
-            print 'm0',type(m0),m0
-            print 'delta',type(delta),delta
+#            print 'm0',type(m0),m0.get_shape()
+#            print 'delta',type(delta)
             #TODO - mean returns a dense matrix, can I avoid that
-            m = m0 + SS.csr_matrix(delta.mean(axis=1))*rate
+            mean = SS.csr_matrix(delta.mean(axis=0))
+#            print 'mean',type(mean),mean.get_shape()
+            m = m0 + mean*rate
             #clip negative entries to zero
-            print 'm',type(m),m
+#            print 'm',type(m),m.get_shape()
             clippedData = NP.clip(m.data,0.0,NP.finfo('float64'))
-            m = SS.csr_matrix((clippedData, m.indices, m.indptr), shape=m.shape)
-            m.prog.db.setParameter(functor,arity,m)
+            m = SS.csr_matrix((clippedData, m.indices, m.indptr), shape=m.shape, dtype='float64')
+#            print 'updated m0',type(m0),m0.get_shape(),'nnz',m0.nnz,self.prog.db.rowAsSymbolDict(m)
+            self.prog.db.setParameter(functor,arity,m)
 
-class FixedRateSGDLearner(Learner):
+class FixedRateGDLearner(Learner):
 
     def __init__(self,prog,data,epochs=10,rate=0.01):
-        super(FixedRateSGDLearner,self).__init__(prog,data)
+        super(FixedRateGDLearner,self).__init__(prog,data)
         self.epochs=epochs
         self.rate=rate
     
@@ -105,6 +109,7 @@ class FixedRateSGDLearner(Learner):
             print 'epoch',i+1,'of',self.epochs
             updates = self.crossEntropyUpdate(modeString)
             self.applyMeanUpdate(updates,self.rate)
+
 
 if __name__ == "__main__":
     prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr","test/textcattoy.cfacts"])

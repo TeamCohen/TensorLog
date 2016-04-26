@@ -135,7 +135,11 @@ class MatrixDB(object):
         result = {}
         (rows,cols)=m.shape
         for r in range(rows):
-            result[r] = self.rowAsSymbolDict(m.getrow(r))
+            try:
+                result[r] = self.rowAsSymbolDict(m.getrow(r))
+            except TypeError:
+                print '!!! type',type(m),'nnz',m.nnz,'shape',m.get_shape(),'rows',rows,'r',r
+                print '!!! row r',m.getrow(r)
         return result
 
     def matrixAsPredicateFacts(self,functor,arity,m):

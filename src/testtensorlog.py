@@ -398,11 +398,11 @@ class TestProPPR(unittest.TestCase):
         for i,x in enumerate(rawNeg):
             checkGrad(i+len(rawPos),x,-1,+1)
 
-    def notestLearn(self):
+    def testLearn(self):
         rawPos,rawNeg,rawData = toyTrain()
         data = learn.Dataset(self.prog.db)
         loadRaw(data,rawPos,rawNeg)
-        learner = learn.FixedRateSGDLearner(self.prog,data)
+        learner = learn.FixedRateGDLearner(self.prog,data)
         learner.train('predict(i,o)')
 
     def checkClass(self,d,sym,lab,expected):
