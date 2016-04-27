@@ -135,11 +135,7 @@ class MatrixDB(object):
         result = {}
         (rows,cols)=m.shape
         for r in range(rows):
-            try:
-                result[r] = self.rowAsSymbolDict(m.getrow(r))
-            except TypeError:
-                print '!!! type',type(m),'nnz',m.nnz,'shape',m.get_shape(),'rows',rows,'r',r
-                print '!!! row r',m.getrow(r)
+            result[r] = self.rowAsSymbolDict(m.getrow(r))
         return result
 
     def matrixAsPredicateFacts(self,functor,arity,m):
@@ -186,6 +182,12 @@ class MatrixDB(object):
             assert i==k,'symbols out of sync'
             k += 1
         scipy.io.loadmat(os.path.join(dir,"db.mat"),db.matEncoding)
+        #serialization/deserialization ends up converting
+        #(functor,arity) pairs to strings so convert them back....
+        for stringKey,mat in db.matEncoding.items():
+            if not stringKey.startswith('__'):
+                del db.matEncoding[stringKey]
+                db.matEncoding[eval(stringKey)] = mat
         return db
 
     def _checkArity(self,p,k):

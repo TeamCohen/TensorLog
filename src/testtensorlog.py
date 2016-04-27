@@ -172,8 +172,6 @@ class TestSmallProofs(unittest.TestCase):
 class TestGrad(unittest.TestCase):
 
     def setUp(self):
-        #TODO write test for this also
-        #self.prog = tensorlog.ProPPRProgram.load(["test/testgrad.ppr","test/testgrad.cfacts"])
         self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
     
     def testIf(self):

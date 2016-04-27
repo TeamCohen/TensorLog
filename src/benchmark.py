@@ -106,7 +106,7 @@ def runBenchmark(com):
         start = time.time()
         fun = prog.function[(qMode,0)]
         fun.eval(db, [qX])
-        print 'answered',len(queries),'queries at',len(queries)/(1000*(time.time() - start)),'kilo qps'
+        print 'answered',len(queries),'queries at',len(queries)/(time.time() - start),'qps'
     else:
         assert False,'illegal benchmark task'
     elapsed = time.time() - start

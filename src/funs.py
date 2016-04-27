@@ -1,19 +1,12 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
 import scipy.sparse as SS
+import scipy.misc as SM
 import numpy as np
 import logging
 
 import ops
 import bcast
-
-# TODO use scipy.misc.logsumexp
-# then: log of softmax is: outputs - logsumexp(outputs, axis=1, keepdims=True)
-# see https://github.com/HIPS/autograd/blob/master/examples/neural_net.py
-
-#TODO: how to associated the backprop nodes with the computation node?
-#mybe subclass ComputationNode with forward and backprop classes?  but
-#then do I really need a computation tree class at all?
 
 def trace(): return logging.getLogger().isEnabledFor(logging.DEBUG)
 
