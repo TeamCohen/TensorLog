@@ -50,13 +50,12 @@ class OpSeqFunction(Function):
             op.eval(self.opEnv)
         self.result = self.opEnv[self.opOutput]
         return self.result
-    def backprop(self,delta,updates):
+    def backprop(self,delta,gradAccum):
         self.opEnv.delta[self.opOutput] = delta
         n = len(self.ops)
         for i in range(n):
             op = self.ops[n-i-1]
-            #print 'fun bp op',n-i-1,op
-            op.backprop(self.opEnv,updates)
+            op.backprop(self.opEnv,gradAccum)
 
 class NullFunction(OpSeqFunction):
     """Returns an all-zeros vector."""
@@ -71,7 +70,7 @@ class NullFunction(OpSeqFunction):
     def eval(self,db,values):
         self.result = db.zeros()
         return self.result
-    def backprop(self,delta,updates):
+    def backprop(self,delta,gradAccum):
         pass
 
 class SumFunction(Function):
@@ -90,9 +89,9 @@ class SumFunction(Function):
             accum = accum + addends[i]
         self.result = accum
         return self.result
-    def backprop(self,delta,updates):
+    def backprop(self,delta,gradAccum):
         for f in self.funs:
-            f.backprop(delta,updates)
+            f.backprop(delta,gradAccum)
 
 class SoftmaxFunction(Function):
     """A function which computes row-wise softmax."""
@@ -108,21 +107,6 @@ class SoftmaxFunction(Function):
         self.result = bcast.softmax(unnorm)
         return self.result
     def backprop(self,delta):
+        # see comments for learner.crossEntropyGrad
         assert False, 'should not call this directly'
-
-#TODO modify this - we'll need it for tracking loss 
-
-#class CrossEntropy(Function):
-#    def __init__(self,Y,fun):
-#        self.Y = Y
-#        self.fun = StructuredLog(fun)
-#    def computationTree(self,db,values):
-#        subtree = self.fun.computationTree(db,values)
-#        logP = subtree.result
-#        result = (-self.Y).multiply(logP)
-#        return ComputationNode(self,db,values,result,children=[subtree])
-#    def grad(self,root):
-#        logP = root.children[0].result
-#        for w in root.db.params:        
-#            root.gradResult[w] = (-self.Y).multiply(root.children[0].gradResult[w])
 

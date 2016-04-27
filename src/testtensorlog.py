@@ -334,7 +334,7 @@ class TestGrad(unittest.TestCase):
             prog.db.markAsParam(functor,arity)
         #compute gradient
         learner = learn.Learner(prog,data)
-        updates = learner.crossEntropyUpdate(modeString)
+        updates = learner.crossEntropyGrad(modeString)
         return prog,updates
     
 class TestProPPR(unittest.TestCase):
@@ -381,7 +381,7 @@ class TestProPPR(unittest.TestCase):
         data = learn.Dataset(self.prog.db)
         loadRaw(data,rawPos,rawNeg)
         learner = learn.Learner(self.prog,data)
-        updates =  learner.crossEntropyUpdate('predict(i,o)')
+        updates =  learner.crossEntropyGrad('predict(i,o)')
         w = updates[('weighted',1)]
         def checkGrad(i,x,psign,nsign):
             ri = w.getrow(i)            
@@ -402,8 +402,21 @@ class TestProPPR(unittest.TestCase):
         rawPos,rawNeg,rawData = toyTrain()
         data = learn.Dataset(self.prog.db)
         loadRaw(data,rawPos,rawNeg)
-        learner = learn.FixedRateGDLearner(self.prog,data)
-        learner.train('predict(i,o)')
+        modeString = 'predict(i,o)'
+
+        X,Y = data.getData(modeString)
+        learner = learn.FixedRateGDLearner(self.prog,data,epochs=5)
+        P0 = learner.predict(modeString,X)
+        acc0 = learner.accuracy(Y,P0)
+        xent0 = learner.crossEntropy(Y,P0)
+        learner.train(modeString)
+        P1 = learner.predict(modeString)
+        acc1 = learner.accuracy(Y,P1)
+        xent1 = learner.crossEntropy(Y,P1)
+        
+        self.assertTrue(acc0<acc1)
+        self.assertTrue(xent0>xent1)
+        self.assertTrue(acc1==1)
 
     def checkClass(self,d,sym,lab,expected):
         self.assertEqual(d[lab], expected[sym])

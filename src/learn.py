@@ -7,12 +7,12 @@ import scipy.sparse as SS
 import numpy.random as NR
 import numpy as NP
 import collections
+import bcast
 
 #TODO clean up mode/modeString
 
-class UpdateAccumulator(object):
+class GradAccumulator(object):
     def __init__(self):
-        self.updates = collections.defaultdict(list) #for debug
         self.runningSum = {}
     def keys(self):
         return self.runningSum.keys()
@@ -23,13 +23,13 @@ class UpdateAccumulator(object):
     def __setitem__(self,paramName,gradient):
         self.runningSum[paramName] = gradient
     def accum(self,paramName,deltaGradient):
-        self.updates[paramName].append(deltaGradient)
         if not paramName in self.runningSum:
             self.runningSum[paramName] = deltaGradient
         else:
             self.runningSum[paramName] = self.runningSum[paramName] + deltaGradient
 
 #TODO modes should be objects not strings
+
 class Dataset(object):
     def __init__(self,db):
         self.db = db
@@ -52,10 +52,13 @@ class Dataset(object):
     def getData(self,mode):
         """Return matrix pair X,Y - inputs and corresponding outputs of the
         function for the given mode."""
+        return self.getX(mode),self.getY(mode)
+    def getX(self,mode):
         assert self.xs[mode], 'no data inserted for mode %r' % mode
+        return SS.vstack(self.xs[mode])
+    def getY(self,mode):
         assert self.ys[mode], 'no labels inserted for mode %r' % mode
-        return SS.vstack(self.xs[mode]), SS.vstack(self.ys[mode])
-
+        return SS.vstack(self.ys[mode])
 
 class Learner(object):
 
@@ -64,52 +67,97 @@ class Learner(object):
         self.prog = prog
         self.data = data
 
-    def showMat(self,msg,m):
-        dm = self.prog.db.matrixAsSymbolDict(m)
-        for r,d in dm.items():
-            print msg,r,d
+    @staticmethod
+    def accuracy(Y,P):
+        #TODO surely there's a better way of doing this
+        n = bcast.numRows(P)
+        ok = 0.0
+        for i in range(n):
+            pi = P.getrow(i)
+            yi = Y.getrow(i)
+            di = pi.data
+            tdata = NP.zeros_like(di)
+            maxj = di.argmax()
+            tdata[maxj] = 1
+            ti = SS.csr_matrix((tdata, pi.indices, pi.indptr), shape=pi.shape, dtype='float64')
+            ok += yi.multiply(ti).sum()
+        return ok/n
 
-    def crossEntropyUpdate(self,modeString):
-        X,Y = self.data.getData(modeString)
+    @staticmethod
+    def crossEntropy(Y,P):
+        """Compute cross entropy some predications relative to some labels."""
+        logPData = NP.log(P.data)
+        logP = SS.csr_matrix((logPData, P.indices, P.indptr), shape=P.shape, dtype='float64')
+        return -(Y.multiply(logP).sum())
+
+    def predict(self,modeString,X=None):
+        """Make predictions on a data matrix associated with the given mode.
+        If X==None, use the training data. """
+        if not X:
+            X = self.data.getX(modeString)
         mode = tensorlog.ModeDeclaration(modeString)
         predictFun = self.prog.getPredictFunction(mode)
-        assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyUpdate specialized to work for softmax normalization'
-        P = predictFun.eval(self.prog.db, [X])
-        paramUpdates = UpdateAccumulator()
-        delta = Y - P
-        predictFun.fun.backprop(delta,paramUpdates)
-        return paramUpdates
+        return predictFun.eval(self.prog.db, [X])
 
-    #TODO clean up
-    def applyMeanUpdate(self,updates,rate):
-        for (functor,arity),delta in updates.items():
+    def crossEntropyGrad(self,modeString,traceFun=None):
+        """Compute parameter gradient associated with softmax normalization
+        followed by a cross-entropy cost function.
+        """
+
+        # More detail: in learning we use a softmax normalization
+        # followed immediately by a crossEntropy loss, which has a
+        # simple derivative when combined - see
+        # http://peterroelants.github.io/posts/neural_network_implementation_intermezzo02/
+        # So in doing backprop, you don't call backprop on the outer
+        # function, instead you compute the initial delta of P-Y, the
+        # derivative for the loss of the (softmax o crossEntropy)
+        # function, and it pass that delta down to the inner function
+        # for softMax
+
+        # a check
+        predictFun = self.prog.getPredictFunction(tensorlog.ModeDeclaration(modeString))
+        assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
+
+        X,Y = self.data.getData(modeString)
+        P = self.predict(modeString,X)
+        if traceFun: traceFun(self,Y,P)
+        paramGrads = GradAccumulator()
+        #TODO assert rowSum(Y) = all ones - that's assumed here in
+        #initial delta of Y-P
+        predictFun.fun.backprop(Y-P,paramGrads)
+        return paramGrads
+
+    def applyMeanUpdate(self,paramGrads,rate):
+        """ Compute the mean of each parameter gradient, and add it to the
+        appropriate param, after scaling by rate. If necessary clip
+        negative parameters to zero.
+        """ 
+        for (functor,arity),delta in paramGrads.items():
             m0 = self.prog.db.getParameter(functor,arity)
-#            print 'm0',type(m0),m0.get_shape()
-#            print 'delta',type(delta)
-            #TODO - mean returns a dense matrix, can I avoid that
-            mean = SS.csr_matrix(delta.mean(axis=0))
-#            print 'mean',type(mean),mean.get_shape()
+            #TODO - mean returns a dense matrix, can I avoid that?
+            mean = SS.csr_matrix(delta.mean(axis=0))  #column mean
             m = m0 + mean*rate
             #clip negative entries to zero
-#            print 'm',type(m),m.get_shape()
             clippedData = NP.clip(m.data,0.0,NP.finfo('float64'))
             m = SS.csr_matrix((clippedData, m.indices, m.indptr), shape=m.shape, dtype='float64')
-#            print 'updated m0',type(m0),m0.get_shape(),'nnz',m0.nnz,self.prog.db.rowAsSymbolDict(m)
             self.prog.db.setParameter(functor,arity,m)
 
 class FixedRateGDLearner(Learner):
 
-    def __init__(self,prog,data,epochs=10,rate=0.01):
+    def __init__(self,prog,data,epochs=10,rate=0.1):
         super(FixedRateGDLearner,self).__init__(prog,data)
         self.epochs=epochs
         self.rate=rate
     
     def train(self,modeString):
         for i in range(self.epochs):
-            print 'epoch',i+1,'of',self.epochs
-            updates = self.crossEntropyUpdate(modeString)
-            self.applyMeanUpdate(updates,self.rate)
-
+            def traceFunForEpoch(thisLearner,Y,P):
+                print 'epoch %d of %d' % (i+1,self.epochs),
+                print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
+                print ' acc %.3f' % thisLearner.accuracy(Y,P)            
+            paramGrads = self.crossEntropyGrad(modeString,traceFun=traceFunForEpoch)
+            self.applyMeanUpdate(paramGrads,self.rate)
+        
 
 if __name__ == "__main__":
     prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr","test/textcattoy.cfacts"])
@@ -117,5 +165,5 @@ if __name__ == "__main__":
     learner.addData(tensorlog.ModeDeclaration('predict(i,o)'), 'test/textcattoy-train.examples')
     learner.initializeWeights()
     print 'params',learner.prog.db.params
-    learner.crossEntropyUpdate()
+    learner.crossEntropyGrad()
 
