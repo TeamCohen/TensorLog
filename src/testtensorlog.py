@@ -44,6 +44,11 @@ def toyTrain():
                'jm':	'huge	pile	of	junk	mail	bills	and	catalogs'}
     return rawPos,rawNeg,rawData
 
+def toyTest():
+    rawPos = "pb yc rb2 rp".split()
+    rawNeg = "bp he wt".split()
+    return rawPos,rawNeg
+
 def loadRaw(data,rawPos,rawNeg):
     for s in rawPos:
         data.addDataSymbols('predict(i,o)',s,['pos'])
@@ -417,6 +422,17 @@ class TestProPPR(unittest.TestCase):
         self.assertTrue(acc0<acc1)
         self.assertTrue(xent0>xent1)
         self.assertTrue(acc1==1)
+        print 'toy train: acc1',acc1,'xent1',xent1
+
+        rawPosTest,rawNegTest = toyTest()
+        testData = learn.Dataset(self.prog.db)
+        loadRaw(testData,rawPosTest,rawNegTest)
+        TX,TY = testData.getData(modeString)
+        P2 = learner.predict(modeString,TX)
+        acc2 = learner.accuracy(TY,P2)
+        xent2 = learner.crossEntropy(TY,P2)
+        print 'toy test: acc2',acc2,'xent2',xent2
+        self.assertTrue(acc2==1)
 
     def checkClass(self,d,sym,lab,expected):
         self.assertEqual(d[lab], expected[sym])
