@@ -3,7 +3,16 @@
 import scipy.sparse as SS
 import numpy as np
 
+#TODO rename to matutils
 # miscellaneous broadcast utilities used my ops.py and funs.py
+
+def mean(mat):
+    """Return the average of the rows."""
+    return SS.csr_matrix(mat.mean(axis=0))
+
+def mapData(dataFun,mat):
+    """Apply some function to the mat.data array of the sparse matrix and return a new one."""
+    return SS.csr_matrix((dataFun(mat.data),mat.indices,mat.indptr), shape=mat.shape, dtype='float64')
 
 def stack(mats):
     return SS.csr_matrix(SS.vstack(mats, dtype='float64'))

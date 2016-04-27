@@ -1,10 +1,6 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
-import scipy.sparse as SS
-import scipy.misc as SM
-import numpy as np
 import logging
-
 import ops
 import bcast
 

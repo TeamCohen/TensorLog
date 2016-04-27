@@ -3,13 +3,9 @@
 import funs
 import tensorlog
 
-import scipy.sparse as SS
-import numpy.random as NR
 import numpy as NP
 import collections
 import bcast
-
-#TODO clean up mode/modeString
 
 class GradAccumulator(object):
     def __init__(self):
@@ -27,8 +23,6 @@ class GradAccumulator(object):
             self.runningSum[paramName] = deltaGradient
         else:
             self.runningSum[paramName] = self.runningSum[paramName] + deltaGradient
-
-#TODO modes should be objects not strings
 
 class Dataset(object):
     def __init__(self,db):
@@ -54,11 +48,11 @@ class Dataset(object):
         function for the given mode."""
         return self.getX(mode),self.getY(mode)
     def getX(self,mode):
-        assert self.xs[mode], 'no data inserted for mode %r' % mode
-        return SS.vstack(self.xs[mode])
+        assert self.xs[mode], 'no data inserted for mode %r in %r' % (mode,self.xs)
+        return bcast.stack(self.xs[mode])
     def getY(self,mode):
         assert self.ys[mode], 'no labels inserted for mode %r' % mode
-        return SS.vstack(self.ys[mode])
+        return bcast.stack(self.ys[mode])
 
 class Learner(object):
 
@@ -72,34 +66,31 @@ class Learner(object):
         #TODO surely there's a better way of doing this
         n = bcast.numRows(P)
         ok = 0.0
+        def allZerosButArgmax(d):
+            result = NP.zeros_like(d)
+            result[d.argmax()] = 1.0
+            return result
         for i in range(n):
             pi = P.getrow(i)
             yi = Y.getrow(i)
-            di = pi.data
-            tdata = NP.zeros_like(di)
-            maxj = di.argmax()
-            tdata[maxj] = 1
-            ti = SS.csr_matrix((tdata, pi.indices, pi.indptr), shape=pi.shape, dtype='float64')
+            ti = bcast.mapData(allZerosButArgmax,pi)
             ok += yi.multiply(ti).sum()
         return ok/n
 
     @staticmethod
     def crossEntropy(Y,P):
         """Compute cross entropy some predications relative to some labels."""
-        logPData = NP.log(P.data)
-        logP = SS.csr_matrix((logPData, P.indices, P.indptr), shape=P.shape, dtype='float64')
+        logP = bcast.mapData(NP.log,P)
         return -(Y.multiply(logP).sum())
 
-    def predict(self,modeString,X=None):
+    def predict(self,mode,X=None):
         """Make predictions on a data matrix associated with the given mode.
         If X==None, use the training data. """
-        if not X:
-            X = self.data.getX(modeString)
-        mode = tensorlog.ModeDeclaration(modeString)
+        if X==None: X = self.data.getX(mode)
         predictFun = self.prog.getPredictFunction(mode)
         return predictFun.eval(self.prog.db, [X])
 
-    def crossEntropyGrad(self,modeString,traceFun=None):
+    def crossEntropyGrad(self,mode,traceFun=None):
         """Compute parameter gradient associated with softmax normalization
         followed by a cross-entropy cost function.
         """
@@ -115,11 +106,11 @@ class Learner(object):
         # for softMax
 
         # a check
-        predictFun = self.prog.getPredictFunction(tensorlog.ModeDeclaration(modeString))
+        predictFun = self.prog.getPredictFunction(mode)
         assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
 
-        X,Y = self.data.getData(modeString)
-        P = self.predict(modeString,X)
+        X,Y = self.data.getData(mode)
+        P = self.predict(mode,X)
         if traceFun: traceFun(self,Y,P)
         paramGrads = GradAccumulator()
         #TODO assert rowSum(Y) = all ones - that's assumed here in
@@ -135,11 +126,10 @@ class Learner(object):
         for (functor,arity),delta in paramGrads.items():
             m0 = self.prog.db.getParameter(functor,arity)
             #TODO - mean returns a dense matrix, can I avoid that?
-            mean = SS.csr_matrix(delta.mean(axis=0))  #column mean
-            m = m0 + mean*rate
+#            mean = SS.csr_matrix(delta.mean(axis=0))  #column mean
+            m = m0 + bcast.mean(delta)*rate
             #clip negative entries to zero
-            clippedData = NP.clip(m.data,0.0,NP.finfo('float64'))
-            m = SS.csr_matrix((clippedData, m.indices, m.indptr), shape=m.shape, dtype='float64')
+            m = bcast.mapData(lambda d:NP.clip(m.data,0.0,NP.finfo('float64').max), m)
             self.prog.db.setParameter(functor,arity,m)
 
 class FixedRateGDLearner(Learner):
@@ -149,21 +139,16 @@ class FixedRateGDLearner(Learner):
         self.epochs=epochs
         self.rate=rate
     
-    def train(self,modeString):
+    def train(self,mode):
         for i in range(self.epochs):
             def traceFunForEpoch(thisLearner,Y,P):
                 print 'epoch %d of %d' % (i+1,self.epochs),
                 print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
                 print ' acc %.3f' % thisLearner.accuracy(Y,P)            
-            paramGrads = self.crossEntropyGrad(modeString,traceFun=traceFunForEpoch)
+            paramGrads = self.crossEntropyGrad(mode,traceFun=traceFunForEpoch)
             self.applyMeanUpdate(paramGrads,self.rate)
         
 
 if __name__ == "__main__":
-    prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr","test/textcattoy.cfacts"])
-    learner = Learner(prog)
-    learner.addData(tensorlog.ModeDeclaration('predict(i,o)'), 'test/textcattoy-train.examples')
-    learner.initializeWeights()
-    print 'params',learner.prog.db.params
-    learner.crossEntropyGrad()
+    pass
 

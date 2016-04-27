@@ -4,9 +4,8 @@ import sys
 import time
 import resource
 
-import scipy.sparse as SS
-
 import matrixdb
+import bcast
 import tensorlog
 import parser
 
@@ -102,7 +101,7 @@ def runBenchmark(com):
         #a list of (m,vx)
         qMode = queries[0][0]
         Xs = [vx for m,vx in queries]
-        qX = SS.vstack(Xs, dtype='float64')
+        qX = bcast.stack(Xs)
         start = time.time()
         fun = prog.function[(qMode,0)]
         fun.eval(db, [qX])

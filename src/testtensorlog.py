@@ -6,8 +6,6 @@ import logging.config
 import sys
 import math
 
-import scipy.sparse
-
 import tensorlog 
 import parser
 import matrixdb
@@ -50,10 +48,21 @@ def toyTest():
     return rawPos,rawNeg
 
 def loadRaw(data,rawPos,rawNeg):
+    pmode = tensorlog.ModeDeclaration('predict(i,o)')
     for s in rawPos:
-        data.addDataSymbols('predict(i,o)',s,['pos'])
+        data.addDataSymbols(pmode,s,['pos'])
     for s in rawNeg:
-        data.addDataSymbols('predict(i,o)',s,['neg'])
+        data.addDataSymbols(pmode,s,['neg'])
+
+class TestModeDeclaration(unittest.TestCase):
+
+    def testHash(self):
+        d = {}
+        m1 = tensorlog.ModeDeclaration('foo(i,o)')
+        m2 = tensorlog.ModeDeclaration('foo(i, o)')
+        self.assertTrue(m1==m2)
+        d[m1] = 1.0
+        self.assertTrue(m2 in d)
 
 class TestSmallProofs(unittest.TestCase):
     
@@ -294,7 +303,8 @@ class TestGrad(unittest.TestCase):
         """
         expected - dict mapping strings encoding facts to expected sign of the gradient
         """
-        (prog,updates) = self.gradUpdates(ruleStrings,modeString,params,xyPairs)
+        mode = tensorlog.ModeDeclaration(modeString)
+        (prog,updates) = self.gradUpdates(ruleStrings,mode,params,xyPairs)
         #put the gradient into a single fact-string-indexed dictionary
         updatesWithStringKeys = {}
         for (functor,arity),up in updates.items():
@@ -313,7 +323,7 @@ class TestGrad(unittest.TestCase):
             self.assertTrue(fact in actualGrad)
             self.assertTrue(actualGrad[fact] * sign > 0)
 
-    def gradUpdates(self,ruleStrings,modeString,params,xyPairs):
+    def gradUpdates(self,ruleStrings,mode,params,xyPairs):
         """
         ruleStrings - a list of tensorlog rules to use with the db.
         modeString - mode for the data.
@@ -330,14 +340,14 @@ class TestGrad(unittest.TestCase):
         #build dataset
         data = learn.Dataset(self.db)
         for x,ys in xyPairs:
-            data.addDataSymbols(modeString,x,ys)
+            data.addDataSymbols(mode,x,ys)
         #mark params: should be pairs (functor,arity)
         prog.db.clearParamMarkings()
         for functor,arity in params:
             prog.db.markAsParam(functor,arity)
         #compute gradient
         learner = learn.Learner(prog,data)
-        updates = learner.crossEntropyGrad(modeString)
+        updates = learner.crossEntropyGrad(mode)
         return prog,updates
     
 class TestProPPR(unittest.TestCase):
@@ -384,7 +394,7 @@ class TestProPPR(unittest.TestCase):
         data = learn.Dataset(self.prog.db)
         loadRaw(data,rawPos,rawNeg)
         learner = learn.Learner(self.prog,data)
-        updates =  learner.crossEntropyGrad('predict(i,o)')
+        updates =  learner.crossEntropyGrad(tensorlog.ModeDeclaration('predict(i,o)'))
         w = updates[('weighted',1)]
         def checkGrad(i,x,psign,nsign):
             ri = w.getrow(i)            
@@ -405,15 +415,15 @@ class TestProPPR(unittest.TestCase):
         rawPos,rawNeg,rawData = toyTrain()
         data = learn.Dataset(self.prog.db)
         loadRaw(data,rawPos,rawNeg)
-        modeString = 'predict(i,o)'
+        mode = tensorlog.ModeDeclaration('predict(i,o)')
 
-        X,Y = data.getData(modeString)
+        X,Y = data.getData(mode)
         learner = learn.FixedRateGDLearner(self.prog,data,epochs=5)
-        P0 = learner.predict(modeString,X)
+        P0 = learner.predict(mode,X)
         acc0 = learner.accuracy(Y,P0)
         xent0 = learner.crossEntropy(Y,P0)
-        learner.train(modeString)
-        P1 = learner.predict(modeString)
+        learner.train(mode)
+        P1 = learner.predict(mode)
         acc1 = learner.accuracy(Y,P1)
         xent1 = learner.crossEntropy(Y,P1)
         
@@ -425,8 +435,8 @@ class TestProPPR(unittest.TestCase):
         rawPosTest,rawNegTest = toyTest()
         testData = learn.Dataset(self.prog.db)
         loadRaw(testData,rawPosTest,rawNegTest)
-        TX,TY = testData.getData(modeString)
-        P2 = learner.predict(modeString,TX)
+        TX,TY = testData.getData(mode)
+        P2 = learner.predict(mode,TX)
         acc2 = learner.accuracy(TY,P2)
         xent2 = learner.crossEntropy(TY,P2)
         print 'toy test: acc2',acc2,'xent2',xent2
@@ -444,7 +454,7 @@ class TestProPPR(unittest.TestCase):
             xsyms.append(sx)
             xs.append(db.onehot(sx))
             ys.append(db.onehot(sy))
-        return xsyms,scipy.sparse.vstack(xs),scipy.sparse.vstack(ys)
+        return xsyms,bcast.stack(xs),bcast.stack(ys)
 
     def checkDicts(self,actual, expected):
 #        print 'actual:  ',actual
