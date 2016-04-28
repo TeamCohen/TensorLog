@@ -182,14 +182,52 @@ class ProPPRProgram(Program):
         (db,rules) = Program._load(fileNames)
         return ProPPRProgram(db,rules)
 
-def answerStringQuery(p,a):
-    """Use a program to answer a query and print the result - used in the sample main"""
-    g = parser.Parser.parseGoal(a)
-    assert (not parser.isVariableAtom(g.args[0]) and parser.isVariableAtom(g.args[1])), 'mode of query should be p(i,o): %s' % str(g)
-    mode = declare.ModeDeclaration(parser.Goal(g.functor,['i','o']))
-    x = g.args[0]
-    result = p.evalSymbols(mode,[x])
-    print p.db.rowAsSymbolDict(result)
+class Interp(object):
+
+    def __init__(self,initFiles=[],proppr=True):
+        if proppr: 
+            self.prog = ProPPRProgram.load(initFiles)
+            self.prog.setWeights(self.prog.db.ones())
+        else: 
+            self.prog = Program.load(initFiles)
+        self.db = self.prog.db
+
+    #parse a spec: pred/io/index
+
+    @staticmethod
+    def asMode(spec):
+        if type(spec)==type(""):
+            return declare.ModeDeclaration(spec)
+        else:
+            return spec
+
+    def listFunction(self,modeSpec):
+        mode = self.asMode(modeSpec)
+        key = (mode,0)
+        if key not in self.prog.function:
+            self.prog.compile(mode)
+        fun = self.prog.function[key]
+        print fun
+
+    def listRules(self):
+        self.prog.rules.listing()
+
+    def listDB(self):
+        self.db.listing()
+
+    def answer(self,a):
+        """Answer a query with the mode p(i,o), print the resulting
+        dictionary.
+        """
+        if type(a)==type(""):
+            g = parser.Parser.parseGoal(a)
+        elif type(a)==type(parse.Goal('dummyGoal',[])):
+            g = a
+        assert (not parser.isVariableAtom(g.args[0]) and parser.isVariableAtom(g.args[1])), 'mode of query should be p(i,o): %s' % str(g)
+        mode = declare.ModeDeclaration(parser.Goal(g.functor,['i','o']))
+        x = g.args[0]
+        result = self.prog.evalSymbols(mode,[x])
+        print self.prog.db.rowAsSymbolDict(result)
 
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william
@@ -209,12 +247,8 @@ if __name__ == "__main__":
 
     assert '--programFiles' in optdict, '--programFiles f1:f2:... is a required option'
 
-    if "--proppr" in optdict:
-        p = ProPPRProgram.load(optdict['--programFiles'].split(":"))
-        p.setWeights(p.db.ones())
-    else:
-        p = Program.load(optdict['--programFiles'].split(":"))
+    ti = Interp(initFiles=optdict['--programFiles'].split(":"), proppr=('--proppr' in optdict))
 
     for a in args:
-        answerStringQuery(p,a)
+        ti.answer(a)
 
