@@ -5,7 +5,7 @@ import tensorlog
 
 import numpy as NP
 import collections
-import bcast
+import mutil
 
 class GradAccumulator(object):
     def __init__(self):
@@ -49,10 +49,10 @@ class Dataset(object):
         return self.getX(mode),self.getY(mode)
     def getX(self,mode):
         assert self.xs[mode], 'no data inserted for mode %r in %r' % (mode,self.xs)
-        return bcast.stack(self.xs[mode])
+        return mutil.stack(self.xs[mode])
     def getY(self,mode):
         assert self.ys[mode], 'no labels inserted for mode %r' % mode
-        return bcast.stack(self.ys[mode])
+        return mutil.stack(self.ys[mode])
 
 class Learner(object):
 
@@ -64,7 +64,7 @@ class Learner(object):
     @staticmethod
     def accuracy(Y,P):
         #TODO surely there's a better way of doing this
-        n = bcast.numRows(P)
+        n = mutil.numRows(P)
         ok = 0.0
         def allZerosButArgmax(d):
             result = NP.zeros_like(d)
@@ -73,14 +73,14 @@ class Learner(object):
         for i in range(n):
             pi = P.getrow(i)
             yi = Y.getrow(i)
-            ti = bcast.mapData(allZerosButArgmax,pi)
+            ti = mutil.mapData(allZerosButArgmax,pi)
             ok += yi.multiply(ti).sum()
         return ok/n
 
     @staticmethod
     def crossEntropy(Y,P):
         """Compute cross entropy some predications relative to some labels."""
-        logP = bcast.mapData(NP.log,P)
+        logP = mutil.mapData(NP.log,P)
         return -(Y.multiply(logP).sum())
 
     def predict(self,mode,X=None):
@@ -127,9 +127,9 @@ class Learner(object):
             m0 = self.prog.db.getParameter(functor,arity)
             #TODO - mean returns a dense matrix, can I avoid that?
 #            mean = SS.csr_matrix(delta.mean(axis=0))  #column mean
-            m = m0 + bcast.mean(delta)*rate
+            m = m0 + mutil.mean(delta)*rate
             #clip negative entries to zero
-            m = bcast.mapData(lambda d:NP.clip(m.data,0.0,NP.finfo('float64').max), m)
+            m = mutil.mapData(lambda d:NP.clip(m.data,0.0,NP.finfo('float64').max), m)
             self.prog.db.setParameter(functor,arity,m)
 
 class FixedRateGDLearner(Learner):

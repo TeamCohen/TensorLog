@@ -2,7 +2,7 @@
 
 import logging
 import ops
-import bcast
+import mutil
 
 def trace(): return logging.getLogger().isEnabledFor(logging.DEBUG)
 
@@ -93,7 +93,7 @@ class SoftmaxFunction(Function):
         return [('| '*depth) + 'SoftmaxFunction:'] + self.fun.pprint(depth=depth+1)
     def eval(self,db,values):
         unnorm = self.fun.eval(db,values)
-        self.result = bcast.softmax(unnorm)
+        self.result = mutil.softmax(unnorm)
         return self.result
     def backprop(self,delta):
         # see comments for learner.crossEntropyGrad

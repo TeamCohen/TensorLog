@@ -7,12 +7,13 @@ import sys
 import math
 
 import tensorlog 
+import declare
 import parser
 import matrixdb
 import bpcompiler
 import ops
 import learn
-import bcast
+import mutil
 
 # can call a single test with, e.g.,
 # python -m unittest testtensorlog.TestSmallProofs.testIf
@@ -48,7 +49,7 @@ def toyTest():
     return rawPos,rawNeg
 
 def loadRaw(data,rawPos,rawNeg):
-    pmode = tensorlog.ModeDeclaration('predict(i,o)')
+    pmode = declare.ModeDeclaration('predict(i,o)')
     for s in rawPos:
         data.addDataSymbols(pmode,s,['pos'])
     for s in rawNeg:
@@ -58,8 +59,8 @@ class TestModeDeclaration(unittest.TestCase):
 
     def testHash(self):
         d = {}
-        m1 = tensorlog.ModeDeclaration('foo(i,o)')
-        m2 = tensorlog.ModeDeclaration('foo(i, o)')
+        m1 = declare.ModeDeclaration('foo(i,o)')
+        m2 = declare.ModeDeclaration('foo(i, o)')
         self.assertTrue(m1==m2)
         d[m1] = 1.0
         self.assertTrue(m2 in d)
@@ -147,7 +148,7 @@ class TestSmallProofs(unittest.TestCase):
         for r in ruleStrings:
             rules.add(parser.Parser.parseRule(r))
         prog = tensorlog.Program(db=self.db,rules=rules)
-        mode = tensorlog.ModeDeclaration(modeString)
+        mode = declare.ModeDeclaration(modeString)
         fun = prog.compile(mode)
         y1 = prog.evalSymbols(mode,[inputSymbol]) 
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
@@ -160,7 +161,7 @@ class TestSmallProofs(unittest.TestCase):
         for r in ruleStrings:
             rules.add(parser.Parser.parseRule(r))
         prog = tensorlog.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
-        mode = tensorlog.ModeDeclaration(modeString)
+        mode = declare.ModeDeclaration(modeString)
         fun = prog.compile(mode)
 
         y1 = prog.evalSymbols(mode,[inputSymbol]) 
@@ -303,7 +304,7 @@ class TestGrad(unittest.TestCase):
         """
         expected - dict mapping strings encoding facts to expected sign of the gradient
         """
-        mode = tensorlog.ModeDeclaration(modeString)
+        mode = declare.ModeDeclaration(modeString)
         (prog,updates) = self.gradUpdates(ruleStrings,mode,params,xyPairs)
         #put the gradient into a single fact-string-indexed dictionary
         updatesWithStringKeys = {}
@@ -358,7 +359,7 @@ class TestProPPR(unittest.TestCase):
         self.xsyms,self.X,self.Y = self.loadExamples("test/textcattoy-train.examples",self.prog.db)
         self.numExamples = self.X.get_shape()[0] 
         self.numFeatures = self.X.get_shape()[1] 
-        self.mode = tensorlog.ModeDeclaration('predict(i,o)')
+        self.mode = declare.ModeDeclaration('predict(i,o)')
         self.numWords = \
             {'dh':4.0, 'ft':5.0, 'rw':3.0, 'sc':5.0, 'bk':5.0, 
              'rb':4.0, 'mv':8.0,  'hs':9.0, 'ji':6.0, 'tf':8.0, 'jm':8.0 }
@@ -394,7 +395,7 @@ class TestProPPR(unittest.TestCase):
         data = learn.Dataset(self.prog.db)
         loadRaw(data,rawPos,rawNeg)
         learner = learn.Learner(self.prog,data)
-        updates =  learner.crossEntropyGrad(tensorlog.ModeDeclaration('predict(i,o)'))
+        updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'))
         w = updates[('weighted',1)]
         def checkGrad(i,x,psign,nsign):
             ri = w.getrow(i)            
@@ -415,7 +416,7 @@ class TestProPPR(unittest.TestCase):
         rawPos,rawNeg,rawData = toyTrain()
         data = learn.Dataset(self.prog.db)
         loadRaw(data,rawPos,rawNeg)
-        mode = tensorlog.ModeDeclaration('predict(i,o)')
+        mode = declare.ModeDeclaration('predict(i,o)')
 
         X,Y = data.getData(mode)
         learner = learn.FixedRateGDLearner(self.prog,data,epochs=5)
@@ -454,7 +455,7 @@ class TestProPPR(unittest.TestCase):
             xsyms.append(sx)
             xs.append(db.onehot(sx))
             ys.append(db.onehot(sy))
-        return xsyms,bcast.stack(xs),bcast.stack(ys)
+        return xsyms,mutil.stack(xs),mutil.stack(ys)
 
     def checkDicts(self,actual, expected):
 #        print 'actual:  ',actual

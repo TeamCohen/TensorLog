@@ -10,9 +10,10 @@ import funs
 import symtab 
 import collections
 import parser
-import tensorlog
+import declare
 import matrixdb
 import logging
+import tensorlog
 
 # check that a clause fits assumptions
 STRICT = True
@@ -227,7 +228,7 @@ class BPCompiler(object):
             else:
                 assert x!='i' and x!='o' and x!='i1' and x!='i2', 'Illegal to use constants i,o,i1,o1 in a program'
                 return x
-        return tensorlog.ModeDeclaration(parser.Goal(goal.functor, [argIOMode(x) for x in goal.args]))
+        return declare.ModeDeclaration(parser.Goal(goal.functor, [argIOMode(x) for x in goal.args]))
 
     #
     # the main belief propagation algorithm
@@ -403,7 +404,7 @@ if __name__ == "__main__":
 
     ruleString = sys.argv[1]
     rule = p.parseRule(ruleString)
-    mode = tensorlog.ModeDeclaration(sys.argv[2])
+    mode = declare.ModeDeclaration(sys.argv[2])
     rules = parser.RuleCollection()
     rules.add(rule)
     prog = tensorlog.Program(db=None,rules=rules)

@@ -5,7 +5,7 @@ import time
 import resource
 
 import matrixdb
-import bcast
+import mutil
 import tensorlog
 import parser
 
@@ -101,7 +101,7 @@ def runBenchmark(com):
         #a list of (m,vx)
         qMode = queries[0][0]
         Xs = [vx for m,vx in queries]
-        qX = bcast.stack(Xs)
+        qX = mutil.stack(Xs)
         start = time.time()
         fun = prog.function[(qMode,0)]
         fun.eval(db, [qX])
