@@ -74,6 +74,13 @@ class MatrixDB(object):
     def isParameter(self,mode):
         return (mode.functor,mode.arity) in self.params
 
+    def inDB(self,functor,arity):
+        return (functor,arity) in self.matEncoding
+
+    def summary(self,functor,arity):
+        m = self.matEncoding[(functor,arity)]
+        return 'in DB: type %r shape %r non-zeros %d' % (type(m),m.get_shape(),m.nnz)
+
     @staticmethod
     def transposeNeeded(mode,transpose=False):
         """Figure out if we should use the transpose of a matrix or not."""
@@ -162,7 +169,7 @@ class MatrixDB(object):
 
     def listing(self):
         for (functor,arity),m in self.matEncoding.items():
-            print "DB: %s/%d" % (functor,arity)
+            print '%s/%d: %s' % (functor,arity,self.summary(functor,arity))
 
     def serialize(self,dir):
         if not os.path.exists(dir):

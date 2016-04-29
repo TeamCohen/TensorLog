@@ -59,14 +59,6 @@ class Program(object):
                 self.function[(mode,0)] = funs.SoftmaxFunction(self.function[(mode,0)])
         return self.function[(mode,depth)]
 
-    def listing(self):
-        self.rules.listing()
-        self.db.listing()
-
-    def functionListing(self):
-        for (m,d) in sorted(self.function.keys()):
-            print '> mode',m,'depth',d,'fun:',self.function[(m,d)]
-
     def getPredictFunction(self,mode):
         if (mode,0) not in self.function: self.compile(mode)
         fun = self.function[(mode,0)]
@@ -183,6 +175,7 @@ class ProPPRProgram(Program):
         return ProPPRProgram(db,rules)
 
 class Interp(object):
+    """High-level interface to tensor log."""
 
     def __init__(self,initFiles=[],proppr=True):
         if proppr: 
@@ -192,42 +185,47 @@ class Interp(object):
             self.prog = Program.load(initFiles)
         self.db = self.prog.db
 
-    #parse a spec: pred/io/index
+    #TODO make robust and allow generic list
+
+    def listRules(self,functor,arity):
+        mode = declare.ModeDeclaration(parser.Goal(functor,['x']*arity))
+        rules = self.prog.rules.rulesFor(mode)
+        if rules:
+            for r in rules: print r
+            return True
+        return False
+
+    def listAllRules(self):
+        self.prog.rules.listing()
+
+    def listFacts(self,functor,arity):
+        if self.db.inDB(functor,arity):
+            print self.db.summary(functor,arity)
+            return True
+        return False
+
+    def listAllFacts(self):
+        self.db.listing()
 
     @staticmethod
-    def asMode(spec):
+    def _asMode(spec):
         if type(spec)==type(""):
             return declare.ModeDeclaration(spec)
         else:
             return spec
 
     def listFunction(self,modeSpec):
-        mode = self.asMode(modeSpec)
+        mode = self._asMode(modeSpec)
         key = (mode,0)
         if key not in self.prog.function:
             self.prog.compile(mode)
         fun = self.prog.function[key]
-        print fun
+        print "\n".join(fun.pprint())
 
-    def listRules(self):
-        self.prog.rules.listing()
-
-    def listDB(self):
-        self.db.listing()
-
-    def answer(self,a):
-        """Answer a query with the mode p(i,o), print the resulting
-        dictionary.
-        """
-        if type(a)==type(""):
-            g = parser.Parser.parseGoal(a)
-        elif type(a)==type(parse.Goal('dummyGoal',[])):
-            g = a
-        assert (not parser.isVariableAtom(g.args[0]) and parser.isVariableAtom(g.args[1])), 'mode of query should be p(i,o): %s' % str(g)
-        mode = declare.ModeDeclaration(parser.Goal(g.functor,['i','o']))
-        x = g.args[0]
+    def eval(self,modeSpec,x):
+        mode = self._asMode(modeSpec)        
         result = self.prog.evalSymbols(mode,[x])
-        print self.prog.db.rowAsSymbolDict(result)
+        return self.prog.db.rowAsSymbolDict(result)
 
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william
@@ -235,20 +233,23 @@ class Interp(object):
 
 if __name__ == "__main__":
     
-    argspec = ["programFiles=","debug", "proppr"]
+    argspec = ["programFiles=","debug", "proppr","help"]
     try:
         optlist,args = getopt.getopt(sys.argv[1:], 'x', argspec)
     except getopt.GetoptError:
         logging.fatal('bad option: use "--help" to get help')
         sys.exit(-1)
     optdict = dict(optlist)
+    if "--help" in optdict:
+        print "python tensorlog.py --programFiles a.ppr:b.cfacts:... [p(i,o) x1 x2 ....]"
     if "--debug" in optdict:
         logging.basicConfig(level=logging.DEBUG)        
+    
 
     assert '--programFiles' in optdict, '--programFiles f1:f2:... is a required option'
-
     ti = Interp(initFiles=optdict['--programFiles'].split(":"), proppr=('--proppr' in optdict))
 
-    for a in args:
-        ti.answer(a)
-
+    if args:
+        modeSpec = args[0]
+        for a in args[1:]:
+            print ("f_%s[%s] =" % (modeSpec,a)),ti.eval(modeSpec,a)
