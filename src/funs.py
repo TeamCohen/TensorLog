@@ -30,7 +30,8 @@ class OpSeqFunction(Function):
         shortOps = '[%r,...,%r]' % (self.ops[0],self.ops[-1])
         return 'OpSeqFunction(%r,%r,%r)' % (self.opInputs,self.opOutput,shortOps)
     def pprint(self,depth=0):
-        return [('| '*depth) + 'OpSeqFunction:'] + map(lambda o:('| '*(depth+1))+repr(o), self.ops)
+        return [('| '*depth) + '%s = OpSeqFunction(%r):' % (self.opOutput,self.opInputs)] \
+               + map(lambda o:('| '*(depth+1))+str(o), self.ops)
     def eval(self,db,values):
         #eval expression
         self.opEnv = ops.Envir(db)

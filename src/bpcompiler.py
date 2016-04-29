@@ -247,7 +247,8 @@ class BPCompiler(object):
         def addOp(op,depth,msgFrom,msgTo):
             """Add an operation to self.ops, echo if required"""
             if TRACE: print '%s+%s' % (('| '*depth),op)
-            op.setMessage(msgFrom,msgTo)
+            def jToGoal(msg): return str(self.goals[msg]) if type(msg)==type(0) else msg
+            op.setMessage(jToGoal(msgFrom),jToGoal(msgTo))
             self.ops.append(op)
 
         def cacheMessage((src,dst),msg):
