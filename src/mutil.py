@@ -118,6 +118,7 @@ def softmax(m):
         return stack([softmaxRow(r) for r in rows])
 
 def weightByRowSum(m1,m2):
+    """Weight a rows of matrix m1 by the row sum of matrix m2."""
     r = numRows(m1)  #also m2
     if r==1:
         return  m1 * m2.sum()

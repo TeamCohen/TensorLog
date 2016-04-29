@@ -8,6 +8,9 @@ import collections
 import mutil
 
 class GradAccumulator(object):
+    """ Accumulate the sum gradients for perhaps many parameters, indexing
+    them by parameter name.
+    """
     def __init__(self):
         self.runningSum = {}
     def keys(self):
@@ -19,47 +22,21 @@ class GradAccumulator(object):
     def __setitem__(self,paramName,gradient):
         self.runningSum[paramName] = gradient
     def accum(self,paramName,deltaGradient):
+        """Increment the parameter with the given name by the appropriate
+        amount."""
         if not paramName in self.runningSum:
             self.runningSum[paramName] = deltaGradient
         else:
             self.runningSum[paramName] = self.runningSum[paramName] + deltaGradient
 
-class Dataset(object):
-    def __init__(self,db):
-        self.db = db
-        self.xSyms = collections.defaultdict(list)
-        self.ySyms = collections.defaultdict(list)
-        self.xs = collections.defaultdict(list)
-        self.ys = collections.defaultdict(list)
-    def addDataSymbols(self,mode,sx,syList):
-        """syList is a list of symbols that are correct answers to input sx
-        for the function associated with the given mode."""
-        assert len(syList)>0, 'need to have some desired outputs for each input'
-        self.xSyms[mode].append(sx)
-        self.xs[mode].append(self.db.onehot(sx))
-        self.ySyms[mode].append(syList)
-        distOverYs = self.db.onehot(syList[0])
-        for sy in syList[1:]:
-            distOverYs = distOverYs + self.db.onehot(sy)
-        distOverYs = distOverYs * (1.0/len(syList))
-        self.ys[mode].append(distOverYs)
-    def getData(self,mode):
-        """Return matrix pair X,Y - inputs and corresponding outputs of the
-        function for the given mode."""
-        return self.getX(mode),self.getY(mode)
-    def getX(self,mode):
-        assert self.xs[mode], 'no data inserted for mode %r in %r' % (mode,self.xs)
-        return mutil.stack(self.xs[mode])
-    def getY(self,mode):
-        assert self.ys[mode], 'no labels inserted for mode %r' % mode
-        return mutil.stack(self.ys[mode])
-
+#todo is data part of learner?
 class Learner(object):
 
     # prog pts to db, rules
-    def __init__(self,prog,data):
+    def __init__(self,prog,X,Y):
         self.prog = prog
-        self.data = data
+        self.X = X
+        self.Y = Y
 
     @staticmethod
     def accuracy(Y,P):
@@ -86,13 +63,13 @@ class Learner(object):
     def predict(self,mode,X=None):
         """Make predictions on a data matrix associated with the given mode.
         If X==None, use the training data. """
-        if X==None: X = self.data.getX(mode)
+        if X==None: X = self.X
         predictFun = self.prog.getPredictFunction(mode)
         return predictFun.eval(self.prog.db, [X])
 
     def crossEntropyGrad(self,mode,traceFun=None):
-        """Compute parameter gradient associated with softmax normalization
-        followed by a cross-entropy cost function.
+        """Compute the parameter gradient associated with softmax
+        normalization followed by a cross-entropy cost function.
         """
 
         # More detail: in learning we use a softmax normalization
@@ -109,7 +86,7 @@ class Learner(object):
         predictFun = self.prog.getPredictFunction(mode)
         assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
 
-        X,Y = self.data.getData(mode)
+        X,Y = self.X,self.Y
         P = self.predict(mode,X)
         if traceFun: traceFun(self,Y,P)
         paramGrads = GradAccumulator()
@@ -134,8 +111,8 @@ class Learner(object):
 
 class FixedRateGDLearner(Learner):
 
-    def __init__(self,prog,data,epochs=10,rate=0.1):
-        super(FixedRateGDLearner,self).__init__(prog,data)
+    def __init__(self,prog,X,Y,epochs=10,rate=0.1):
+        super(FixedRateGDLearner,self).__init__(prog,X,Y)
         self.epochs=epochs
         self.rate=rate
     

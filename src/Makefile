@@ -11,8 +11,8 @@ noconstTests:
 	python -m unittest testtensorlog.TestSmallProofs.testRec1
 	python -m unittest testtensorlog.TestSmallProofs.testAltChain
 
-sample-usage:
-	python tensorlog.py test/fam.cfacts 'p(X,Z):-spouse(X,Y),sister(Y,Z).' 'p(i,o)' 'susan' 
+interp:
+	python -i tensorlog.py --programFiles test/textcattoy.cfacts:test/textcat.ppr --proppr
 
 snap:
 	tar -czf backup/snap`date +%m.%d.%H.%M.%S`.tgz *.py Makefile

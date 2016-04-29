@@ -3,6 +3,7 @@
 import unittest
 import logging
 import logging.config
+import collections
 import sys
 import math
 
@@ -27,33 +28,37 @@ def maybeNormalize(expectedResultDict):
         for c in expectedResultDict:
             expectedResultDict[c] /= norm
 
-def toyTrain():
-    rawPos = "dh ft rw sc bk rb".split()
-    rawNeg = "mv hs ji tf jm".split()
-    rawData = {'dh':	'a	pricy	doll	house',
-               'ft':	'a	little	red	fire	truck',
-               'rw':	'a	red	wagon',
-               'sc':	'a	pricy	red	sports	car',
-               'bk':	'punk	queen	barbie	and	ken',
-               'rb':	'a	little	red	bike',
-               'mv':	'a	big	7-seater	minivan	with	an	automatic	transmission',
-               'hs':	'a	big	house	in	the	suburbs	with	crushing	mortgage',
-               'ji':	'a	job	for	life	at	IBM',
-               'tf':	'a	huge	pile	of	tax	forms	due	yesterday',
-               'jm':	'huge	pile	of	junk	mail	bills	and	catalogs'}
-    return rawPos,rawNeg,rawData
+class DataBuffer(object):
+    def __init__(self,db):
+        self.db = db
+        self.xSyms = []
+        self.ySyms = []
+        self.xs = []
+        self.ys = []
+    def addDataSymbols(self,sx,syList):
+        """syList is a list of symbols that are correct answers to input sx
+        for the function associated with the given mode."""
+        assert len(syList)>0, 'need to have some desired outputs for each input'
+        self.xSyms.append(sx)
+        self.xs.append(self.db.onehot(sx))
+        self.ySyms.append(syList)
+        distOverYs = self.db.onehot(syList[0])
+        for sy in syList[1:]:
+            distOverYs = distOverYs + self.db.onehot(sy)
+        distOverYs = distOverYs * (1.0/len(syList))
+        self.ys.append(distOverYs)
+    def getData(self):
+        """Return matrix pair X,Y - inputs and corresponding outputs of the
+        function for the given mode."""
+        return self.getX(),self.getY()
+    def getX(self):
+        assert self.xs, 'no data inserted for mode %r in %r' % (mode,self.xs)
+        return mutil.stack(self.xs)
+    def getY(self):
+        assert self.ys, 'no labels inserted for mode %r' % mode
+        return mutil.stack(self.ys)
 
-def toyTest():
-    rawPos = "pb yc rb2 rp".split()
-    rawNeg = "bp he wt".split()
-    return rawPos,rawNeg
 
-def loadRaw(data,rawPos,rawNeg):
-    pmode = declare.ModeDeclaration('predict(i,o)')
-    for s in rawPos:
-        data.addDataSymbols(pmode,s,['pos'])
-    for s in rawNeg:
-        data.addDataSymbols(pmode,s,['neg'])
 
 class TestModeDeclaration(unittest.TestCase):
 
@@ -352,15 +357,15 @@ class TestGrad(unittest.TestCase):
             rules.add(parser.Parser.parseRule(r))
         prog = tensorlog.Program(db=self.db,rules=rules)
         #build dataset
-        data = learn.Dataset(self.db)
+        data = DataBuffer(self.db)
         for x,ys in xyPairs:
-            data.addDataSymbols(mode,x,ys)
+            data.addDataSymbols(x,ys)
         #mark params: should be pairs (functor,arity)
         prog.db.clearParamMarkings()
         for functor,arity in params:
             prog.db.markAsParam(functor,arity)
         #compute gradient
-        learner = learn.Learner(prog,data)
+        learner = learn.Learner(prog,data.getX(),data.getY())
         updates = learner.crossEntropyGrad(mode)
         return prog,updates
     
@@ -368,6 +373,9 @@ class TestProPPR(unittest.TestCase):
 
     def setUp(self):
         self.prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr","test/textcattoy.cfacts"])
+        self.labeledData = self.prog.db.createPartner()
+        self.prog.db.moveToPartner(self.labeledData,'train',2)
+        self.prog.db.moveToPartner(self.labeledData,'test',2)
         self.prog.setWeights(self.prog.db.ones())
         self.xsyms,self.X,self.Y = self.loadExamples("test/textcattoy-train.examples",self.prog.db)
         self.numExamples = self.X.get_shape()[0] 
@@ -376,6 +384,19 @@ class TestProPPR(unittest.TestCase):
         self.numWords = \
             {'dh':4.0, 'ft':5.0, 'rw':3.0, 'sc':5.0, 'bk':5.0, 
              'rb':4.0, 'mv':8.0,  'hs':9.0, 'ji':6.0, 'tf':8.0, 'jm':8.0 }
+        self.rawPos = "dh ft rw sc bk rb".split()
+        self.rawNeg = "mv hs ji tf jm".split()
+        self.rawData = {'dh':	'a	pricy	doll	house',
+                        'ft':	'a	little	red	fire	truck',
+                        'rw':	'a	red	wagon',
+                        'sc':	'a	pricy	red	sports	car',
+                        'bk':	'punk	queen	barbie	and	ken',
+                        'rb':	'a	little	red	bike',
+                        'mv':	'a	big	7-seater	minivan	with	an	automatic	transmission',
+                        'hs':	'a	big	house	in	the	suburbs	with	crushing	mortgage',
+                        'ji':	'a	job	for	life	at	IBM',
+                        'tf':	'a	huge	pile	of	tax	forms	due	yesterday',
+                        'jm':	'huge	pile	of	junk	mail	bills	and	catalogs'}
     
     def testNativeRow(self):
         for i in range(self.numExamples):
@@ -404,38 +425,40 @@ class TestProPPR(unittest.TestCase):
                 self.checkClass(d,self.xsyms[i],'neg',self.numWords)
 
     def testGradMatrix(self):
-        rawPos,rawNeg,rawData = toyTrain()
-        data = learn.Dataset(self.prog.db)
-        loadRaw(data,rawPos,rawNeg)
-        learner = learn.Learner(self.prog,data)
+        data = DataBuffer(self.prog.db)
+        X,Y = self.labeledData.matrixAsTrainingData('train',2)
+        learner = learn.Learner(self.prog,X,Y)
         updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'))
         w = updates[('weighted',1)]
         def checkGrad(i,x,psign,nsign):
             ri = w.getrow(i)            
             di = self.prog.db.rowAsSymbolDict(ri)
-            for toki in rawData[x].split("\t"):
+            for toki in self.rawData[x].split("\t"):
                 posToki = toki+'_pos'
                 negToki = toki+'_neg'
                 self.assertTrue(posToki in di)
                 self.assertTrue(negToki in di)
                 self.assertTrue(di[posToki]*psign > 0)
                 self.assertTrue(di[negToki]*nsign > 0)
-        for i,x in enumerate(rawPos):
+        for i,x in enumerate(self.rawPos):
             checkGrad(i,x,+1,-1)
-        for i,x in enumerate(rawNeg):
-            checkGrad(i+len(rawPos),x,-1,+1)
+        for i,x in enumerate(self.rawNeg):
+            checkGrad(i+len(self.rawPos),x,-1,+1)
+
+    def testLabeledData(self):
+        self.assertTrue(self.labeledData.inDB('train',2))
+        self.assertTrue(self.labeledData.inDB('test',2))
+        self.assertFalse(self.prog.db.inDB('train',2))
+        self.assertFalse(self.prog.db.inDB('test',2))
 
     def testLearn(self):
-        rawPos,rawNeg,rawData = toyTrain()
-        data = learn.Dataset(self.prog.db)
-        loadRaw(data,rawPos,rawNeg)
         mode = declare.ModeDeclaration('predict(i,o)')
-
-        X,Y = data.getData(mode)
-        learner = learn.FixedRateGDLearner(self.prog,data,epochs=5)
+        X,Y = self.labeledData.matrixAsTrainingData('train',2)
+        learner = learn.FixedRateGDLearner(self.prog,X,Y,epochs=5)
         P0 = learner.predict(mode,X)
         acc0 = learner.accuracy(Y,P0)
         xent0 = learner.crossEntropy(Y,P0)
+
         learner.train(mode)
         P1 = learner.predict(mode)
         acc1 = learner.accuracy(Y,P1)
@@ -446,10 +469,7 @@ class TestProPPR(unittest.TestCase):
         self.assertTrue(acc1==1)
         print 'toy train: acc1',acc1,'xent1',xent1
 
-        rawPosTest,rawNegTest = toyTest()
-        testData = learn.Dataset(self.prog.db)
-        loadRaw(testData,rawPosTest,rawNegTest)
-        TX,TY = testData.getData(mode)
+        TX,TY = self.labeledData.matrixAsTrainingData('test',2)
         P2 = learner.predict(mode,TX)
         acc2 = learner.accuracy(TY,P2)
         xent2 = learner.crossEntropy(TY,P2)

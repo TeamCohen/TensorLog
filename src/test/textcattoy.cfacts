@@ -100,9 +100,6 @@ hasWord	wt	woe
 hasWord	wt	and
 hasWord	wt	trouble
 
-label	pos	
-label	neg
-
 posPair	10	10_pos
 posPair	7-seater	7-seater_pos
 posPair	IBM	IBM_pos
@@ -217,3 +214,25 @@ negPair	woe	woe_neg
 negPair	yellow	yellow_neg
 negPair	yesterday	yesterday_neg
 
+label	pos	
+label	neg
+
+train	dh	pos
+train	ft	pos
+train	rw	pos
+train	sc	pos
+train	bk	pos
+train	rb	pos
+train	mv	neg
+train	hs	neg
+train	ji	neg
+train	tf	neg
+train	jm	neg
+
+test	pb	pos
+test	yc	pos
+test	rb2	pos
+test	rp	pos
+test	bp	neg
+test	he	neg
+test	wt	neg

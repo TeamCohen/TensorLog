@@ -3,13 +3,14 @@
 import sys
 import os
 import os.path
-import ops
-import symtab 
-import parser
 import scipy.sparse
 import scipy.io
 import collections
 import logging
+
+import symtab 
+import parser
+import mutil
 
 def assignGoal(var,const):
     return parser.Goal('assign',[var,const])
@@ -34,6 +35,8 @@ class MatrixDB(object):
             self.stab = symtab.SymbolTable()
             self.stab.reservedSymbols.add("i")
             self.stab.reservedSymbols.add("o")
+        else:
+            self.stab = stab
         #matEncoding[(functor,arity)] encodes predicate as a matrix
         self.matEncoding = {}
         #buffer data for a sparse matrix: buf[pred][i][j] = f
@@ -207,15 +210,33 @@ class MatrixDB(object):
         return copy
 
     def copyToPartner(self,partner,functor,arity):
-        partner.matEncoding = self.matEncoding[(functor,arity)]
-        if self.isParameter(functor,arity):
+        partner.matEncoding[(functor,arity)] = self.matEncoding[(functor,arity)]
+        if (functor,arity) in self.params:
             partner.params.add((functor,arity))
 
     def moveToPartner(self,partner,functor,arity):
         self.copyToPartner(partner,functor,arity)
-        if self.isParameter(functor,arity):
+        if (functor,arity) in self.params:
             self.params.remove((functor,arity))
         del self.matEncoding[(functor,arity)]
+
+    
+    #TODO not clear if this is the right place for this logic
+    def matrixAsTrainingData(self,functor,arity):
+        """ Convert a matrix containing pairs x,f(x) to training data for a
+        learner.  For each row x with non-zero entries, copy that row
+        to Y, and and also append a one-hot representation of x to the
+        corresponding row of X.
+        """
+        xrows = []
+        yrows = []
+        m = self.matEncoding[(functor,arity)].tocoo()
+        n = self.dim()
+        for i in range(len(m.data)):
+            x = m.row[i]            
+            xrows.append(scipy.sparse.csr_matrix( ([1.0],([0],[x])), shape=(1,n) ))
+            yrows.append(m.getrow(x))
+        return mutil.stack(xrows),mutil.stack(yrows)
 
     #
     # i/o

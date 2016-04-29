@@ -4,6 +4,7 @@ import sys
 import time
 import resource
 
+import declare
 import matrixdb
 import mutil
 import tensorlog
@@ -18,7 +19,7 @@ def fbModes():
     modes = []
     for line in open("test/fb15k-valid.preds"):
         pred = line.strip()
-        modes.append(tensorlog.ModeDeclaration("%s(i,o)" % pred))
+        modes.append(declare.ModeDeclaration("%s(i,o)" % pred))
     return modes
 
 def fbProgram(rules,db,modes):
