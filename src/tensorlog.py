@@ -26,7 +26,6 @@ class Program(object):
 
     def __init__(self, db=None, rules=parser.RuleCollection()):
         self.db = db
-        self.program = []
         self.function = {}
         self.rules = rules
 

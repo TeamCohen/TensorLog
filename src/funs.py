@@ -20,18 +20,20 @@ class Function(object):
 class OpSeqFunction(Function):
 
     """A function defined by executing a sequence of operators."""
-    def __init__(self,opInputs,opOutput,ops):
+    def __init__(self,opInputs,opOutput,ops,rule=None):
         self.opInputs = opInputs    #initial bindings to insert in Envir
         self.opOutput = opOutput  #finding bindings which indicate the output
         self.ops = ops
         self.result = None
+        self.rule = rule #recorded for debug/trace
         self.opEnv = None #caches environment to evaluate the ops
     def __repr__(self):
         shortOps = '[%r,...,%r]' % (self.ops[0],self.ops[-1])
         return 'OpSeqFunction(%r,%r,%r)' % (self.opInputs,self.opOutput,shortOps)
     def pprint(self,depth=0):
-        return [('| '*depth) + '%s = OpSeqFunction(%r):' % (self.opOutput,self.opInputs)] \
-               + map(lambda o:('| '*(depth+1))+str(o), self.ops)
+        top = ('| '*depth) + '%s = OpSeqFunction(%r):' % (self.opOutput,self.opInputs)
+        if self.rule: top = top + '\t\t// ' + str(self.rule)
+        return [top] + map(lambda o:('| '*(depth+1))+o.pprint(), self.ops)
     def eval(self,db,values):
         #eval expression
         self.opEnv = ops.Envir(db)

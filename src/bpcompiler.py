@@ -91,7 +91,7 @@ class BPCompiler(object):
         """
         if not self.compiled: 
             self.compile()
-        return funs.OpSeqFunction(self.inputs, self.output, self.ops)
+        return funs.OpSeqFunction(self.inputs, self.output, self.ops, self.rule)
 
     #
     # debugging tools
@@ -216,7 +216,8 @@ class BPCompiler(object):
                 self.tensorlogProg.compile(mode,self.depth+1)
 
     def toMode(self,j):
-        """Helper - Return a mode declaration for the j-th goal of the rule"""
+        """Helper - Return a mode declaration for the j-th goal of the rule,
+        based on the information flow"""
         goal = self.goals[j]
         gin = self.goalDict[j]
         def argIOMode(x): 
@@ -238,110 +239,94 @@ class BPCompiler(object):
         the message and assign it a 'variable' named 'foo', and then
         return not the message but the variable-name string 'foo'. """
 
-        #these routines pass around a second depth value which is used
-        #only for printing debugging traces. TODO rename to traceDepth
+        messages = {}
 
-        #TODO remove caching, as it's actually not needed
-        messages = {}  #cached messages
-
-        def addOp(op,depth,msgFrom,msgTo):
+        def addOp(op,traceDepth,msgFrom,msgTo):
             """Add an operation to self.ops, echo if required"""
-            if TRACE: print '%s+%s' % (('| '*depth),op)
+            if TRACE: print '%s+%s' % (('| '*traceDepth),op)
             def jToGoal(msg): return str(self.goals[msg]) if type(msg)==type(0) else msg
             op.setMessage(jToGoal(msgFrom),jToGoal(msgTo))
             self.ops.append(op)
 
-        def cacheMessage((src,dst),msg):
-            """ Send a message, caching it if necessary
-            """
-            messages[(src,dst)] = msg
-            return messages[(src,dst)]
-
-        def msgGoal2Var(j,v,depth):
+        def msgGoal2Var(j,v,traceDepth):
             """Send a message from a goal to a variable.  Note goals can have at
             most one input and at most one output.  This is complex
             because there are several cases, depending on if the goal
             is LHS on RHS, and if the variable is an input or
             output."""
-            if (j,v) in messages: 
-                return messages[(j,v)]
-            else:
-                gin = self.goalDict[j]
-                if TRACE: print '%smsg: %d->%s' % (('| '*depth),j,v)
-                # The lhs goal, j==0, is the input factor
-                if j==0 and v in self.goalDict[j].inputs:
-                    #input port -> input variable
-                    assert parser.isVariableAtom(v),'input must be a variable'
-                    return cacheMessage((j,v),v)
-                elif j==0:
-                    #output port -> output variable
-                    assert False,'illegal message - something is wrong'
-                elif j>0 and v in self.goalDict[j].outputs:
-                    #message from rhs goal to an output variable of that goal
-                    msgName = 'f_%d_%s' % (j,v) 
-                    mode = self.toMode(j)
-                    if not gin.inputs:
-                        # special case - binding a variable to a constant with set(Var,const)
-                        assert matrixdb.isAssignMode(mode),'output variables without inputs are only allowed for assign/2'
-                        addOp(ops.AssignOnehotToVar(msgName,mode), depth,j,v)
-                        return cacheMessage((j,v),msgName)
-                    else:
-                        fx = msgVar2Goal(only(gin.inputs),j,depth+1) #ask for the message forward from the input to goal j
-                        if not gin.definedPred:
-                            addOp(ops.VecMatMulOp(msgName,fx,mode), depth,j,v)
-                        else:
-                            addOp(ops.DefinedPredOp(self.tensorlogProg,msgName,fx,mode,self.depth+1), depth,j,v)
-                        return cacheMessage((j,v),msgName)
-                elif j>0 and v in self.goalDict[j].inputs:
-                    #message from rhs goal to an input variable of that goal
-                    gin = self.goalDict[j]
-                    msgName = 'b_%d_%s' % (j,v) 
-                    mode = self.toMode(j)
-                    def hasOutputVarUsedElsewhere(gin): 
-                        outVar = only(gin.outputs)
-                        return self.varDict[outVar].inputTo
-                    if gin.outputs and hasOutputVarUsedElsewhere(gin):
-                        bx = msgVar2Goal(only(gin.outputs),j,depth+1) #ask for the message backward from the input to goal 
-                        addOp(ops.VecMatMulOp(msgName,bx,mode,transpose=True), depth,j,v)
-                        return cacheMessage((j,v),msgName)
-                    else:
-                        if gin.outputs:
-                            #optimize away the message from the output
-                            # var of gin, since it would be a dense
-                            # all-ones vector
-                            assert len(gin.outputs)==1, 'need single output from %s' % self.goals[j]
-                            #this variable now is connected to the main chain
-                            self.varDict[only(gin.outputs)].connected = True
-                            addOp(ops.AssignPreimageToVar(msgName,mode), depth,j,v)
-                        else:
-                            addOp(ops.AssignVectorToVar(msgName,mode), depth,j,v)
-                            
-                        return cacheMessage((j,v),msgName)
+            gin = self.goalDict[j]
+            if TRACE: print '%smsg: %d->%s' % (('| '*traceDepth),j,v)
+            # The lhs goal, j==0, is the input factor
+            if j==0 and v in self.goalDict[j].inputs:
+                #input port -> input variable
+                assert parser.isVariableAtom(v),'input must be a variable'
+                return v
+            elif j==0:
+                #output port -> output variable
+                assert False,'illegal message - something is wrong'
+            elif j>0 and v in self.goalDict[j].outputs:
+                #message from rhs goal to an output variable of that goal
+                msgName = 'f_%d_%s' % (j,v) 
+                mode = self.toMode(j)
+                if not gin.inputs:
+                    # special case - binding a variable to a constant with set(Var,const)
+                    assert matrixdb.isAssignMode(mode),'output variables without inputs are only allowed for assign/2'
+                    addOp(ops.AssignOnehotToVar(msgName,mode), traceDepth,j,v)
+                    return msgName
                 else:
-                    assert False,'unexpected message goal %d -> %s ins %r outs %r' % (j,v,gin.inputs,gin.outputs)
+                    fx = msgVar2Goal(only(gin.inputs),j,traceDepth+1) #ask for the message forward from the input to goal j
+                    if not gin.definedPred:
+                        addOp(ops.VecMatMulOp(msgName,fx,mode), traceDepth,j,v)
+                    else:
+                        addOp(ops.DefinedPredOp(self.tensorlogProg,msgName,fx,mode,self.depth+1), traceDepth,j,v)
+                    return msgName
+            elif j>0 and v in self.goalDict[j].inputs:
+                #message from rhs goal to an input variable of that goal
+                gin = self.goalDict[j]
+                msgName = 'b_%d_%s' % (j,v) 
+                mode = self.toMode(j)
+                def hasOutputVarUsedElsewhere(gin): 
+                    outVar = only(gin.outputs)
+                    return self.varDict[outVar].inputTo
+                if gin.outputs and hasOutputVarUsedElsewhere(gin):
+                    bx = msgVar2Goal(only(gin.outputs),j,traceDepth+1) #ask for the message backward from the input to goal 
+                    addOp(ops.VecMatMulOp(msgName,bx,mode,transpose=True), traceDepth,j,v)
+                    return msgName
+                else:
+                    if gin.outputs:
+                        #optimize away the message from the output
+                        # var of gin, since it would be a dense
+                        # all-ones vector
+                        assert len(gin.outputs)==1, 'need single output from %s' % self.goals[j]
+                        #this variable now is connected to the main chain
+                        self.varDict[only(gin.outputs)].connected = True
+                        addOp(ops.AssignPreimageToVar(msgName,mode), traceDepth,j,v)
+                    else:
+                        addOp(ops.AssignVectorToVar(msgName,mode), traceDepth,j,v)
+                        
+                    return msgName
+            else:
+                assert False,'unexpected message goal %d -> %s ins %r outs %r' % (j,v,gin.inputs,gin.outputs)
 
-        def msgVar2Goal(v,j,depth):
+        def msgVar2Goal(v,j,traceDepth):
             """Message from a variable to a goal.
             """
-            if (v,j) in messages: 
-                return messages[(v,j)]
-            else:
-                vin = self.varDict[v]
-                vin.connected = True
-                gin = self.goalDict[j]
-                #variables have one outputOf, but possily many inputTo connections
-                vNeighbors = [j2 for j2 in [vin.outputOf]+list(vin.inputTo) if j2!=j]
-                if TRACE: print '%smsg from %s to %d, vNeighbors=%r' % ('| '*depth,v,j,vNeighbors)
-                assert len(vNeighbors),'variables should have >1 neighbor but %s has only one: %d' % (v,j)
-                #form product of the incoming messages, cleverly
-                #generating only the variables we really need
-                currentProduct = msgGoal2Var(vNeighbors[0],v,depth+1)
-                for j2 in vNeighbors[1:]:
-                    nextProd = 'p_%d_%s_%d' % (j,v,j2) if j2!=vNeighbors[-1] else 'fb_%s' % v
-                    multiplicand = msgGoal2Var(j2,v,depth+1)
-                    addOp(ops.ComponentwiseVecMulOp(nextProd,currentProduct,multiplicand), depth,v,j)
-                    currentProduct = nextProd
-                return cacheMessage((v,j),currentProduct)
+            vin = self.varDict[v]
+            vin.connected = True
+            gin = self.goalDict[j]
+            #variables have one outputOf, but possily many inputTo connections
+            vNeighbors = [j2 for j2 in [vin.outputOf]+list(vin.inputTo) if j2!=j]
+            if TRACE: print '%smsg from %s to %d, vNeighbors=%r' % ('| '*traceDepth,v,j,vNeighbors)
+            assert len(vNeighbors),'variables should have >1 neighbor but %s has only one: %d' % (v,j)
+            #form product of the incoming messages, cleverly
+            #generating only the variables we really need
+            currentProduct = msgGoal2Var(vNeighbors[0],v,traceDepth+1)
+            for j2 in vNeighbors[1:]:
+                nextProd = 'p_%d_%s_%d' % (j,v,j2) if j2!=vNeighbors[-1] else 'fb_%s' % v
+                multiplicand = msgGoal2Var(j2,v,traceDepth+1)
+                addOp(ops.ComponentwiseVecMulOp(nextProd,currentProduct,multiplicand), traceDepth,v,j)
+                currentProduct = nextProd
+            return currentProduct
 
         #
         # main BP code starts here
