@@ -26,9 +26,6 @@ TRACE = False
 PRODUCE_OPS = True
 #PRODUCE_OPS = False
 
-# if true normalize the bp vectors for depth=0 computations to have sum to 1.0
-NORMALIZE = False
-
 def only(c):
     """Return only member of a singleton set, or raise an error if the set's not a singleton."""
     assert len(c)==1,'non-singleton ' + repr(c)
@@ -247,9 +244,10 @@ class BPCompiler(object):
         #TODO remove caching, as it's actually not needed
         messages = {}  #cached messages
 
-        def addOp(depth,op):
+        def addOp(op,depth,msgFrom,msgTo):
             """Add an operation to self.ops, echo if required"""
             if TRACE: print '%s+%s' % (('| '*depth),op)
+            op.setMessage(msgFrom,msgTo)
             self.ops.append(op)
 
         def cacheMessage((src,dst),msg):
@@ -284,14 +282,14 @@ class BPCompiler(object):
                     if not gin.inputs:
                         # special case - binding a variable to a constant with set(Var,const)
                         assert matrixdb.isAssignMode(mode),'output variables without inputs are only allowed for assign/2'
-                        addOp(depth,ops.AssignOnehotToVar(msgName,mode))
+                        addOp(ops.AssignOnehotToVar(msgName,mode), depth,j,v)
                         return cacheMessage((j,v),msgName)
                     else:
                         fx = msgVar2Goal(only(gin.inputs),j,depth+1) #ask for the message forward from the input to goal j
                         if not gin.definedPred:
-                            addOp(depth,ops.VecMatMulOp(msgName,fx,mode))
+                            addOp(ops.VecMatMulOp(msgName,fx,mode), depth,j,v)
                         else:
-                            addOp(depth,ops.DefinedPredOp(self.tensorlogProg,msgName,fx,mode,self.depth+1))
+                            addOp(ops.DefinedPredOp(self.tensorlogProg,msgName,fx,mode,self.depth+1), depth,j,v)
                         return cacheMessage((j,v),msgName)
                 elif j>0 and v in self.goalDict[j].inputs:
                     #message from rhs goal to an input variable of that goal
@@ -303,7 +301,7 @@ class BPCompiler(object):
                         return self.varDict[outVar].inputTo
                     if gin.outputs and hasOutputVarUsedElsewhere(gin):
                         bx = msgVar2Goal(only(gin.outputs),j,depth+1) #ask for the message backward from the input to goal 
-                        addOp(depth,ops.VecMatMulOp(msgName,bx,mode,transpose=True))
+                        addOp(ops.VecMatMulOp(msgName,bx,mode,transpose=True), depth,j,v)
                         return cacheMessage((j,v),msgName)
                     else:
                         if gin.outputs:
@@ -313,9 +311,9 @@ class BPCompiler(object):
                             assert len(gin.outputs)==1, 'need single output from %s' % self.goals[j]
                             #this variable now is connected to the main chain
                             self.varDict[only(gin.outputs)].connected = True
-                            addOp(depth,ops.AssignPreimageToVar(msgName,mode))
+                            addOp(ops.AssignPreimageToVar(msgName,mode), depth,j,v)
                         else:
-                            addOp(depth,ops.AssignVectorToVar(msgName,mode))
+                            addOp(ops.AssignVectorToVar(msgName,mode), depth,j,v)
                             
                         return cacheMessage((j,v),msgName)
                 else:
@@ -340,7 +338,7 @@ class BPCompiler(object):
                 for j2 in vNeighbors[1:]:
                     nextProd = 'p_%d_%s_%d' % (j,v,j2) if j2!=vNeighbors[-1] else 'fb_%s' % v
                     multiplicand = msgGoal2Var(j2,v,depth+1)
-                    addOp(depth,ops.ComponentwiseVecMulOp(nextProd,currentProduct,multiplicand))
+                    addOp(ops.ComponentwiseVecMulOp(nextProd,currentProduct,multiplicand), depth,v,j)
                     currentProduct = nextProd
                 return cacheMessage((v,j),currentProduct)
 
@@ -377,13 +375,8 @@ class BPCompiler(object):
         for msg in weighters:
             nextProd = 'w_%s' % outputVar if msg==weighters[-1] else 'p_%s_%s' % (msg,outputVar)
             multiplicand = msg
-            addOp(0,ops.WeightedVec(nextProd,multiplicand,currentProduct))
+            addOp(ops.WeightedVec(nextProd,multiplicand,currentProduct),0,msg,'PSEUDO')
             currentProduct = nextProd
-
-        if NORMALIZE and self.depth==0:
-            normProduct = 'norm_%s' % outputVar
-            addOp(0,ops.Normalize(normProduct,currentProduct))
-            currentProduct = normProduct
 
         # save the output and inputs 
         self.output = currentProduct

@@ -185,7 +185,14 @@ class Interp(object):
             self.prog = Program.load(initFiles)
         self.db = self.prog.db
 
-    #TODO make robust and allow generic list(string) call 
+    def list(self,str):
+        assert str.find("/")>=0, 'supported formats are functor/arity, function/io, function/oi, function/o, function/i'
+        functor,rest = str.split("/")
+        try:
+            arity = int(rest)
+            self.listRules(functor,arity) or self.listFacts(functor,arity)
+        except ValueError:
+            self.listFunction(str)
 
     def listRules(self,functor,arity):
         mode = declare.ModeDeclaration(parser.Goal(functor,['x']*arity))
@@ -209,7 +216,10 @@ class Interp(object):
 
     @staticmethod
     def _asMode(spec):
-        if type(spec)==type(""):
+        if type(spec)==type("") and spec.find("/")>=0:
+            functor,rest = spec.split("/")            
+            return declare.ModeDeclaration(parser.Goal(functor,list(rest)))
+        elif type(spec)==type(""):
             return declare.ModeDeclaration(spec)
         else:
             return spec

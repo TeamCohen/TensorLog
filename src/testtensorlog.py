@@ -65,6 +65,19 @@ class TestModeDeclaration(unittest.TestCase):
         d[m1] = 1.0
         self.assertTrue(m2 in d)
 
+class TestInterp(unittest.TestCase):
+
+    def setUp(self):
+        self.ti = tensorlog.Interp('test/textcattoy.cfacts:test/textcat.ppr'.split(':'),proppr=True)
+
+    def testList(self):
+        self.ti.list("predict/2")
+        self.ti.list("predict/io")
+        self.ti.list("hasWord/2")
+        self.ti.listAllRules()
+        self.ti.listAllFacts()
+        print self.ti.eval("predict/io", "pb")
+
 class TestSmallProofs(unittest.TestCase):
     
     def setUp(self):
