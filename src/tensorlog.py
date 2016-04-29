@@ -185,7 +185,7 @@ class Interp(object):
             self.prog = Program.load(initFiles)
         self.db = self.prog.db
 
-    #TODO make robust and allow generic list
+    #TODO make robust and allow generic list(string) call 
 
     def listRules(self,functor,arity):
         mode = declare.ModeDeclaration(parser.Goal(functor,['x']*arity))
