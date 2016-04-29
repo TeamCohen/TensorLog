@@ -138,8 +138,8 @@ class ProPPRProgram(Program):
         if weights!=None: self.setWeights(weights)
 
     def setWeights(self,weights):
-        self.db.insertPredicate(weights,"weighted",1)
         self.db.markAsParam("weighted",1)
+        self.db.setParameter("weighted",1,weights)
 
     def getWeights(self):  
         return self.db.matEncoding[('weighted',1)]

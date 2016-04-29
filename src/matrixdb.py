@@ -28,13 +28,12 @@ def isAssignMode(mode):
 
 class MatrixDB(object):
 
-    def __init__(self):
+    def __init__(self,stab=None):
         #maps symbols to numeric ids
-        self.stab = symtab.SymbolTable()
-        self.stab.reservedSymbols.add("i")
-        self.stab.reservedSymbols.add("o")
-        # track if the matrix is arity one or arity two
-        self.arity = {}
+        if not stab: 
+            self.stab = symtab.SymbolTable()
+            self.stab.reservedSymbols.add("i")
+            self.stab.reservedSymbols.add("o")
         #matEncoding[(functor,arity)] encodes predicate as a matrix
         self.matEncoding = {}
         #buffer data for a sparse matrix: buf[pred][i][j] = f
@@ -44,7 +43,6 @@ class MatrixDB(object):
         self.buf = collections.defaultdict(dictOfFloatDicts)
         #mark which matrices are 'parameters' by (functor,arity) pair
         self.params = set()
-
         
     #
     # retrieve matrixes, vectors, etc
@@ -71,16 +69,6 @@ class MatrixDB(object):
         n = self.dim()
         return scipy.sparse.csr_matrix( ([1]*n,([0]*n,[j for j in range(n)])), shape=(1,n))
 
-    def isParameter(self,mode):
-        return (mode.functor,mode.arity) in self.params
-
-    def inDB(self,functor,arity):
-        return (functor,arity) in self.matEncoding
-
-    def summary(self,functor,arity):
-        m = self.matEncoding[(functor,arity)]
-        return 'in DB: type %r shape %r non-zeros %d' % (type(m),m.get_shape(),m.nnz)
-
     @staticmethod
     def transposeNeeded(mode,transpose=False):
         """Figure out if we should use the transpose of a matrix or not."""
@@ -101,14 +89,14 @@ class MatrixDB(object):
 
     def vector(self,mode):
         """Returns a row vector for a unary predicate."""
-        assert self.arity[mode.functor]==1
+        assert mode.arity==1
         return self.matEncoding[(mode.functor,mode.arity)]
 
     def matrixPreimage(self,mode):
         """The preimage associated with this mode, eg if mode is p(i,o) then
         return a row vector equivalent to 1 * M_p^T.  Also returns a row vector
         for a unary predicate."""
-        assert self.arity[mode.functor]==2
+        assert mode.arity==2
         #TODO mode is o,i vs i,o
         assert mode.isInput(0) and mode.isOutput(1), 'preimages only implemented for mode p(i,o)'
         coo = self.matrix(mode).tocoo()
@@ -124,6 +112,29 @@ class MatrixDB(object):
         n = self.dim()
         return scipy.sparse.csr_matrix((data,(rowids,colids)),shape=(1,n))
 
+
+    #
+    # handling parameters
+    #
+
+    def isParameter(self,mode):
+        return (mode.functor,mode.arity) in self.params
+
+    def markAsParam(self,functor,arity):
+        """ Mark a predicate as a parameter """
+        self.params.add((functor,arity))
+
+    def clearParamMarkings(self):
+        """ Clear previously marked parameters"""
+        self.params = set()
+
+    def getParameter(self,functor,arity):
+        assert (functor,arity) in self.params,'%s/%d not a parameter' % (functor,arity)
+        return self.matEncoding[(functor,arity)]
+        
+    def setParameter(self,functor,arity,replacement):
+        assert (functor,arity) in self.params,'%s/%d not a parameter' % (functor,arity)
+        self.matEncoding[(functor,arity)] = replacement
 
     #
     # convert from vectors, matrixes to symbols - for i/o and debugging
@@ -162,14 +173,53 @@ class MatrixDB(object):
                 w = m1.data[i]
                 result[parser.Goal(functor,[b])] = w
         return result
+
+
     #
-    # i/o
-    # TODO save/restore stab, matrices (separately)
-    #
+    # query and display contents of database
+    # 
+
+    def inDB(self,functor,arity):
+        return (functor,arity) in self.matEncoding
+
+    def summary(self,functor,arity):
+        m = self.matEncoding[(functor,arity)]
+        return 'in DB: type %r shape %r non-zeros %d' % (type(m),m.get_shape(),m.nnz)
 
     def listing(self):
         for (functor,arity),m in self.matEncoding.items():
             print '%s/%d: %s' % (functor,arity,self.summary(functor,arity))
+
+    #
+    # moving data between databases
+    #
+
+    def partnerWith(self,other):
+        """Check that a database can be used as a partner.
+        """
+        assert other.dim()==self.dim()
+
+    def createPartner(self):
+        """Create a 'partner' datavase, which shares the same symbol table,
+        but not the same data. Matrices/relations can be moved back
+        and forth between partners"""
+        copy = MatrixDB(self.stab)
+        return copy
+
+    def copyToPartner(self,partner,functor,arity):
+        partner.matEncoding = self.matEncoding[(functor,arity)]
+        if self.isParameter(functor,arity):
+            partner.params.add((functor,arity))
+
+    def moveToPartner(self,partner,functor,arity):
+        self.copyToPartner(partner,functor,arity)
+        if self.isParameter(functor,arity):
+            self.params.remove((functor,arity))
+        del self.matEncoding[(functor,arity)]
+
+    #
+    # i/o
+    #
 
     def serialize(self,dir):
         if not os.path.exists(dir):
@@ -197,12 +247,6 @@ class MatrixDB(object):
                 db.matEncoding[eval(stringKey)] = mat
         return db
 
-    def _checkArity(self,p,k):
-        if p in self.arity:
-            assert self.arity[p]==k,'inconsistent number of arguments for ' + p + 'at line: '+repr(parts)
-        else:
-            self.arity[p]=k
-
     def bufferLine(self,line):
         """Load a single triple encoded as a tab-separated line.."""
         parts = line.split("\t")
@@ -218,7 +262,6 @@ class MatrixDB(object):
         else:
             logging.error("bad line '"+line+" '" + repr(parts)+"'")
             return
-        self._checkArity(f,arity)
         if ((f,arity) in self.matEncoding):
             logging.error("predicate encoding is already completed for "+(f,arity)+ " at line: "+line)
             return
@@ -280,34 +323,6 @@ class MatrixDB(object):
         db.flushBuffers()
         db.clearBuffers()
         return db
-
-    #
-    #
-    def insertPredicate(self,mat,functor,arity):
-        """ Directly insert a matrix or vector into the database"""
-        self.arity[functor] = arity
-        self.matEncoding[(functor,arity)] = mat
-        self.matEncoding[(functor,arity)].sort_indices()
-        (nrows,ncols) = mat.get_shape()
-        assert (nrows==1 and arity==1) or (nrows==self.dim() and arity==2)
-        return mat
-
-    def markAsParam(self,functor,arity):
-        """ Mark a predicate as a parameter """
-        self.params.add((functor,arity))
-
-    def clearParamMarkings(self):
-        """ Clear previously marked parameters"""
-        self.params = set()
-
-    def getParameter(self,functor,arity):
-        assert (functor,arity) in self.params,'%s/%d not a parameter' % (functor,arity)
-        return self.matEncoding[(functor,arity)]
-        
-    def setParameter(self,functor,arity,replacement):
-        assert (functor,arity) in self.params,'%s/%d not a parameter' % (functor,arity)
-        self.matEncoding[(functor,arity)] = replacement
-
 
     #
     # debugging
