@@ -1,0 +1,1 @@
+concept_professionistypeofprofession(A,B) :- fact_concept_professionistypeofprofession(A,B) {f209}.

@@ -10,6 +10,7 @@ import ops
 import parser
 import matrixdb
 import bpcompiler
+import learn
 
 
 #TODO make parameters of a program
@@ -115,9 +116,9 @@ class Program(object):
         if factFiles:
             db = matrixdb.MatrixDB()
             for f in factFiles:
-                db.bufferFile(f)
-                db.flushBuffers()
-                db.clearBuffers()
+                logging.debug("starting %s" % f)
+                db.addFile(f)
+                logging.debug("finished %s" % f)
         return (db,rules)
 
     @staticmethod
@@ -183,6 +184,7 @@ class Interp(object):
         else: 
             self.prog = Program.load(initFiles)
         self.db = self.prog.db
+        self.learner = None
 
     def list(self,str):
         assert str.find("/")>=0, 'supported formats are functor/arity, function/io, function/oi, function/o, function/i'
@@ -235,6 +237,27 @@ class Interp(object):
         mode = self._asMode(modeSpec)        
         result = self.prog.evalSymbols(mode,[x])
         return self.prog.db.rowAsSymbolDict(result)
+    
+    def train(self,trainingDataFile,modeSpec):
+        mode = self._asMode(modeSpec)
+        trainingData = self.db.createPartner()
+        trainingData.addFile(trainingDataFile)
+        trainSpec = (mode.functor,mode.arity)
+        X,Y = trainingData.matrixAsTrainingData(*trainSpec)
+        self.learner = learn.FixedRateGDLearner(self.prog,X,Y,epochs=5)
+        P0 = self.learner.predict(mode,X)
+        acc0 = self.learner.accuracy(Y,P0)
+        xent0 = self.learner.crossEntropy(Y,P0)
+        print 'untrained: acc0',acc0,'xent0',xent0
+
+        self.learner.train(mode)
+        P1 = self.learner.predict(mode)
+        acc1 = self.learner.accuracy(Y,P1)
+        xent1 = self.learner.crossEntropy(Y,P1)
+        
+        print "acc0<acc1?   ",acc0<acc1
+        print "xent0>xent1? ",xent0>xent1
+        print 'trained: acc1',acc1,'xent1',xent1
 
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william

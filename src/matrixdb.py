@@ -12,6 +12,20 @@ import symtab
 import parser
 import mutil
 
+class MatrixParseError(Exception):
+    def __init__(self,msg):
+        self.msg = msg
+    def __str__(self):
+        return str(self.msg)
+
+class MatrixFileError(Exception):
+    def __init__(self,fname,line,p):
+        self.filename=fname
+        self.parseError=p
+        self.line=line
+    def __str__(self):
+        return "on line %d of %s: %s" % (self.line,self.filename,str(self.parseError))
+
 def assignGoal(var,const):
     return parser.Goal('assign',[var,const])
 
@@ -39,11 +53,7 @@ class MatrixDB(object):
             self.stab = stab
         #matEncoding[(functor,arity)] encodes predicate as a matrix
         self.matEncoding = {}
-        #buffer data for a sparse matrix: buf[pred][i][j] = f
-        #TODO: would lists and a coo matrix make a nicer buffer?
-        def dictOfFloats(): return collections.defaultdict(float)
-        def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
-        self.buf = collections.defaultdict(dictOfFloatDicts)
+        # buffer initialization: see startBuffers()
         #mark which matrices are 'parameters' by (functor,arity) pair
         self.params = set()
         
@@ -283,12 +293,25 @@ class MatrixDB(object):
         else:
             logging.error("bad line '"+line+" '" + repr(parts)+"'")
             return
-        if ((f,arity) in self.matEncoding):
-            logging.error("predicate encoding is already completed for "+(f,arity)+ " at line: "+line)
+        key = (f,arity)
+        if (key in self.matEncoding):
+            logging.error("predicate encoding is already completed for "+key+ " at line: "+line)
             return
         i = self.stab.getId(a1)
         j = self.stab.getId(a2) if a2 else -1
-        self.buf[(f,arity)][i][j] = w
+        #if key not in self.buf: raise MatrixParseError("%s unknown" % str(key))
+        #t = self.buf[key]
+        #if i not in t: raise MatrixParseError("%d unknown in %s" % (i,str(key)))
+        #t = t[i]
+        #if j not in t: raise MatrixParseError("%d unknown in %s[%d]" % (j,str(key),i))
+        #print key
+        #print i
+        #print j
+        #raise MatrixParseError("xyzzy")
+        try:
+            self.buf[key][i][j] = w
+        except TypeError as e:
+            raise MatrixParseError(e)
 
     def bufferLines(self,lines):
         """Load triples from a list of lines and buffer them internally"""
@@ -303,7 +326,10 @@ class MatrixDB(object):
             line = line0.strip()
             if line and (not line.startswith("#")):
                 if not k%10000: logging.info('read %d lines' % k)
-                self.bufferLine(line)
+                try:
+                    self.bufferLine(line)
+                except MatrixParseError as e:
+                    raise MatrixFileError(filename,k,e)
 
     def flushBuffers(self):
         """Flush all triples from the buffer."""
@@ -335,14 +361,25 @@ class MatrixDB(object):
     def clearBuffers(self):
         """Save space by removing buffers"""
         self.buf = None
+        
+    def startBuffers(self):
+        #buffer data for a sparse matrix: buf[pred][i][j] = f
+        #TODO: would lists and a coo matrix make a nicer buffer?
+        def dictOfFloats(): return collections.defaultdict(float)
+        def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
+        self.buf = collections.defaultdict(dictOfFloatDicts)
+    
+    def addFile(self,filename):
+        self.startBuffers()
+        self.bufferFile(filename)
+        self.flushBuffers()
+        self.clearBuffers()
 
     @staticmethod 
     def loadFile(filename):
         """Return a MatrixDB created by loading a files."""
         db = MatrixDB()
-        db.bufferFile(filename)
-        db.flushBuffers()
-        db.clearBuffers()
+        db.addFile(filename)
         return db
 
     #
