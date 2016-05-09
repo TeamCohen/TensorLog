@@ -39,6 +39,9 @@ class Program(object):
         """
         #find the rules which define this predicate/function
         
+        if (mode,depth) in self.function:
+            return
+
         if depth>MAXDEPTH:
             self.function[(mode,depth)] = funs.NullFunction(mode)
         else:
