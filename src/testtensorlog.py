@@ -147,6 +147,11 @@ class TestSmallProofs(unittest.TestCase):
         self.propprInferenceCheck(w,['p(X,Y):-sister(X,Y) {r1}.','p(X,Y):-spouse(X,Y) {r2}.'],'p(i,o)',
                                   'william', {'sarah': 7.0, 'rachel': 7.0, 'lottie': 7.0, 'susan': 3.0})
 
+    def testProppr2(self):
+        w = 3*self.db.onehot('r2')
+        self.propprInferenceCheck(w,['p(X,Y):-spouse(Y,X) {r2}.'],'p(i,o)',
+                                  'susan', {'william': 3.0})
+
     # support routines
     # 
 

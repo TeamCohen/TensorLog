@@ -201,7 +201,7 @@ class BPCompiler(object):
 
         #validate - lhs has exactly one output, which must be bound somewhere 
         lhsGin = self.goalDict[0]
-        assert len(lhsGin.outputs)==1, 'lhs must have exactly one output but outputs are '+str(lhsGin.outputs)
+        assert len(lhsGin.outputs)==1, 'lhs mode '+str(self.lhsMode)+' and lhs has >1 output: outputs '+str(lhsGin.outputs)+' for rule '+str(self.rule)
         y = only(lhsGin.outputs)
         self.varDict[y]!=None,'lhs output variable "%s" not bound' % y
 
@@ -226,7 +226,7 @@ class BPCompiler(object):
             else:
                 assert x!='i' and x!='o' and x!='i1' and x!='i2', 'Illegal to use constants i,o,i1,o1 in a program'
                 return x
-        return declare.ModeDeclaration(parser.Goal(goal.functor, [argIOMode(x) for x in goal.args]))
+        return declare.ModeDeclaration(parser.Goal(goal.functor, [argIOMode(x) for x in goal.args]), strict=False)
 
     #
     # the main belief propagation algorithm

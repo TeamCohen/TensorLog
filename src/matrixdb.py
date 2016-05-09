@@ -245,7 +245,8 @@ class MatrixDB(object):
         for i in range(len(m.data)):
             x = m.row[i]            
             xrows.append(scipy.sparse.csr_matrix( ([1.0],([0],[x])), shape=(1,n) ))
-            yrows.append(m.getrow(x))
+            rx = m.getrow(x)
+            yrows.append(rx.multiply(1.0/rx.sum()))
         return mutil.stack(xrows),mutil.stack(yrows)
 
     #
@@ -273,8 +274,8 @@ class MatrixDB(object):
         #serialization/deserialization ends up converting
         #(functor,arity) pairs to strings so convert them back....
         for stringKey,mat in db.matEncoding.items():
+            del db.matEncoding[stringKey]
             if not stringKey.startswith('__'):
-                del db.matEncoding[stringKey]
                 db.matEncoding[eval(stringKey)] = mat
         return db
 

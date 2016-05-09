@@ -32,6 +32,11 @@ class ModeDeclaration(AbstractDeclaration):
     with 'i' (respectively 'o') are inputs (outputs), and arguments
     ending with '1' are one-hot encodings, aka singleton sets.
     """
+    def __init__(self,goal,strict=True):
+        super(ModeDeclaration,self).__init__(goal)
+        if strict:
+            for a in self.prototype.args:
+                assert a=='i' or a=='o','arguments to a ModeDeclaration should be "i" or "o" (not %s for mode %r)' % (a,self.prototype)
     def isInput(self,i):
         return self.arg(i)=='i'
     def isOutput(self,i):
