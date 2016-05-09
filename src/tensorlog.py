@@ -238,26 +238,27 @@ class Interp(object):
         result = self.prog.evalSymbols(mode,[x])
         return self.prog.db.rowAsSymbolDict(result)
     
-    def train(self,trainingDataFile,modeSpec):
+    def train(self,trainingDataFile,modeSpec,trainSpec=False,epochs=5):
         mode = self._asMode(modeSpec)
         trainingData = self.db.createPartner()
         trainingData.addFile(trainingDataFile)
-        trainSpec = (mode.functor,mode.arity)
+        if not trainSpec:
+            trainSpec = (mode.functor,mode.arity)
         X,Y = trainingData.matrixAsTrainingData(*trainSpec)
-        self.learner = learn.FixedRateGDLearner(self.prog,X,Y,epochs=5)
+        self.learner = learn.FixedRateGDLearner(self.prog,X,Y,epochs=epochs)
         P0 = self.learner.predict(mode,X)
         acc0 = self.learner.accuracy(Y,P0)
         xent0 = self.learner.crossEntropy(Y,P0)
-        print 'untrained: acc0',acc0,'xent0',xent0
+        print 'untrained: xent0',xent0,'acc0',acc0
 
         self.learner.train(mode)
         P1 = self.learner.predict(mode)
         acc1 = self.learner.accuracy(Y,P1)
         xent1 = self.learner.crossEntropy(Y,P1)
         
-        print "acc0<acc1?   ",acc0<acc1
         print "xent0>xent1? ",xent0>xent1
-        print 'trained: acc1',acc1,'xent1',xent1
+        print "acc0<acc1?   ",acc0<acc1
+        print 'trained: xent1',xent1,'acc1',acc1
 
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william

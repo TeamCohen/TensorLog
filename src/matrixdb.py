@@ -262,8 +262,9 @@ class MatrixDB(object):
         scipy.io.savemat(os.path.join(dir,"db.mat"),self.matEncoding,do_compression=True)
     
     @staticmethod
-    def deserialize(dir):
-        db = MatrixDB()
+    def deserialize(dir,db=False):
+        if not db:
+            db=MatrixDB()
         k = 1
         for line in open(os.path.join(dir,"symbols.txt")):
             i = db.stab.getId(line.strip())
@@ -273,8 +274,8 @@ class MatrixDB(object):
         #serialization/deserialization ends up converting
         #(functor,arity) pairs to strings so convert them back....
         for stringKey,mat in db.matEncoding.items():
-            if not stringKey.startswith('__'):
-                del db.matEncoding[stringKey]
+            del db.matEncoding[stringKey]
+            if not stringKey.startswith('__'): # we didn't want to keep __version__ etc did we? --kmm
                 db.matEncoding[eval(stringKey)] = mat
         return db
 
@@ -357,7 +358,24 @@ class MatrixDB(object):
             del self.buf[(f,arity)]
             self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m)
             self.matEncoding[(f,arity)].sort_indices()
-
+            
+    def rebufferMatrices(self):
+        """Re-encode previously frozen matrices after a symbol table update"""
+        n = self.stab.getMaxId() + 1
+        for (functor,arity),m in self.matEncoding.items():
+            (rows,cols) = m.get_shape()
+            if cols != n:
+                logging.info("Re-encoding predicate %s" % functor)
+                if arity==2:
+                    # first shim the extra rows
+                    shim = scipy.sparse.lil_matrix((n-rows,cols))      
+                    m = scipy.sparse.vstack([m,shim])
+                    (rows,cols) = m.get_shape()
+                # shim extra columns
+                shim = scipy.sparse.lil_matrix((rows,n-cols))
+                self.matEncoding[(functor,arity)] = scipy.sparse.hstack([m,shim],format="csr")
+                self.matEncoding[(functor,arity)].sort_indices()
+                    
     def clearBuffers(self):
         """Save space by removing buffers"""
         self.buf = None
@@ -372,6 +390,7 @@ class MatrixDB(object):
     def addFile(self,filename):
         self.startBuffers()
         self.bufferFile(filename)
+        self.rebufferMatrices()
         self.flushBuffers()
         self.clearBuffers()
 
@@ -401,7 +420,12 @@ class MatrixDB(object):
 if __name__ == "__main__":
     if sys.argv[1]=='--serialize':
         print 'loading cfacts from ',sys.argv[2]
-        db = MatrixDB.loadFile(sys.argv[2])
+        if sys.argv[2].find(":")>=0:
+            db = MatrixDB()
+            for f in sys.argv[2].split(":"):
+                db.addFile(f)
+        else:
+            db = MatrixDB.loadFile(sys.argv[2])
         print 'saving to',sys.argv[3]
         db.serialize(sys.argv[3])
     elif sys.argv[1]=='--deserialize':
