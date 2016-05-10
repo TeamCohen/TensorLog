@@ -31,12 +31,15 @@ class GradAccumulator(object):
 
 #todo is data part of learner?
 class Learner(object):
+    """Multi-predicate support: initialize Learner with X as a list of matrices, and stack the Ys in a single matrix.
+    """
 
     # prog pts to db, rules
-    def __init__(self,prog,X,Y):
+    def __init__(self,prog,X,Y,multiPredicate=False):
         self.prog = prog
         self.X = X
         self.Y = Y
+        self.multiPredicate = multiPredicate
 
     @staticmethod
     def accuracy(Y,P):
@@ -62,11 +65,27 @@ class Learner(object):
 
     def predict(self,mode,X=None):
         """Make predictions on a data matrix associated with the given mode.
-        If X==None, use the training data. """
+        If X==None, use the training data. 
+        
+        For multiple predicates, returned predications are stacked for use downstream."""
         if X==None: X = self.X
-        predictFun = self.prog.getPredictFunction(mode)
-        return predictFun.eval(self.prog.db, [X])
-
+        def impl(m,x):
+            predictFun = self.prog.getPredictFunction(m)
+            return predictFun.eval(self.prog.db, [x])
+        if type(mode) == type(""):
+            # then just predict on one mode
+            return impl(mode,X)
+        else:
+            # then mode and X are parallel lists
+            init = False
+            result = None
+            for i in range(len(mode)):
+                r = impl(mode[i],X[i])
+                if not init: 
+                    result = r
+                    init = True
+                else: result = mutil.stack((result,r))
+            return result
     def crossEntropyGrad(self,mode,traceFun=None):
         """Compute the parameter gradient associated with softmax
         normalization followed by a cross-entropy cost function.
@@ -83,8 +102,12 @@ class Learner(object):
         # for softMax
 
         # a check
-        predictFun = self.prog.getPredictFunction(mode)
-        assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
+        def check(m):
+            predictFun = self.prog.getPredictFunction(m)
+            assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
+        if not self.multiPredicate: check(mode)
+        else:
+            for m in mode: check(m)
 
         X,Y = self.X,self.Y
         P = self.predict(mode,X)
@@ -111,8 +134,8 @@ class Learner(object):
 
 class FixedRateGDLearner(Learner):
 
-    def __init__(self,prog,X,Y,epochs=10,rate=0.1):
-        super(FixedRateGDLearner,self).__init__(prog,X,Y)
+    def __init__(self,prog,X,Y,epochs=10,rate=0.1,multiPredicate=False):
+        super(FixedRateGDLearner,self).__init__(prog,X,Y,multiPredicate)
         self.epochs=epochs
         self.rate=rate
     

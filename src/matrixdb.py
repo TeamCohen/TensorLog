@@ -65,12 +65,20 @@ class MatrixDB(object):
         """Number of constants in the database, and dimension of all the vectors/matrices."""
         return self.stab.getMaxId() + 1
 
-    def onehot(self,s):
+    def onehot(self,S):
         """A onehot row representation of a symbol."""
-        assert self.stab.hasId(s),'constant %s not in db' % s
-        n = self.dim()
-        i = self.stab.getId(s)
-        return scipy.sparse.csr_matrix( ([1.0],([0],[i])), shape=(1,n))
+        def impl(s):
+            assert self.stab.hasId(s),'constant %s not in db' % s
+            n = self.dim()
+            i = self.stab.getId(s)
+            return scipy.sparse.csr_matrix( ([1.0],([0],[i])), shape=(1,n))
+        if type(S)==type(""):
+            return impl(S)
+        else:
+            result = []
+            for s in S:
+                result.append(impl(s))
+            return mutil.stack(result)
 
     def zeros(self):
         """An all-zeros row matrix."""
@@ -162,11 +170,11 @@ class MatrixDB(object):
             result[s] = coorow.data[i]
         return result
 
-    def matrixAsSymbolDict(self,m):
+    def matrixAsSymbolDict(self,m,start=0):
         result = {}
         (rows,cols)=m.shape
         for r in range(rows):
-            result[r] = self.rowAsSymbolDict(m.getrow(r))
+            result[r+start] = self.rowAsSymbolDict(m.getrow(r))
         return result
 
     def matrixAsPredicateFacts(self,functor,arity,m):
