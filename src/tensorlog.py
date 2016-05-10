@@ -201,7 +201,7 @@ class Interp(object):
             self.listFunction(str)
 
     def listRules(self,functor,arity):
-        mode = declare.ModeDeclaration(parser.Goal(functor,['x']*arity))
+        mode = declare.ModeDeclaration(parser.Goal(functor,['x']*arity),strict=False)
         rules = self.prog.rules.rulesFor(mode)
         if rules:
             for r in rules: print r
