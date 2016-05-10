@@ -332,7 +332,7 @@ class Interp(object):
             ranked.sort(key=lambda x: x[1])
             k=0
             for v,s in ranked:
-                print "%d\t%g\t%s" % (k,s,queryString(mode,instance,v))
+                print "%d\t%g\t%s" % (k,s,queryString(mode,instance,[v]))
             
 
 def queryString(mode,instance,values=None):
