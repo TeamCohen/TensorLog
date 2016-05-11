@@ -6,6 +6,7 @@ import tensorlog
 import numpy as NP
 import collections
 import mutil
+import declare
 
 class GradAccumulator(object):
     """ Accumulate the sum gradients for perhaps many parameters, indexing
@@ -72,7 +73,7 @@ class Learner(object):
         def impl(m,x):
             predictFun = self.prog.getPredictFunction(m)
             return predictFun.eval(self.prog.db, [x])
-        if type(mode) == type(""):
+        if type(mode) in (type(""), declare.ModeDeclaration):
             # then just predict on one mode
             return impl(mode,X)
         else:
@@ -102,12 +103,16 @@ class Learner(object):
         # for softMax
 
         # a check
+        
         def check(m):
             predictFun = self.prog.getPredictFunction(m)
             assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
-        if not self.multiPredicate: check(mode)
+            return predictFun
+        predictFun=None
+        if not self.multiPredicate: predictFun=check(mode)
         else:
-            for m in mode: check(m)
+            predictFun = []
+            for m in mode: predictFun.append(check(m))
 
         X,Y = self.X,self.Y
         P = self.predict(mode,X)
@@ -115,7 +120,15 @@ class Learner(object):
         paramGrads = GradAccumulator()
         #TODO assert rowSum(Y) = all ones - that's assumed here in
         #initial delta of Y-P
-        predictFun.fun.backprop(Y-P,paramGrads)
+        def impl(predictFun,y,p):
+            predictFun.fun.backprop(y-p,paramGrads)
+        if not self.multiPredicate: impl(predictFun,Y,P)
+        else:
+            start = 0
+            for i in range(len(mode)):
+                n = X[i].get_shape()[0] # get #rows for this query predicate
+                impl(predictFun[i],Y[start:(start+n),:],P[start:(start+n),:])
+                start += n
         return paramGrads
 
     def applyMeanUpdate(self,paramGrads,rate):
