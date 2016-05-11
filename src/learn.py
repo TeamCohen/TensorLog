@@ -2,6 +2,7 @@
 
 import funs
 import tensorlog
+import time
 
 import numpy as NP
 import collections
@@ -117,11 +118,13 @@ class FixedRateGDLearner(Learner):
         self.rate=rate
     
     def train(self,mode):
+        startTime = time.time()
         for i in range(self.epochs):
             def traceFunForEpoch(thisLearner,Y,P):
                 print 'epoch %d of %d' % (i+1,self.epochs),
                 print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
-                print ' acc %.3f' % thisLearner.accuracy(Y,P)            
+                print ' acc %.3f' % thisLearner.accuracy(Y,P),            
+                print ' cumSecs %.3f' % (time.time()-startTime)
             paramGrads = self.crossEntropyGrad(mode,traceFun=traceFunForEpoch)
             self.applyMeanUpdate(paramGrads,self.rate)
         

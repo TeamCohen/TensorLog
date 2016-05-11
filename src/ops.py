@@ -250,8 +250,10 @@ class WeightedVec(Op):
     def _ppLHS(self):
         return "%s * %s.sum()" % (self.vec,self.weighter)
     def eval(self,env):
-        m1,m2 = mutil.broadcastBinding(env, self.vec, self.weighter)
-        env[self.dst] = mutil.weightByRowSum(m1,m2)
+        #optimized
+        #m1,m2 = mutil.broadcastBinding(env, self.vec, self.weighter)
+        #env[self.dst] = mutil.weightByRowSum(m1,m2)
+        env[self.dst] = mutil.broadcastAndWeightByRowSum(env[self.vec],env[self.weighter])
         self.traceEvalCompletion(env)
     def backprop(self,env,gradAccum):
         # This is written as a single operation
@@ -260,14 +262,19 @@ class WeightedVec(Op):
         #   1. weighterSum = weighter.sum()
         #   2. dst = vec * weighterSum
         # and then backprop through step 2, then step 1
-        mVec,mWeighter = mutil.broadcastBinding(env, self.vec, self.weighter)
         # step 2a: bp from delta[dst] to delta[vec]
-        env.delta[self.vec] = mutil.weightByRowSum(env.delta[self.dst],mWeighter)
+        # old slow version was:
+        #   mVec,mWeighter = mutil.broadcastBinding(env, self.vec, self.weighter)
+        #   env.delta[self.vec] = mutil.weightByRowSum(env.delta[self.dst],mWeighter)
+        # optimized version of step 2a
+        env.delta[self.vec] = mutil.broadcastAndWeightByRowSum(env.delta[self.dst],env[self.weighter]) #optimized
         # step 2b: bp from delta[dst] to delta[weighterSum]
         #   would be: delta[weighterSum] = (delta[dst].multiply(vec)).sum
         # followed by 
         # step 1: bp from delta[weighterSum] to weighter
         #   delta[weighter] = delta[weighterSum]*weighter
         # but we can combine 2b and 1 as follows:
-        env.delta[self.weighter] = mutil.weightByRowSum(mWeighter, env.delta[self.dst].multiply(mVec))
+        # old slow version
+        mVec,mWeighter = mutil.broadcastBinding(env, self.vec, self.weighter)
+        env.delta[self.weighter] = mutil.broadcastAndWeightByRowSum(mWeighter, env.delta[self.dst].multiply(mVec)) #TODO: optimize
         self.traceBackPropCompletion(env)

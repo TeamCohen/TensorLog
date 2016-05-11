@@ -32,6 +32,7 @@ def broadcastBinding(env,var1,var2):
     m2 = env[var2]
     return broadcast2(m1,m2)
 
+#TODO optimize?
 def broadcast2(m1,m2):
     """Return a pair of shape-compatible matrices for m1, m2 """
     r1 = numRows(m1)
@@ -117,11 +118,32 @@ def softmax(m):
         rows = [m.getrow(i) for i in range(numr)]
         return stack([softmaxRow(r) for r in rows])
 
+def broadcastAndWeightByRowSum(m1,m2):
+    r1 = numRows(m1)
+    r2 = numRows(m2)
+    if r2==1:
+        return  m1 * m2.sum()
+#   TODO: optimize
+#    elif r1==1:
+#        #for each row of m2, find sum, and make a copy of m1's only row
+#        #data and column indices should be copied over r2 times
+#        #really only indptr needs to be copied?
+    else:
+        m1b,m2b = broadcast2(m1,m2)
+        return weightByRowSum(m1b,m2b)
+
 def weightByRowSum(m1,m2):
     """Weight a rows of matrix m1 by the row sum of matrix m2."""
     r = numRows(m1)  #also m2
     if r==1:
         return  m1 * m2.sum()
     else:
-        return SS.vstack([m2.getrow(i).sum() * m1.getrow(i) for i in range(r)], dtype='float64')
-    
+        #old slow version 
+        #  return SS.vstack([m2.getrow(i).sum() * m1.getrow(i) for i in range(r)], dtype='float64')
+        #optimized
+        result = m1.copy()
+        for i in xrange(r):
+            w = m2.data[m2.indptr[i]:m2.indptr[i+1]].sum()
+            result.data[result.indptr[i]:result.indptr[i+1]] *= w
+        return result
+

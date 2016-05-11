@@ -61,7 +61,7 @@ def runBenchmark(com):
     if com=="fb-db-serialize":
         db = matrixdb.MatrixDB.loadFile("test/fb15k-valid.cfacts")
         start = time.time()
-        db.serialize("tmp.db")
+        db.serialize("fb15k-valid.db")
     elif com=="fb-db-load":
         start = time.time()
         db = matrixdb.MatrixDB.deserialize("fb15k-valid.db")

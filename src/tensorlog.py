@@ -180,10 +180,12 @@ class ProPPRProgram(Program):
 class Interp(object):
     """High-level interface to tensor log."""
 
-    def __init__(self,initFiles=[],proppr=True):
+    def __init__(self,initFiles=[],proppr=True,weights=None):
         if proppr: 
             self.prog = ProPPRProgram.load(initFiles)
-            self.prog.setWeights(self.prog.db.ones())
+            if weights==None:
+                weights = self.prog.db.ones()
+            self.prog.setWeights(weights)
         else: 
             self.prog = Program.load(initFiles)
         self.db = self.prog.db
