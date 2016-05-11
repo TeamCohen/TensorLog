@@ -65,20 +65,12 @@ class MatrixDB(object):
         """Number of constants in the database, and dimension of all the vectors/matrices."""
         return self.stab.getMaxId() + 1
 
-    def onehot(self,S):
+    def onehot(self,s):
         """A onehot row representation of a symbol."""
-        def impl(s):
-            assert self.stab.hasId(s),'constant %s not in db' % s
-            n = self.dim()
-            i = self.stab.getId(s)
-            return scipy.sparse.csr_matrix( ([1.0],([0],[i])), shape=(1,n))
-        if type(S)==type(""):
-            return impl(S)
-        else:
-            result = []
-            for s in S:
-                result.append(impl(s))
-            return mutil.stack(result)
+        assert self.stab.hasId(s),'constant %s not in db' % s
+        n = self.dim()
+        i = self.stab.getId(s)
+        return scipy.sparse.csr_matrix( ([1.0],([0],[i])), shape=(1,n))
 
     def zeros(self):
         """An all-zeros row matrix."""
@@ -170,11 +162,11 @@ class MatrixDB(object):
             result[s] = coorow.data[i]
         return result
 
-    def matrixAsSymbolDict(self,m,start=0):
+    def matrixAsSymbolDict(self,m):
         result = {}
         (rows,cols)=m.shape
         for r in range(rows):
-            result[r+start] = self.rowAsSymbolDict(m.getrow(r))
+            result[r] = self.rowAsSymbolDict(m.getrow(r))
         return result
 
     def matrixAsPredicateFacts(self,functor,arity,m):
@@ -271,9 +263,8 @@ class MatrixDB(object):
         scipy.io.savemat(os.path.join(dir,"db.mat"),self.matEncoding,do_compression=True)
     
     @staticmethod
-    def deserialize(dir,db=False):
-        if not db:
-            db=MatrixDB()
+    def deserialize(dir):
+        db = MatrixDB()
         k = 1
         for line in open(os.path.join(dir,"symbols.txt")):
             i = db.stab.getId(line.strip())
@@ -367,24 +358,7 @@ class MatrixDB(object):
             del self.buf[(f,arity)]
             self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m)
             self.matEncoding[(f,arity)].sort_indices()
-            
-    def rebufferMatrices(self):
-        """Re-encode previously frozen matrices after a symbol table update"""
-        n = self.stab.getMaxId() + 1
-        for (functor,arity),m in self.matEncoding.items():
-            (rows,cols) = m.get_shape()
-            if cols != n:
-                logging.info("Re-encoding predicate %s" % functor)
-                if arity==2:
-                    # first shim the extra rows
-                    shim = scipy.sparse.lil_matrix((n-rows,cols))      
-                    m = scipy.sparse.vstack([m,shim])
-                    (rows,cols) = m.get_shape()
-                # shim extra columns
-                shim = scipy.sparse.lil_matrix((rows,n-cols))
-                self.matEncoding[(functor,arity)] = scipy.sparse.hstack([m,shim],format="csr")
-                self.matEncoding[(functor,arity)].sort_indices()
-                    
+
     def clearBuffers(self):
         """Save space by removing buffers"""
         self.buf = None
@@ -399,7 +373,6 @@ class MatrixDB(object):
     def addFile(self,filename):
         self.startBuffers()
         self.bufferFile(filename)
-        self.rebufferMatrices()
         self.flushBuffers()
         self.clearBuffers()
 
@@ -429,12 +402,7 @@ class MatrixDB(object):
 if __name__ == "__main__":
     if sys.argv[1]=='--serialize':
         print 'loading cfacts from ',sys.argv[2]
-        if sys.argv[2].find(":")>=0:
-            db = MatrixDB()
-            for f in sys.argv[2].split(":"):
-                db.addFile(f)
-        else:
-            db = MatrixDB.loadFile(sys.argv[2])
+        db = MatrixDB.loadFile(sys.argv[2])
         print 'saving to',sys.argv[3]
         db.serialize(sys.argv[3])
     elif sys.argv[1]=='--deserialize':
