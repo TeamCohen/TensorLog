@@ -72,10 +72,10 @@ class MatrixDB(object):
         i = self.stab.getId(s)
         return scipy.sparse.csr_matrix( ([1.0],([0],[i])), shape=(1,n))
 
-    def zeros(self):
+    def zeros(self,rows=1):
         """An all-zeros row matrix."""
         n = self.dim()
-        return scipy.sparse.csr_matrix( ([],([],[])), shape=(1,n))
+        return scipy.sparse.csr_matrix( ([],([],[])), shape=(rows,n))
 
     def ones(self):
         """An all-zeros row matrix."""
@@ -350,6 +350,23 @@ class MatrixDB(object):
             self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m)
             self.matEncoding[(f,arity)].sort_indices()
 
+    def rebufferMatrices(self):
+        """Re-encode previously frozen matrices after a symbol table update"""
+        n = self.stab.getMaxId() + 1
+        for (functor,arity),m in self.matEncoding.items():
+            (rows,cols) = m.get_shape()
+            if cols != n:
+                logging.info("Re-encoding predicate %s" % functor)
+                if arity==2:
+                    # first shim the extra rows
+                    shim = scipy.sparse.lil_matrix((n-rows,cols))      
+                    m = scipy.sparse.vstack([m,shim])
+                    (rows,cols) = m.get_shape()
+                # shim extra columns
+                shim = scipy.sparse.lil_matrix((rows,n-cols))
+                self.matEncoding[(functor,arity)] = scipy.sparse.hstack([m,shim],format="csr")
+                self.matEncoding[(functor,arity)].sort_indices()
+
     def clearBuffers(self):
         """Save space by removing buffers"""
         self.buf = None
@@ -364,6 +381,7 @@ class MatrixDB(object):
     def addFile(self,filename):
         self.startBuffers()
         self.bufferFile(filename)
+        self.rebufferMatrices()
         self.flushBuffers()
         self.clearBuffers()
 

@@ -7,6 +7,8 @@ import time
 import numpy as NP
 import collections
 import mutil
+import declare
+import logging
 
 class GradAccumulator(object):
     """ Accumulate the sum gradients for perhaps many parameters, indexing
@@ -34,7 +36,7 @@ class GradAccumulator(object):
 class Learner(object):
 
     # prog pts to db, rules
-    def __init__(self,prog,X,Y):
+    def __init__(self,prog,X=None,Y=None):
         self.prog = prog
         self.X = X
         self.Y = Y
@@ -68,7 +70,7 @@ class Learner(object):
         predictFun = self.prog.getPredictFunction(mode)
         return predictFun.eval(self.prog.db, [X])
 
-    def crossEntropyGrad(self,mode,traceFun=None):
+    def crossEntropyGrad(self,mode,traceFun=None,X=None,Y=None):
         """Compute the parameter gradient associated with softmax
         normalization followed by a cross-entropy cost function.
         """
@@ -86,8 +88,9 @@ class Learner(object):
         # a check
         predictFun = self.prog.getPredictFunction(mode)
         assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
-
-        X,Y = self.X,self.Y
+        
+        if X==None: X=self.X
+        if Y==None: Y=self.Y
         P = self.predict(mode,X)
         if traceFun: traceFun(self,Y,P)
         paramGrads = GradAccumulator()
@@ -127,7 +130,69 @@ class FixedRateGDLearner(Learner):
                 print ' cumSecs %.3f' % (time.time()-startTime)
             paramGrads = self.crossEntropyGrad(mode,traceFun=traceFunForEpoch)
             self.applyMeanUpdate(paramGrads,self.rate)
-        
+
+class MultiModeLearner(FixedRateGDLearner):
+
+    def __init__(self,prog,modes,Xs,Ys,epochs=10,rate=0.1):
+        super(MultiModeLearner,self).__init__(prog,X=None,Y=None,epochs=epochs,rate=rate)
+        self.trainingData = {}
+        for (mode,x,y) in zip(modes,Xs,Ys):
+            self.trainingData[mode] = (x,y)
+        self.modes = modes
+        self.Xs = Xs
+        self.Ys = Ys
+    
+    def train(self):
+        startTime = time.time()
+        batches = len(self.modes)
+        for i in range(self.epochs):
+            print 'epoch %d of %d' % (i+1,self.epochs)
+            for b in range(batches):
+                #print 'batch %d of %d' % (b+1,batches)
+                if self.modes[b] not in self.trainingData: assert "No training data available for mode %s" % str(self.modes[b])
+                self._trainBatch(self.modes[b],*self.trainingData[self.modes[b]],startTime=startTime)
+            Ps = self.predict(self.modes,self.Xs)
+            print ' crossEnt %.3f' % self.crossEntropy(self.Ys,Ps),
+            print ' acc %.3f' % self.accuracy(self.Ys,Ps),
+            print ' cumSecs %.3f' % (time.time()-startTime)
+            
+    def _trainBatch(self,mode,X,Y,startTime):
+        paramGrads = self.crossEntropyGrad(mode,X=X,Y=Y)
+        self.applyMeanUpdate(paramGrads,self.rate)
+                
+    def predict(self,modes=None,Xs=None):
+        if modes == None: modes = self.modes
+        if type(modes) == declare.ModeDeclaration:
+            return super(MultiModeLearner,self).predict(modes,Xs)
+        Y = []
+        if Xs == None: Xs = [self.trainingData[m][0] for m in modes]
+        i=0
+        for m,x in zip(modes,Xs):
+            i+=1
+            logging.debug("Mode %d of %d: %s %s" % (i,len(modes),str(m),str(x.shape)))
+            Y.append(super(MultiModeLearner,self).predict(m,x))
+        return Y
+                             
+    def accuracy(self,Ys,Ps,stack=True):
+        if stack:
+            Ys=mutil.stack(Ys)
+            Ps=mutil.stack(Ps)
+        return super(MultiModeLearner,self).accuracy(Ys,Ps)
+        #acc = []
+        #for y,p in zip(Ys,Ps):
+        #    acc.append(super(MultiModeLearner,self).accuracy(y,p))
+        #return acc
+                           
+    def crossEntropy(self,Ys,Ps,stack=True):
+        if stack:
+            Ys=mutil.stack(Ys)
+            Ps=mutil.stack(Ps)
+        return super(MultiModeLearner,self).crossEntropy(Ys,Ps)
+        #xent = []
+        #for y,p in zip(Ys,Ps):
+        #    xent.append(super(MultiModeLearner,self).crossEntropy(y,p))
+        #return xent
+    
 
 if __name__ == "__main__":
     pass

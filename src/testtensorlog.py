@@ -503,6 +503,55 @@ class TestProPPR(unittest.TestCase):
             for k in actual.keys():
                 self.assertAlmostEqual(actual[k], expected[k], 0.0001)
 
+class TestMultiProPPR(unittest.TestCase):
+#class TestMultiProPPR(object):
+    def setUp(self):
+        logging.basicConfig(level=logging.DEBUG)
+        self.prog = tensorlog.ProPPRProgram.load(["test/top-1000-near-google-recursive.ppr","test/top-1000-near-google.db"])
+        self.trainData = self.prog.db.createPartner()
+        self.trainData.addFile("test/top-1000-near-google.train.examples.cfacts")
+        self.trainKeys = [m for m in self.trainData.matEncoding.keys() if m[1]==2 ]
+        self.testData = self.prog.db.createPartner()
+        self.testData.addFile("test/top-1000-near-google.test.examples.cfacts")
+        self.testKeys = [m for m in self.testData.matEncoding.keys() if m[1]==2 ]
+        self.prog.setWeights(self.prog.db.ones())
+        
+        self.Xs=[]
+        self.Ys=[]
+        self.modes = []
+        self._loadData(self.trainData,self.trainKeys,self.Xs,self.Ys,self.modes)
+    
+    def _loadData(self,db,modeSpecs,xs,ys,modes):
+        for m in modeSpecs:
+            x,y = db.matrixAsTrainingData(*m)
+            xs.append(x)
+            ys.append(y)
+            modes.append(declare.ModeDeclaration("%s(i,o)" % m[0]))
+    
+    def testLearn(self):
+        learner = learn.MultiModeLearner(self.prog,self.modes,self.Xs,self.Ys,epochs=5)
+        P0 = learner.predict(self.modes,self.Xs)
+        acc0 = learner.accuracy(self.Ys,P0)
+        xent0 = learner.crossEntropy(self.Ys,P0)
+
+        learner.train()
+        P1 = learner.predict(self.modes)
+        acc1 = learner.accuracy(self.Ys,P1)
+        xent1 = learner.crossEntropy(self.Ys,P1)
+        
+        self.assertTrue(acc0<acc1)
+        self.assertTrue(xent0>xent1)
+        self.assertTrue(acc1==1)
+        print 'fb15k train: acc1',acc1,'xent1',xent1
+
+        TX,TY,Tmodes = [],[],[]
+        self._loadData(self.testData,self.testKeys,TX,TY,Tmodes)
+        P2 = learner.predict(Tmodes,TX)
+        acc2 = learner.accuracy(TY,P2)
+        xent2 = learner.crossEntropy(TY,P2)
+        print 'fb15k test: acc2',acc2,'xent2',xent2
+        self.assertTrue(acc2==1)
+
 if __name__=="__main__":
     if len(sys.argv)==1:
         unittest.main()
