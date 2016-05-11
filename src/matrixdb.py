@@ -300,15 +300,6 @@ class MatrixDB(object):
             return
         i = self.stab.getId(a1)
         j = self.stab.getId(a2) if a2 else -1
-        #if key not in self.buf: raise MatrixParseError("%s unknown" % str(key))
-        #t = self.buf[key]
-        #if i not in t: raise MatrixParseError("%d unknown in %s" % (i,str(key)))
-        #t = t[i]
-        #if j not in t: raise MatrixParseError("%d unknown in %s[%d]" % (j,str(key),i))
-        #print key
-        #print i
-        #print j
-        #raise MatrixParseError("xyzzy")
         try:
             self.buf[key][i][j] = w
         except TypeError as e:
@@ -402,7 +393,12 @@ class MatrixDB(object):
 if __name__ == "__main__":
     if sys.argv[1]=='--serialize':
         print 'loading cfacts from ',sys.argv[2]
-        db = MatrixDB.loadFile(sys.argv[2])
+        if sys.argv[2].find(":")>=0:
+            db = MatrixDB()
+            for f in sys.argv[2].split(":"):
+                db.addFile(f)
+        else:
+            db = MatrixDB.loadFile(sys.argv[2])
         print 'saving to',sys.argv[3]
         db.serialize(sys.argv[3])
     elif sys.argv[1]=='--deserialize':
