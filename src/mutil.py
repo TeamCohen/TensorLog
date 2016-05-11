@@ -1,9 +1,9 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
 import scipy.sparse as SS
+import scipy.io
 import numpy as np
 
-#TODO rename to matutils
 # miscellaneous broadcast utilities used my ops.py and funs.py
 
 def mean(mat):
@@ -44,54 +44,6 @@ def broadcast2(m1,m2):
     elif r1==1 and r2>1:
         return stack([m1]*r2),m2
 
-def broadcast4(m1a,m2a,m1b,m2b):
-    """Given that the m1a,m2a and m1b,m2b are each pairwise compatible,
-    broadcast to make all four matrices the same shape."""
-    #print '=input sizes',[m.get_shape() for m in (m1a,m2a,m1b,m2b)]
-    def broadcast(m,nr): return stack([m]*nr)
-    r1 = numRows(m1a)
-    r2 = numRows(m1b)
-    if r1==r2:
-        result = (m1a,m2a,m1b,m2b)
-    elif r1==1:
-        result = broadcast(m1a,r2),broadcast(m2a,r2),m1b,m2b
-    elif r2==1:
-        result = m1a,m2a,broadcast(m1b,r1),broadcast(m2b,r1)
-    else:
-        assert False,'broadcast fails'
-    return result
-
-#TODO unused?
-def broadcastingDictSum(d1,d2,var):
-    """ Given dicts d1 and d2, return the result of d1[var]+d2[var], after
-    broadcasting, and defaulting missing values to zero.
-    """
-    if (var in d1) and (not var in d2):
-        return d1[var]
-    elif (var in d2) and (not var in d1):
-        return d2[var]                
-    else:
-        def broadcast(m,r): return stack([m],r)
-        r1 = d1[var].get_shape()[0]
-        r2 = d2[var].get_shape()[0]
-        if r1==r2:
-            return d1[var] + d2[var]
-        elif r1==1:
-            return broadcast(d1[var], r2) + d2[var]
-        elif r2==1:
-            return d1[var] + broadcast(d2[var], r1)
-
-
-#TODO unused?
-def rowSum(m):
-    """Sum of each row as a column vector."""
-    numr = numRows(m)
-    if numr==1:
-        return m.sum()
-    else:
-        rows = [m.getrow(i) for i in range(numr)]
-        return stack([r.sum() for r in rows])
-
 def softmax(m):
     """Row-wise softmax of a sparse matrix, returned as a sparse matrix.
     This doesn't really require 'broadcasting' but it seems like you
@@ -124,17 +76,37 @@ def broadcastAndWeightByRowSum(m1,m2):
     if r2==1:
         return  m1 * m2.sum()
 #   TODO: optimize
-#    elif r1==1:
-#        #for each row of m2, find sum, and make a copy of m1's only row
-#        #data and column indices should be copied over r2 times
-#        #really only indptr needs to be copied?
+    elif r1==1:
+        #space for the values of the result - need to duplicate m1 for each row of m2
+        nnz1 = m1.data.shape[0]
+        data = np.zeros(shape=(nnz1*r2,))
+        #space for the indices of the non-zero columns of m1
+        indices = np.zeros(shape=(nnz1*r2,),dtype='int')
+        indptr = np.zeros(shape=(r2+1,),dtype='int')
+        ptr = 0
+        indptr[0] = 0 
+        for i in xrange(r2):
+            #sum of row i in m2
+            w = m2.data[m2.indptr[i]:m2.indptr[i+1]].sum()
+            #multiply the non-zero datapoints by w and copy them into the right places
+            for j in xrange(nnz1):
+                data[ptr+j] = m1.data[j]*w
+                indices[ptr+j] = m1.indices[j]
+            # increment the indptr so indptr[i]:indptr[i+1] tells
+            # where to find the data, indices for row i
+            indptr[i+1]= indptr[i]+nnz1
+            ptr += nnz1
+        result = SS.csr_matrix((data,indices,indptr),shape=m2.shape, dtype='float64')
+        return result
     else:
         m1b,m2b = broadcast2(m1,m2)
         return weightByRowSum(m1b,m2b)
 
+
 def weightByRowSum(m1,m2):
     """Weight a rows of matrix m1 by the row sum of matrix m2."""
     r = numRows(m1)  #also m2
+    assert numRows(m2)==r
     if r==1:
         return  m1 * m2.sum()
     else:
@@ -146,4 +118,11 @@ def weightByRowSum(m1,m2):
             w = m2.data[m2.indptr[i]:m2.indptr[i+1]].sum()
             result.data[result.indptr[i]:result.indptr[i+1]] *= w
         return result
+
+if __name__=="__main__":
+    testmat = {}
+    scipy.io.loadmat("test.mat",testmat)
+    m1 = testmat['m1']
+    m2 = testmat['m2']
+    broadcastAndWeightByRowSum(m1,m2)
 

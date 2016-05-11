@@ -124,16 +124,7 @@ def runExpt(initFiles=None, initProgram=None, theoryPred=None, trainPred=None, t
         print 'ready for commands like: proppr eval %s %s --metric map' % (savedTestExamples,savedTestPreds)
 
 if __name__=="__main__":
-    params = {'initFiles':["wnet.db","wnet-learned.ppr"],
-              'theoryPred':'i_hypernym',
-              'trainPred':'train_i_hypernym',
-              'testPred':'valid_i_hypernym',
-              'savedModel':'hypernym-trained.db',
-              'savedTestPreds':'hypernym-test.solutions.txt',
-              'savedTrainExamples':'hypernym-train.examples',
-              'savedTestExamples':'hypernym-test.examples',
-    }
-    toyparams = {'initFiles':["../../src/test/textcattoy.cfacts","../../src/test/textcat.ppr"],
+    toyparams = {'initFiles':["test/textcattoy.cfacts","test/textcat.ppr"],
                  'theoryPred':'predict',
                  'trainPred':'train',
                  'testPred':'test',
@@ -142,4 +133,4 @@ if __name__=="__main__":
                  'savedTrainExamples':'toy-train.examples',
                  'savedTestExamples':'toy-test.examples',
     }
-    runExpt(**params)
+    runExpt(**toyparams)

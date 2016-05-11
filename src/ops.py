@@ -274,7 +274,5 @@ class WeightedVec(Op):
         # step 1: bp from delta[weighterSum] to weighter
         #   delta[weighter] = delta[weighterSum]*weighter
         # but we can combine 2b and 1 as follows:
-        # old slow version
-        mVec,mWeighter = mutil.broadcastBinding(env, self.vec, self.weighter)
-        env.delta[self.weighter] = mutil.broadcastAndWeightByRowSum(mWeighter, env.delta[self.dst].multiply(mVec)) #TODO: optimize
+        env.delta[self.weighter] = mutil.broadcastAndWeightByRowSum(env[self.weighter], env.delta[self.dst].multiply(env[self.vec]))
         self.traceBackPropCompletion(env)
