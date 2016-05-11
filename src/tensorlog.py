@@ -11,6 +11,7 @@ import parser
 import matrixdb
 import bpcompiler
 import learn
+import mutil
 
 
 #TODO make parameters of a program
@@ -84,6 +85,7 @@ class Program(object):
         fun = self.function[(mode,0)]
         if TRACE: logging.debug('eval function %s' % str(fun))
         if TRACE: logging.debug('\n'.join(fun.pprint()))
+        if TRACE: logging.debug(str(inputs))
         return fun.eval(self.db, inputs)
 
     def evalGradSymbols(self,mode,symbols):
@@ -239,30 +241,115 @@ class Interp(object):
         print "\n".join(fun.pprint())
 
     def eval(self,modeSpec,x):
-        mode = self._asMode(modeSpec)        
+        mode = self._asMode(modeSpec)
         result = self.prog.evalSymbols(mode,[x])
         return self.prog.db.rowAsSymbolDict(result)
     
-    def train(self,trainingDataFile,modeSpec):
-        mode = self._asMode(modeSpec)
+    def train(self,trainingDataFile,modeSpec=False,allModes=False,trainSpec=False,epochs=5):
         trainingData = self.db.createPartner()
         trainingData.addFile(trainingDataFile)
-        trainSpec = (mode.functor,mode.arity)
-        X,Y = trainingData.matrixAsTrainingData(*trainSpec)
-        self.learner = learn.FixedRateGDLearner(self.prog,X,Y,epochs=5)
+        multiPredicate = False
+        if modeSpec and not allModes:
+            # then train just one mode
+            mode = self._asMode(modeSpec)
+            if not trainSpec:
+                trainSpec = (mode.functor,mode.arity)
+            X,Y = trainingData.matrixAsTrainingData(*trainSpec)
+        else:
+            # then train all available modes
+            multiPredicate = True
+            if not modeSpec: modeSpec="i,o"
+            X,Y=([],[])
+            mode = []
+            for (functor,arity) in trainingData.matEncoding.keys():
+                if arity != 2: assert "Nonbinary query predicate '%s' not supported" % functor
+                thisMode = self._asMode("%s(%s)" % (functor,modeSpec))
+                thisX,thisY=trainingData.matrixAsTrainingData(thisMode.functor,thisMode.arity)
+                mode.append(thisMode)
+                X.append(thisX)
+                Y.append(thisY)
+            Y = mutil.stack(Y)
+        self.learner = learn.FixedRateGDLearner(self.prog,X,Y,epochs=epochs,multiPredicate=multiPredicate)
         P0 = self.learner.predict(mode,X)
         acc0 = self.learner.accuracy(Y,P0)
         xent0 = self.learner.crossEntropy(Y,P0)
-        print 'untrained: acc0',acc0,'xent0',xent0
+        print 'untrained: xent0',xent0,'acc0',acc0
 
         self.learner.train(mode)
         P1 = self.learner.predict(mode)
         acc1 = self.learner.accuracy(Y,P1)
         xent1 = self.learner.crossEntropy(Y,P1)
         
-        print "acc0<acc1?   ",acc0<acc1
         print "xent0>xent1? ",xent0>xent1
-        print 'trained: acc1',acc1,'xent1',xent1
+        print "acc0<acc1?   ",acc0<acc1
+        print 'trained: xent1',xent1,'acc1',acc1
+    def predict(self,queryFile,modeSpec=False):
+        """ currently only supports queries with 1 input """
+        X = []
+        M = []
+        multi = True
+        if type(modeSpec) == type(""): 
+            M = self._asMode(modeSpec)
+            multi = False
+        with open(queryFile,"r") as f:
+            k=0
+            for line in f:
+                k+=1
+                parts = line.strip().split("\t",2)
+                if len(parts) < 2: assert "on line %d of %s: Need at least 2 fields; got %d. Syntax is <modeSpec> TAB <input> TAB <ignored>..." % (k,queryFile,len(parts))
+                q,i = parts[0],parts[1]
+                if not multi:
+                    if q == M:
+                        X.append(i)
+                else:
+                    if len(M) == 0 or q != M[-1]: 
+                        M.append(self._asMode(q))
+                        X.append([])
+                    X[-1].append(i)
+        def impl(m,x,n):
+            result = self.prog.evalSymbols(m,[x])
+            return self.prog.db.matrixAsSymbolDict(result,start=n)
+        if not multi:
+            return [M],[X],impl(M,X)
+        else:
+            init = False
+            result = {}
+            for i in range(len(M)):
+                r = impl(M[i],X[i],len(result))
+                result.update(r)
+                logging.debug("r: %s" % str(r))
+                logging.debug("Result: %s" % str(result))
+            return M,X,result
+    def solutions(self,queryFile,solutionsFile):
+        M,I,S = self.predict(queryFile)
+        def queries():
+            k=-1
+            for m,X in zip(M,I):
+                for x in X:
+                    k+=1
+                    yield k,m,x,S[k]
+        for qid,mode,instance,solutions in queries():
+            print "# proved %d\t%s\t-1 msec" % (qid,queryString(mode,instance))
+            ranked = solutions.items()
+            ranked.sort(key=lambda x: x[1])
+            k=0
+            for v,s in ranked:
+                print "%d\t%g\t%s" % (k,s,queryString(mode,instance,[v]))
+            
+
+def queryString(mode,instance,values=None):
+    result = mode.functor
+    delim = "("
+    k=0
+    for a in range(mode.arity):
+        if mode.isInput(a): result += delim + instance
+        else: 
+            s = "X%d" % k
+            if values: s = values[k]
+            result += delim + s
+            k+=1
+        delim = ","
+    return result + ")"
 
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william
