@@ -92,7 +92,7 @@ class Expt(object):
         print msg,'...'
         start = time.time()
         result = act()
-        print msg,'... done in in %.3f sec' % (time.time()-start)
+        print msg,'... done in %.3f sec' % (time.time()-start)
         return result
 
     @staticmethod
