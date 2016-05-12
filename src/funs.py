@@ -1,17 +1,26 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
 import logging
+import traceback
+
+import sys
 import ops
 import mutil
 
-def trace(): return logging.getLogger().isEnabledFor(logging.DEBUG)
+TRACE = False
 
 class Function(object):
     """The tensorlog representation of a function. This supports eval and
     evalGrad operations, and take a list of input values as the inputs.
     """
     def eval(self,db,values):
-        assert False, 'abstract method called'
+        result = self._doEval(db,values)
+        if TRACE:
+            print "Function completed:\n%s" % "\n. . ".join(self.pprint())
+            for k,v in enumerate(values):
+                print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
+            print '. result :',db.matrixAsSymbolDict(result)
+        return result
     def pprint(self,depth=0):
         """Return list of lines in a pretty-print of the function.
         """
@@ -34,7 +43,7 @@ class OpSeqFunction(Function):
         top = ('| '*depth) + '%s = OpSeqFunction(%r):' % (self.opOutput,self.opInputs)
         if self.rule: top = top + '\t\t// ' + str(self.rule)
         return [top] + map(lambda o:('| '*(depth+1))+o.pprint(), self.ops)
-    def eval(self,db,values):
+    def _doEval(self,db,values):
         #eval expression
         self.opEnv = ops.Envir(db)
         self.opEnv.bindList(self.opInputs,values)
@@ -59,8 +68,8 @@ class NullFunction(OpSeqFunction):
         return 'NullFunction()'
     def pprint(self,depth=0):
         return [('| '*depth) + repr(self)]
-    def eval(self,db,values):
-        self.result = db.zeros()
+    def _doEval(self,db,values):
+        self.result = db.zeros(mutil.numRows(values[0]))
         return self.result
     def backprop(self,delta,gradAccum):
         pass
@@ -74,10 +83,12 @@ class SumFunction(Function):
         return 'SumFunction(%r)' % self.funs
     def pprint(self,depth=0):
         return [('| '*depth) + 'SumFunction:'] + reduce(lambda x,y:x+y, map(lambda f:f.pprint(depth=depth+1), self.funs))
-    def eval(self,db,values):
+    def _doEval(self,db,values):
         addends = map(lambda f:f.eval(db,values), self.funs)
         accum = addends[0]
         for i in range(1,len(addends)):
+            assert accum.get_shape()==addends[i].get_shape(), \
+                'shape error %r vs %r for addend %d\n%s' % (accum.get_shape(),addends[i].get_shape(),i,("\n > ".join(self.pprint())))
             accum = accum + addends[i]
         self.result = accum
         return self.result
@@ -94,7 +105,7 @@ class SoftmaxFunction(Function):
         return 'SoftmaxFunction(%r)' % self.fun
     def pprint(self,depth=0):
         return [('| '*depth) + 'SoftmaxFunction:'] + self.fun.pprint(depth=depth+1)
-    def eval(self,db,values):
+    def _doEval(self,db,values):
         unnorm = self.fun.eval(db,values)
         self.result = mutil.softmax(unnorm)
         return self.result

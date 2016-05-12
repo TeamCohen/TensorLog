@@ -100,7 +100,7 @@ class DefinedPredOp(Op):
         subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
         vals = [env[self.src]]
         outputs = subfun.eval(self.tensorlogProg.db, vals)
-        env[self.dst] = outputs[0]
+        env[self.dst] = outputs
         self.traceEvalCompletion(env)
     def backprop(self,env,gradAccum):
         subfun = self.tensorlogProg.function[(self.funMode,self.depth)]

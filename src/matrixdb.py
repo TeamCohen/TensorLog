@@ -72,10 +72,10 @@ class MatrixDB(object):
         i = self.stab.getId(s)
         return scipy.sparse.csr_matrix( ([1.0],([0],[i])), shape=(1,n))
 
-    def zeros(self):
-        """An all-zeros row matrix."""
+    def zeros(self,numRows=1):
+        """An all-zeros matrix."""
         n = self.dim()
-        return scipy.sparse.csr_matrix( ([],([],[])), shape=(1,n))
+        return scipy.sparse.csr_matrix( ([],([],[])), shape=(numRows,n))
 
     def ones(self):
         """An all-zeros row matrix."""
@@ -268,7 +268,7 @@ class MatrixDB(object):
         k = 1
         for line in open(os.path.join(dir,"symbols.txt")):
             i = db.stab.getId(line.strip())
-            assert i==k,'symbols out of sync'
+            assert i==k,'symbols out of sync for symbol "%s": expected index %d actual %d' % (line.strip(),i,k)
             k += 1
         scipy.io.loadmat(os.path.join(dir,"db.mat"),db.matEncoding)
         #serialization/deserialization ends up converting

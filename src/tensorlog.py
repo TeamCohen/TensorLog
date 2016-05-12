@@ -13,9 +13,8 @@ import bpcompiler
 import learn
 
 
-#TODO make parameters of a program
-MAXDEPTH=10
-NORMALIZE=True
+DEFAULT_MAXDEPTH=10
+DEFAULT_NORMALIZE=True
 
 TRACE=True
 
@@ -29,6 +28,8 @@ class Program(object):
         self.db = db
         self.function = {}
         self.rules = rules
+        self.maxDepth = DEFAULT_MAXDEPTH
+        self.normalize = DEFAULT_NORMALIZE
 
     def findPredDef(self,mode):
         """Find the set of rules with a lhs that match the given mode."""
@@ -42,7 +43,7 @@ class Program(object):
         if (mode,depth) in self.function:
             return
 
-        if depth>MAXDEPTH:
+        if depth>self.maxDepth:
             self.function[(mode,depth)] = funs.NullFunction(mode)
         else:
             predDef = self.findPredDef(mode)
@@ -58,7 +59,7 @@ class Program(object):
                 #clauses
                 ruleFuns = map(lambda r:bpcompiler.BPCompiler(mode,self,depth,r).getFunction(), predDef)
                 self.function[(mode,depth)] = funs.SumFunction(ruleFuns)
-            if depth==0 and NORMALIZE:
+            if depth==0 and self.normalize:
                 self.function[(mode,0)] = funs.SoftmaxFunction(self.function[(mode,0)])
         return self.function[(mode,depth)]
 
@@ -180,8 +181,11 @@ class ProPPRProgram(Program):
 class Interp(object):
     """High-level interface to tensor log."""
 
-    def __init__(self,initFiles=[],proppr=True,weights=None):
-        if proppr: 
+    def __init__(self,initFiles=[],initProgram=None,proppr=True,weights=None):
+        if initProgram:
+            assert not initFiles, 'cannot initialize an interpreter with both initFiles and initProgram'
+            self.prog = initProgram
+        elif proppr: 
             self.prog = ProPPRProgram.load(initFiles)
             if weights==None:
                 weights = self.prog.db.ones()

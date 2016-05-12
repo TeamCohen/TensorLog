@@ -20,13 +20,12 @@ import mutil
 # python -m unittest testtensorlog.TestSmallProofs.testIf
 
 def maybeNormalize(expectedResultDict):
-    if tensorlog.NORMALIZE:
-        #softmax normalization
-        for k in expectedResultDict:
-            expectedResultDict[k] = math.exp(expectedResultDict[k])
-        norm = sum(expectedResultDict.values())
-        for c in expectedResultDict:
-            expectedResultDict[c] /= norm
+    #softmax normalization
+    for k in expectedResultDict:
+        expectedResultDict[k] = math.exp(expectedResultDict[k])
+    norm = sum(expectedResultDict.values())
+    for c in expectedResultDict:
+        expectedResultDict[c] /= norm
 
 class DataBuffer(object):
     def __init__(self,db):
@@ -82,6 +81,56 @@ class TestInterp(unittest.TestCase):
         self.ti.listAllRules()
         self.ti.listAllFacts()
         print self.ti.eval("predict/io", "pb")
+
+class TestMatrixRecursion(unittest.TestCase):
+
+    def setUp(self):
+        self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
+    
+    def testRec0(self):
+        self.matInferenceCheck(['p(X,Y):-child(X,Y).','p(X,Y):-r1(X,Y).','r1(X,Y):-child(X,Y).'],
+                               'r1(i,o)',['william','rachel'],
+                               {0: {'charlie': 0.5, 'josh': 0.5}, 1: {'caroline': 0.5, 'elizabeth': 0.5}})
+
+    def testRec1(self):
+        self.matInferenceCheck(['p(X,Y):-child(X,Y).','p(X,Y):-r1(X,Y).','r1(X,Y):-child(X,Y).'],
+                               'p(i,o)',['william','rachel'],
+                               {0: {'charlie': 0.5, 'josh': 0.5}, 1: {'caroline': 0.5, 'elizabeth': 0.5}})
+
+    def testRecBound(self):
+        self.matInferenceCheck(['p(X,Y):-child(X,Y).','p(X,Y):-r1(X,Y).','r1(X,Y):-spouse(X,Y).'],
+                               'p(i,o)',['william','rachel'],
+                               {0: {'charlie': 1.0/3.0, 'josh': 1.0/3.0, 'susan':1.0/3.0}, 1: {'caroline': 0.5, 'elizabeth': 0.5}})
+        self.matInferenceCheck(['p(X,Y):-child(X,Y).','p(X,Y):-r1(X,Y).','r1(X,Y):-spouse(X,Y).'],
+                               'p(i,o)',['william','rachel'],
+                               {0: {'charlie': 0.5, 'josh': 0.5}, 1: {'caroline': 0.5, 'elizabeth': 0.5}},
+                               maxDepth=0)
+
+    def matInferenceCheck(self,ruleStrings,modeString,inputSymbols,expectedResultDict,maxDepth=None):
+        print 'testing inference for mode',modeString,'on inputs',inputSymbols,'with rules:'
+        for r in ruleStrings:
+            print '>',r
+        rules = parser.RuleCollection()
+        for r in ruleStrings:
+            rules.add(parser.Parser.parseRule(r))
+        prog = tensorlog.Program(db=self.db,rules=rules)
+        if maxDepth!=None: prog.maxDepth=maxDepth
+        mode = declare.ModeDeclaration(modeString)
+        X = mutil.stack(map(lambda s:prog.db.onehot(s), inputSymbols))
+        actual = prog.eval(mode,[X])
+        print 'compiled functions',prog.function.keys()
+        self.checkDictOfDicts(prog.db.matrixAsSymbolDict(actual), expectedResultDict)
+        
+    def checkDictOfDicts(self,actual,expected):
+        print 'actual',actual
+        print 'expected',expected
+        self.assertTrue(len(actual.keys())==len(expected.keys()))
+        for r in actual.keys():
+            da = actual[r]
+            de = expected[r]
+            self.assertTrue(len(da.keys())==len(de.keys()))
+            for k in da.keys():
+                self.assertAlmostEqual(da[k],de[k],0.001)
 
 class TestSmallProofs(unittest.TestCase):
     
@@ -156,10 +205,9 @@ class TestSmallProofs(unittest.TestCase):
     # 
 
     def maybeNormalize(self,expectedResultDict):
-        if tensorlog.NORMALIZE:
-            norm = sum(expectedResultDict.values())
-            for c in expectedResultDict:
-                expectedResultDict[c] /= norm
+        norm = sum(expectedResultDict.values())
+        for c in expectedResultDict:
+            expectedResultDict[c] /= norm
 
 
     def inferenceCheck(self,ruleStrings,modeString,inputSymbol,expectedResultDict):
@@ -409,25 +457,15 @@ class TestProPPR(unittest.TestCase):
             d = self.prog.db.rowAsSymbolDict(pred)
             if i<4: 
                 pass
-#                print 'native row',i,self.xsyms[i],d
-            if tensorlog.NORMALIZE:
-                uniform = {'pos':0.5,'neg':0.5}
-                self.checkDicts(d,uniform)
-            else:
-                self.checkClass(d,self.xsyms[i],'pos',self.numWords)
-                self.checkClass(d,self.xsyms[i],'neg',self.numWords)
+            uniform = {'pos':0.5,'neg':0.5}
+            self.checkDicts(d,uniform)
 
     def testNativeMatrix(self):
         pred = self.prog.eval(self.mode,[self.X])
         d0 = self.prog.db.matrixAsSymbolDict(pred)
         for i,d in d0.items():
-#            if i<4: print 'native matrix',i,self.xsyms[i],d
-            if tensorlog.NORMALIZE:
-                uniform = {'pos':0.5,'neg':0.5}
-                self.checkDicts(d,uniform)
-            else:
-                self.checkClass(d,self.xsyms[i],'pos',self.numWords)
-                self.checkClass(d,self.xsyms[i],'neg',self.numWords)
+            uniform = {'pos':0.5,'neg':0.5}
+            self.checkDicts(d,uniform)
 
     def testGradMatrix(self):
         data = DataBuffer(self.prog.db)
