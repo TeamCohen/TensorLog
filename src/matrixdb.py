@@ -103,7 +103,8 @@ class MatrixDB(object):
     def vector(self,mode):
         """Returns a row vector for a unary predicate."""
         assert mode.arity==1
-        return self.matEncoding[(mode.functor,mode.arity)]
+        result = self.matEncoding[(mode.functor,mode.arity)]
+        return result
 
     def matrixPreimage(self,mode):
         """The preimage associated with this mode, eg if mode is p(i,o) then

@@ -7,6 +7,10 @@ import mutil
 
 # if true print ops as they are executed
 TRACE = False
+# if true print outputs of ops - only use this for tiny test cases
+LONG_TRACE = False
+
+OPTIMIZE_COMPONENT_MULTIPLY = False
 
 ##############################################################################
 #
@@ -59,6 +63,7 @@ class Op(object):
         self.msgFrom = msgFrom
         self.msgTo = msgTo
     #TODO docstrings
+    #TODO make this like what was done in funs.py, with _doEval and _doBackprop
     def eval(self,env):
         assert False,'abstract method called'
     def backprop(self,env,gradAccum):
@@ -66,10 +71,16 @@ class Op(object):
         assert False,'abstract method called'
     def traceEvalCompletion(self,env):
         # call at end of eval
-        if TRACE: print 'eval',self,'stores',env.db.matrixAsSymbolDict(env[self.dst])
+        if TRACE: 
+            print 'eval',self,
+            if LONG_TRACE: print 'stores',env.db.matrixAsSymbolDict(env[self.dst])
+            else: print
     def traceBackPropCompletion(self,env):
         # call at end of backprop
-        if TRACE: print 'bp',self,'delta[',self.dst,']',env.db.matrixAsSymbolDict(env.delta[self.dst])
+        if TRACE: 
+            print 'bp',self,'delta[',self.dst,']',
+            if LONG_TRACE: print env.db.matrixAsSymbolDict(env.delta[self.dst])
+            else: print
     def showDeltaShape(self,env,key):
         print 'shape of env.delta[%s]' % key,env.delta[key].get_shape()
     def showShape(self,env,key):
@@ -197,7 +208,13 @@ class VecMatMulOp(Op):
         self.traceEvalCompletion(env)
     def backprop(self,env,gradAccum):
         # dst = f(src,mat)
-        env.delta[self.src] = env.delta[self.dst] * env.db.matrix(self.matMode,(not self.transpose))
+        try:
+            env.delta[self.src] = env.delta[self.dst] * env.db.matrix(self.matMode,(not self.transpose))
+        except Exception as e:
+            def showmat(msg,m): print msg,type(m),m.get_shape(),m.nnz
+            showmat(self.dst+' delta',env.delta[self.dst])
+            showmat(str(self.matMode) + ' transpose=%r' % (not self.transpose ), env.db.matrix(self.matMode,(not self.transpose)))
+            print e
         if env.db.isParameter(self.matMode):
             update = env[self.src].transpose() * (env.delta[self.dst])
             # The transpose flag is set in BP when sending a message
@@ -229,13 +246,20 @@ class ComponentwiseVecMulOp(Op):
     def _ppLHS(self):
         return "%s o %s" % (self.src,self.src2)
     def eval(self,env):
-        m1,m2 = mutil.broadcastBinding(env, self.src, self.src2)
-        env[self.dst] = m1.multiply(m2)
+        if OPTIMIZE_COMPONENT_MULTIPLY:
+            env[self.dst] = mutil.broadcastAndComponentwiseMultiply(env[self.src],env[self.src2])
+        else:
+            m1,m2 = mutil.broadcastBinding(env,self.src,self.src2)
+            env[self.dst] = m1.multiply(m2)
         self.traceEvalCompletion(env)
     def backprop(self,env,gradAccum):
-        m1,m2 = mutil.broadcastBinding(env, self.src, self.src2)
-        env.delta[self.src] = env.delta[self.dst].multiply(m2)
-        env.delta[self.src2] = env.delta[self.dst].multiply(m1)
+        if OPTIMIZE_COMPONENT_MULTIPLY:
+            env.delta[self.src] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src2])
+            env.delta[self.src2] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src])
+        else:
+            m1,m2 = mutil.broadcastBinding(env,self.src,self.src2)            
+            env.delta[self.src] = env.delta[self.dst].multiply(m2)
+            env.delta[self.src2] = env.delta[self.dst].multiply(m1)
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
@@ -246,7 +270,7 @@ class WeightedVec(Op):
         self.weighter = weighter
         self.vec = vec
     def __repr__(self):
-        return "WeightedVec<%s,%s.sum(),%s>" % (self.dst,self.weighter,self.vec)
+        return "WeightedVec(%s,%s.sum(),%s)" % (self.dst,self.weighter,self.vec)
     def _ppLHS(self):
         return "%s * %s.sum()" % (self.vec,self.weighter)
     def eval(self,env):
@@ -266,13 +290,13 @@ class WeightedVec(Op):
         # old slow version was:
         #   mVec,mWeighter = mutil.broadcastBinding(env, self.vec, self.weighter)
         #   env.delta[self.vec] = mutil.weightByRowSum(env.delta[self.dst],mWeighter)
-        # optimized version of step 2a
-        env.delta[self.vec] = mutil.broadcastAndWeightByRowSum(env.delta[self.dst],env[self.weighter]) #optimized
+        # new optimized version of step 2a
+        env.delta[self.vec] = mutil.broadcastAndWeightByRowSum(env.delta[self.dst],env[self.weighter]) 
         # step 2b: bp from delta[dst] to delta[weighterSum]
         #   would be: delta[weighterSum] = (delta[dst].multiply(vec)).sum
         # followed by 
         # step 1: bp from delta[weighterSum] to weighter
         #   delta[weighter] = delta[weighterSum]*weighter
-        # but we can combine 2b and 1 as follows:
+        # but we can combine 2b and 1 as follows (optimized):
         env.delta[self.weighter] = mutil.broadcastAndWeightByRowSum(env[self.weighter], env.delta[self.dst].multiply(env[self.vec]))
         self.traceBackPropCompletion(env)

@@ -3,8 +3,10 @@
 import scipy.sparse as SS
 import scipy.io
 import numpy as np
+import math
 
 # miscellaneous broadcast utilities used my ops.py and funs.py
+OPTIMIZE_SOFTMAX = False
 
 def mean(mat):
     """Return the average of the rows."""
@@ -12,9 +14,21 @@ def mean(mat):
 
 def mapData(dataFun,mat):
     """Apply some function to the mat.data array of the sparse matrix and return a new one."""
-    return SS.csr_matrix((dataFun(mat.data),mat.indices,mat.indptr), shape=mat.shape, dtype='float64')
+    def showMat(msg,m): print msg,type(m),m.shape
+    newdata = dataFun(mat.data)
+    assert newdata.shape==mat.data.shape,'shape mismatch %r vs %r' % (newdata.shape,mat.data.shape)
+    return SS.csr_matrix((newdata,mat.indices,mat.indptr), shape=mat.shape, dtype='float64')
+
+def nzCols(mat,rowIndex):
+    """Enumerate the non-zero column indices in row i."""
+    for colIndex in mat.indices[mat.indptr[rowIndex]:mat.indptr[rowIndex+1]]:
+        yield colIndex
+
+def emptyRow(mat,rowIndex):
+    return mat.indptr[rowIndex]==mat.indptr[rowIndex+1]
 
 def stack(mats):
+    """Vertically stack matrices and return a sparse csr matrix."""
     return SS.csr_matrix(SS.vstack(mats, dtype='float64'))
 
 def numRows(m): 
@@ -32,7 +46,6 @@ def broadcastBinding(env,var1,var2):
     m2 = env[var2]
     return broadcast2(m1,m2)
 
-#TODO optimize?
 def broadcast2(m1,m2):
     """Return a pair of shape-compatible matrices for m1, m2 """
     r1 = numRows(m1)
@@ -61,22 +74,54 @@ def softmax(m):
             #that would be: d_sm = e_d / (e_d.sum() + numCols(r) - r.nnz)
             d_sm = e_d / e_d.sum()
             return SS.csr_matrix((d_sm,r.indices,r.indptr),shape=r.shape)
-
     assert (isinstance(m,SS.csr_matrix) or isinstance(m,SS.csc_matrix)),'bad type for %r' % m
     numr = numRows(m)
     if numr==1:
         return softmaxRow(m)
-    else:
+    elif not OPTIMIZE_SOFTMAX:
         rows = [m.getrow(i) for i in range(numr)]
         return stack([softmaxRow(r) for r in rows])
+    else:
+        #much faster for benchmark problems
+        #but way slower for wordnet
+        result = m.copy()
+        for i in xrange(numr):
+            if not emptyRow(result,i):
+                rowMax = max(result[i,j] for j in nzCols(result,i))
+                rowNorm = 0
+                for j in nzCols(result,i):
+                    result[i,j] = math.exp(result[i,j] - rowMax)
+                    rowNorm += result[i,j]
+                for j in nzCols(result,i):            
+                    result[i,j] = result[i,j]/rowNorm
+        return result
+
+def broadcastAndComponentwiseMultiply(m1,m2):
+    def multiplyByBroadcastRowVec(r,m,v):
+        result = m1.copy()
+        for i in xrange(r):
+            for j in nzCols(m,i):
+                result[i,j] = result[i,j]*v[0,j]
+        return result
+    r1 = numRows(m1)
+    r2 = numRows(m2)
+    if r1==r2:
+        return  m1.multiply(m2)
+    elif r1==1:
+        return multiplyByBroadcastRowVec(r2,m2,m1)
+    elif r2==1:
+        return multiplyByBroadcastRowVec(r1,m1,m2)        
+    else:
+        assert False, 'mismatched matrix sizes: #rows %d,%d' % (r1,r2)
 
 def broadcastAndWeightByRowSum(m1,m2):
+    """ Optimized combination of broadcast2 and weightByRowSum operations
+    """ 
     r1 = numRows(m1)
     r2 = numRows(m2)
     if r2==1:
         return  m1 * m2.sum()
-#   TODO: optimize
-    elif r1==1:
+    elif r1==1 and r2>1:
         #space for the values of the result - need to duplicate m1 for each row of m2
         nnz1 = m1.data.shape[0]
         data = np.zeros(shape=(nnz1*r2,))
@@ -99,8 +144,12 @@ def broadcastAndWeightByRowSum(m1,m2):
         result = SS.csr_matrix((data,indices,indptr),shape=m2.shape, dtype='float64')
         return result
     else:
-        m1b,m2b = broadcast2(m1,m2)
-        return weightByRowSum(m1b,m2b)
+        assert r1==r2
+        result = m1.copy()
+        for i in xrange(r1):
+            w = m2.data[m2.indptr[i]:m2.indptr[i+1]].sum()
+            result.data[result.indptr[i]:result.indptr[i+1]] *= w
+        return result
 
 
 def weightByRowSum(m1,m2):

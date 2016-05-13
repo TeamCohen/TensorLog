@@ -57,6 +57,9 @@ class OpSeqFunction(Function):
         for i in range(n):
             op = self.ops[n-i-1]
             op.backprop(self.opEnv,gradAccum)
+        assert len(self.opInputs)==1, 'bp for multiple input functions not implemented'
+        return self.opEnv.delta[self.opInputs[0]]
+
 
 class NullFunction(OpSeqFunction):
     """Returns an all-zeros vector."""
@@ -72,7 +75,7 @@ class NullFunction(OpSeqFunction):
         self.result = db.zeros(mutil.numRows(values[0]))
         return self.result
     def backprop(self,delta,gradAccum):
-        pass
+        return self.result
 
 class SumFunction(Function):
     """A function which computes the sum of a bunch of other functions."""
@@ -87,14 +90,15 @@ class SumFunction(Function):
         addends = map(lambda f:f.eval(db,values), self.funs)
         accum = addends[0]
         for i in range(1,len(addends)):
-            assert accum.get_shape()==addends[i].get_shape(), \
-                'shape error %r vs %r for addend %d\n%s' % (accum.get_shape(),addends[i].get_shape(),i,("\n > ".join(self.pprint())))
             accum = accum + addends[i]
         self.result = accum
         return self.result
     def backprop(self,delta,gradAccum):
-        for f in self.funs:
-            f.backprop(delta,gradAccum)
+        addends = map(lambda f:f.backprop(delta,gradAccum), self.funs)
+        accum = addends[0]
+        for i in range(1,len(addends)):
+            accum = accum + addends[i]
+        return accum
 
 class SoftmaxFunction(Function):
     """A function which computes row-wise softmax."""
