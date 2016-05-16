@@ -10,7 +10,8 @@ TRACE = False
 # if true print outputs of ops - only use this for tiny test cases
 LONG_TRACE = False
 
-OPTIMIZE_COMPONENT_MULTIPLY = False
+OPTIMIZE_WEIGHTED_VEC = True
+OPTIMIZE_COMPONENT_MULTIPLY = True
 
 ##############################################################################
 #
@@ -65,20 +66,18 @@ class Op(object):
     #TODO docstrings
     #TODO make this like what was done in funs.py, with _doEval and _doBackprop
     def eval(self,env):
-        assert False,'abstract method called'
-    def backprop(self,env,gradAccum):
-        #these should all call eval first
-        assert False,'abstract method called'
-    def traceEvalCompletion(self,env):
-        # call at end of eval
-        if TRACE: 
+        if TRACE:
             print 'eval',self,
+        self._doEval(env)
+        if TRACE:
             if LONG_TRACE: print 'stores',env.db.matrixAsSymbolDict(env[self.dst])
             else: print
-    def traceBackPropCompletion(self,env):
-        # call at end of backprop
-        if TRACE: 
+    def backprop(self,env,gradAccum):
+        #these should all call eval first
+        if TRACE:
             print 'bp',self,'delta[',self.dst,']',
+        self._doBackprop(env,gradAccum)
+        if TRACE: 
             if LONG_TRACE: print env.db.matrixAsSymbolDict(env.delta[self.dst])
             else: print
     def showDeltaShape(self,env,key):
@@ -107,17 +106,15 @@ class DefinedPredOp(Op):
         return "DefinedPredOp(%r,%r,%s,%d)" % (self.dst,self.src,str(self.funMode),self.depth)
     def _ppLHS(self):
         return "f_[%s,%d](%s)" % (str(self.funMode),self.depth,self.src)
-    def eval(self,env):
+    def _doEval(self,env):
         subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
         vals = [env[self.src]]
         outputs = subfun.eval(self.tensorlogProg.db, vals)
         env[self.dst] = outputs
-        self.traceEvalCompletion(env)
-    def backprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum):
         subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
         newDelta = subfun.backprop(env.delta[self.dst],gradAccum)
         env.delta[self.src] = newDelta
-        self.traceBackPropCompletion(env)
 
 class AssignPreimageToVar(Op):
     """Mat is something like p(X,Y) where Y is not used 'downstream' or
@@ -131,10 +128,9 @@ class AssignPreimageToVar(Op):
         return "AssignPreimageToVar(%s,%s)" % (self.dst,self.matMode)
     def _ppLHS(self):
         return "M_[%s]" % str(self.matMode)
-    def eval(self,env):
+    def _doEval(self,env):
         env[self.dst] = env.db.matrixPreimage(self.matMode)
-        self.traceEvalCompletion(env)
-    def backprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum):
         #TODO implement preimages
         assert False,'backprop with preimages not implemented'
 
@@ -148,15 +144,13 @@ class AssignVectorToVar(Op):
         return "AssignVectorToVar(%s,%s)" % (self.dst,self.matMode)
     def _ppLHS(self):
         return "V_[%s]" % str(self.matMode)
-    def eval(self,env):
+    def _doEval(self,env):
         env[self.dst] = env.db.vector(self.matMode)
-        self.traceEvalCompletion(env)
-    def backprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum):
         if env.db.isParameter(self.matMode):        
             update = env.delta[self.dst]
             key = (self.matMode.functor,self.matMode.arity)
             gradAccum.accum(key,update)
-        self.traceBackPropCompletion(env)
 
 class AssignZeroToVar(Op):
     """Set the dst variable to an all-zeros row."""
@@ -166,11 +160,12 @@ class AssignZeroToVar(Op):
         return "ClearVar(%r)" % (self.dst)
     def _ppLHS(self):
         return "0"
-    def eval(self,env):
+    def _doEval(self,env):
+        #TODO - zeros(n)? or is this used now?
         env[self.dst] = env.db.zeros()
-        self.traceEvalCompletion(env)
-    def backprop(self,env,gradAccum):
-        self.traceBackPropCompletion(env)
+    def _doBackprop(self,env,gradAccum):
+        #TODO check
+        pass
 
 class AssignOnehotToVar(Op):
     """ Assign a one-hot row encoding of a constant to the dst variable.
@@ -182,12 +177,11 @@ class AssignOnehotToVar(Op):
         return "AssignOnehotToVar(%s,%s)" % (self.dst,self.onehotConst)
     def _ppLHS(self):
         return 'U_[%s]' % self.onehotConst
-    def eval(self,env):
+    def _doEval(self,env):
         env[self.dst] = env.db.onehot(self.onehotConst)
-        self.traceEvalCompletion(env)
-    def backprop(self,env,gradAccum):
-        self.traceBackPropCompletion(env)
-    
+    def _doBackprop(self,env,gradAccum):
+        #TODO check
+        pass
 
 class VecMatMulOp(Op):
     """Op of the form "dst = src*mat or dst=src*mat.tranpose()"
@@ -203,18 +197,11 @@ class VecMatMulOp(Op):
         buf = "%s * M_[%s]" % (self.src,self.matMode)
         if self.transpose: buf += ".T"
         return buf
-    def eval(self,env):
+    def _doEval(self,env):
         env[self.dst] = env[self.src] * env.db.matrix(self.matMode,self.transpose)
-        self.traceEvalCompletion(env)
-    def backprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum):
         # dst = f(src,mat)
-        try:
-            env.delta[self.src] = env.delta[self.dst] * env.db.matrix(self.matMode,(not self.transpose))
-        except Exception as e:
-            def showmat(msg,m): print msg,type(m),m.get_shape(),m.nnz
-            showmat(self.dst+' delta',env.delta[self.dst])
-            showmat(str(self.matMode) + ' transpose=%r' % (not self.transpose ), env.db.matrix(self.matMode,(not self.transpose)))
-            print e
+        env.delta[self.src] = env.delta[self.dst] * env.db.matrix(self.matMode,(not self.transpose))
         if env.db.isParameter(self.matMode):
             update = env[self.src].transpose() * (env.delta[self.dst])
             # The transpose flag is set in BP when sending a message
@@ -231,7 +218,6 @@ class VecMatMulOp(Op):
             # finally save the update
             key = (self.matMode.functor,self.matMode.arity)
             gradAccum.accum(key,update)
-        self.traceBackPropCompletion(env)
 
 class ComponentwiseVecMulOp(Op):
     """ Computes dst = src*Diag(src2), i.e., the component-wise product of
@@ -245,14 +231,13 @@ class ComponentwiseVecMulOp(Op):
         return "ComponentwiseVecMulOp(%r,%r,%s)" % (self.dst,self.src,self.src2)
     def _ppLHS(self):
         return "%s o %s" % (self.src,self.src2)
-    def eval(self,env):
+    def _doEval(self,env):
         if OPTIMIZE_COMPONENT_MULTIPLY:
             env[self.dst] = mutil.broadcastAndComponentwiseMultiply(env[self.src],env[self.src2])
         else:
             m1,m2 = mutil.broadcastBinding(env,self.src,self.src2)
             env[self.dst] = m1.multiply(m2)
-        self.traceEvalCompletion(env)
-    def backprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum):
         if OPTIMIZE_COMPONENT_MULTIPLY:
             env.delta[self.src] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src2])
             env.delta[self.src2] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src])
@@ -273,13 +258,13 @@ class WeightedVec(Op):
         return "WeightedVec(%s,%s.sum(),%s)" % (self.dst,self.weighter,self.vec)
     def _ppLHS(self):
         return "%s * %s.sum()" % (self.vec,self.weighter)
-    def eval(self,env):
-        #optimized
-        #m1,m2 = mutil.broadcastBinding(env, self.vec, self.weighter)
-        #env[self.dst] = mutil.weightByRowSum(m1,m2)
-        env[self.dst] = mutil.broadcastAndWeightByRowSum(env[self.vec],env[self.weighter])
-        self.traceEvalCompletion(env)
-    def backprop(self,env,gradAccum):
+    def _doEval(self,env):
+        if OPTIMIZE_WEIGHTED_VEC:
+            env[self.dst] = mutil.broadcastAndWeightByRowSum(env[self.vec],env[self.weighter])
+        else:
+            m1,m2 = mutil.broadcastBinding(env, self.vec, self.weighter)
+            env[self.dst] = mutil.weightByRowSum(m1,m2)
+    def _doBackprop(self,env,gradAccum):
         # This is written as a single operation
         #    dst = vec * weighter.sum()
         # but we will break into two steps conceptually
@@ -288,15 +273,23 @@ class WeightedVec(Op):
         # and then backprop through step 2, then step 1
         # step 2a: bp from delta[dst] to delta[vec]
         # old slow version was:
-        #   mVec,mWeighter = mutil.broadcastBinding(env, self.vec, self.weighter)
-        #   env.delta[self.vec] = mutil.weightByRowSum(env.delta[self.dst],mWeighter)
+        if OPTIMIZE_WEIGHTED_VEC:
+            env.delta[self.vec] = mutil.broadcastAndWeightByRowSum(env.delta[self.dst],env[self.weighter]) 
+        else:
+            mVec,mWeighter = mutil.broadcastBinding(env, self.vec, self.weighter)
+            env.delta[self.vec] = mutil.weightByRowSum(env.delta[self.dst],mWeighter)
         # new optimized version of step 2a
-        env.delta[self.vec] = mutil.broadcastAndWeightByRowSum(env.delta[self.dst],env[self.weighter]) 
         # step 2b: bp from delta[dst] to delta[weighterSum]
         #   would be: delta[weighterSum] = (delta[dst].multiply(vec)).sum
         # followed by 
         # step 1: bp from delta[weighterSum] to weighter
         #   delta[weighter] = delta[weighterSum]*weighter
         # but we can combine 2b and 1 as follows (optimized):
-        env.delta[self.weighter] = mutil.broadcastAndWeightByRowSum(env[self.weighter], env.delta[self.dst].multiply(env[self.vec]))
-        self.traceBackPropCompletion(env)
+        if OPTIMIZE_WEIGHTED_VEC:
+            tmp = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.vec])
+            env.delta[self.weighter] = \
+                mutil.broadcastAndWeightByRowSum(env[self.weighter], tmp)
+        else:
+            env.delta[self.weighter] = \
+                mutil.weightByRowSum(env[self.weighter], env.delta[self.dst].multiply(env[self.vec]))
+            

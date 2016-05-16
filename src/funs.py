@@ -111,7 +111,7 @@ class SoftmaxFunction(Function):
         return [('| '*depth) + 'SoftmaxFunction:'] + self.fun.pprint(depth=depth+1)
     def _doEval(self,db,values):
         unnorm = self.fun.eval(db,values)
-        self.result = mutil.softmax(unnorm)
+        self.result = mutil.softmax(db,unnorm)
         return self.result
     def backprop(self,delta):
         # see comments for learner.crossEntropyGrad
