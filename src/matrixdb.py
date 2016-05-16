@@ -72,7 +72,7 @@ class MatrixDB(object):
         i = self.stab.getId(s)
         return scipy.sparse.csr_matrix( ([1.0],([0],[i])), shape=(1,n))
 
-    def zeros(self,rows=1):
+    def zeros(self,rows=1):  # 'rows' argument added: predict() requires multi-row results --kmm
         """An all-zeros row matrix."""
         n = self.dim()
         return scipy.sparse.csr_matrix( ([],([],[])), shape=(rows,n))
@@ -197,7 +197,7 @@ class MatrixDB(object):
 
     def summary(self,functor,arity):
         m = self.matEncoding[(functor,arity)]
-        return 'in DB: type %r shape %r non-zeros %d' % (type(m),m.get_shape(),m.nnz)
+        return 'in DB: %s' % mutil.summary(m)
 
     def listing(self):
         for (functor,arity),m in self.matEncoding.items():
@@ -308,7 +308,7 @@ class MatrixDB(object):
     def bufferLines(self,lines):
         """Load triples from a list of lines and buffer them internally"""
         for line in lines:
-            loadLine(self,line.strip())
+            self.bufferLine(line) #was: loadLine (undefined?)
 
     def bufferFile(self,filename):
         """Load triples from a file and buffer them internally."""
@@ -377,6 +377,14 @@ class MatrixDB(object):
         def dictOfFloats(): return collections.defaultdict(float)
         def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
         self.buf = collections.defaultdict(dictOfFloatDicts)
+    
+    def addLines(self,lines):
+        self.startBuffers()
+        self.bufferLines(lines)
+        self.rebufferMatrices()
+        self.flushBuffers()
+        self.clearBuffers()
+        
     
     def addFile(self,filename):
         self.startBuffers()

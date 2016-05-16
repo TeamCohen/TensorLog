@@ -6,6 +6,9 @@ import numpy as np
 
 # miscellaneous broadcast utilities used my ops.py and funs.py
 
+def summary(m):
+    return 'type %r shape %r non-zeros %d' % (type(m),m.get_shape(),m.nnz)
+
 def mean(mat):
     """Return the average of the rows."""
     return SS.csr_matrix(mat.mean(axis=0))

@@ -3,8 +3,11 @@
 import logging
 import ops
 import mutil
+import tlerr
 
 def trace(): return logging.getLogger().isEnabledFor(logging.DEBUG)
+TRACE = False
+
 
 class Function(object):
     """The tensorlog representation of a function. This supports eval and
@@ -16,6 +19,12 @@ class Function(object):
         """Return list of lines in a pretty-print of the function.
         """
         assert False, 'abstract method called'
+    def traceEvalCommencement(self):
+        # call at beginning of eval
+        if TRACE: print 'fn eval',self
+    def traceEvalCompletion(self):
+        # call at end of eval
+        if TRACE: print 'fn eval /'+str(self)
 
 class OpSeqFunction(Function):
 
@@ -33,21 +42,32 @@ class OpSeqFunction(Function):
     def pprint(self,depth=0):
         top = ('| '*depth) + '%s = OpSeqFunction(%r):' % (self.opOutput,self.opInputs)
         if self.rule: top = top + '\t\t// ' + str(self.rule)
-        return [top] + map(lambda o:('| '*(depth+1))+o.pprint(), self.ops)
+        return [top] + reduce(lambda x,y:x+y, map(lambda o:[s for s in o.pprint(depth+1)], self.ops))
     def eval(self,db,values):
+        self.traceEvalCommencement()
         #eval expression
         self.opEnv = ops.Envir(db)
         self.opEnv.bindList(self.opInputs,values)
+        i=0
         for op in self.ops:
+            i+=1
+            #if TRACE: logging.debug("calling %d of %d %s from %s" % (i,len(self.ops),str(op),str(self)))
             op.eval(self.opEnv)
         self.result = self.opEnv[self.opOutput]
+        #if TRACE: logging.debug("returning %s from %s" % (str(self.result.shape),str(self)))
+        self.traceEvalCompletion()
         return self.result
     def backprop(self,delta,gradAccum):
         self.opEnv.delta[self.opOutput] = delta
+        #if type(delta) != type(0) and delta.nnz == 0: raise tlerr.InvalidBackpropState("0 nonzero elements in delta")
+        logging.debug("OpSeqFunction delta[%s] set to %s" % (self.opOutput,str(delta) if type(delta) == type(0) else mutil.summary(delta)))
         n = len(self.ops)
+        #logging.debug("delta keys required: %s" % ",".join([self.ops[n-i-1].dst for i in range(n)]))
         for i in range(n):
             op = self.ops[n-i-1]
+            logging.debug("delta key required: %s [%s]" % (op.dst,op.__class__.__name__))
             op.backprop(self.opEnv,gradAccum)
+        logging.debug("I suppose deltas now set for %s" % ",".join([self.ops[n-i-1].src for i in range(n)]))
 
 class NullFunction(OpSeqFunction):
     """Returns an all-zeros vector."""
@@ -60,10 +80,14 @@ class NullFunction(OpSeqFunction):
     def pprint(self,depth=0):
         return [('| '*depth) + repr(self)]
     def eval(self,db,values):
-        self.result = db.zeros()
+        self.traceEvalCommencement()
+        n=1
+        if len(values)>0: n = values[0].shape[0] # predict() requires multi-row results --kmm
+        self.result = db.zeros(n) 
+        self.traceEvalCompletion()
         return self.result
     def backprop(self,delta,gradAccum):
-        pass
+        return 0 # learning on deep graphs requires sensible delta returned here --kmm
 
 class SumFunction(Function):
     """A function which computes the sum of a bunch of other functions."""
@@ -75,11 +99,13 @@ class SumFunction(Function):
     def pprint(self,depth=0):
         return [('| '*depth) + 'SumFunction:'] + reduce(lambda x,y:x+y, map(lambda f:f.pprint(depth=depth+1), self.funs))
     def eval(self,db,values):
+        self.traceEvalCommencement()
         addends = map(lambda f:f.eval(db,values), self.funs)
         accum = addends[0]
         for i in range(1,len(addends)):
             accum = accum + addends[i]
         self.result = accum
+        self.traceEvalCompletion()
         return self.result
     def backprop(self,delta,gradAccum):
         for f in self.funs:
@@ -95,8 +121,10 @@ class SoftmaxFunction(Function):
     def pprint(self,depth=0):
         return [('| '*depth) + 'SoftmaxFunction:'] + self.fun.pprint(depth=depth+1)
     def eval(self,db,values):
+        self.traceEvalCommencement()
         unnorm = self.fun.eval(db,values)
         self.result = mutil.softmax(unnorm)
+        self.traceEvalCompletion()
         return self.result
     def backprop(self,delta):
         # see comments for learner.crossEntropyGrad

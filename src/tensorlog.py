@@ -14,7 +14,7 @@ import learn
 
 
 #TODO make parameters of a program
-MAXDEPTH=10
+MAXDEPTH=4
 NORMALIZE=True
 
 TRACE=True
@@ -83,7 +83,7 @@ class Program(object):
         if (mode,0) not in self.function: self.compile(mode)
         fun = self.function[(mode,0)]
         if TRACE: logging.debug('eval function %s' % str(fun))
-        if TRACE: logging.debug('\n'.join(fun.pprint()))
+        #if TRACE: logging.debug('\n'.join(fun.pprint()))
         return fun.eval(self.db, inputs)
 
     def evalGradSymbols(self,mode,symbols):

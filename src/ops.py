@@ -4,9 +4,12 @@ import numpy
 import logging
 
 import mutil
+import tlerr
 
 # if true print ops as they are executed
 TRACE = False
+
+MAXDEPTH=8
 
 ##############################################################################
 #
@@ -53,6 +56,7 @@ class Op(object):
     def __init__(self,dst):
         self.dst = dst
         self.msgFrom = self.msgTo = None
+        self.src = "n/a"
     def setMessage(self,msgFrom,msgTo):
         """For debugging/tracing, record the BP message associated with this
         operation."""
@@ -66,20 +70,22 @@ class Op(object):
         assert False,'abstract method called'
     def traceEvalCompletion(self,env):
         # call at end of eval
-        if TRACE: print 'eval',self,'stores',env.db.matrixAsSymbolDict(env[self.dst])
+        #if TRACE: print 'op eval',self,'stores',env.db.matrixAsSymbolDict(env[self.dst])
+        pass
     def traceBackPropCompletion(self,env):
         # call at end of backprop
-        if TRACE: print 'bp',self,'delta[',self.dst,']',env.db.matrixAsSymbolDict(env.delta[self.dst])
+        if TRACE: print 'op bp  ',self,'delta[',self.dst,']'#,env.db.matrixAsSymbolDict(env.delta[self.dst])
     def showDeltaShape(self,env,key):
         print 'shape of env.delta[%s]' % key,env.delta[key].get_shape()
     def showShape(self,env,key):
         print 'shape of env[%s]' % key,env[key].get_shape()
-    def pprint(self):
+    def pprint(self,depth=-1):
         buf = '%s = %s' % (self.dst,self._ppLHS())
         if self.msgFrom and self.msgTo:
-            return '%-45s // %s -> %s' % (buf,self.msgFrom,self.msgTo)
+            buf = "%-45s // %s -> %s" % (buf,self.msgFrom,self.msgTo)
+            return ["%s%-94s [%s]" % (('| '*depth),buf,self.__class__.__name__)]
         else:
-            return buf
+            return ["%s%s" % (('| '*depth),buf)]
     def _ppLHS(self):
         #override
         return repr(self)
@@ -100,13 +106,23 @@ class DefinedPredOp(Op):
         subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
         vals = [env[self.src]]
         outputs = subfun.eval(self.tensorlogProg.db, vals)
-        env[self.dst] = outputs[0]
+        env[self.dst] = outputs #'[0]' removed: predict() needs multi-row results --kmm
         self.traceEvalCompletion(env)
     def backprop(self,env,gradAccum):
         subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
+        foo = env.delta[self.dst]
         newDelta = subfun.backprop(env.delta[self.dst],gradAccum)
+        if newDelta == None: raise tlerr.InvalidBackpropState("None delta received from %s\ndst %s, src %s\ndelta was: %s" % (subfun.__class__.__name__,self.dst,self.src,env.delta))
         env.delta[self.src] = newDelta
+        logging.debug("%s(%s,%s) delta[%s] set to %s" % (self.__class__.__name__,self.dst,self.src,self.src,str(newDelta)))
         self.traceBackPropCompletion(env)
+    def pprint(self,depth=-1):
+        top = super(DefinedPredOp,self).pprint(depth)
+        #return top
+        #if self.depth>MAXDEPTH: return top
+        if depth>MAXDEPTH: return top + ["%s..." % ('| '*(depth+1))]
+        return top + self.tensorlogProg.function[(self.funMode,self.depth)].pprint(depth=depth+1)
+            
 
 class AssignPreimageToVar(Op):
     """Mat is something like p(X,Y) where Y is not used 'downstream' or
@@ -198,6 +214,7 @@ class VecMatMulOp(Op):
     def backprop(self,env,gradAccum):
         # dst = f(src,mat)
         env.delta[self.src] = env.delta[self.dst] * env.db.matrix(self.matMode,(not self.transpose))
+        logging.debug("%s delta[%s] set to %s" % (self.__class__.__name__,self.src,mutil.summary(env.delta[self.src])))
         if env.db.isParameter(self.matMode):
             update = env[self.src].transpose() * (env.delta[self.dst])
             # The transpose flag is set in BP when sending a message
@@ -235,7 +252,10 @@ class ComponentwiseVecMulOp(Op):
     def backprop(self,env,gradAccum):
         m1,m2 = mutil.broadcastBinding(env, self.src, self.src2)
         env.delta[self.src] = env.delta[self.dst].multiply(m2)
+        logging.debug("%s delta[%s] set to %s" % (self.__class__.__name__,self.src,mutil.summary(env.delta[self.src])))
         env.delta[self.src2] = env.delta[self.dst].multiply(m1)
+        logging.debug("%s delta[%s] set to %s" % (self.__class__.__name__,self.src2,mutil.summary(env.delta[self.src2])))
+        self.traceBackPropCompletion(env)
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
@@ -245,6 +265,7 @@ class WeightedVec(Op):
         super(WeightedVec,self).__init__(dst)
         self.weighter = weighter
         self.vec = vec
+        self.src = "[%s,%s]" % (weighter,vec)
     def __repr__(self):
         return "WeightedVec<%s,%s.sum(),%s>" % (self.dst,self.weighter,self.vec)
     def _ppLHS(self):
@@ -268,6 +289,7 @@ class WeightedVec(Op):
         #   env.delta[self.vec] = mutil.weightByRowSum(env.delta[self.dst],mWeighter)
         # optimized version of step 2a
         env.delta[self.vec] = mutil.broadcastAndWeightByRowSum(env.delta[self.dst],env[self.weighter]) #optimized
+        logging.debug("%s delta[%s] set to %s" % (self.__class__.__name__,self.vec,mutil.summary(env.delta[self.vec])))
         # step 2b: bp from delta[dst] to delta[weighterSum]
         #   would be: delta[weighterSum] = (delta[dst].multiply(vec)).sum
         # followed by 
@@ -275,4 +297,5 @@ class WeightedVec(Op):
         #   delta[weighter] = delta[weighterSum]*weighter
         # but we can combine 2b and 1 as follows:
         env.delta[self.weighter] = mutil.broadcastAndWeightByRowSum(env[self.weighter], env.delta[self.dst].multiply(env[self.vec]))
+        logging.debug("%s delta[%s] set to %s" % (self.__class__.__name__,self.weighter,mutil.summary(env.delta[self.vec])))
         self.traceBackPropCompletion(env)

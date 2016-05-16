@@ -147,8 +147,10 @@ class MultiModeLearner(FixedRateGDLearner):
         batches = len(self.modes)
         for i in range(self.epochs):
             print 'epoch %d of %d' % (i+1,self.epochs)
+            lastPrint = time.time()
             for b in range(batches):
-                #print 'batch %d of %d' % (b+1,batches)
+                if time.time()-lastPrint > 10: # seconds
+                   print 'batch %d of %d...' % (b+1,batches)
                 if self.modes[b] not in self.trainingData: assert "No training data available for mode %s" % str(self.modes[b])
                 self._trainBatch(self.modes[b],*self.trainingData[self.modes[b]],startTime=startTime)
             Ps = self.predict(self.modes,self.Xs)
