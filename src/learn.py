@@ -10,6 +10,8 @@ import mutil
 import declare
 import logging
 
+ROBUST_ACCURACY_CHECK = False
+
 class GradAccumulator(object):
     """ Accumulate the sum gradients for perhaps many parameters, indexing
     them by parameter name.
@@ -32,7 +34,7 @@ class GradAccumulator(object):
         else:
             self.runningSum[paramName] = self.runningSum[paramName] + deltaGradient
 
-#todo is data part of learner?
+#TODO is data part of learner?
 class Learner(object):
 
     # prog pts to db, rules
@@ -44,17 +46,27 @@ class Learner(object):
     @staticmethod
     def accuracy(Y,P):
         #TODO surely there's a better way of doing this
-        n = mutil.numRows(P)
-        ok = 0.0
         def allZerosButArgmax(d):
             result = NP.zeros_like(d)
             result[d.argmax()] = 1.0
             return result
+        n = mutil.numRows(P)
+        ok = 0.0
         for i in range(n):
-            pi = P.getrow(i)
-            yi = Y.getrow(i)
-            ti = mutil.mapData(allZerosButArgmax,pi)
-            ok += yi.multiply(ti).sum()
+            if not ROBUST_ACCURACY_CHECK:
+                pi = P.getrow(i)
+                yi = Y.getrow(i)
+                ti = mutil.mapData(allZerosButArgmax,pi)
+                ok += yi.multiply(ti).sum()
+            else:
+                #TODO: WAY slower
+                maxp = -1
+                maxj = -1
+                for j in mutil.nzCols(P,i):
+                    if P[i,j]>maxp:                
+                        maxp = P[i,j]
+                        maxj = j
+                ok += Y[i,maxj]
         return ok/n
 
     @staticmethod
@@ -110,7 +122,7 @@ class Learner(object):
 #            mean = SS.csr_matrix(delta.mean(axis=0))  #column mean
             m = m0 + mutil.mean(delta)*rate
             #clip negative entries to zero
-            m = mutil.mapData(lambda d:NP.clip(m.data,0.0,NP.finfo('float64').max), m)
+            NP.clip(m.data,0.0,NP.finfo('float64').max)
             self.prog.db.setParameter(functor,arity,m)
 
 class FixedRateGDLearner(Learner):
