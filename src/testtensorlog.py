@@ -277,10 +277,12 @@ class TestMultiRowOps(unittest.TestCase):
             'josh':1.0,'charlie':1.0},
             {'caroline':1.0,'elizabeth':1.0}])
     def compareCheck(self,ruleStrings,modeString,inputSymbols,expectedResultDicts):
+        for d in expectedResultDicts:
+            maybeNormalize(d)
+            d[matrixdb.NULL_ENTITY_NAME] = 0
         self.inferenceCheck(ruleStrings,modeString,inputSymbols,expectedResultDicts)
         self.predictCheck(ruleStrings,modeString,inputSymbols,expectedResultDicts)
     def inferenceCheck(self,ruleStrings,modeString,inputSymbols,expectedResultDicts):
-        for d in expectedResultDicts: maybeNormalize(d)
         print '\n\ntesting inference for mode',modeString,'on input',inputSymbols,'with rules:'
         for r in ruleStrings:
             print '>',r
@@ -299,10 +301,9 @@ class TestMultiRowOps(unittest.TestCase):
         
         fun = prog.compile(mode)
         for i in range(len(inputSymbols)):
-            y1 = prog.evalSymbols(mode,[inputSymbols[i]]) 
+            y1 = prog.evalSymbols(mode,[inputSymbols[i]])
             self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDicts[i])
     def predictCheck(self,ruleStrings,modeString,inputSymbols,expectedResultDicts):
-        for d in expectedResultDicts: maybeNormalize(d)
         print '\n\ntesting predictions for mode',modeString,'on input',inputSymbols,'with rules:'
         for r in ruleStrings:
             print '>',r
@@ -585,13 +586,13 @@ class TestProPPR(unittest.TestCase):
     def testMultiLearn(self):
         mode = declare.ModeDeclaration('predict(i,o)')
         X,Y = self.labeledData.matrixAsTrainingData('train',2)
-        learner = learn.MultiModeLearner(self.prog,[mode],[X],[Y],epochs=5)
-        P0 = learner.predict([mode],[X])[0]
+        learner = learn.MultiModeLearner(self.prog,[mode],Xs=[X],Ys=[Y],epochs=5)
+        P0 = learner.predict([mode],Xs=[X])[0]
         acc0 = learner.accuracy(Y,P0,stack=False)
         xent0 = learner.crossEntropy(Y,P0,stack=False)
 
         learner.train()
-        P1 = learner.predict([mode],[X])[0]
+        P1 = learner.predict([mode],Xs=[X])[0]
         acc1 = learner.accuracy(Y,P1,stack=False)
         xent1 = learner.crossEntropy(Y,P1,stack=False)
         
@@ -601,7 +602,7 @@ class TestProPPR(unittest.TestCase):
         print 'toy train: acc1',acc1,'xent1',xent1
 
         TX,TY = self.labeledData.matrixAsTrainingData('test',2)
-        P2 = learner.predict([mode],[TX])[0]
+        P2 = learner.predict([mode],Xs=[TX])[0]
         acc2 = learner.accuracy(TY,P2,stack=False)
         xent2 = learner.crossEntropy(TY,P2,stack=False)
         print 'toy test: acc2',acc2,'xent2',xent2
@@ -657,65 +658,7 @@ class TestProPPR(unittest.TestCase):
             for k in actual.keys():
                 self.assertAlmostEqual(actual[k], expected[k], delta=0.05)
 
-class TestMultiProPPR(unittest.TestCase):
-#class TestMultiProPPR(object):
-    def setUp(self):
-        #logging.basicConfig(level=logging.DEBUG)
-        self.prog = tensorlog.ProPPRProgram.load(["test/top-1000-near-google-recursive.ppr","test/top-1000-near-google.db"])
-        self.trainData = self.prog.db.createPartner()
-        self.trainData.addFile("test/top-1000-near-google.train.safe.examples.cfacts")
-        self.trainKeys = [m for m in self.trainData.matEncoding.keys() if m[1]==2 ]
-        #self.testData = self.prog.db.createPartner()
-        #self.testData.addFile("test/top-1000-near-google.test.examples.cfacts")
-        #self.testKeys = [m for m in self.testData.matEncoding.keys() if m[1]==2 ]
-        self.prog.setWeights(self.prog.db.ones())
-        self.prog.maxDepth=2
-        
-        self.Xs=[]
-        self.Ys=[]
-        self.modes = []
-        self._loadData(self.trainData,self.trainKeys,self.Xs,self.Ys,self.modes)
-    
-    def _loadData(self,db,modeSpecs,xs,ys,modes):
-        for m in modeSpecs:
-            x,y = db.matrixAsTrainingData(*m)
-            xs.append(x)
-            ys.append(y)
-            modes.append(declare.ModeDeclaration("%s(i,o)" % m[0]))
-    
-    def testMultiLearn(self):
-        #self.modes = [self.modes[34]]
-        #self.Ys = [self.Ys[34]]
-        #self.Xs = [self.Xs[34]]
-        learner = learn.MultiModeLearner(self.prog,self.modes,self.Xs,self.Ys,epochs=5)
-        P0 = learner.predict(self.modes,self.Xs)
-        acc0 = learner.accuracy(self.Ys,P0)
-        #for y,p,i in zip(self.Ys,P0,range(len(P0))):
-        #    try:
-        #        xent_i = learner.crossEntropy(y,p,stack=False)
-        #    except ValueError as e:
-        #        print "at mode %d: %s" % (i,self.modes[i])
-        xent0 = learner.crossEntropy(self.Ys,P0)
-        print 'top-1000-near-google untrained: xent0',xent0,'acc0',acc0
-        self.assertFalse(math.isnan(xent0))
 
-        learner.train()
-        P1 = learner.predict(self.modes)
-        acc1 = learner.accuracy(self.Ys,P1)
-        xent1 = learner.crossEntropy(self.Ys,P1)
-        
-        #self.assertTrue(acc0<=acc1)
-        #self.assertTrue(xent0>=xent1)
-        #self.assertTrue(acc1==1)
-        print 'top-1000-near-google trained: xent1',xent1,'acc1',acc1
-
-        #TX,TY,Tmodes = [],[],[]
-        #self._loadData(self.testData,self.testKeys,TX,TY,Tmodes)
-        #P2 = learner.predict(Tmodes,TX)
-        #acc2 = learner.accuracy(TY,P2)
-        #xent2 = learner.crossEntropy(TY,P2)
-        #print 'fb15k test: acc2',acc2,'xent2',xent2
-        #self.assertTrue(acc2==1)
 
 
 if __name__=="__main__":
