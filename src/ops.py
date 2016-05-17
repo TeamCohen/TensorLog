@@ -11,7 +11,8 @@ TRACE = False
 LONG_TRACE = False
 
 OPTIMIZE_WEIGHTED_VEC = True
-OPTIMIZE_COMPONENT_MULTIPLY = True
+#not apparently faster
+OPTIMIZE_COMPONENT_MULTIPLY = False
 
 ##############################################################################
 #

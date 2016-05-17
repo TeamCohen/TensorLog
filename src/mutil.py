@@ -105,10 +105,19 @@ def softmax(db,m):
 
 def broadcastAndComponentwiseMultiply(m1,m2):
     def multiplyByBroadcastRowVec(r,m,v):
+        vd = {}
+        for j in nzCols(v,0):
+            vd[j] = v[0,j]
         result = m1.copy()
         for i in xrange(r):
-            for j in nzCols(m,i):
-                result[i,j] = result[i,j]*v[0,j]
+            #for j in nzCols(m,i):
+            #    result[i,j] = result[i,j]*v[0,j]
+            for j in range(result.indptr[i],result.indptr[i+1]):
+                k = result.indices[j]
+                if k in vd:
+                    result.data[j] = result.data[j] * vd[k]
+                else:
+                    result.data[j] = 0
         return result
     r1 = numRows(m1)
     r2 = numRows(m2)

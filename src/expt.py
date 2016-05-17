@@ -80,7 +80,7 @@ class Expt(object):
             Expt.timeAction('saving test examples', lambda:Expt.dataAsProPPRExamples(savedTestExamples,theoryPred,ti.db,UX,UY))
 
         if savedTrainExamples:
-            Expt.timeAction('saving train examples', lambda:Expt.dataAsProPPRExamples(savedTrainExamples,theoryPred,ti.db,UX,UY))
+            Expt.timeAction('saving train examples', lambda:Expt.dataAsProPPRExamples(savedTrainExamples,theoryPred,ti.db,TX,TY))
 
         if savedTestPreds and savedTestExamples:
             print 'ready for commands like: proppr eval %s %s --metric map' % (savedTestExamples,savedTestPreds)
