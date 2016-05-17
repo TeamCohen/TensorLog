@@ -9,6 +9,8 @@ import mutil
 import tlerr
 
 TRACE = False
+# if true print outputs of funs - only use this for tiny test cases
+LONG_TRACE = False
 
 class Function(object):
     """The tensorlog representation of a function. This supports eval and
@@ -16,7 +18,7 @@ class Function(object):
     """
     def eval(self,db,values):
         result = self._doEval(db,values)
-        if TRACE:
+        if LONG_TRACE:
             print "Function completed:\n%s" % "\n. . ".join(self.pprint())
             for k,v in enumerate(values):
                 print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
@@ -68,15 +70,15 @@ class OpSeqFunction(Function):
     def backprop(self,delta,gradAccum):
         self.opEnv.delta[self.opOutput] = delta
         #if type(delta) != type(0) and delta.nnz == 0: raise tlerr.InvalidBackpropState("0 nonzero elements in delta")
-        logging.debug("OpSeqFunction delta[%s] set to %s" % (self.opOutput,str(delta) if type(delta) == type(0) else mutil.summary(delta)))
+        if TRACE: logging.debug("OpSeqFunction delta[%s] set to %s" % (self.opOutput,str(delta) if type(delta) == type(0) else mutil.summary(delta)))
         n = len(self.ops)
         #logging.debug("delta keys required: %s" % ",".join([self.ops[n-i-1].dst for i in range(n)]))
         for i in range(n):
             op = self.ops[n-i-1]
-            logging.debug("delta key required: %s [%s]" % (op.dst,op.__class__.__name__))
+            if TRACE: logging.debug("delta key required: %s [%s]" % (op.dst,op.__class__.__name__))
             op.backprop(self.opEnv,gradAccum)
         assert len(self.opInputs)==1, 'bp for multiple input functions not implemented'
-        logging.debug("I suppose deltas now set for %s" % ",".join([self.ops[n-i-1].src for i in range(n)]))
+        if TRACE: logging.debug("deltas should now be set for %s" % ",".join([self.ops[n-i-1].src for i in range(n)]))
         return self.opEnv.delta[self.opInputs[0]]
 
 class NullFunction(OpSeqFunction):
@@ -90,9 +92,9 @@ class NullFunction(OpSeqFunction):
     def pprint(self,depth=0):
         return [('| '*depth) + repr(self)]
     def _doEval(self,db,values):
-        self.traceEvalCommencement()
+        #self.traceEvalCommencement()
         self.result = db.zeros(mutil.numRows(values[0]))
-        self.traceEvalCompletion()
+        #self.traceEvalCompletion()
         return self.result
     def backprop(self,delta,gradAccum):
         return self.result
@@ -135,7 +137,10 @@ class SoftmaxFunction(Function):
     def _doEval(self,db,values):
         self.traceEvalCommencement()
         unnorm = self.fun.eval(db,values)
+        #logging.debug("Softmax unorm: %s, %s" % (mutil.summary(unnorm),unnorm.data.all()))
         self.result = mutil.softmax(unnorm)
+        #logging.debug("Softmax result: %s, %s" % (mutil.summary(self.result),self.result.data.all()))
+        
         self.traceEvalCompletion()
         return self.result
     def backprop(self,delta):

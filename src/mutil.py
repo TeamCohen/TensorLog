@@ -4,9 +4,12 @@ import scipy.sparse as SS
 import scipy.io
 import numpy as np
 import math
+import logging
 
 # miscellaneous broadcast utilities used my ops.py and funs.py
 OPTIMIZE_SOFTMAX = False
+
+np.seterr('raise')
 
 def summary(m):
     return 'type %r shape %r non-zeros %d' % (type(m),m.get_shape(),m.nnz)
@@ -60,12 +63,19 @@ def broadcast2(m1,m2):
     elif r1==1 and r2>1:
         return stack([m1]*r2),m2
 
+def reNormalize(m,threshold=None):
+    """Normalize rows of a sparse matrix in-place"""
+    if threshold != None:
+        fix = m.data == 0
+        m.data[fix] = threshold
+    m.data = m.data / m.data.sum()
+
 def softmax(m):
     """Row-wise softmax of a sparse matrix, returned as a sparse matrix.
     This doesn't really require 'broadcasting' but it seems like you
     need special case handling to deal with multiple rows efficiently.
     """
-    def softmaxRow(r):
+    def softmaxRow(r,debug=False):
         if not r.nnz:
             # evals to uniform
             n = numCols(r)
@@ -103,8 +113,23 @@ def broadcastAndComponentwiseMultiply(m1,m2):
     def multiplyByBroadcastRowVec(r,m,v):
         result = m1.copy()
         for i in xrange(r):
-            for j in nzCols(m,i):
-                result[i,j] = result[i,j]*v[0,j]
+            nzm = nzCols(m,i)
+            nzv = nzCols(v,0)
+            try:
+                mj = nzm.next()
+                vj = nzv.next()
+                while True:
+                    if mj < vj:
+                        mj = nzm.next()
+                    if vj < mj:
+                        vj = nzv.next()
+                    else: # mj == vj
+                        result[i,mj] = result[i,mj]*v[0,vj]
+                        mj = nzm.next()
+                        vj = nzv.next()
+            except StopIteration:
+                pass
+            #    result[i,j] = result[i,j]*v[0,j]
         return result
     r1 = numRows(m1)
     r2 = numRows(m2)

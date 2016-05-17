@@ -11,6 +11,7 @@ import declare
 import logging
 
 ROBUST_ACCURACY_CHECK = False
+MIN_PROBABILITY = NP.finfo(dtype='float64').eps
 
 class GradAccumulator(object):
     """ Accumulate the sum gradients for perhaps many parameters, indexing
@@ -80,7 +81,9 @@ class Learner(object):
         If X==None, use the training data. """
         if X==None: X = self.X
         predictFun = self.prog.getPredictFunction(mode)
-        return predictFun.eval(self.prog.db, [X])
+        result = predictFun.eval(self.prog.db, [X])
+        mutil.reNormalize(result,threshold=MIN_PROBABILITY)
+        return result
 
     def crossEntropyGrad(self,mode,traceFun=None,X=None,Y=None):
         """Compute the parameter gradient associated with softmax
@@ -163,8 +166,13 @@ class MultiModeLearner(FixedRateGDLearner):
             for b in range(batches):
                 if time.time()-lastPrint > 10: # seconds
                    print 'batch %d of %d...' % (b+1,batches)
+                   lastPrint = time.time()
                 if self.modes[b] not in self.trainingData: assert "No training data available for mode %s" % str(self.modes[b])
-                self._trainBatch(self.modes[b],*self.trainingData[self.modes[b]],startTime=startTime)
+                try:
+                    self._trainBatch(self.modes[b],*self.trainingData[self.modes[b]],startTime=startTime)
+                except FloatingPointError as e:
+                    print "_trainBatch trouble at mode %d, %s" % (b,str(self.modes[b]))
+                    raise e
             Ps = self.predict(self.modes,self.Xs)
             print ' crossEnt %.3f' % self.crossEntropy(self.Ys,Ps),
             print ' acc %.3f' % self.accuracy(self.Ys,Ps),
@@ -183,8 +191,12 @@ class MultiModeLearner(FixedRateGDLearner):
         i=0
         for m,x in zip(modes,Xs):
             i+=1
-            logging.debug("Mode %d of %d: %s %s" % (i,len(modes),str(m),str(x.shape)))
-            Y.append(super(MultiModeLearner,self).predict(m,x))
+            logging.debug("Predict: mode %d of %d: %s %s" % (i,len(modes),str(m),str(x.shape)))
+            try:
+                Y.append(super(MultiModeLearner,self).predict(m,x))
+            except FloatingPointError as e:
+                print "predict trouble at mode %d, %s" % (i,str(m))
+                raise e
         return Y
                              
     def accuracy(self,Ys,Ps,stack=True):

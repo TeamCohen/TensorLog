@@ -13,6 +13,7 @@ import parser
 import matrixdb
 import bpcompiler
 import ops
+import funs
 import learn
 import mutil
 
@@ -645,15 +646,16 @@ class TestProPPR(unittest.TestCase):
 class TestMultiProPPR(unittest.TestCase):
 #class TestMultiProPPR(object):
     def setUp(self):
-        logging.basicConfig(level=logging.DEBUG)
+        #logging.basicConfig(level=logging.DEBUG)
         self.prog = tensorlog.ProPPRProgram.load(["test/top-1000-near-google-recursive.ppr","test/top-1000-near-google.db"])
         self.trainData = self.prog.db.createPartner()
-        self.trainData.addFile("test/top-1000-near-google.train.6.examples.cfacts")
+        self.trainData.addFile("test/top-1000-near-google.train.safe.examples.cfacts")
         self.trainKeys = [m for m in self.trainData.matEncoding.keys() if m[1]==2 ]
         #self.testData = self.prog.db.createPartner()
         #self.testData.addFile("test/top-1000-near-google.test.examples.cfacts")
         #self.testKeys = [m for m in self.testData.matEncoding.keys() if m[1]==2 ]
         self.prog.setWeights(self.prog.db.ones())
+        self.prog.maxDepth=2
         
         self.Xs=[]
         self.Ys=[]
@@ -668,12 +670,20 @@ class TestMultiProPPR(unittest.TestCase):
             modes.append(declare.ModeDeclaration("%s(i,o)" % m[0]))
     
     def testMultiLearn(self):
+        #self.modes = [self.modes[34]]
+        #self.Ys = [self.Ys[34]]
+        #self.Xs = [self.Xs[34]]
         learner = learn.MultiModeLearner(self.prog,self.modes,self.Xs,self.Ys,epochs=5)
-        oldDepth,tensorlog.MAXDEPTH=tensorlog.MAXDEPTH,4
         P0 = learner.predict(self.modes,self.Xs)
         acc0 = learner.accuracy(self.Ys,P0)
+        #for y,p,i in zip(self.Ys,P0,range(len(P0))):
+        #    try:
+        #        xent_i = learner.crossEntropy(y,p,stack=False)
+        #    except ValueError as e:
+        #        print "at mode %d: %s" % (i,self.modes[i])
         xent0 = learner.crossEntropy(self.Ys,P0)
-        print 'top-1000-near-google untrained: acc0',acc0,'xent0',xent0
+        print 'top-1000-near-google untrained: xent0',xent0,'acc0',acc0
+        self.assertFalse(math.isnan(xent0))
 
         learner.train()
         P1 = learner.predict(self.modes)
@@ -683,7 +693,7 @@ class TestMultiProPPR(unittest.TestCase):
         #self.assertTrue(acc0<=acc1)
         #self.assertTrue(xent0>=xent1)
         #self.assertTrue(acc1==1)
-        print 'top-1000-near-google trained: acc1',acc1,'xent1',xent1
+        print 'top-1000-near-google trained: xent1',xent1,'acc1',acc1
 
         #TX,TY,Tmodes = [],[],[]
         #self._loadData(self.testData,self.testKeys,TX,TY,Tmodes)
@@ -692,7 +702,7 @@ class TestMultiProPPR(unittest.TestCase):
         #xent2 = learner.crossEntropy(TY,P2)
         #print 'fb15k test: acc2',acc2,'xent2',xent2
         #self.assertTrue(acc2==1)
-        tensorlog.MAXDEPTH=oldDepth
+
 
 if __name__=="__main__":
     if len(sys.argv)==1:
