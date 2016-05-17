@@ -82,7 +82,7 @@ class Learner(object):
         if X==None: X = self.X
         predictFun = self.prog.getPredictFunction(mode)
         result = predictFun.eval(self.prog.db, [X])
-        mutil.reNormalize(result,threshold=MIN_PROBABILITY)
+        #mutil.reNormalize(result,threshold=MIN_PROBABILITY)
         return result
 
     def crossEntropyGrad(self,mode,traceFun=None,X=None,Y=None):
@@ -148,14 +148,18 @@ class FixedRateGDLearner(Learner):
 
 class MultiModeLearner(FixedRateGDLearner):
 
-    def __init__(self,prog,modes,Xs,Ys,epochs=10,rate=0.1):
+    def __init__(self,prog,modes,Xs=None,Ys=None,data=None,epochs=10,rate=0.1):
         super(MultiModeLearner,self).__init__(prog,X=None,Y=None,epochs=epochs,rate=rate)
-        self.trainingData = {}
-        for (mode,x,y) in zip(modes,Xs,Ys):
-            self.trainingData[mode] = (x,y)
         self.modes = modes
-        self.Xs = Xs
-        self.Ys = Ys
+        if data!=None: 
+            self.trainingData = data
+            self.Ys = [data[m.functor][1] for m in modes]
+        else:
+            self.trainingData = {}
+            for (mode,x,y) in zip(modes,Xs,Ys):
+                self.trainingData[mode.functor] = (x,y)
+            self.Ys = Ys
+        self.rate = self.rate / len(self.modes) # maybe this is what's causing the underflow?
     
     def train(self):
         startTime = time.time()
@@ -167,13 +171,13 @@ class MultiModeLearner(FixedRateGDLearner):
                 if time.time()-lastPrint > 10: # seconds
                    print 'batch %d of %d...' % (b+1,batches)
                    lastPrint = time.time()
-                if self.modes[b] not in self.trainingData: assert "No training data available for mode %s" % str(self.modes[b])
+                if self.modes[b].functor not in self.trainingData: assert "No training data available for mode %s" % str(self.modes[b])
                 try:
-                    self._trainBatch(self.modes[b],*self.trainingData[self.modes[b]],startTime=startTime)
+                    self._trainBatch(self.modes[b],*self.trainingData[self.modes[b].functor],startTime=startTime)
                 except FloatingPointError as e:
                     print "_trainBatch trouble at mode %d, %s" % (b,str(self.modes[b]))
                     raise e
-            Ps = self.predict(self.modes,self.Xs)
+            Ps = self.predict(self.modes,data=self.trainingData)
             print ' crossEnt %.3f' % self.crossEntropy(self.Ys,Ps),
             print ' acc %.3f' % self.accuracy(self.Ys,Ps),
             print ' cumSecs %.3f' % (time.time()-startTime)
@@ -182,12 +186,14 @@ class MultiModeLearner(FixedRateGDLearner):
         paramGrads = self.crossEntropyGrad(mode,X=X,Y=Y)
         self.applyMeanUpdate(paramGrads,self.rate)
                 
-    def predict(self,modes=None,Xs=None):
-        if modes == None: modes = self.modes
+    def predict(self,modes,Xs=None,data=None):
         if type(modes) == declare.ModeDeclaration:
             return super(MultiModeLearner,self).predict(modes,Xs)
         Y = []
-        if Xs == None: Xs = [self.trainingData[m][0] for m in modes]
+        
+        if Xs == None: 
+            if data == None: data = self.trainingData
+            Xs = [data[m.functor][0] for m in modes]
         i=0
         for m,x in zip(modes,Xs):
             i+=1

@@ -146,9 +146,9 @@ class Expt(object):
         return result
 
     @staticmethod
-    def dataAsProPPRExamples(fileName,theoryPred,db,X,Y):
+    def dataAsProPPRExamples(fileName,theoryPred,db,X,Y,append=False):
         """Convert X and Y to ProPPR examples and store in a file."""
-        fp = open(fileName,'w')
+        fp = open(fileName,'a' if append else 'w')
         dx = db.matrixAsSymbolDict(X)
         dy = db.matrixAsSymbolDict(Y)
         for i in range(max(dx.keys())):
@@ -162,9 +162,9 @@ class Expt(object):
             fp.write('\n')
 
     @staticmethod
-    def predictionAsProPPRSolutions(fileName,theoryPred,db,X,P):
+    def predictionAsProPPRSolutions(fileName,theoryPred,db,X,P,append=False):
         """Print X and P in the ProPPR solutions.txt format."""
-        fp = open(fileName,'w')
+        fp = open(fileName,'a' if append else 'w')
         dx = db.matrixAsSymbolDict(X)
         dp = db.matrixAsSymbolDict(P)
         for i in range(max(dx.keys())):
@@ -177,6 +177,76 @@ class Expt(object):
             for (r,(py,y)) in enumerate(scoresdPs):
                 fp.write('%d\t%.18f\t%s(%s,%s).\n' % (r+1,py,theoryPred,x,y))
 
+class BatchExpt(Expt):
+    def __init__(self,configDict,options={}):
+        super(BatchExpt,self).__init__(configDict)
+        self.options=options
+    def _run(self,
+             initFiles=None, initProgram=None,
+             trainData=None, testData=None,
+             theoryPred=None,
+             savedTestPreds=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None):
+
+        """ Run an experiment, given a whole bunch of parameters.
+        trainData, testData: as from propprExamplesAsData
+        savedTestPreds, savedTestExamples, savedTrainExamples: if not None, then
+        serialize predictions and examples for later eval with ProPPR tools.
+        savedModel: save result of training somewhere
+        """
+        ti = tensorlog.Interp(initFiles=initFiles,initProgram=initProgram)
+        # TODO: should be a parameter, and should work with a sparse parameter vector
+        # ti.prog.setWeights(ti.db.vector(declare.ModeDeclaration('rule(o)')))
+        
+        if theoryPred == None: theoryPred = set(trainData.keys()+testData.keys())
+        elif type(theoryPred)==type(""): theoryPred = [theoryPred]
+        modes = [declare.ModeDeclaration('%s(i,o)' % p) for p in theoryPred]
+
+        learner = learn.MultiModeLearner(ti.prog,modes,data=trainData,epochs=self.options['epochs'] if 'epochs' in self.options else 5)
+
+        TP0 = Expt.timeAction(
+            'running untrained theory on train data',
+            lambda:learner.predict(modes,data=trainData))
+        UP0 = Expt.timeAction(
+            'running untrained theory on test data',
+            lambda:learner.predict(modes,data=testData))
+
+        Expt.timeAction('training', lambda:learner.train())
+
+        TP1 = Expt.timeAction(
+            'running trained theory on train data',
+            lambda:learner.predict(modes,data=trainData))
+        UP1 = Expt.timeAction(
+            'running trained theory on test data',
+            lambda:learner.predict(modes,data=testData))
+        
+        TY = [trainData[m.functor][1] for m in modes if m.functor in trainData]
+        UY = [testData[m.functor][1] for m in modes if m.functor in trainData]
+        Expt.printStats('untrained theory','train',learner,TP0,TY)
+        Expt.printStats('..trained theory','train',learner,TP1,TY)
+        Expt.printStats('untrained theory','test',learner,UP0,UY)
+        Expt.printStats('..trained theory','test',learner,UP1,UY)
+
+        if savedModel:
+            Expt.timeAction('saving trained model', lambda:ti.db.serialize(savedModel))
+
+            
+        if savedTestPreds:
+            open(savedTestPreds,'w').close()
+            Expt.timeAction('saving test predictions', lambda:
+                [Expt.predictionAsProPPRSolutions(savedTestPreds,m.functor,ti.db,testData[m.functor][0],up1,append=True) for m,up1 in zip(modes,UP1)])
+
+        if savedTestExamples:
+            open(savedTestExamples,'w').close()
+            Expt.timeAction('saving test examples', lambda:
+                [Expt.dataAsProPPRExamples(savedTestExamples,m.functor,ti.db,testData[m.functor][0],testData[m.functor][1],append=True) for m in modes])
+
+        if savedTrainExamples:
+            open(savedTrainExamples,'w').close()
+            Expt.timeAction('saving train examples', lambda:
+                [Expt.dataAsProPPRExamples(savedTrainExamples,m.functor,ti.db,trainData[m.functor][0],trainData[m.functor][1],append=True) for m in modes])
+
+        if savedTestPreds and savedTestExamples:
+            print 'ready for commands like: proppr eval %s %s --metric map' % (savedTestExamples,savedTestPreds)
 
 if __name__=="__main__":
     toyparams = {'initFiles':["test/textcattoy.cfacts","test/textcat.ppr"],
