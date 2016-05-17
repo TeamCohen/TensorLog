@@ -1,0 +1,2 @@
+PYTHONPATH=$PYTHONPATH:/afs/cs.cmu.edu/user/wcohen/shared-home/code/TensorLog/src
+TLOG=/afs/cs.cmu.edu/user/wcohen/shared-home/code/TensorLog/src

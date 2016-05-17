@@ -1,0 +1,10 @@
+rule	author
+rule	title
+rule	venue
+rule	tcbib
+rule	authorword
+rule	tcauthor
+rule	titleword
+rule	tctitle
+rule	venueword
+rule	tcvenue
