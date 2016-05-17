@@ -270,7 +270,6 @@ class ComponentwiseVecMulOp(Op):
             if TRACE: logging.debug("%s delta[%s] set to %s" % (self.__class__.__name__,self.src,mutil.summary(env.delta[self.src])))
             env.delta[self.src2] = env.delta[self.dst].multiply(m1)
             if TRACE: logging.debug("%s delta[%s] set to %s" % (self.__class__.__name__,self.src2,mutil.summary(env.delta[self.src2])))
-        self.traceBackPropCompletion(env)
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
