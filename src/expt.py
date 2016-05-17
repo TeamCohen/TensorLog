@@ -1,9 +1,13 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
+import time
+import re
+import collections
+
 import tensorlog
 import declare
 import learn
-import time
+import mutil
 
 class Expt(object):
 
@@ -80,7 +84,7 @@ class Expt(object):
             Expt.timeAction('saving test examples', lambda:Expt.dataAsProPPRExamples(savedTestExamples,theoryPred,ti.db,UX,UY))
 
         if savedTrainExamples:
-            Expt.timeAction('saving train examples', lambda:Expt.dataAsProPPRExamples(savedTrainExamples,theoryPred,ti.db,UX,UY))
+            Expt.timeAction('saving train examples', lambda:Expt.dataAsProPPRExamples(savedTrainExamples,theoryPred,ti.db,TX,TY))
 
         if savedTestPreds and savedTestExamples:
             print 'ready for commands like: proppr eval %s %s --metric map' % (savedTestExamples,savedTestPreds)
@@ -99,6 +103,47 @@ class Expt(object):
     def printStats(modelMsg,testSet,learner,P,Y):
         """Print accuracy and crossEntropy for some named model on a named eval set."""
         print 'eval',modelMsg,'on',testSet,': acc',learner.accuracy(Y,P),'xent',learner.crossEntropy(Y,P)
+
+    @staticmethod 
+    def propprExamplesAsData(db,fileName):
+        """Convert a foo.examples file to a dict of modename->(X,Y)pairs"""
+        xsResult = collections.defaultdict(list)
+        ysResult = collections.defaultdict(list)
+        regex = re.compile('(\w+)\((\w+),(\w+)\)')
+        fp = open(fileName)
+        for line in fp:
+            parts = line.strip().split("\t")
+            mx = regex.search(parts[0])
+            if mx:
+                pred = mx.group(1)
+                x = mx.group(2)
+                pos = []
+                for ans in parts[1:]:
+                    #print '=',pred,x,ans
+                    label = ans[0]
+                    my = regex.search(ans[1:])
+                    assert my,'problem at line '+line
+                    assert my.group(1)==pred,'mismatched preds at line '+line
+                    assert my.group(2)==x,'mismatched x\'s at line '+line
+                    if label=='+':
+                        pos.append(my.group(3))
+                xsResult[pred].append(x)
+                ysResult[pred].append(pos)
+                #print pred,x,pos
+        #print xsResult
+        #print ysResult
+        result = {}
+        for pred in xsResult.keys():
+            xRows = map(lambda x:db.onehot(x), xsResult[pred])
+            def yRow(ys):
+                accum = db.onehot(ys[0])
+                for y in ys[1:]:
+                    accum = accum + db.onehot(y)
+                accum = accum * 1.0/len(ys)
+                return accum
+            yRows = map(yRow, ysResult[pred])
+            result[pred] = (mutil.stack(xRows),mutil.stack(yRows))
+        return result
 
     @staticmethod
     def dataAsProPPRExamples(fileName,theoryPred,db,X,Y):
@@ -143,5 +188,11 @@ if __name__=="__main__":
                  'savedTrainExamples':'toy-train.examples',
                  'savedTestExamples':'toy-test.examples',
     }
-    Expt(toyparams).run()
+#    Expt(toyparams).run()
+    ti = tensorlog.Interp(initFiles=["test/textcattoy.cfacts","test/textcat.ppr"])
+    d = Expt.propprExamplesAsData(ti.db,'test/toytrain.examples')
+    for pred,(X,Y) in d.items():
+        print pred,ti.db.matrixAsSymbolDict(X)
+        print pred,ti.db.matrixAsSymbolDict(Y)
+
 

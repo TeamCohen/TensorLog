@@ -7,7 +7,7 @@ import math
 import logging
 
 # miscellaneous broadcast utilities used my ops.py and funs.py
-OPTIMIZE_SOFTMAX = False
+OPTIMIZE_SOFTMAX = True
 
 np.seterr('raise')
 
@@ -70,12 +70,13 @@ def reNormalize(m,threshold=None):
         m.data[fix] = threshold
     m.data = m.data / m.data.sum()
 
-def softmax(m):
+def softmax(db,m):
     """Row-wise softmax of a sparse matrix, returned as a sparse matrix.
     This doesn't really require 'broadcasting' but it seems like you
     need special case handling to deal with multiple rows efficiently.
     """
-    def softmaxRow(r,debug=False):
+    nullEpsilon = -10  # scores for null entity will be exp(nullMatrix)
+    def softmaxRow(r):
         if not r.nnz:
             # evals to uniform
             n = numCols(r)
@@ -90,46 +91,46 @@ def softmax(m):
     assert (isinstance(m,SS.csr_matrix) or isinstance(m,SS.csc_matrix)),'bad type for %r' % m
     numr = numRows(m)
     if numr==1:
-        return softmaxRow(m)
+        return softmaxRow(m + db.nullMatrix(1)*nullEpsilon)
     elif not OPTIMIZE_SOFTMAX:
-        rows = [m.getrow(i) for i in range(numr)]
+        m1 = m + db.nullMatrix(numr)*nullEpsilon
+        rows = [m1.getrow(i) for i in range(numr)]
         return stack([softmaxRow(r) for r in rows])
     else:
         #much faster for benchmark problems
         #but way slower for wordnet
-        result = m.copy()
+        result = m + db.nullMatrix(numr)*nullEpsilon
         for i in xrange(numr):
-            if not emptyRow(result,i):
-                rowMax = max(result[i,j] for j in nzCols(result,i))
-                rowNorm = 0
-                for j in nzCols(result,i):
-                    result[i,j] = math.exp(result[i,j] - rowMax)
-                    rowNorm += result[i,j]
-                for j in nzCols(result,i):            
-                    result[i,j] = result[i,j]/rowNorm
+            #rowMax = max(result[i,j] for j in nzCols(result,i))
+            rowMax = max(result.data[result.indptr[i]:result.indptr[i+1]])
+            rowNorm = 0
+            #for j in nzCols(result,i):
+            for j in range(result.indptr[i],result.indptr[i+1]):
+                #result[i,j] = math.exp(result[i,j] - rowMax)
+                #rowNorm += result[i,j]
+                result.data[j] = math.exp(result.data[j] - rowMax)
+                rowNorm += result.data[j]
+            #for j in nzCols(result,i):            
+            for j in range(result.indptr[i],result.indptr[i+1]):
+                #result[i,j] = result[i,j]/rowNorm
+                result.data[j] = result.data[j] / rowNorm
         return result
 
 def broadcastAndComponentwiseMultiply(m1,m2):
     def multiplyByBroadcastRowVec(r,m,v):
+        vd = {}
+        for j in nzCols(v,0):
+            vd[j] = v[0,j]
         result = m1.copy()
         for i in xrange(r):
-            nzm = nzCols(m,i)
-            nzv = nzCols(v,0)
-            try:
-                mj = nzm.next()
-                vj = nzv.next()
-                while True:
-                    if mj < vj:
-                        mj = nzm.next()
-                    if vj < mj:
-                        vj = nzv.next()
-                    else: # mj == vj
-                        result[i,mj] = result[i,mj]*v[0,vj]
-                        mj = nzm.next()
-                        vj = nzv.next()
-            except StopIteration:
-                pass
+            #for j in nzCols(m,i):
             #    result[i,j] = result[i,j]*v[0,j]
+            for j in range(result.indptr[i],result.indptr[i+1]):
+                k = result.indices[j]
+                if k in vd:
+                    result.data[j] = result.data[j] * vd[k]
+                else:
+                    result.data[j] = 0
         return result
     r1 = numRows(m1)
     r2 = numRows(m2)

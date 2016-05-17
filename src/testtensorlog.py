@@ -129,9 +129,11 @@ class TestMatrixRecursion(unittest.TestCase):
         for r in actual.keys():
             da = actual[r]
             de = expected[r]
+            if not matrixdb.NULL_ENTITY_NAME in de:
+                de[matrixdb.NULL_ENTITY_NAME]=0.0
             self.assertTrue(len(da.keys())==len(de.keys()))
             for k in da.keys():
-                self.assertAlmostEqual(da[k],de[k],0.001)
+                self.assertAlmostEqual(da[k],de[k],delta=0.05)
 
 class TestSmallProofs(unittest.TestCase):
     
@@ -140,6 +142,9 @@ class TestSmallProofs(unittest.TestCase):
     
     def testIf(self):
         self.inferenceCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
+
+    def testFailure(self):
+        self.inferenceCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
 
     def testRevIf(self):
         self.inferenceCheck(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
@@ -245,11 +250,13 @@ class TestSmallProofs(unittest.TestCase):
 
     def checkDicts(self,actual, expected):
         print 'actual:  ',actual
+        if not matrixdb.NULL_ENTITY_NAME in expected:
+            expected[matrixdb.NULL_ENTITY_NAME]=0.0
         if expected:
             print 'expected:',expected
             self.assertEqual(len(actual.keys()), len(expected.keys()))
             for k in actual.keys():
-                self.assertAlmostEqual(actual[k], expected[k], delta=0.0001)
+                self.assertAlmostEqual(actual[k], expected[k], delta=0.05)
 
 
 class TestMultiRowOps(unittest.TestCase):
@@ -528,6 +535,9 @@ class TestProPPR(unittest.TestCase):
                         'tf':	'a	huge	pile	of	tax	forms	due	yesterday',
                         'jm':	'huge	pile	of	junk	mail	bills	and	catalogs'}
     
+    def testDBKeys(self):
+        self.assertTrue(self.prog.db.stab.hasId(matrixdb.NULL_ENTITY_NAME))
+
     def testNativeRow(self):
         for i in range(self.numExamples):
             pred = self.prog.eval(self.mode,[self.X.getrow(i)])
@@ -541,9 +551,10 @@ class TestProPPR(unittest.TestCase):
         pred = self.prog.eval(self.mode,[self.X])
         d0 = self.prog.db.matrixAsSymbolDict(pred)
         for i,d in d0.items():
-            uniform = {'pos':0.5,'neg':0.5}
+            uniform = {'pos':0.5,'neg':0.5,}
             self.checkDicts(d,uniform)
 
+    #seg fault on mac
     def testGradMatrix(self):
         data = DataBuffer(self.prog.db)
         X,Y = self.labeledData.matrixAsTrainingData('train',2)
@@ -596,6 +607,7 @@ class TestProPPR(unittest.TestCase):
         print 'toy test: acc2',acc2,'xent2',xent2
         self.assertTrue(acc2==1)
         
+    #seg fault on mac
     def testLearn(self):
         mode = declare.ModeDeclaration('predict(i,o)')
         X,Y = self.labeledData.matrixAsTrainingData('train',2)
@@ -636,12 +648,14 @@ class TestProPPR(unittest.TestCase):
         return xsyms,mutil.stack(xs),mutil.stack(ys)
 
     def checkDicts(self,actual, expected):
-#        print 'actual:  ',actual
+        print 'actual:  ',actual
+        if not matrixdb.NULL_ENTITY_NAME in expected:
+            expected[matrixdb.NULL_ENTITY_NAME]=0.0
         if expected:
-#            print 'expected:',expected
+            print 'expected:',expected
             self.assertEqual(len(actual.keys()), len(expected.keys()))
             for k in actual.keys():
-                self.assertAlmostEqual(actual[k], expected[k], 0.0001)
+                self.assertAlmostEqual(actual[k], expected[k], delta=0.05)
 
 class TestMultiProPPR(unittest.TestCase):
 #class TestMultiProPPR(object):

@@ -7,10 +7,13 @@ import scipy.sparse
 import scipy.io
 import collections
 import logging
+import numpy as NP
 
 import symtab 
 import parser
 import mutil
+
+NULL_ENTITY_NAME = '__NULL__'
 
 class MatrixParseError(Exception):
     def __init__(self,msg):
@@ -49,6 +52,7 @@ class MatrixDB(object):
             self.stab = symtab.SymbolTable()
             self.stab.reservedSymbols.add("i")
             self.stab.reservedSymbols.add("o")
+            self.stab.insert(NULL_ENTITY_NAME)
         else:
             self.stab = stab
         #matEncoding[(functor,arity)] encodes predicate as a matrix
@@ -78,9 +82,16 @@ class MatrixDB(object):
         return scipy.sparse.csr_matrix( ([],([],[])), shape=(numRows,n))
 
     def ones(self):
-        """An all-zeros row matrix."""
+        """An all-ones row matrix."""
         n = self.dim()
-        return scipy.sparse.csr_matrix( ([1]*n,([0]*n,[j for j in range(n)])), shape=(1,n))
+        return scipy.sparse.csr_matrix( ([1.0]*n,([0]*n,[j for j in range(n)])), shape=(1,n))
+
+    def nullMatrix(self,numRows=1):
+        n = self.dim()
+        nullId = self.stab.getId(NULL_ENTITY_NAME)
+        return scipy.sparse.csr_matrix( ([1.0]*numRows,
+                                         (list(range(numRows)),[nullId]*numRows)), 
+                                        shape=(numRows,n))
 
     @staticmethod
     def transposeNeeded(mode,transpose=False):

@@ -16,7 +16,6 @@ class SymbolTable(object):
 
     def insert(self,symbol):
         """Insert a symbol."""
-        assert symbol not in self.reservedSymbols, 'Reserved word %s used as a constant' % symbol
         if symbol not in self._idDict:
             self._nextId += 1
             self._idDict[symbol] = self._nextId
@@ -33,7 +32,8 @@ class SymbolTable(object):
         return symbol in self._idDict
 
     def getId(self,symbol):
-        """Get the numeric id, between 1 and N, of a symbol"""
+        """Get the numeric id, between 1 and N, of a symbol.
+        """
         self.insert(symbol)
         return self._idDict[symbol]
 

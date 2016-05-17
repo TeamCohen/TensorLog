@@ -135,13 +135,8 @@ class SoftmaxFunction(Function):
     def pprint(self,depth=0):
         return [('| '*depth) + 'SoftmaxFunction:'] + self.fun.pprint(depth=depth+1)
     def _doEval(self,db,values):
-        self.traceEvalCommencement()
         unnorm = self.fun.eval(db,values)
-        #logging.debug("Softmax unorm: %s, %s" % (mutil.summary(unnorm),unnorm.data.all()))
-        self.result = mutil.softmax(unnorm)
-        #logging.debug("Softmax result: %s, %s" % (mutil.summary(self.result),self.result.data.all()))
-        
-        self.traceEvalCompletion()
+        self.result = mutil.softmax(db,unnorm)
         return self.result
     def backprop(self,delta):
         # see comments for learner.crossEntropyGrad
