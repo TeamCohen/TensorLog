@@ -1,5 +1,0 @@
-if __name__=="__main__":
-   for line in open('labels.txt'):
-       id,lab = line.strip().split("\t")
-       if lab=="yAgents":
-       
