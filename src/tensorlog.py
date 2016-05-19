@@ -11,6 +11,7 @@ import parser
 import matrixdb
 import bpcompiler
 import learn
+import mutil
 
 
 DEFAULT_MAXDEPTH=10
@@ -267,6 +268,17 @@ class Interp(object):
         print "acc0<acc1?   ",acc0<acc1
         print "xent0>xent1? ",xent0>xent1
         print 'trained: acc1',acc1,'xent1',xent1
+    
+    def predict(self,trainingDataFile,modeSpec):
+        mode = self._asMode(modeSpec)
+        trainingData = self.db.createPartner()
+        trainingData.addFile(trainingDataFile)
+        trainSpec = (mode.functor,mode.arity)
+        X,Y = trainingData.matrixAsTrainingData(*trainSpec)
+        self.learner = learn.FixedRateGDLearner(self.prog,X,Y,epochs=5)
+        print "predicting %s for %s" % (str(mode),mutil.summary(X))
+        return self.learner.predict(mode,X)
+        
 
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william

@@ -12,7 +12,7 @@ OPTIMIZE_SOFTMAX = True
 np.seterr('raise')
 
 def summary(m):
-    return 'type %r shape %r non-zeros %d' % (type(m),m.get_shape(),m.nnz)
+    return 'type %r shape %r non-zeros %d min %g max %g' % (type(m),m.get_shape(),m.nnz,m.min(),m.max())
 
 def mean(mat):
     """Return the average of the rows."""
@@ -149,7 +149,12 @@ def broadcastAndWeightByRowSum(m1,m2):
     r1 = numRows(m1)
     r2 = numRows(m2)
     if r2==1:
-        return  m1 * m2.sum()
+        try:
+            return  m1 * m2.sum()
+        except FloatingPointError:
+            print "broadcastAndWeightByRowSum m1: %s" % summary(m1)
+            print "broadcastAndWeightByRowSum m2.sum(): %s" % m2.sum()
+            raise
     elif r1==1 and r2>1:
         #space for the values of the result - need to duplicate m1 for each row of m2
         nnz1 = m1.data.shape[0]

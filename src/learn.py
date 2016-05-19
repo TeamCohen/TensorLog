@@ -107,6 +107,7 @@ class Learner(object):
         if X==None: X=self.X
         if Y==None: Y=self.Y
         P = self.predict(mode,X)
+        
         if traceFun: traceFun(self,Y,P)
         paramGrads = GradAccumulator()
         #TODO assert rowSum(Y) = all ones - that's assumed here in
@@ -168,15 +169,17 @@ class MultiModeLearner(FixedRateGDLearner):
             print 'epoch %d of %d' % (i+1,self.epochs)
             lastPrint = time.time()
             for b in range(batches):
-                if time.time()-lastPrint > 10: # seconds
-                   print 'batch %d of %d...' % (b+1,batches)
+                if time.time()-lastPrint > 0:#10: # seconds
+                   print 'batch %d of %d: %s...' % (b+1,batches,str(self.modes[b]))
                    lastPrint = time.time()
                 if self.modes[b].functor not in self.trainingData: assert "No training data available for mode %s" % str(self.modes[b])
                 try:
                     self._trainBatch(self.modes[b],*self.trainingData[self.modes[b].functor],startTime=startTime)
+                    for p in self.prog.db.params:
+                        logging.debug("params in %s: max %g min %g sum %s" % (str(p),self.prog.db.getParameter(*p).max(),self.prog.db.getParameter(*p).min(),self.prog.db.getParameter(*p).sum() ))
                 except FloatingPointError as e:
                     print "_trainBatch trouble at mode %d, %s" % (b,str(self.modes[b]))
-                    raise e
+                    raise
             Ps = self.predict(self.modes,data=self.trainingData)
             print ' crossEnt %.3f' % self.crossEntropy(self.Ys,Ps),
             print ' acc %.3f' % self.accuracy(self.Ys,Ps),
@@ -184,6 +187,8 @@ class MultiModeLearner(FixedRateGDLearner):
             
     def _trainBatch(self,mode,X,Y,startTime):
         paramGrads = self.crossEntropyGrad(mode,X=X,Y=Y)
+        for (functor,arity),delta in paramGrads.items():
+            logging.debug("paramGrads for %s: max %g min %g %s" % (functor,delta.max(),delta.min(),mutil.summary(delta)))
         self.applyMeanUpdate(paramGrads,self.rate)
                 
     def predict(self,modes,Xs=None,data=None):
@@ -202,7 +207,7 @@ class MultiModeLearner(FixedRateGDLearner):
                 Y.append(super(MultiModeLearner,self).predict(m,x))
             except FloatingPointError as e:
                 print "predict trouble at mode %d, %s" % (i,str(m))
-                raise e
+                raise
         return Y
                              
     def accuracy(self,Ys,Ps,stack=True):

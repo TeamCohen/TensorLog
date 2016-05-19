@@ -8,9 +8,10 @@ import ops
 import mutil
 import tlerr
 
-TRACE = False
+TRACE = True
 # if true print outputs of funs - only use this for tiny test cases
 LONG_TRACE = False
+STRICT=True
 
 class Function(object):
     """The tensorlog representation of a function. This supports eval and
@@ -70,15 +71,21 @@ class OpSeqFunction(Function):
     def backprop(self,delta,gradAccum):
         self.opEnv.delta[self.opOutput] = delta
         #if type(delta) != type(0) and delta.nnz == 0: raise tlerr.InvalidBackpropState("0 nonzero elements in delta")
-        if TRACE: logging.debug("OpSeqFunction delta[%s] set to %s" % (self.opOutput,str(delta) if type(delta) == type(0) else mutil.summary(delta)))
+        if TRACE: print("OpSeqFunction(%s,%s) delta[%s] set to %s" % (self.opInputs,self.opOutput,self.opOutput,str(delta) if type(delta) == type(0) else mutil.summary(delta)))
+        if TRACE: print("opEnv.delta now %s" % (str(self.opEnv.delta)))
+        if TRACE: print("opEnv now %s" % (str(self.opEnv.register)))
         n = len(self.ops)
         #logging.debug("delta keys required: %s" % ",".join([self.ops[n-i-1].dst for i in range(n)]))
         for i in range(n):
             op = self.ops[n-i-1]
-            if TRACE: logging.debug("delta key required: %s [%s]" % (op.dst,op.__class__.__name__))
+            if TRACE: print("OpSeqFunction delta key required: %s [%s]" % (op.dst,op.__class__.__name__))
             op.backprop(self.opEnv,gradAccum)
+            if TRACE: 
+                for (functor,arity),delta in gradAccum.items():
+                    print("OpSeqFunction(%s,%s) gradAccum for %s after %s: %s" % (self.opInputs,self.opOutput,functor,str(op),mutil.summary(delta)))
+                    if STRICT and delta.min() < -1e5: raise tlerr.InvalidBackpropState("bad gradAccum delta at %s" % self)
         assert len(self.opInputs)==1, 'bp for multiple input functions not implemented'
-        if TRACE: logging.debug("deltas should now be set for %s" % ",".join([self.ops[n-i-1].src for i in range(n)]))
+        if TRACE: print("deltas should now be set for %s" % ",".join([self.ops[n-i-1].src for i in range(n)]))
         return self.opEnv.delta[self.opInputs[0]]
 
 class NullFunction(OpSeqFunction):
