@@ -293,12 +293,27 @@ class MatrixDB(object):
 
     def bufferLine(self,line):
         """Load a single triple encoded as a tab-separated line.."""
+        def atof(s):
+            try:
+                return float(s)
+            except ValueError:
+                return 0.0
+
         parts = line.split("\t")
         #TODO add ability to read in weights
-        if len(parts)==3:
-            f,a1,a2 = parts[0],parts[1],parts[2]
+        if len(parts)==4:
+            f,a1,a2,wstr = parts[0],parts[1],parts[2],parts[3]
             arity = 2
-            w = 1.0
+            w = atof(wstr)
+        elif len(parts)==3:
+            f,a1,a2 = parts[0],parts[1],parts[2]
+            w = atof(a2)
+            if w==0:
+                arity = 2
+                w = 1.0
+            else:
+                arity = 1
+                #w is ok still
         elif len(parts)==2:
             f,a1,a2 = parts[0],parts[1],None
             arity = 1
@@ -312,15 +327,6 @@ class MatrixDB(object):
             return
         i = self.stab.getId(a1)
         j = self.stab.getId(a2) if a2 else -1
-        #if key not in self.buf: raise MatrixParseError("%s unknown" % str(key))
-        #t = self.buf[key]
-        #if i not in t: raise MatrixParseError("%d unknown in %s" % (i,str(key)))
-        #t = t[i]
-        #if j not in t: raise MatrixParseError("%d unknown in %s[%d]" % (j,str(key),i))
-        #print key
-        #print i
-        #print j
-        #raise MatrixParseError("xyzzy")
         try:
             self.buf[key][i][j] = w
         except TypeError as e:

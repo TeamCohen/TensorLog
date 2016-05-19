@@ -174,7 +174,7 @@ class BPCompiler(object):
             else:
                 assert False,'same variable cannot appear twice in a rule lhs'
             vin = self.varDict[v]
-            assert parser.isVariableAtom(v), 'arguments to defined predicate %s cannot be a constant' % str(rule.lhs)
+            assert parser.isVariableAtom(v), 'arguments to defined predicate %s cannot be a constant' % str(self.rule.lhs)
             if gin.mode.isInput(i):
                 gin.inputs.add(v) #input to predicate means output of lhs
                 vin.outputOf = 0

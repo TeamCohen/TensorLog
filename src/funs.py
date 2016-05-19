@@ -8,18 +8,29 @@ import ops
 import mutil
 
 TRACE = False
+LONG_TRACE = False
 
 class Function(object):
     """The tensorlog representation of a function. This supports eval and
     evalGrad operations, and take a list of input values as the inputs.
     """
     def eval(self,db,values):
+        if TRACE:
+            print "Invoking:\n%s" % "\n. . ".join(self.pprint())
         result = self._doEval(db,values)
         if TRACE:
             print "Function completed:\n%s" % "\n. . ".join(self.pprint())
-            for k,v in enumerate(values):
-                print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
-            print '. result :',db.matrixAsSymbolDict(result)
+            if LONG_TRACE:
+                for k,v in enumerate(values):
+                    print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
+                print '. result :',db.matrixAsSymbolDict(result)
+        return result
+    def backprop(self,delta,gradAccum):
+        if TRACE:
+            print "Backprop:\n%s" % "\n. . ".join(self.pprint())
+        result = self._doBackprop(delta,gradAccum)
+        if TRACE:
+            print "Backprop completed:\n%s" % "\n. . ".join(self.pprint())
         return result
     def pprint(self,depth=0):
         """Return list of lines in a pretty-print of the function.
@@ -51,12 +62,14 @@ class OpSeqFunction(Function):
             op.eval(self.opEnv)
         self.result = self.opEnv[self.opOutput]
         return self.result
-    def backprop(self,delta,gradAccum):
+    def _doBackprop(self,delta,gradAccum):
         self.opEnv.delta[self.opOutput] = delta
         n = len(self.ops)
         for i in range(n):
             op = self.ops[n-i-1]
+            #print 'calling backprop on op',n-i-1,str(op)
             op.backprop(self.opEnv,gradAccum)
+            #print 'op.backprop',n-i-1,'finished'
         assert len(self.opInputs)==1, 'bp for multiple input functions not implemented'
         return self.opEnv.delta[self.opInputs[0]]
 
@@ -74,7 +87,7 @@ class NullFunction(OpSeqFunction):
     def _doEval(self,db,values):
         self.result = db.zeros(mutil.numRows(values[0]))
         return self.result
-    def backprop(self,delta,gradAccum):
+    def _doBackprop(self,delta,gradAccum):
         return self.result
 
 class SumFunction(Function):
@@ -93,7 +106,7 @@ class SumFunction(Function):
             accum = accum + addends[i]
         self.result = accum
         return self.result
-    def backprop(self,delta,gradAccum):
+    def _doBackprop(self,delta,gradAccum):
         addends = map(lambda f:f.backprop(delta,gradAccum), self.funs)
         accum = addends[0]
         for i in range(1,len(addends)):
@@ -113,7 +126,7 @@ class SoftmaxFunction(Function):
         unnorm = self.fun.eval(db,values)
         self.result = mutil.softmax(db,unnorm)
         return self.result
-    def backprop(self,delta):
+    def _doBackprop(self,delta):
         # see comments for learner.crossEntropyGrad
         assert False, 'should not call this directly'
 

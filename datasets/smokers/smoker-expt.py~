@@ -1,0 +1,13 @@
+import sys
+import time
+
+import tensorlog
+import expt
+import declare
+
+if __name__=="__main__":
+    
+    ti = tensorlog.Interp(initFiles=[gridFile,'grid.ppr'],proppr=False)
+    start = time.time()
+    ti.prog.evalSymbols(ti._asMode("path/io"), [startNode])
+    print 'time',time.time() - start,'sec'
