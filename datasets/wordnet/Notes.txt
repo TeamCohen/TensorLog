@@ -1,0 +1,60 @@
+training ... done in 27.924 sec
+
+INFO:root:calling: python /afs/cs.cmu.edu/user/wcohen/shared-home/code/ProPPR/scripts/answermetrics.py --data hypernym-test.examples --answers hypernym-test.solutions.txt --metric auc --defaultNeg
+queries 1173 answers 18192 labeled answers 18192
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve [5 epochs]
+. micro: 0.765543304146
+. macro: 0.503884585076
+
+10 epochs - training ... done in 56.703 sec
+. micro: 0.854231090496
+. macro: 0.503931915774
+
+15 epochs - training ... done in 85.271 sec
+. micro: 0.923585848405
+. macro: 0.503989134371
+
+20 epochs - training ... done in 111.538 sec
+. micro: 0.932765448235
+. macro: 0.503996210545
+
+30 epochs - training ... done in 166.825 sec
+. micro: 0.93437229711
+. macro: 0.503998225614
+
+Proppr:
+
+Grounding time: 18225
+Training time: 154884
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.933065362892
+. macro: 0.530242898096
+
+
+
+Experimental process:
+
+make -B wnet.db - db for wordnet KBC task
+python expt.py  - trained results, also saves the following in proppr format
+              'savedTestPreds':'hypernym-test.solutions.txt',
+              'savedTrainExamples':'hypernym-train.examples',
+              'savedTestExamples':'hypernym-test.examples',
+#tensorlog MAP result . macro: 0.947144075021 w/o softmax optimization, 0.946291560102 w
+# learning time, 
+# 1400+ initially
+#  409.148 sec after removing stacking from weightByRowSum
+#  214.368 sec after removing broadcast from op
+#   36.696 sec after more optimization
+#   36.696 sec after final broadcast operation
+#   23.128 sec after softmax optimization
+proppr eval hypernym-test.examples hypernym-test.solutions.txt --metric map  
+
+#proppr result - grounding 9.5 sec, training 1:13.8, answer 10.0, map 0.945439045183 [even with only one thread]
+proppr set --programFiles wnet-learned.wam:wnet.cfacts
+proppr ground hypernym-train.examples --duplicateCheck -1
+proppr train hypernym-train hypernym
+proppr answer hypernym-test.examples proppr-test.solutions.txt --params hypernym.params --duplicateCheck -1
+proppr eval hypernym-test.examples proppr-test.solutions.txt --metric map
+
+#profiling: python -m cProfile -o toy.prof expt.py
