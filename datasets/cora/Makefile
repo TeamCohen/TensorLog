@@ -9,7 +9,9 @@ cora.cfacts:
 	cat raw/cora-*.cfacts > cora.cfacts
 
 clean:
-	rm -f *~ cora-trained.db cora.db 
+	rm -rf *~ 
+	rm -rf cora-trained.db cora.db 
+
 
 
 
