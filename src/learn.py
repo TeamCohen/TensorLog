@@ -8,7 +8,8 @@ import numpy as NP
 import collections
 import mutil
 import declare
-import logging
+import logging as L
+logging = L.getLogger()
 
 ROBUST_ACCURACY_CHECK = False
 MIN_PROBABILITY = NP.finfo(dtype='float64').eps
@@ -169,14 +170,15 @@ class MultiModeLearner(FixedRateGDLearner):
             print 'epoch %d of %d' % (i+1,self.epochs)
             lastPrint = time.time()
             for b in range(batches):
-                if time.time()-lastPrint > 0:#10: # seconds
+                if time.time()-lastPrint > 10: # seconds
                    print 'batch %d of %d: %s...' % (b+1,batches,str(self.modes[b]))
                    lastPrint = time.time()
                 if self.modes[b].functor not in self.trainingData: assert "No training data available for mode %s" % str(self.modes[b])
                 try:
                     self._trainBatch(self.modes[b],*self.trainingData[self.modes[b].functor],startTime=startTime)
-                    for p in self.prog.db.params:
-                        logging.debug("params in %s: max %g min %g sum %s" % (str(p),self.prog.db.getParameter(*p).max(),self.prog.db.getParameter(*p).min(),self.prog.db.getParameter(*p).sum() ))
+                    if logging.isEnabledFor(L.DEBUG):
+                        for p in self.prog.db.params:
+                            logging.debug("params in %s: max %g min %g sum %s",str(p),self.prog.db.getParameter(*p).max(),self.prog.db.getParameter(*p).min(),self.prog.db.getParameter(*p).sum())
                 except FloatingPointError as e:
                     print "_trainBatch trouble at mode %d, %s" % (b,str(self.modes[b]))
                     raise
@@ -187,8 +189,9 @@ class MultiModeLearner(FixedRateGDLearner):
             
     def _trainBatch(self,mode,X,Y,startTime):
         paramGrads = self.crossEntropyGrad(mode,X=X,Y=Y)
-        for (functor,arity),delta in paramGrads.items():
-            logging.debug("paramGrads for %s: max %g min %g %s" % (functor,delta.max(),delta.min(),mutil.summary(delta)))
+        if logging.isEnabledFor(L.DEBUG):
+            for (functor,arity),delta in paramGrads.items():
+                logging.debug("paramGrads for %s: max %g min %g %s",functor,delta.max(),delta.min(),mutil.summary(delta))
         self.applyMeanUpdate(paramGrads,self.rate)
                 
     def predict(self,modes,Xs=None,data=None):
@@ -202,7 +205,7 @@ class MultiModeLearner(FixedRateGDLearner):
         i=0
         for m,x in zip(modes,Xs):
             i+=1
-            logging.debug("Predict: mode %d of %d: %s %s" % (i,len(modes),str(m),str(x.shape)))
+            logging.debug("Predict: mode %d of %d: %s %s",i,len(modes),str(m),str(x.shape))
             try:
                 Y.append(super(MultiModeLearner,self).predict(m,x))
             except FloatingPointError as e:

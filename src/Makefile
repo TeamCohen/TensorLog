@@ -5,6 +5,9 @@ long-tests: short-tests benchmark-test wnet-test
 
 benchmark-test:
 	python benchmark.py
+	
+fb15k-valid.db: matrixdb.py
+	python $< --serialize test/fb15k-valid.cfacts:test/fb15k.tensorLog.cfacts $@
 
 wnet-test:
 	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet/; python wnet-expt.py; \

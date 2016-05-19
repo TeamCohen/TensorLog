@@ -9,7 +9,7 @@ import logging
 # miscellaneous broadcast utilities used my ops.py and funs.py
 OPTIMIZE_SOFTMAX = True
 
-np.seterr('raise')
+np.seterr('raise') # stop execution & print traceback for divide-by-zero, underflow, overflow, etc
 
 def summary(m):
     return 'type %r shape %r non-zeros %d min %g max %g' % (type(m),m.get_shape(),m.nnz,m.min(),m.max())

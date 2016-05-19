@@ -11,10 +11,14 @@ import funs
 
 #logging.basicConfig(level=logging.DEBUG)
 
+stem = "top-1000-near-google"
+
 def uncacheDB(dbFile):
     if not os.path.exists(dbFile):
         print 'creating',dbFile,'...'
-        db = matrixdb.MatrixDB.loadFile('cora.cfacts')
+        db = matrixdb.MatrixDB.loadFile('%s.cfacts' % stem)
+        db.addFile("%s-fact.cfacts" % stem)
+        db.addFile("%s-rule.cfacts" % stem)
         db.serialize(dbFile)
         print 'created',dbFile
         return db
@@ -29,7 +33,6 @@ def uncacheMatPairs(dbFile,exampleFile):
         return d
         
 if __name__=="__main__":
-    stem = "top-1000-near-google"
     dTrain = uncacheMatPairs('%s.db' % stem,'raw/%s.train.examples' % stem)
     dTest = uncacheMatPairs('%s.db' % stem,'raw/%s.test.examples' % stem)
     prog = tensorlog.ProPPRProgram.load(["%s.db" % stem,"%s-recursive.ppr" % stem])

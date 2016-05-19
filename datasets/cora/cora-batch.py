@@ -8,6 +8,10 @@ import expt
 import tensorlog
 import matrixdb
 import mutil
+import ops 
+import funs
+ops.TRACE=False
+funs.TRACE=False
 
 def uncacheDB(dbFile):
     if not os.path.exists(dbFile):
@@ -35,7 +39,7 @@ if __name__=="__main__":
     prog.db.markAsParam('kvw',1)
     prog.setWeights(prog.db.ones())
     params = {'initProgram':prog,
-              'theoryPred':'samebib',
+              #'theoryPred':'samebib',
               'trainData':dTrain,
               'testData':dTest,
               'savedModel':'cora-batch-trained.db',
@@ -43,4 +47,4 @@ if __name__=="__main__":
               'savedTrainExamples':'cora-batch-train.examples',
               'savedTestExamples':'cora-batch-test.examples',
     }
-    expt.BatchExpt(params,{'epochs':10}).run()
+    expt.BatchExpt(params,{'epochs':5}).run()

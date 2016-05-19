@@ -7,7 +7,7 @@ import mutil
 import tlerr
 
 # if true print ops as they are executed
-TRACE = True
+TRACE = False
 # if true print outputs of ops - only use this for tiny test cases
 LONG_TRACE = False
 
@@ -121,9 +121,9 @@ class DefinedPredOp(Op):
         subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
         foo = env.delta[self.dst]
         newDelta = subfun.backprop(env.delta[self.dst],gradAccum)
-        if newDelta == None: raise tlerr.InvalidBackpropState("None delta received from %s\ndst %s, src %s\ndelta was: %s" % (subfun.__class__.__name__,self.dst,self.src,env.delta))
+        if newDelta == None: raise tlerr.InvalidBackpropState("invalid 'None' delta received from %s\ndst %s, src %s\ndelta was: %s" % (subfun.__class__.__name__,self.dst,self.src,env.delta))
         env.delta[self.src] = newDelta
-        if TRACE: print("%s(%s,%s) delta[%s] set to %s" % (self.__class__.__name__,self.dst,self.src,self.src,mutil.summary(newDelta) if newDelta.nnz else str(newDelta)))
+        #if TRACE: print("%s(%s,%s) delta[%s] set to %s" % (self.__class__.__name__,self.dst,self.src,self.src,mutil.summary(newDelta) if newDelta.nnz else str(newDelta)))
     def pprint(self,depth=-1):
         top = super(DefinedPredOp,self).pprint(depth)
         #return top
@@ -220,7 +220,7 @@ class VecMatMulOp(Op):
         # dst = f(src,mat)
         try:
             env.delta[self.src] = env.delta[self.dst] * env.db.matrix(self.matMode,(not self.transpose))
-            if TRACE: print("%s delta[%s] set to %s" % (self.__class__.__name__,self.src,mutil.summary(env.delta[self.src])))
+            #if TRACE: print("%s delta[%s] set to %s" % (self.__class__.__name__,self.src,mutil.summary(env.delta[self.src])))
         except Exception as e:
             def showmat(msg,m): print msg,type(m),m.get_shape(),m.nnz
             showmat(self.dst+' delta',env.delta[self.dst])
@@ -273,15 +273,15 @@ class ComponentwiseVecMulOp(Op):
             d2,m2 = mutil.broadcast2(env.delta[self.dst],env[self.src2])
             assert d1.get_shape()==d2.get_shape()
             env.delta[self.src] = d2.multiply(m2)
-            if TRACE: 
-                print("%s d2 %s" % (self.__class__.__name__,mutil.summary(d2)))
-                print("%s m2 %s" % (self.__class__.__name__,mutil.summary(m2)))
-                print("%s delta[%s] set to %s" % (self.__class__.__name__,self.src,mutil.summary(env.delta[self.src])))
+            #if TRACE: 
+            #    print("%s d2 %s" % (self.__class__.__name__,mutil.summary(d2)))
+            #    print("%s m2 %s" % (self.__class__.__name__,mutil.summary(m2)))
+            #    print("%s delta[%s] set to %s" % (self.__class__.__name__,self.src,mutil.summary(env.delta[self.src])))
             env.delta[self.src2] = d1.multiply(m1)
-            if TRACE: 
-                print("%s d1 %s" % (self.__class__.__name__,mutil.summary(d1)))
-                print("%s m1 %s" % (self.__class__.__name__,mutil.summary(m1)))
-                print("%s delta[%s] set to %s" % (self.__class__.__name__,self.src2,mutil.summary(env.delta[self.src2])))
+            #if TRACE: 
+            #    print("%s d1 %s" % (self.__class__.__name__,mutil.summary(d1)))
+            #    print("%s m1 %s" % (self.__class__.__name__,mutil.summary(m1)))
+            #    print("%s delta[%s] set to %s" % (self.__class__.__name__,self.src2,mutil.summary(env.delta[self.src2])))
 #            env.delta[self.src] = env.delta[self.dst].multiply(m2)
 #            env.delta[self.src2] = env.delta[self.dst].multiply(m1)
 
@@ -324,7 +324,7 @@ class WeightedVec(Op):
         else:
             deltaDst,mWeighter = mutil.broadcast2(env.delta[self.dst], env[self.weighter])
             env.delta[self.vec] = mutil.weightByRowSum(deltaDst,mWeighter)
-        if TRACE: print("%s delta[%s] set to %s" % (self.__class__.__name__,self.vec,mutil.summary(env.delta[self.vec])))
+        #if TRACE: print("%s delta[%s] set to %s" % (self.__class__.__name__,self.vec,mutil.summary(env.delta[self.vec])))
         # step 2b: bp from delta[dst] to delta[weighterSum]
         #   would be: delta[weighterSum] = (delta[dst].multiply(vec)).sum
         # followed by 
@@ -332,9 +332,9 @@ class WeightedVec(Op):
         #   delta[weighter] = delta[weighterSum]*weighter
         # but we can combine 2b and 1 as follows (optimized):
         if OPTIMIZE_WEIGHTED_VEC:
-            if TRACE: 
-                print("WeightedVec delta[%s] %s" % (self.dst,mutil.summary(env.delta[self.dst])))
-                print("WeightedVec env[%s] %s" % (self.vec,mutil.summary(env[self.vec])))
+            #if TRACE: 
+            #    print("WeightedVec delta[%s] %s" % (self.dst,mutil.summary(env.delta[self.dst])))
+            #    print("WeightedVec env[%s] %s" % (self.vec,mutil.summary(env[self.vec])))
             if OPTIMIZE_COMPONENT_MULTIPLY:
                 tmp = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.vec])
             else:
@@ -342,11 +342,11 @@ class WeightedVec(Op):
                 tmp = m1.multiply(m2)
             env.delta[self.weighter] = \
                 mutil.broadcastAndWeightByRowSum(env[self.weighter], tmp)
-            if TRACE: print("WeightedVec tmp %s" % (mutil.summary(tmp)))
+            #if TRACE: print("WeightedVec tmp %s" % (mutil.summary(tmp)))
         else:
             #not clear if this still works
             m1,m2 = mutil.broadcast2(env.delta[self.dst],env[self.vec])
             tmp = m1.multiply(m2)
             mWeighter,mTmp = mutil.broadcast2(env[self.weighter],tmp)
             env.delta[self.weighter] = mutil.weightByRowSum(mWeighter,mTmp)
-        if TRACE: print("%s delta[%s] set to %s" % (self.__class__.__name__,self.weighter,mutil.summary(env.delta[self.weighter])))
+        #if TRACE: print("%s delta[%s] set to %s" % (self.__class__.__name__,self.weighter,mutil.summary(env.delta[self.weighter])))

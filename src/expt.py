@@ -188,10 +188,11 @@ class BatchExpt(Expt):
              savedTestPreds=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None):
 
         """ Run an experiment, given a whole bunch of parameters.
-        trainData, testData: functor -> (X,Y) as from propprExamplesAsData
-        savedTestPreds, savedTestExamples, savedTrainExamples: if not None, then
+        trainData, testData: functor -> (X,Y); as from propprExamplesAsData
+        theoryPred: if not None, a list of functors to select from *Data for training/testing (assumes i,o)
+        savedTestPreds, savedTestExamples, savedTrainExamples: filename; if not None, then
         serialize predictions and examples for later eval with ProPPR tools.
-        savedModel: save result of training somewhere
+        savedModel: filename; save result of training somewhere
         """
         ti = tensorlog.Interp(initFiles=initFiles,initProgram=initProgram)
         # TODO: should be a parameter, and should work with a sparse parameter vector
@@ -231,7 +232,6 @@ class BatchExpt(Expt):
         if savedModel:
             Expt.timeAction('saving trained model', lambda:ti.db.serialize(savedModel))
 
-            
         if savedTestPreds:
             open(savedTestPreds,'w').close()
             Expt.timeAction('saving test predictions', lambda:
@@ -250,21 +250,5 @@ class BatchExpt(Expt):
         if savedTestPreds and savedTestExamples:
             print 'ready for commands like: proppr eval %s %s --metric map' % (savedTestExamples,savedTestPreds)
 
-if __name__=="__main__":
-    toyparams = {'initFiles':["test/textcattoy.cfacts","test/textcat.ppr"],
-                 'theoryPred':'predict',
-                 'trainPred':'train',
-                 'testPred':'test',
-                 'savedModel':'toy-trained.db',
-                 'savedTestPreds':'toy-test.solutions.txt',
-                 'savedTrainExamples':'toy-train.examples',
-                 'savedTestExamples':'toy-test.examples',
-    }
-#    Expt(toyparams).run()
-    ti = tensorlog.Interp(initFiles=["test/textcattoy.cfacts","test/textcat.ppr"])
-    d = Expt.propprExamplesAsData(ti.db,'test/toytrain.examples')
-    for pred,(X,Y) in d.items():
-        print pred,ti.db.matrixAsSymbolDict(X)
-        print pred,ti.db.matrixAsSymbolDict(Y)
 
 
