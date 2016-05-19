@@ -1,3 +1,5 @@
+currently failing - I think due to one of the optimizations but I need to test
+
 training: 88.690sec (1 thread,maxdepth 1)
 proppr eval cora-test.examples cora-test.solutions.txt --metric auc --defaultNeg
 . micro: 0.975902362875
