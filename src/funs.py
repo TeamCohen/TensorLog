@@ -19,7 +19,7 @@ class Function(object):
         if TRACE:
             print "Invoking %s:\n%s" % (str(self),"\n. . ".join(self.pprint()))
         result = self._doEval(db,values)
-        if LONG_TRACE:
+        if TRACE:
             print "Function completed:\n%s" % "\n. . ".join(self.pprint())
             if LONG_TRACE:
                 for k,v in enumerate(values):

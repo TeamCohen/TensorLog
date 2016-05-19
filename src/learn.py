@@ -161,8 +161,7 @@ class MultiModeLearner(FixedRateGDLearner):
             for (mode,x,y) in zip(modes,Xs,Ys):
                 self.trainingData[mode.functor] = (x,y)
             self.Ys = Ys
-        self.rate = self.rate / len(self.modes) # maybe this is what's causing the underflow?
-    
+        self.rate = self.rate / len(self.modes)
     def train(self):
         startTime = time.time()
         batches = len(self.modes)

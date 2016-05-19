@@ -251,4 +251,19 @@ class BatchExpt(Expt):
             print 'ready for commands like: proppr eval %s %s --metric map' % (savedTestExamples,savedTestPreds)
 
 
-
+if __name__=="__main__":
+    toyparams = {'initFiles':["test/textcattoy.cfacts","test/textcat.ppr"],
+                 'theoryPred':'predict',
+                 'trainPred':'train',
+                 'testPred':'test',
+                 'savedModel':'toy-trained.db',
+                 'savedTestPreds':'toy-test.solutions.txt',
+                 'savedTrainExamples':'toy-train.examples',
+                 'savedTestExamples':'toy-test.examples',
+    }
+#    Expt(toyparams).run()
+    ti = tensorlog.Interp(initFiles=["test/textcattoy.cfacts","test/textcat.ppr"])
+    d = Expt.propprExamplesAsData(ti.db,'test/toytrain.examples')
+    for pred,(X,Y) in d.items():
+        print pred,ti.db.matrixAsSymbolDict(X)
+        print pred,ti.db.matrixAsSymbolDict(Y)
