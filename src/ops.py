@@ -12,8 +12,7 @@ TRACE = True
 LONG_TRACE = False
 
 OPTIMIZE_WEIGHTED_VEC = True
-#not apparently faster
-OPTIMIZE_COMPONENT_MULTIPLY = False
+OPTIMIZE_COMPONENT_MULTIPLY = True
 
 MAXDEPTH=0
 
@@ -80,11 +79,12 @@ class Op(object):
     def backprop(self,env,gradAccum):
         #these should all call eval first
         if TRACE:
-            print 'op bp',self,'delta[',self.dst,']',
-        self._doBackprop(env,gradAccum)
-        if TRACE: 
+            print 'call op bp',self,'delta[',self.dst,'] shape',env.delta[self.dst].get_shape(),
             if LONG_TRACE: print env.db.matrixAsSymbolDict(env.delta[self.dst])
             else: print
+        self._doBackprop(env,gradAccum)
+        if TRACE: 
+            print 'end op bp',self
     def showDeltaShape(self,env,key):
         print 'shape of env.delta[%s]' % key,env.delta[key].get_shape()
     def showShape(self,env,key):
@@ -213,6 +213,8 @@ class VecMatMulOp(Op):
         if self.transpose: buf += ".T"
         return buf
     def _doEval(self,env):
+#        print 'xpose',self.transpose,\
+#              'src',env[self.src].get_shape(),'mat',env.db.matrix(self.matMode,self.transpose).get_shape()
         env[self.dst] = env[self.src] * env.db.matrix(self.matMode,self.transpose)
     def _doBackprop(self,env,gradAccum):
         # dst = f(src,mat)
@@ -265,16 +267,23 @@ class ComponentwiseVecMulOp(Op):
             env.delta[self.src] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src2])
             env.delta[self.src2] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src])
         else:
-            m1,m2 = mutil.broadcastBinding(env,self.src,self.src2)            
-            env.delta[self.src] = env.delta[self.dst].multiply(m2)
+            #m1,m2 = mutil.broadcastBinding(env,self.src,self.src2)            
+            #print 'shapes 1/2/delta[',self.dst,']',m1.get_shape(),m2.get_shape(),env.delta[self.dst].get_shape()
+            d1,m1 = mutil.broadcast2(env.delta[self.dst],env[self.src])
+            d2,m2 = mutil.broadcast2(env.delta[self.dst],env[self.src2])
+            assert d1.get_shape()==d2.get_shape()
+            env.delta[self.src] = d2.multiply(m2)
             if TRACE: 
-                print("%s dst %s" % (self.__class__.__name__,mutil.summary(env.delta[self.dst])))
+                print("%s d2 %s" % (self.__class__.__name__,mutil.summary(d2)))
                 print("%s m2 %s" % (self.__class__.__name__,mutil.summary(m2)))
                 print("%s delta[%s] set to %s" % (self.__class__.__name__,self.src,mutil.summary(env.delta[self.src])))
-            env.delta[self.src2] = env.delta[self.dst].multiply(m1)
+            env.delta[self.src2] = d1.multiply(m1)
             if TRACE: 
+                print("%s d1 %s" % (self.__class__.__name__,mutil.summary(d1)))
                 print("%s m1 %s" % (self.__class__.__name__,mutil.summary(m1)))
                 print("%s delta[%s] set to %s" % (self.__class__.__name__,self.src2,mutil.summary(env.delta[self.src2])))
+#            env.delta[self.src] = env.delta[self.dst].multiply(m2)
+#            env.delta[self.src2] = env.delta[self.dst].multiply(m1)
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
@@ -308,13 +317,13 @@ class WeightedVec(Op):
         #   2. dst = vec * weighterSum
         # and then backprop through step 2, then step 1
         # step 2a: bp from delta[dst] to delta[vec]
+        #   delta[vec] = delta[dst]*weighterSum
         if OPTIMIZE_WEIGHTED_VEC:
             # new optimized version of step 2a
             env.delta[self.vec] = mutil.broadcastAndWeightByRowSum(env.delta[self.dst],env[self.weighter])         
         else:
-            # old slow version was:
-            mVec,mWeighter = mutil.broadcastBinding(env, self.vec, self.weighter)
-            env.delta[self.vec] = mutil.weightByRowSum(env.delta[self.dst],mWeighter)
+            deltaDst,mWeighter = mutil.broadcast2(env.delta[self.dst], env[self.weighter])
+            env.delta[self.vec] = mutil.weightByRowSum(deltaDst,mWeighter)
         if TRACE: print("%s delta[%s] set to %s" % (self.__class__.__name__,self.vec,mutil.summary(env.delta[self.vec])))
         # step 2b: bp from delta[dst] to delta[weighterSum]
         #   would be: delta[weighterSum] = (delta[dst].multiply(vec)).sum
@@ -326,11 +335,18 @@ class WeightedVec(Op):
             if TRACE: 
                 print("WeightedVec delta[%s] %s" % (self.dst,mutil.summary(env.delta[self.dst])))
                 print("WeightedVec env[%s] %s" % (self.vec,mutil.summary(env[self.vec])))
-            tmp = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.vec])
+            if OPTIMIZE_COMPONENT_MULTIPLY:
+                tmp = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.vec])
+            else:
+                m1,m2 = mutil.broadcast2(env.delta[self.dst],env[self.vec])
+                tmp = m1.multiply(m2)
             env.delta[self.weighter] = \
                 mutil.broadcastAndWeightByRowSum(env[self.weighter], tmp)
             if TRACE: print("WeightedVec tmp %s" % (mutil.summary(tmp)))
         else:
-            env.delta[self.weighter] = \
-                mutil.weightByRowSum(env[self.weighter], env.delta[self.dst].multiply(env[self.vec]))
+            #not clear if this still works
+            m1,m2 = mutil.broadcast2(env.delta[self.dst],env[self.vec])
+            tmp = m1.multiply(m2)
+            mWeighter,mTmp = mutil.broadcast2(env[self.weighter],tmp)
+            env.delta[self.weighter] = mutil.weightByRowSum(mWeighter,mTmp)
         if TRACE: print("%s delta[%s] set to %s" % (self.__class__.__name__,self.weighter,mutil.summary(env.delta[self.weighter])))

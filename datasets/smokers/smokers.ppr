@@ -1,0 +1,10 @@
+t_stress(P,Yes) :- assign(Yes,yes),person(P) {r1}.
+
+t_influences(P1,P2) :- friends(P1,P2) {r2}.
+t_cancer_spont(P,Yes) :- assign(Yes,yes),person(P) {r3}.
+t_cancer_smoke(P,Yes) :- assign(Yes,yes),person(P) {r4}.
+i_smokes(X,Yes) :- i_stress(X,Yes) {r5}.
+i_smokes(X,Yes) :- assign(Yes,yes), smokes(Y), i_influences(Y,X) {r6}.
+i_cancer(P,Yes) :- i_cancer_spont(P,Yes) {r7}.
+i_cancer(P,Yes) :- i_smokes(P,Yes), cancer_smoke(P,Yes ) {r8}.
+

@@ -53,6 +53,7 @@ if __name__=="__main__":
     prog.db.markAsParam('kaw',1)
     prog.db.markAsParam('ktw',1)
     prog.db.markAsParam('kvw',1)
+    prog.maxDepth = 1
     prog.setWeights(prog.db.ones())
     params = {'initProgram':prog,
               'theoryPred':'samebib',
@@ -63,4 +64,5 @@ if __name__=="__main__":
               'savedTrainExamples':'cora-train.examples',
               'savedTestExamples':'cora-test.examples',
     }
+    print 'maxdepth',prog.maxDepth
     expt.Expt(params).run()

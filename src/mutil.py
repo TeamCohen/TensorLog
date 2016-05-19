@@ -97,8 +97,6 @@ def softmax(db,m):
         rows = [m1.getrow(i) for i in range(numr)]
         return stack([softmaxRow(r) for r in rows])
     else:
-        #much faster for benchmark problems
-        #but way slower for wordnet
         result = m + db.nullMatrix(numr)*nullEpsilon
         for i in xrange(numr):
             #rowMax = max(result[i,j] for j in nzCols(result,i))
@@ -119,8 +117,8 @@ def softmax(db,m):
 def broadcastAndComponentwiseMultiply(m1,m2):
     def multiplyByBroadcastRowVec(r,m,v):
         vd = {}
-        for j in nzCols(v,0):
-            vd[j] = v[0,j]
+        for j in range(v.indptr[0],v.indptr[1]):
+            vd[v.indices[j]] = v.data[j]
         result = m1.copy()
         for i in xrange(r):
             #for j in nzCols(m,i):
@@ -156,16 +154,16 @@ def broadcastAndWeightByRowSum(m1,m2):
             print "broadcastAndWeightByRowSum m2.sum(): %s" % m2.sum()
             raise
     elif r1==1 and r2>1:
-        #space for the values of the result - need to duplicate m1 for each row of m2
+        n = numCols(m1)
         nnz1 = m1.data.shape[0]
+        #allocate space for the broadcast version of m1,
+        #with one copy of m1 for every row of m2
         data = np.zeros(shape=(nnz1*r2,))
-        #space for the indices of the non-zero columns of m1
         indices = np.zeros(shape=(nnz1*r2,),dtype='int')
         indptr = np.zeros(shape=(r2+1,),dtype='int')
         ptr = 0
         indptr[0] = 0 
         for i in xrange(r2):
-            #sum of row i in m2
             w = m2.data[m2.indptr[i]:m2.indptr[i+1]].sum()
             #multiply the non-zero datapoints by w and copy them into the right places
             for j in xrange(nnz1):
@@ -175,7 +173,23 @@ def broadcastAndWeightByRowSum(m1,m2):
             # where to find the data, indices for row i
             indptr[i+1]= indptr[i]+nnz1
             ptr += nnz1
-        result = SS.csr_matrix((data,indices,indptr),shape=m2.shape, dtype='float64')
+        result = SS.csr_matrix((data,indices,indptr),shape=(m2.shape[0],m2.shape[1]), dtype='float64')
+        return result
+
+#        #alternate implementation - 1
+#        #hold the values of the result - need to duplicate m1 for each row of m2
+#        buf = SS.lil_matrix((r2,n))
+#        m1ColIndices = list(nzCols(m1,0))
+#        m1Vals = map(lambda j:m1[0,j], m1ColIndices)
+#        for i in xrange(r2):
+#            wi = m2.data[m2.indptr[i]:m2.indptr[i+1]].sum()
+#            for j in range(len(m1ColIndices)):
+#                buf[i,m1ColIndices[j]] = m1Vals[j]*wi
+#        result = SS.csr_matrix(buf)
+#        
+#        #alternate implementation - 2
+#        ref = stack([m1.getrow(0) * m2.getrow(i).sum() for i in range(r2)])
+#        print 'ref',ref.get_shape(),'result',result.get_shape()
         return result
     else:
         assert r1==r2

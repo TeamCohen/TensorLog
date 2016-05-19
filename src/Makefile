@@ -8,7 +8,11 @@ benchmark-test:
 
 wnet-test:
 	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet/; python wnet-expt.py; \
-	 proppr eval hypernym-test.examples hypernym-test.solutions.txt --metric map)
+	 proppr eval hypernym-test.examples hypernym-test.solutions.txt --metric auc --defaultNeg)
+
+cora-test:
+	(export PYTHONPATH=`pwd`; cd ../datasets/cora/; python cora-expt.py; \
+	 proppr eval cora-test.examples cora-test.solutions.txt --metric auc --defaultNeg)
 
 snap:
 	tar -czf backup/snap`date +%m.%d.%H.%M.%S`.tgz *.py Makefile

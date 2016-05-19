@@ -1,0 +1,9 @@
+import sys
+
+def generateGrid(n,outf):
+    
+
+if __name__=="__main__":
+    n = int(sys.argv[1])
+    outf = sys.argv[2]
+    generateGrid(n,outf)

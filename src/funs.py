@@ -9,7 +9,6 @@ import mutil
 import tlerr
 
 TRACE = True
-# if true print outputs of funs - only use this for tiny test cases
 LONG_TRACE = False
 STRICT=True
 
@@ -18,12 +17,22 @@ class Function(object):
     evalGrad operations, and take a list of input values as the inputs.
     """
     def eval(self,db,values):
+        if TRACE:
+            print "Invoking:\n%s" % "\n. . ".join(self.pprint())
         result = self._doEval(db,values)
         if LONG_TRACE:
             print "Function completed:\n%s" % "\n. . ".join(self.pprint())
-            for k,v in enumerate(values):
-                print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
-            print '. result :',db.matrixAsSymbolDict(result)
+            if LONG_TRACE:
+                for k,v in enumerate(values):
+                    print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
+                print '. result :',db.matrixAsSymbolDict(result)
+        return result
+    def backprop(self,delta,gradAccum):
+        if TRACE:
+            print "Backprop:\n%s" % "\n. . ".join(self.pprint())
+        result = self._doBackprop(delta,gradAccum)
+        if TRACE:
+            print "Backprop completed:\n%s" % "\n. . ".join(self.pprint())
         return result
     def pprint(self,depth=0):
         """Return list of lines in a pretty-print of the function.
@@ -68,7 +77,7 @@ class OpSeqFunction(Function):
         #if TRACE: logging.debug("returning %s from %s" % (str(self.result.shape),str(self)))
         self.traceEvalCompletion()
         return self.result
-    def backprop(self,delta,gradAccum):
+    def _doBackprop(self,delta,gradAccum):
         self.opEnv.delta[self.opOutput] = delta
         #if type(delta) != type(0) and delta.nnz == 0: raise tlerr.InvalidBackpropState("0 nonzero elements in delta")
         if TRACE: print("OpSeqFunction(%s,%s) delta[%s] set to %s" % (self.opInputs,self.opOutput,self.opOutput,str(delta) if type(delta) == type(0) else mutil.summary(delta)))
@@ -79,11 +88,13 @@ class OpSeqFunction(Function):
         for i in range(n):
             op = self.ops[n-i-1]
             if TRACE: print("OpSeqFunction delta key required: %s [%s]" % (op.dst,op.__class__.__name__))
+            #print 'calling backprop on op',n-i-1,str(op)
             op.backprop(self.opEnv,gradAccum)
             if TRACE: 
                 for (functor,arity),delta in gradAccum.items():
                     print("OpSeqFunction(%s,%s) gradAccum for %s after %s: %s" % (self.opInputs,self.opOutput,functor,str(op),mutil.summary(delta)))
                     if STRICT and delta.min() < -1e5: raise tlerr.InvalidBackpropState("bad gradAccum delta at %s" % self)
+            #print 'op.backprop',n-i-1,'finished'
         assert len(self.opInputs)==1, 'bp for multiple input functions not implemented'
         if TRACE: print("deltas should now be set for %s" % ",".join([self.ops[n-i-1].src for i in range(n)]))
         return self.opEnv.delta[self.opInputs[0]]
@@ -103,7 +114,7 @@ class NullFunction(OpSeqFunction):
         self.result = db.zeros(mutil.numRows(values[0]))
         #self.traceEvalCompletion()
         return self.result
-    def backprop(self,delta,gradAccum):
+    def _doBackprop(self,delta,gradAccum):
         return self.result
 
 
@@ -125,7 +136,7 @@ class SumFunction(Function):
         self.result = accum
         self.traceEvalCompletion()
         return self.result
-    def backprop(self,delta,gradAccum):
+    def _doBackprop(self,delta,gradAccum):
         addends = map(lambda f:f.backprop(delta,gradAccum), self.funs)
         accum = addends[0]
         for i in range(1,len(addends)):
@@ -145,7 +156,7 @@ class SoftmaxFunction(Function):
         unnorm = self.fun.eval(db,values)
         self.result = mutil.softmax(db,unnorm)
         return self.result
-    def backprop(self,delta):
+    def _doBackprop(self,delta):
         # see comments for learner.crossEntropyGrad
         assert False, 'should not call this directly'
 
