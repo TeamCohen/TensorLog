@@ -1,0 +1,988 @@
+i_location_x_location_x_contains(X,Y) :- location_x_location_x_containedby(Y,X) {r6}.
+i_location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(Y,X) {r7}.
+i_people_x_person_x_profession(X,Y) :- people_x_profession_x_people_with_this_profession(Y,X) {r8}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- location_x_location_x_contains(Y,X) {r9}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_location_x_containedby(X,Y) {r10}.
+i_film_x_actor_x_film_x_film_x_performance_x_film(X,Y) :- film_x_film_x_starring_x_film_x_performance_x_actor(Y,X) {r11}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_location_x_contains(Y,X) {r12}.
+i_award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_award(X,Y) :- award_x_award_category_x_nominees_x_award_x_award_nomination_x_award_nominee(Y,X) {r13}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(Y,X) {r14}.
+i_location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) {r15}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_position_x_players_x_ice_hockey_x_hockey_roster_position_x_team(Y,X) {r16}.
+i_film_x_film_genre_x_films_in_this_genre(X,Y) :- film_x_film_x_genre(Y,X) {r17}.
+i_base_x_culturalevent_x_event_x_entity_involved(X,Y) :- military_x_military_conflict_x_combatants_x_military_x_military_combatant_group_x_combatants(X,Y) {r18}.
+i_location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) {r19}.
+i_organization_x_organization_x_parent_x_organization_x_organization_relationship_x_parent(X,Y) :- organization_x_organization_x_child_x_organization_x_organization_relationship_x_child(Y,X) {r20}.
+i_people_x_person_x_places_lived_x_people_x_place_lived_x_location(X,Y) :- people_x_person_x_place_of_birth(X,Y) {r21}.
+i_people_x_person_x_education_x_education_x_education_x_institution(X,Y) :- education_x_educational_institution_x_students_graduates_x_education_x_education_x_student(Y,X) {r22}.
+i_location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) {r23}.
+i_people_x_person_x_places_lived_x_people_x_place_lived_x_location(X,Y) :- location_x_location_x_people_born_here(Y,X) {r24}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_position_x_players_x_ice_hockey_x_hockey_roster_position_x_team(Y,X) {r25}.
+i_people_x_deceased_person_x_cause_of_death(X,Y) :- people_x_cause_of_death_x_people(Y,X) {r26}.
+i_organization_x_organization_x_geographic_scope(X,Y) :- organization_x_organization_scope_x_organizations_with_this_scope(Y,X) {r27}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_country_x_administrative_divisions(Y,X) {r28}.
+i_education_x_educational_institution_x_school_type(X,Y) :- education_x_school_category_x_schools_of_this_kind(Y,X) {r29}.
+i_award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_award_nominee(X,Y) :- award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award_winner(Y,X) {r30}.
+i_award_x_award_category_x_winners_x_award_x_award_honor_x_award_winner(X,Y) :- award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(Y,X) {r31}.
+i_government_x_governmental_jurisdiction_x_governing_officials_x_government_x_government_position_held_x_basic_title(X,Y) :- government_x_government_office_category_x_officeholders_x_government_x_government_position_held_x_jurisdiction_of_office(Y,X) {r32}.
+i_tv_x_tv_program_x_genre(X,Y) :- tv_x_tv_genre_x_programs(Y,X) {r33}.
+i_people_x_person_x_ethnicity(X,Y) :- people_x_ethnicity_x_people(Y,X) {r34}.
+i_location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) :- location_x_location_x_contains(Y,X) {r35}.
+i_tv_x_tv_program_x_tv_producer_x_tv_x_tv_producer_term_x_producer(X,Y) :- tv_x_tv_producer_x_programs_produced_x_tv_x_tv_producer_term_x_program(Y,X) {r36}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_person(X,Y) :- business_x_board_member_x_leader_of_x_organization_x_leadership_x_organization(Y,X) {r37}.
+i_location_x_location_x_contains(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) {r38}.
+i_military_x_military_conflict_x_combatants_x_military_x_military_combatant_group_x_combatants(X,Y) :- military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_conflict(Y,X) {r39}.
+i_location_x_statistical_region_x_rent50_2_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_1_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r40}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_position_x_players_x_sports_x_sports_team_roster_x_team(Y,X) {r41}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award_winner(X,Y) :- award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award_winner(Y,X) {r42}.
+i_award_x_award_category_x_nominees_x_award_x_award_nomination_x_award_nominee(X,Y) :- award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_award(Y,X) {r43}.
+i_protected_sites_x_site_listing_category_x_listed_sites_x_protected_sites_x_natural_or_cultural_site_listing_x_listed_site(X,Y) :- protected_sites_x_listed_site_x_designation_as_natural_or_cultural_site_x_protected_sites_x_natural_or_cultural_site_listing_x_category_or_criteria(Y,X) {r44}.
+i_medicine_x_type_of_infectious_agent_x_diseases(X,Y) :- medicine_x_infectious_disease_x_infectious_agent_type(Y,X) {r45}.
+i_protected_sites_x_listed_site_x_designation_as_natural_or_cultural_site_x_protected_sites_x_natural_or_cultural_site_listing_x_designation(X,Y) :- protected_sites_x_natural_or_cultural_site_designation_x_sites_x_protected_sites_x_natural_or_cultural_site_listing_x_listed_site(Y,X) {r46}.
+i_education_x_school_category_x_schools_of_this_kind(X,Y) :- education_x_educational_institution_x_school_type(Y,X) {r47}.
+i_film_x_actor_x_dubbing_performances_x_film_x_dubbing_performance_x_film(X,Y) :- film_x_film_x_dubbing_performances_x_film_x_dubbing_performance_x_actor(Y,X) {r48}.
+i_aviation_x_airline_x_airports_served_x_aviation_x_airline_airport_presence_x_airport(X,Y) :- aviation_x_airport_x_airlines_x_aviation_x_airline_airport_presence_x_airline(Y,X) {r49}.
+i_symbols_x_namesake_x_named_after(X,Y) :- symbols_x_name_source_x_namesakes(Y,X) {r50}.
+i_film_x_film_x_genre(X,Y) :- film_x_film_genre_x_films_in_this_genre(Y,X) {r51}.
+i_tv_x_tv_series_season_x_regular_cast_x_tv_x_regular_tv_appearance_x_actor(X,Y) :- tv_x_tv_actor_x_starring_roles_x_tv_x_regular_tv_appearance_x_seasons(Y,X) {r52}.
+i_base_x_folklore_x_mythology_x_mythical_creatures(X,Y) :- base_x_folklore_x_mythical_creature_x_mythology(Y,X) {r53}.
+i_media_common_x_netflix_title_x_netflix_genres(X,Y) :- media_common_x_netflix_genre_x_titles(Y,X) {r54}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_major_field_of_study(X,Y) :- education_x_field_of_study_x_students_majoring_x_education_x_education_x_institution(Y,X) {r55}.
+i_people_x_profession_x_specialization_of(X,Y) :- people_x_profession_x_specializations(Y,X) {r56}.
+i_people_x_person_x_spouse_s_x_people_x_marriage_x_spouse(X,Y) :- people_x_person_x_spouse_s_x_people_x_marriage_x_spouse(Y,X) {r57}.
+i_award_x_award_category_x_disciplines_or_subjects(X,Y) :- award_x_award_discipline_x_awards_in_this_discipline(Y,X) {r58}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- location_x_location_x_containedby(Y,X) {r59}.
+i_tv_x_tv_program_x_tv_producer_x_tv_x_tv_producer_term_x_producer_type(X,Y) :- tv_x_tv_producer_type_x_tv_producers_of_this_type_x_tv_x_tv_producer_term_x_program(Y,X) {r60}.
+i_tv_x_tv_program_x_tv_producer_x_tv_x_tv_producer_term_x_producer(X,Y) :- tv_x_tv_program_creator_x_programs_created(Y,X) {r61}.
+i_medicine_x_disease_cause_x_diseases(X,Y) :- medicine_x_disease_x_causes(Y,X) {r62}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award_winner(X,Y) :- award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_award_nominee(X,Y) {r63}.
+i_music_x_record_label_x_artist(X,Y) :- music_x_artist_x_label(Y,X) {r64}.
+i_biology_x_organism_classification_rank_x_organism_classifications(X,Y) :- biology_x_organism_classification_x_rank(Y,X) {r65}.
+i_music_x_genre_x_artists(X,Y) :- music_x_artist_x_genre(Y,X) {r66}.
+i_biology_x_organism_classification_x_rank(X,Y) :- biology_x_organism_classification_rank_x_organism_classifications(Y,X) {r67}.
+i_american_football_x_football_team_x_historical_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_position_x_players_x_sports_x_sports_team_roster_x_team(Y,X) {r68}.
+i_royalty_x_noble_title_x_holders_x_royalty_x_noble_title_tenure_x_noble_person(X,Y) :- royalty_x_noble_person_x_titles_x_royalty_x_noble_title_tenure_x_noble_title(Y,X) {r69}.
+i_government_x_governmental_jurisdiction_x_governing_officials_x_government_x_government_position_held_x_office_holder(X,Y) :- government_x_politician_x_government_positions_held_x_government_x_government_position_held_x_jurisdiction_of_office(Y,X) {r70}.
+i_location_x_location_x_containedby(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) {r71}.
+i_influence_x_influence_node_x_influenced(X,Y) :- influence_x_influence_node_x_influenced_by(Y,X) {r72}.
+i_award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_award(X,Y) :- award_x_award_category_x_winners_x_award_x_award_honor_x_award_winner(Y,X) {r73}.
+i_location_x_location_x_contains(X,Y) :- location_x_hud_county_place_x_county(Y,X) {r74}.
+i_medicine_x_disease_x_includes_diseases(X,Y) :- medicine_x_disease_x_parent_disease(Y,X) {r75}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- location_x_location_x_containedby(X,Y) {r76}.
+i_military_x_military_combatant_x_military_commanders_x_military_x_military_command_x_military_commander(X,Y) :- military_x_military_commander_x_military_commands_x_military_x_military_command_x_military_combatant(Y,X) {r77}.
+i_tv_x_tv_program_x_regular_cast_x_tv_x_regular_tv_appearance_x_actor(X,Y) :- tv_x_tv_actor_x_starring_roles_x_tv_x_regular_tv_appearance_x_series(Y,X) {r78}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award_winner(X,Y) :- award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_award_nominee(Y,X) {r79}.
+i_location_x_location_x_contains(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(Y,X) {r80}.
+i_media_common_x_media_genre_x_parent_genre(X,Y) :- media_common_x_media_genre_x_child_genres(Y,X) {r81}.
+i_book_x_school_or_movement_x_associated_authors(X,Y) :- book_x_author_x_school_or_movement(Y,X) {r82}.
+i_location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(Y,X) {r83}.
+i_business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) :- organization_x_role_x_leaders_x_organization_x_leadership_x_organization(Y,X) {r84}.
+i_location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) :- location_x_us_county_x_hud_county_place(Y,X) {r85}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_team_x_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) {r86}.
+i_location_x_statistical_region_x_rent50_2_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_3_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r87}.
+i_location_x_location_x_contains(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_children(X,Y) {r88}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- location_x_location_x_containedby(X,Y) {r89}.
+i_sports_x_sports_team_x_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) :- sports_x_sports_position_x_players_x_ice_hockey_x_hockey_roster_position_x_team(Y,X) {r90}.
+i_location_x_statistical_region_x_rent50_1_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_0_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r91}.
+i_organization_x_organization_x_founders(X,Y) :- business_x_employer_x_employees_x_business_x_employment_tenure_x_person(X,Y) {r92}.
+i_location_x_statistical_region_x_rent50_2_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r93}.
+i_location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) :- location_x_hud_county_place_x_county(X,Y) {r94}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_position_x_players_x_baseball_x_baseball_roster_position_x_team(Y,X) {r95}.
+i_architecture_x_structure_x_architectural_style(X,Y) :- architecture_x_architectural_style_x_examples(Y,X) {r96}.
+i_organization_x_organization_x_phone_number_x_common_x_phone_number_x_service_location(X,Y) :- government_x_government_agency_x_jurisdiction(X,Y) {r97}.
+i_tv_x_tv_program_x_original_network_x_tv_x_tv_network_duration_x_network(X,Y) :- media_common_x_netflix_title_x_netflix_genres(X,Y) {r98}.
+i_government_x_political_party_x_politicians_in_this_party_x_government_x_political_party_tenure_x_politician(X,Y) :- government_x_politician_x_party_x_government_x_political_party_tenure_x_party(Y,X) {r99}.
+i_base_x_aareas_x_schema_x_administrative_area_x_capital(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) {r100}.
+i_royalty_x_noble_person_x_titles_x_royalty_x_noble_title_tenure_x_noble_title(X,Y) :- royalty_x_noble_title_x_holders_x_royalty_x_noble_title_tenure_x_noble_person(Y,X) {r101}.
+i_base_x_aareas_x_schema_x_administrative_area_x_capital(X,Y) :- location_x_location_x_containedby(Y,X) {r102}.
+i_location_x_location_x_containedby(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_capital(Y,X) {r103}.
+i_base_x_culturalevent_x_event_x_entity_involved(X,Y) :- location_x_location_x_events(Y,X) {r104}.
+i_award_x_award_category_x_winners_x_award_x_award_honor_x_award_winner(X,Y) :- award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_award(Y,X) {r105}.
+i_location_x_statistical_region_x_rent50_1_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_2_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r106}.
+i_location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) :- location_x_location_x_containedby(X,Y) {r107}.
+i_location_x_administrative_division_x_first_level_division_of(X,Y) :- location_x_location_x_containedby(X,Y) {r108}.
+i_protected_sites_x_natural_or_cultural_site_designation_x_sites_x_protected_sites_x_natural_or_cultural_site_listing_x_listed_site(X,Y) :- protected_sites_x_listed_site_x_designation_as_natural_or_cultural_site_x_protected_sites_x_natural_or_cultural_site_listing_x_designation(Y,X) {r109}.
+i_sports_x_sports_team_x_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) :- ice_hockey_x_hockey_team_x_current_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) {r110}.
+i_tv_x_tv_program_x_tv_producer_x_tv_x_tv_producer_term_x_producer(X,Y) :- tv_x_tv_program_x_program_creator(X,Y) {r111}.
+i_base_x_culturalevent_x_event_x_entity_involved(X,Y) :- military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_conflict(Y,X) {r112}.
+i_media_common_x_media_genre_x_child_genres(X,Y) :- media_common_x_media_genre_x_parent_genre(Y,X) {r113}.
+i_location_x_location_x_people_born_here(X,Y) :- people_x_person_x_place_of_birth(Y,X) {r114}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_team_x_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) {r115}.
+i_base_x_aareas_x_schema_x_administrative_area_x_capital(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(Y,X) {r116}.
+i_olympics_x_olympic_athlete_x_country_x_olympics_x_olympic_athlete_affiliation_x_olympics(X,Y) :- olympics_x_olympic_games_x_medals_awarded_x_olympics_x_olympic_medal_honor_x_medalist(Y,X) {r117}.
+i_sports_x_sports_team_x_roster_x_american_football_x_football_historical_roster_position_x_position_s(X,Y) :- american_football_x_football_team_x_historical_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r118}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) :- education_x_educational_degree_x_people_with_this_degree_x_education_x_education_x_institution(Y,X) {r119}.
+i_tv_x_tv_actor_x_starring_roles_x_tv_x_regular_tv_appearance_x_character(X,Y) :- tv_x_tv_character_x_appeared_in_tv_program_x_tv_x_regular_tv_appearance_x_actor(Y,X) {r120}.
+i_tv_x_tv_actor_x_starring_roles_x_tv_x_regular_tv_appearance_x_character(X,Y) :- people_x_profession_x_people_with_this_profession(Y,X) {r121}.
+i_aviation_x_airline_x_hubs(X,Y) :- aviation_x_airport_x_hub_for(Y,X) {r122}.
+i_aviation_x_airline_x_hubs(X,Y) :- aviation_x_airport_x_airlines_x_aviation_x_airline_airport_presence_x_airline(Y,X) {r123}.
+i_tv_x_tv_producer_x_programs_produced_x_tv_x_tv_producer_term_x_program(X,Y) :- tv_x_tv_program_x_program_creator(Y,X) {r124}.
+i_tv_x_tv_producer_x_programs_produced_x_tv_x_tv_producer_term_x_program(X,Y) :- tv_x_tv_program_x_tv_producer_x_tv_x_tv_producer_term_x_producer(Y,X) {r125}.
+i_people_x_person_x_education_x_education_x_education_x_major_field_of_study(X,Y) :- education_x_field_of_study_x_students_majoring_x_education_x_education_x_student(Y,X) {r126}.
+i_tv_x_tv_program_x_program_creator(X,Y) :- tv_x_tv_producer_x_programs_produced_x_tv_x_tv_producer_term_x_program(Y,X) {r127}.
+i_base_x_aareas_x_schema_x_administrative_area_x_capital(X,Y) :- location_x_location_x_contains(X,Y) {r128}.
+i_olympics_x_olympic_athlete_x_country_x_olympics_x_olympic_athlete_affiliation_x_olympics(X,Y) :- olympics_x_olympic_athlete_x_medals_won_x_olympics_x_olympic_medal_honor_x_olympics(X,Y) {r129}.
+i_religion_x_religion_x_is_part_of(X,Y) :- religion_x_religion_x_includes(Y,X) {r130}.
+i_organization_x_organization_x_founders(X,Y) :- people_x_person_x_employment_history_x_business_x_employment_tenure_x_company(Y,X) {r131}.
+i_tv_x_tv_program_x_program_creator(X,Y) :- tv_x_tv_program_creator_x_programs_created(Y,X) {r132}.
+i_government_x_governmental_body_x_jurisdiction(X,Y) :- government_x_government_agency_x_jurisdiction(X,Y) {r133}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- ice_hockey_x_hockey_team_x_current_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) {r134}.
+i_government_x_governmental_body_x_jurisdiction(X,Y) :- government_x_governmental_jurisdiction_x_agencies(Y,X) {r135}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- sports_x_pro_athlete_x_teams_x_soccer_x_football_roster_position_x_team(Y,X) {r136}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_capital(X,Y) {r137}.
+i_location_x_location_x_contains(X,Y) :- location_x_us_county_x_county_seat(X,Y) {r138}.
+i_location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) :- location_x_us_county_x_county_seat(Y,X) {r139}.
+i_medicine_x_disease_x_parent_disease(X,Y) :- medicine_x_icd_9_cm_classification_x_parent_classification(X,Y) {r140}.
+i_film_x_film_subject_x_films(X,Y) :- media_common_x_netflix_genre_x_titles(X,Y) {r141}.
+i_tv_x_tv_subject_x_tv_programs(X,Y) :- film_x_film_subject_x_films(X,Y) {r142}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_administrative_division_x_second_level_division_of(X,Y) {r143}.
+i_people_x_person_x_education_x_education_x_education_x_major_field_of_study(X,Y) :- award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Z), award_x_award_category_x_disciplines_or_subjects(Z,Y) {r144}.
+i_business_x_industry_x_companies(X,Y) :- business_x_business_operation_x_industry(Y,X) {r145}.
+i_location_x_administrative_division_x_first_level_division_of(X,Y) :- location_x_location_x_contains(Y,X) {r146}.
+i_tv_x_tv_character_x_appeared_in_tv_program_x_tv_x_regular_tv_appearance_x_special_performance_type(X,Y) :- tv_x_special_tv_performance_type_x_starring_performances_x_tv_x_regular_tv_appearance_x_character(Y,X) {r147}.
+i_tv_x_tv_character_x_appeared_in_tv_program_x_tv_x_regular_tv_appearance_x_special_performance_type(X,Y) :- film_x_special_film_performance_type_x_film_performance_type_x_film_x_performance_x_character(Y,X) {r148}.
+i_american_football_x_football_team_x_historical_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r149}.
+i_sports_x_sports_team_x_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) :- ice_hockey_x_hockey_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r150}.
+i_influence_x_influence_node_x_influenced(X,Y) :- media_common_x_dedicator_x_dedications_x_media_common_x_dedication_x_dedicated_to(Y,X) {r151}.
+i_sports_x_sports_team_x_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) :- sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r152}.
+i_location_x_statistical_region_x_rent50_2_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_0_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r153}.
+i_base_x_biblioness_x_bibs_location_x_state(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_children(Y,X) {r154}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) :- ice_hockey_x_hockey_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r155}.
+i_film_x_production_company_x_films(X,Y) :- film_x_film_distributor_x_films_distributed_x_film_x_film_film_distributor_relationship_x_film(X,Y) {r156}.
+i_base_x_schemastaging_x_organization_extra_x_phone_number_x_base_x_schemastaging_x_phone_sandbox_x_service_location(X,Y) :- location_x_location_x_contains(Y,X) {r157}.
+i_business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) :- business_x_job_title_x_people_with_this_title_x_business_x_employment_tenure_x_company(Y,X) {r158}.
+i_american_football_x_football_team_x_historical_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_position_x_players_x_american_football_x_football_historical_roster_position_x_team(Y,X) {r159}.
+i_medicine_x_disease_x_parent_disease(X,Y) :- medicine_x_disease_x_includes_diseases(Y,X) {r160}.
+i_military_x_military_combatant_x_force_deployments_x_military_x_force_strength_x_combatant(X,Y) :- military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_combatants(X,Y) {r161}.
+i_symbols_x_namesake_x_named_after(X,Y) :- award_x_award_category_x_winners_x_award_x_award_honor_x_award_winner(X,Y) {r162}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_children(Y,X) {r163}.
+i_location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_0_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r164}.
+i_organization_x_organization_sector_x_organizations_in_this_sector(X,Y) :- government_x_political_ideology_x_political_parties(X,Y) {r165}.
+i_location_x_location_x_contains(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(Y,X) {r166}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r167}.
+i_medicine_x_drug_ingredient_x_active_moiety_of_drug(X,Y) :- medicine_x_drug_x_active_moieties(Y,X) {r168}.
+i_tv_x_tv_character_x_appeared_in_tv_program_x_tv_x_regular_tv_appearance_x_series(X,Y) :- base_x_schemastaging_x_tv_character_extra_x_regular_dubbing_performances_x_base_x_schemastaging_x_tv_star_dubbing_performance_x_program(X,Y) {r169}.
+i_computer_x_programming_language_paradigm_x_languages(X,Y) :- computer_x_programming_language_x_language_paradigms(Y,X) {r170}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_honored_for(X,Y) :- tv_x_tv_producer_x_programs_produced_x_tv_x_tv_producer_term_x_program(X,Y) {r171}.
+i_location_x_location_x_containedby(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) {r172}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- location_x_us_county_x_hud_county_place(X,Y) {r173}.
+i_people_x_person_x_employment_history_x_business_x_employment_tenure_x_title(X,Y) :- business_x_board_member_x_leader_of_x_organization_x_leadership_x_role(X,Y) {r174}.
+i_location_x_location_x_contains(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(Y,X) {r175}.
+i_location_x_hud_county_place_x_county(X,Y) :- location_x_location_x_containedby(X,Y) {r176}.
+i_award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_award(X,Y) :- award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Y) {r177}.
+i_location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) {r178}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Y) :- award_x_award_category_x_nominees_x_award_x_award_nomination_x_award_nominee(Y,X) {r179}.
+i_award_x_award_category_x_nominees_x_award_x_award_nomination_x_nominated_for(X,Y) :- award_x_award_category_x_winners_x_award_x_award_honor_x_honored_for(X,Y) {r180}.
+i_religion_x_religious_practice_x_practice_of(X,Y) :- religion_x_religion_x_practices(Y,X) {r181}.
+i_olympics_x_olympic_participating_country_x_athletes_x_olympics_x_olympic_athlete_affiliation_x_olympics(X,Y) :- olympics_x_olympic_games_x_athletes_x_olympics_x_olympic_athlete_affiliation_x_country(Y,X) {r182}.
+i_location_x_administrative_division_x_country(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) {r183}.
+i_military_x_military_commander_x_military_commands_x_military_x_military_command_x_military_conflict(X,Y) :- base_x_culturalevent_x_event_x_entity_involved(Y,X) {r184}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_player(X,Y) :- sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) {r185}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- location_x_location_x_contains(X,Y) {r186}.
+i_military_x_military_commander_x_military_commands_x_military_x_military_command_x_military_conflict(X,Y) :- military_x_military_conflict_x_commanders_x_military_x_military_command_x_military_commander(Y,X) {r187}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- ice_hockey_x_hockey_team_x_current_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) {r188}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- location_x_hud_county_place_x_county(Y,X) {r189}.
+i_tv_x_tv_character_x_appeared_in_tv_program_x_tv_x_regular_tv_appearance_x_series(X,Y) :- base_x_schemastaging_x_tv_program_extra_x_regular_dubbing_performances_x_base_x_schemastaging_x_tv_star_dubbing_performance_x_character(Y,X) {r190}.
+i_award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_award_nominee(X,Y) :- award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award_winner(X,Y) {r191}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- sports_x_pro_athlete_x_teams_x_sports_x_sports_team_roster_x_team(Y,X) {r192}.
+i_location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_capital(Y,X) {r193}.
+i_computer_x_programming_language_paradigm_x_languages(X,Y) :- computer_x_programming_language_paradigm_x_languages(X,Z), computer_x_programming_language_x_influenced(Z,Y) {r194}.
+i_organization_x_organization_sector_x_organizations_in_this_sector(X,Y) :- organization_x_organization_x_sectors(Y,X) {r195}.
+i_organization_x_organization_sector_x_organizations_in_this_sector(X,Y) :- government_x_political_party_x_ideology(Y,X) {r196}.
+i_location_x_location_x_contains(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_state_province_region(Y,X) {r197}.
+i_people_x_profession_x_people_with_this_profession(X,Y) :- tv_x_tv_personality_x_tv_regular_appearances_x_tv_x_tv_regular_personal_appearance_x_appearance_type(Y,X) {r198}.
+i_location_x_statistical_region_x_rent50_1_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r199}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- location_x_us_county_x_county_seat(X,Y) {r200}.
+i_medicine_x_medical_treatment_x_used_to_treat(X,Y) :- medicine_x_disease_x_treatments(Y,X) {r201}.
+i_tv_x_tv_subject_x_tv_programs(X,Y) :- tv_x_tv_program_x_subjects(Y,X) {r202}.
+i_tv_x_tv_subject_x_tv_programs(X,Y) :- film_x_film_x_subjects(Y,X) {r203}.
+i_film_x_producer_x_film(X,Y) :- award_x_award_winning_work_x_awards_won_x_award_x_award_honor_x_award_winner(Y,X) {r204}.
+i_film_x_producer_x_film(X,Y) :- film_x_film_x_directed_by(Y,X) {r205}.
+i_location_x_hud_county_place_x_county(X,Y) :- location_x_location_x_contains(Y,X) {r206}.
+i_language_x_human_language_x_main_country(X,Y) :- language_x_human_language_x_countries_spoken_in(X,Y) {r207}.
+i_computer_x_operating_system_x_includes_os_versions(X,Y) :- influence_x_influence_node_x_influenced_by(Y,X) {r208}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- ice_hockey_x_hockey_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r209}.
+i_location_x_administrative_division_x_first_level_division_of(X,Y) :- location_x_administrative_division_x_country(X,Y) {r210}.
+i_computer_x_operating_system_x_includes_os_versions(X,Y) :- computer_x_operating_system_x_parent_os(Y,X) {r211}.
+i_government_x_governmental_body_x_members_x_government_x_government_position_held_x_jurisdiction_of_office(X,Y) :- government_x_governmental_jurisdiction_x_government_bodies(Y,X) {r212}.
+i_government_x_governmental_body_x_members_x_government_x_government_position_held_x_jurisdiction_of_office(X,Y) :- government_x_governmental_jurisdiction_x_governing_officials_x_government_x_government_position_held_x_governmental_body(Y,X) {r213}.
+i_government_x_governmental_body_x_members_x_government_x_government_position_held_x_jurisdiction_of_office(X,Y) :- government_x_governmental_body_x_jurisdiction(X,Y) {r214}.
+i_award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(X,Y) :- film_x_film_x_starring_x_film_x_performance_x_actor(Y,X) {r215}.
+i_location_x_statistical_region_x_rent50_0_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_1_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r216}.
+i_award_x_award_category_x_winners_x_award_x_award_honor_x_honored_for(X,Y) :- award_x_award_nominated_work_x_award_nominations_x_award_x_award_nomination_x_award(Y,X) {r217}.
+i_award_x_award_category_x_winners_x_award_x_award_honor_x_honored_for(X,Y) :- award_x_award_winning_work_x_awards_won_x_award_x_award_honor_x_award(Y,X) {r218}.
+i_military_x_military_combatant_x_force_deployments_x_military_x_force_strength_x_combatant(X,Y) :- military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_combatants(Y,X) {r219}.
+i_location_x_location_x_containedby(X,Y) :- location_x_us_county_x_county_seat(Y,X) {r220}.
+i_military_x_military_combatant_x_force_deployments_x_military_x_force_strength_x_combatant(X,Y) :- military_x_military_combatant_x_force_deployments_x_military_x_force_strength_x_combatant(Y,X) {r221}.
+i_location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) :- base_x_biblioness_x_bibs_location_x_state(X,Y) {r222}.
+i_symbols_x_namesake_x_named_after(X,Y) :- award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(Y,X) {r223}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_honored_for(X,Y) :- award_x_award_winning_work_x_awards_won_x_award_x_award_honor_x_award_winner(Y,X) {r224}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- location_x_administrative_division_x_second_level_division_of(X,Y) {r225}.
+i_people_x_profession_x_people_with_this_profession(X,Y) :- tv_x_non_character_role_x_tv_regular_personal_appearances_x_tv_x_tv_regular_personal_appearance_x_person(X,Y) {r226}.
+i_education_x_educational_institution_campus_x_educational_institution(X,Y) :- education_x_educational_institution_x_campuses(X,Y) {r227}.
+i_location_x_us_county_x_hud_county_place(X,Y) :- location_x_us_county_x_county_seat(X,Y) {r228}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- sports_x_pro_athlete_x_teams_x_sports_x_sports_team_roster_x_team(Y,X) {r229}.
+i_film_x_production_company_x_films(X,Y) :- film_x_film_x_distributors_x_film_x_film_film_distributor_relationship_x_distributor(Y,X) {r230}.
+i_people_x_person_x_places_lived_x_people_x_place_lived_x_location(X,Y) :- people_x_deceased_person_x_place_of_death(X,Y) {r231}.
+i_film_x_production_company_x_films(X,Y) :- film_x_film_x_production_companies(Y,X) {r232}.
+i_award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(X,Y) :- award_x_award_winning_work_x_awards_won_x_award_x_award_honor_x_award_winner(Y,X) {r233}.
+i_american_football_x_football_team_x_historical_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_team_x_roster_x_american_football_x_football_historical_roster_position_x_position_s(X,Y) {r234}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) :- sports_x_sports_position_x_players_x_sports_x_sports_team_roster_x_team(Y,X) {r235}.
+i_award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(X,Y) :- film_x_film_x_film_set_decoration_by(Y,X) {r236}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- soccer_x_football_player_x_current_team_x_sports_x_sports_team_roster_x_team(Y,X) {r237}.
+i_military_x_military_conflict_x_combatants_x_military_x_military_combatant_group_x_combatants(X,Y) :- military_x_military_conflict_x_commanders_x_military_x_military_command_x_military_combatant(X,Y) {r238}.
+i_computer_x_operating_system_x_includes_os_versions(X,Y) :- influence_x_influence_node_x_influenced(X,Y) {r239}.
+i_business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) :- organization_x_role_x_governors_x_organization_x_organization_board_membership_x_organization(Y,X) {r240}.
+i_sports_x_sports_league_season_x_awards_x_sports_x_sports_award_x_award_winner(X,Y) :- baseball_x_baseball_player_x_batting_stats_x_baseball_x_batting_statistics_x_season(Y,X) {r241}.
+i_organization_x_membership_organization_x_members_x_organization_x_organization_membership_x_member(X,Y) :- government_x_political_party_x_politicians_in_this_party_x_government_x_political_party_tenure_x_politician(X,Y) {r242}.
+i_sports_x_sports_league_season_x_awards_x_sports_x_sports_award_x_award_winner(X,Y) :- sports_x_sports_award_winner_x_awards_x_sports_x_sports_award_x_season(Y,X) {r243}.
+i_organization_x_membership_organization_x_members_x_organization_x_organization_membership_x_member(X,Y) :- organization_x_organization_member_x_member_of_x_organization_x_organization_membership_x_organization(Y,X) {r244}.
+i_organization_x_membership_organization_x_members_x_organization_x_organization_membership_x_member(X,Y) :- government_x_politician_x_party_x_government_x_political_party_tenure_x_party(Y,X) {r245}.
+i_film_x_film_subject_x_films(X,Y) :- film_x_film_x_genre(Y,X) {r246}.
+i_military_x_military_conflict_x_combatants_x_military_x_military_combatant_group_x_combatants(X,Y) :- military_x_military_combatant_x_military_commanders_x_military_x_military_command_x_military_conflict(Y,X) {r247}.
+i_american_football_x_football_team_x_historical_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- american_football_x_football_team_x_historical_roster_x_american_football_x_football_historical_roster_position_x_position_s(X,Y) {r248}.
+i_cvg_x_computer_videogame_x_gameplay_modes(X,Y) :- cvg_x_gameplay_mode_x_games_with_this_mode(Y,X) {r249}.
+i_dining_x_cuisine_x_restaurant(X,Y) :- business_x_business_operation_x_industry(Y,X) {r250}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- baseball_x_baseball_team_x_current_roster_x_baseball_x_baseball_roster_position_x_position(X,Y) {r251}.
+i_award_x_award_category_x_nominees_x_award_x_award_nomination_x_nominated_for(X,Y) :- award_x_award_winning_work_x_awards_won_x_award_x_award_honor_x_award(Y,X) {r252}.
+i_film_x_producer_x_film(X,Y) :- film_x_director_x_film(X,Y) {r253}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) :- sports_x_sports_team_x_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) {r254}.
+i_film_x_producer_x_film(X,Y) :- award_x_award_winner_x_awards_won_x_award_x_award_honor_x_honored_for(X,Y) {r255}.
+i_location_x_us_county_x_hud_county_place(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(Y,X) {r256}.
+i_cvg_x_computer_videogame_x_gameplay_modes(X,Y) :- cvg_x_gameplay_mode_x_games_with_this_mode(X,Y) {r257}.
+i_dining_x_cuisine_x_restaurant(X,Y) :- dining_x_restaurant_x_cuisine(Y,X) {r258}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_children(X,Y) :- base_x_biblioness_x_bibs_location_x_state(Y,X) {r259}.
+i_award_x_award_category_x_winners_x_award_x_award_honor_x_ceremony(X,Y) :- award_x_award_ceremony_x_awards_presented_x_award_x_award_honor_x_award(Y,X) {r260}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- location_x_country_x_second_level_divisions(Y,X) {r261}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_player(X,Y) :- sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_player(X,Y) {r262}.
+i_music_x_genre_x_parent_genre(X,Y) :- music_x_genre_x_subgenre(Y,X) {r263}.
+i_location_x_location_x_containedby(X,Y) :- location_x_administrative_division_x_first_level_division_of(X,Y) {r264}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_location_x_contains(X,Z), location_x_location_x_containedby(Z,Y) {r265}.
+i_location_x_location_x_contains(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_capital(X,Y) {r266}.
+i_location_x_location_x_containedby(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(Y,X) {r267}.
+i_travel_x_tourist_attraction_x_near_travel_destination(X,Y) :- travel_x_travel_destination_x_tourist_attractions(Y,X) {r268}.
+i_medicine_x_icd_9_cm_classification_x_includes_classifications(X,Y) :- medicine_x_icd_9_cm_classification_x_parent_classification(Y,X) {r269}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_player(X,Y) :- sports_x_pro_athlete_x_teams_x_soccer_x_football_roster_position_x_team(Y,X) {r270}.
+i_sports_x_pro_athlete_x_sports_played_professionally_x_sports_x_pro_sports_played_x_sport(X,Y) :- olympics_x_olympic_sport_x_athletes_x_olympics_x_olympic_athlete_affiliation_x_athlete(Y,X) {r271}.
+i_sports_x_sports_team_location_x_teams(X,Y) :- sports_x_sports_team_x_location(Y,X) {r272}.
+i_sports_x_pro_athlete_x_sports_played_professionally_x_sports_x_pro_sports_played_x_sport(X,Y) :- sports_x_sport_x_pro_athletes_x_sports_x_pro_sports_played_x_athlete(Y,X) {r273}.
+i_medicine_x_disease_x_includes_diseases(X,Y) :- medicine_x_icd_9_cm_classification_x_includes_classifications(X,Y) {r274}.
+i_location_x_us_county_x_hud_county_place(X,Y) :- location_x_hud_county_place_x_place(Y,X) {r275}.
+i_american_football_x_football_team_x_historical_roster_x_american_football_x_football_historical_roster_position_x_position_s(X,Y) :- american_football_x_football_team_x_historical_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r276}.
+i_language_x_human_language_x_main_country(X,Y) :- location_x_country_x_official_language(Y,X) {r277}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- soccer_x_football_player_x_current_team_x_sports_x_sports_team_roster_x_team(Y,X) {r278}.
+i_location_x_us_county_x_hud_county_place(X,Y) :- location_x_us_county_x_county_seat(Y,X) {r279}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- sports_x_pro_athlete_x_teams_x_soccer_x_football_roster_position_x_team(Y,X) {r280}.
+i_location_x_location_x_containedby(X,Y) :- location_x_us_county_x_hud_county_place(Y,X) {r281}.
+i_organization_x_organization_x_parent_x_organization_x_organization_relationship_x_parent(X,Y) :- broadcast_x_distributor_x_distributes(Y,X) {r282}.
+i_media_common_x_netflix_genre_x_titles(X,Y) :- award_x_award_winning_work_x_awards_won_x_award_x_award_honor_x_award_winner(Y,X) {r283}.
+i_organization_x_organization_x_parent_x_organization_x_organization_relationship_x_parent(X,Y) :- broadcast_x_broadcast_x_distributor(X,Y) {r284}.
+i_location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_1_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r285}.
+i_organization_x_organization_x_parent_x_organization_x_organization_relationship_x_parent(X,Y) :- business_x_consumer_company_x_brands_x_business_x_company_brand_relationship_x_brand(Y,X) {r286}.
+i_organization_x_organization_x_parent_x_organization_x_organization_relationship_x_parent(X,Y) :- business_x_brand_x_owner_s_x_business_x_company_brand_relationship_x_company(X,Y) {r287}.
+i_media_common_x_netflix_genre_x_titles(X,Y) :- tv_x_tv_program_x_original_network_x_tv_x_tv_network_duration_x_network(Y,X) {r288}.
+i_media_common_x_netflix_genre_x_titles(X,Y) :- award_x_award_nominated_work_x_award_nominations_x_award_x_award_nomination_x_award_nominee(Y,X) {r289}.
+i_medicine_x_drug_x_drug_class(X,Y) :- medicine_x_drug_ingredient_x_active_moiety_of_drug(X,Y) {r290}.
+i_award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(X,Y) :- film_x_actor_x_film_x_film_x_performance_x_film(X,Y) {r291}.
+i_medicine_x_drug_x_drug_class(X,Y) :- medicine_x_drug_ingredient_x_more_specific_ingredient(X,Y) {r292}.
+i_medicine_x_drug_x_drug_class(X,Y) :- medicine_x_drug_class_x_drugs(X,Y) {r293}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- location_x_country_x_capital(Y,X) {r294}.
+i_medicine_x_drug_x_drug_class(X,Y) :- medicine_x_drug_ingredient_x_more_general_ingredient(X,Y) {r295}.
+i_music_x_genre_x_parent_genre(X,Y) :- music_x_genre_x_parent_genre(X,Z), music_x_genre_x_subgenre(Z,Y) {r296}.
+i_military_x_military_combatant_x_force_deployments_x_military_x_force_strength_x_military_conflict(X,Y) :- military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_conflict(X,Y) {r297}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- ice_hockey_x_hockey_player_x_current_team_x_ice_hockey_x_hockey_roster_position_x_team(Y,X) {r298}.
+i_base_x_aareas_x_schema_x_administrative_area_x_capital(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(Y,X) {r299}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- location_x_administrative_division_x_country(X,Y) {r300}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- sports_x_pro_athlete_x_teams_x_ice_hockey_x_hockey_roster_position_x_team(Y,X) {r301}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_honored_for(X,Y) :- film_x_film_x_cinematography(Y,X) {r302}.
+i_tv_x_tv_actor_x_guest_roles_x_tv_x_tv_guest_role_x_special_performance_type(X,Y) :- tv_x_special_tv_performance_type_x_episode_performances_x_tv_x_tv_guest_role_x_actor(Y,X) {r303}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) {r304}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_sports_position_x_players_x_soccer_x_football_roster_position_x_team(Y,X) {r305}.
+i_film_x_director_x_film(X,Y) :- award_x_award_nominated_work_x_award_nominations_x_award_x_award_nomination_x_award_nominee(Y,X) {r306}.
+i_sports_x_sports_team_x_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) :- sports_x_sports_position_x_players_x_sports_x_sports_team_roster_x_team(Y,X) {r307}.
+i_people_x_deceased_person_x_place_of_death(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(X,Y) {r308}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- location_x_it_province_x_capital(X,Y) {r309}.
+i_film_x_director_x_film(X,Y) :- film_x_film_x_directed_by(Y,X) {r310}.
+i_film_x_director_x_film(X,Y) :- award_x_award_winning_work_x_awards_won_x_award_x_award_honor_x_award_winner(Y,X) {r311}.
+i_film_x_director_x_film(X,Y) :- film_x_film_x_produced_by(Y,X) {r312}.
+i_base_x_biblioness_x_bibs_location_x_state(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(Y,X) {r313}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- chemistry_x_chemical_compound_x_solubility_x_chemistry_x_solubility_relationship_x_solvent(X,Z), common_x_topic_x_webpage_x_common_x_webpage_x_category(Z,Y) {r314}.
+i_theater_x_play_x_lyricist(X,Y) :- theater_x_theatrical_lyricist_x_play_lyrics_written(Y,X) {r315}.
+i_theater_x_play_x_lyricist(X,Y) :- book_x_author_x_works_written(Y,X) {r316}.
+i_base_x_contractbridge_x_bridge_tournament_x_standing_x_base_x_contractbridge_x_bridge_tournament_standings_x_second_place(X,Y) :- base_x_contractbridge_x_bridge_tournament_x_standing_x_base_x_contractbridge_x_bridge_tournament_standings_x_first_place(X,Y) {r317}.
+i_medicine_x_drug_x_active_moieties(X,Y) :- medicine_x_drug_class_x_drugs(X,Y) {r318}.
+i_award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(X,Y) :- film_x_film_set_designer_x_film_sets_designed(X,Y) {r319}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_honored_for(X,Y) :- film_x_cinematographer_x_film(X,Y) {r320}.
+i_location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(Z,Y) {r321}.
+i_medicine_x_drug_x_active_moieties(X,Y) :- medicine_x_drug_ingredient_x_active_moiety_of_drug(X,Y) {r322}.
+i_medicine_x_drug_x_active_moieties(X,Y) :- medicine_x_drug_ingredient_x_more_general_ingredient(X,Y) {r323}.
+i_medicine_x_icd_9_cm_classification_x_includes_classifications(X,Y) :- medicine_x_disease_x_includes_diseases(X,Y) {r324}.
+i_medicine_x_drug_x_active_moieties(X,Y) :- medicine_x_drug_ingredient_x_more_specific_ingredient(X,Y) {r325}.
+i_location_x_location_x_containedby(X,Y) :- location_x_country_x_first_level_divisions(Y,X) {r326}.
+i_medicine_x_disease_x_includes_diseases(X,Y) :- medicine_x_icd_9_cm_classification_x_parent_classification(Y,X) {r327}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- location_x_location_x_contains(X,Z), location_x_location_x_containedby(Z,Y) {r328}.
+i_organization_x_organization_x_board_members_x_organization_x_organization_board_membership_x_role(X,Y) :- organization_x_role_x_governors_x_organization_x_organization_board_membership_x_organization(Y,X) {r329}.
+i_location_x_location_x_people_born_here(X,Y) :- base_x_popstra_x_location_x_vacationers_x_base_x_popstra_x_vacation_choice_x_vacationer(X,Y) {r330}.
+i_fictional_universe_x_fictional_character_x_married_to_x_fictional_universe_x_marriage_of_fictional_characters_x_spouses(X,Y) :- fictional_universe_x_fictional_character_x_children(X,Y) {r331}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_containedby(X,Z), location_x_location_x_containedby(Z,Y) {r332}.
+i_location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) {r333}.
+i_base_x_schemastaging_x_organization_extra_x_phone_number_x_base_x_schemastaging_x_phone_sandbox_x_service_location(X,Y) :- location_x_location_x_containedby(X,Y) {r334}.
+i_location_x_location_x_containedby(X,Y) :- location_x_country_x_capital(Y,X) {r335}.
+i_fictional_universe_x_fictional_character_x_married_to_x_fictional_universe_x_marriage_of_fictional_characters_x_spouses(X,Y) :- fictional_universe_x_fictional_character_x_siblings_x_fictional_universe_x_sibling_relationship_of_fictional_characters_x_siblings(X,Y) {r336}.
+i_base_x_schemastaging_x_organization_extra_x_phone_number_x_base_x_schemastaging_x_phone_sandbox_x_service_location(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_country(X,Y) {r337}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) {r338}.
+i_fictional_universe_x_fictional_character_x_married_to_x_fictional_universe_x_marriage_of_fictional_characters_x_spouses(X,Y) :- fictional_universe_x_fictional_character_x_romantically_involved_with_x_fictional_universe_x_romantic_involvement_x_partner(X,Y) {r339}.
+i_organization_x_organization_x_board_members_x_organization_x_organization_board_membership_x_role(X,Y) :- organization_x_role_x_leaders_x_organization_x_leadership_x_organization(Y,X) {r340}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_location_x_contains(X,Z), base_x_biblioness_x_bibs_location_x_country(Z,Y) {r341}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- dataworld_x_gardening_hint_x_split_to(Y,X) {r342}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_player(X,Y) {r343}.
+i_award_x_award_nominated_work_x_award_nominations_x_award_x_award_nomination_x_award_nominee(X,Y) :- award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(Y,X) {r344}.
+i_base_x_contractbridge_x_bridge_tournament_x_standing_x_base_x_contractbridge_x_bridge_tournament_standings_x_second_place(X,Y) :- base_x_contractbridge_x_bridge_player_x_first_place_finish_x_base_x_contractbridge_x_bridge_tournament_standings_x_tournament(Y,X) {r345}.
+i_location_x_hud_county_place_x_county(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) {r346}.
+i_award_x_award_nominated_work_x_award_nominations_x_award_x_award_nomination_x_award_nominee(X,Y) :- media_common_x_netflix_genre_x_titles(Y,X) {r347}.
+i_location_x_statistical_region_x_rent50_1_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_3_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r348}.
+i_award_x_award_nominated_work_x_award_nominations_x_award_x_award_nomination_x_award_nominee(X,Y) :- tv_x_tv_network_x_programs_x_tv_x_tv_network_duration_x_program(Y,X) {r349}.
+i_base_x_contractbridge_x_bridge_tournament_x_standing_x_base_x_contractbridge_x_bridge_tournament_standings_x_second_place(X,Y) :- base_x_contractbridge_x_bridge_player_x_second_place_finish_x_base_x_contractbridge_x_bridge_tournament_standings_x_tournament(Y,X) {r350}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_player(X,Y) :- soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) {r351}.
+i_location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_hud_foreclosure_area_x_hhuniv_x_measurement_unit_x_dated_integer_x_source(X,Y) {r352}.
+i_location_x_location_x_people_born_here(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(Y,X) {r353}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) {r354}.
+i_location_x_location_x_people_born_here(X,Y) :- base_x_popstra_x_celebrity_x_vacations_in_x_base_x_popstra_x_vacation_choice_x_location(Y,X) {r355}.
+i_organization_x_organization_x_founders(X,Y) :- business_x_board_member_x_leader_of_x_organization_x_leadership_x_organization(Y,X) {r356}.
+i_military_x_military_combatant_x_force_deployments_x_military_x_force_strength_x_military_conflict(X,Y) :- military_x_military_conflict_x_combatants_x_military_x_military_combatant_group_x_combatants(Y,X) {r357}.
+i_military_x_military_combatant_x_force_deployments_x_military_x_force_strength_x_military_conflict(X,Y) :- base_x_culturalevent_x_event_x_entity_involved(Y,X) {r358}.
+i_military_x_military_combatant_x_force_deployments_x_military_x_force_strength_x_military_conflict(X,Y) :- military_x_military_conflict_x_force_strengths_x_military_x_force_strength_x_combatant(Y,X) {r359}.
+i_book_x_book_subject_x_works(X,Y) :- book_x_written_work_x_subjects(Y,X) {r360}.
+i_organization_x_organization_x_board_members_x_organization_x_organization_board_membership_x_role(X,Y) :- organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) {r361}.
+i_organization_x_organization_x_founders(X,Y) :- music_x_artist_x_label(Y,X) {r362}.
+i_media_common_x_netflix_genre_x_titles(X,Y) :- award_x_award_winner_x_awards_won_x_award_x_award_honor_x_honored_for(X,Y) {r363}.
+i_military_x_military_combatant_x_force_deployments_x_military_x_force_strength_x_military_conflict(X,Y) :- military_x_military_conflict_x_casualties_x_military_x_casualties_x_combatant(Y,X) {r364}.
+i_media_common_x_netflix_genre_x_titles(X,Y) :- award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(X,Y) {r365}.
+i_military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_combatants(X,Y) :- military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_combatants(Y,X) {r366}.
+i_media_common_x_netflix_genre_x_titles(X,Y) :- tv_x_tv_network_x_programs_x_tv_x_tv_network_duration_x_program(X,Y) {r367}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- business_x_consumer_company_x_brands_x_business_x_company_brand_relationship_x_brand(X,Z), common_x_topic_x_webpage_x_common_x_webpage_x_category(Z,Y) {r368}.
+i_location_x_statistical_region_x_rent50_3_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_0_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r369}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) :- sports_x_sports_position_x_players_x_ice_hockey_x_hockey_roster_position_x_team(Y,X) {r370}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_person(X,Y) :- organization_x_organization_founder_x_organizations_founded(Y,X) {r371}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_person(X,Y) :- music_x_artist_x_label(Y,X) {r372}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- sports_x_sports_team_x_roster_x_ice_hockey_x_hockey_roster_position_x_player(X,Y) {r373}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- ice_hockey_x_hockey_team_x_current_roster_x_ice_hockey_x_hockey_roster_position_x_player(X,Y) {r374}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), location_x_location_x_containedby(Z,Y) {r375}.
+i_tv_x_tv_writer_x_tv_programs_x_tv_x_tv_program_writer_relationship_x_tv_program(X,Y) :- tv_x_tv_program_x_tv_producer_x_tv_x_tv_producer_term_x_producer(Y,X) {r376}.
+i_tv_x_tv_writer_x_tv_programs_x_tv_x_tv_program_writer_relationship_x_tv_program(X,Y) :- tv_x_tv_program_x_program_creator(Y,X) {r377}.
+i_tv_x_tv_writer_x_tv_programs_x_tv_x_tv_program_writer_relationship_x_tv_program(X,Y) :- tv_x_tv_program_x_recurring_writers_x_tv_x_tv_program_writer_relationship_x_writer(Y,X) {r378}.
+i_tv_x_tv_writer_x_tv_programs_x_tv_x_tv_program_writer_relationship_x_tv_program(X,Y) :- award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(X,Y) {r379}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_person(X,Y) :- people_x_person_x_employment_history_x_business_x_employment_tenure_x_company(Y,X) {r380}.
+i_fictional_universe_x_fictional_character_x_married_to_x_fictional_universe_x_marriage_of_fictional_characters_x_spouses(X,Y) :- fictional_universe_x_fictional_character_x_married_to_x_fictional_universe_x_marriage_of_fictional_characters_x_spouses(Y,X) {r381}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_country_x_capital(Y,X) {r382}.
+i_tv_x_tv_writer_x_tv_programs_x_tv_x_tv_program_writer_relationship_x_tv_program(X,Y) :- tv_x_tv_actor_x_starring_roles_x_tv_x_regular_tv_appearance_x_series(X,Y) {r383}.
+i_fictional_universe_x_fictional_character_x_married_to_x_fictional_universe_x_marriage_of_fictional_characters_x_spouses(X,Y) :- fictional_universe_x_fictional_character_x_romantically_involved_with_x_fictional_universe_x_romantic_involvement_x_partner(Y,X) {r384}.
+i_fictional_universe_x_fictional_character_x_married_to_x_fictional_universe_x_marriage_of_fictional_characters_x_spouses(X,Y) :- fictional_universe_x_fictional_character_x_siblings_x_fictional_universe_x_sibling_relationship_of_fictional_characters_x_siblings(Y,X) {r385}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_team_x_roster_x_american_football_x_football_historical_roster_position_x_position_s(X,Y) {r386}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_player(X,Y) :- soccer_x_football_player_x_current_team_x_sports_x_sports_team_roster_x_team(Y,X) {r387}.
+i_theater_x_play_x_lyricist(X,Y) :- book_x_written_work_x_author(X,Y) {r388}.
+i_tv_x_tv_writer_x_tv_programs_x_tv_x_tv_program_writer_relationship_x_tv_program(X,Y) :- tv_x_tv_producer_x_programs_produced_x_tv_x_tv_producer_term_x_program(X,Y) {r389}.
+i_film_x_director_x_film(X,Y) :- award_x_award_winner_x_awards_won_x_award_x_award_honor_x_honored_for(X,Y) {r390}.
+i_fictional_universe_x_fictional_character_x_married_to_x_fictional_universe_x_marriage_of_fictional_characters_x_spouses(X,Y) :- fictional_universe_x_fictional_character_x_parents(Y,X) {r391}.
+i_tv_x_tv_writer_x_tv_programs_x_tv_x_tv_program_writer_relationship_x_tv_program(X,Y) :- tv_x_tv_program_creator_x_programs_created(X,Y) {r392}.
+i_film_x_director_x_film(X,Y) :- award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(X,Y) {r393}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- american_football_x_football_team_x_historical_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r394}.
+i_education_x_educational_institution_campus_x_educational_institution(X,Y) :- education_x_educational_institution_x_campuses(Y,X) {r395}.
+i_organization_x_organization_x_founders(X,Y) :- music_x_record_label_x_artist(X,Y) {r396}.
+i_location_x_us_county_x_hud_county_place(X,Y) :- location_x_hud_county_place_x_place(X,Y) {r397}.
+i_film_x_director_x_film(X,Y) :- film_x_producer_x_film(X,Y) {r398}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- baseball_x_baseball_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r399}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- american_football_x_football_team_x_historical_roster_x_american_football_x_football_historical_roster_position_x_position_s(X,Y) {r400}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_person(X,Y) :- business_x_employer_x_employees_x_business_x_employment_tenure_x_person(X,Y) {r401}.
+i_location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_2_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r402}.
+i_location_x_location_x_containedby(X,Y) :- geography_x_river_x_basin_countries(X,Y) {r403}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_player(X,Y) :- soccer_x_football_player_x_current_team_x_soccer_x_football_roster_position_x_team(Y,X) {r404}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_person(X,Y) :- music_x_record_label_x_artist(X,Y) {r405}.
+i_location_x_administrative_division_x_first_level_division_of(X,Y) :- location_x_country_x_first_level_divisions(Y,X) {r406}.
+i_location_x_location_x_containedby(X,Y) :- government_x_political_district_x_representatives_x_government_x_government_position_held_x_jurisdiction_of_office(X,Y) {r407}.
+i_education_x_educational_institution_campus_x_educational_institution(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(X,Z), location_x_location_x_contains(Z,Y) {r408}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_honored_for(X,Y) :- award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(X,Y) {r409}.
+i_location_x_statistical_region_x_rent50_3_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_1_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r410}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_containedby(X,Z), location_x_administrative_division_x_second_level_division_of(Z,Y) {r411}.
+i_medicine_x_icd_9_cm_classification_x_includes_classifications(X,Y) :- medicine_x_disease_x_parent_disease(X,Z), medicine_x_disease_x_includes_diseases(Z,Y) {r412}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_children(Y,X) {r413}.
+i_location_x_administrative_division_x_country(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_children(Y,X) {r414}.
+i_film_x_film_x_distributors_x_film_x_film_film_distributor_relationship_x_distributor(X,Y) :- film_x_production_company_x_films(Y,X) {r415}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Z), base_x_biblioness_x_bibs_location_x_country(Z,Y) {r416}.
+i_location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_statistical_region_x_rent50_3_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r417}.
+i_architecture_x_architect_x_architectural_style(X,Y) :- architecture_x_architectural_style_x_architects(Y,X) {r418}.
+i_film_x_film_x_distributors_x_film_x_film_film_distributor_relationship_x_distributor(X,Y) :- film_x_film_location_x_featured_in_films(Y,X) {r419}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Y) :- award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_award(X,Y) {r420}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Z), location_x_administrative_division_x_country(Z,Y) {r421}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_player(X,Y) {r422}.
+i_location_x_country_x_form_of_government(X,Y) :- government_x_form_of_government_x_countries(Y,X) {r423}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_location_x_containedby(X,Z), location_x_location_x_containedby(Z,Y) {r424}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Z), location_x_administrative_division_x_first_level_division_of(Z,Y) {r425}.
+i_location_x_location_x_containedby(X,Y) :- government_x_governmental_jurisdiction_x_governing_officials_x_government_x_government_position_held_x_district_represented(Y,X) {r426}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_location_x_containedby(X,Z), location_x_administrative_division_x_country(Z,Y) {r427}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_location_x_containedby(X,Z), location_x_administrative_division_x_first_level_division_of(Z,Y) {r428}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Z), location_x_location_x_containedby(Z,Y) {r429}.
+i_location_x_administrative_division_x_first_level_division_of(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_children(Y,X) {r430}.
+i_medicine_x_drug_x_drug_class(X,Y) :- medicine_x_drug_ingredient_x_more_general_ingredient(Y,X) {r431}.
+i_medicine_x_drug_x_drug_class(X,Y) :- medicine_x_drug_class_x_drugs(Y,X) {r432}.
+i_medicine_x_drug_x_drug_class(X,Y) :- medicine_x_drug_ingredient_x_more_specific_ingredient(Y,X) {r433}.
+i_medicine_x_drug_x_drug_class(X,Y) :- medicine_x_drug_ingredient_x_active_moiety_of_drug(Y,X) {r434}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_player(X,Y) :- soccer_x_football_player_x_current_team_x_soccer_x_football_roster_position_x_team(Y,X) {r435}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- location_x_location_x_containedby(X,Z), base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(Z,Y) {r436}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_containedby(X,Y) {r437}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_player(X,Y) {r438}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) :- education_x_educational_degree_x_people_with_this_degree_x_education_x_education_x_institution(Y,X) {r439}.
+i_medicine_x_drug_x_active_moieties(X,Y) :- medicine_x_drug_ingredient_x_more_specific_ingredient(Y,X) {r440}.
+i_medicine_x_drug_x_active_moieties(X,Y) :- medicine_x_drug_ingredient_x_active_moiety_of_drug(Y,X) {r441}.
+i_location_x_location_x_partially_contains(X,Y) :- location_x_location_x_partially_containedby(Y,X) {r442}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_contains(X,Z), location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(Z,Y) {r443}.
+i_location_x_location_x_containedby(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_capital(X,Z), location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(Z,Y) {r444}.
+i_location_x_location_x_containedby(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Z), location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(Z,Y) {r445}.
+i_architecture_x_architectural_style_x_examples(X,Y) :- architecture_x_structure_x_architectural_style(Y,X) {r446}.
+i_military_x_military_conflict_x_combatants_x_military_x_military_combatant_group_x_combatants(X,Y) :- military_x_military_combatant_x_casualties_x_military_x_casualties_x_military_conflict(Y,X) {r447}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- base_x_x2010fifaworldcupsouthafrica_x_world_cup_squad_x_current_world_cup_squad_x_base_x_x2010fifaworldcupsouthafrica_x_current_world_cup_squad_x_position(X,Y) {r448}.
+i_medicine_x_drug_x_active_moieties(X,Y) :- medicine_x_drug_class_x_drugs(Y,X) {r449}.
+i_medicine_x_drug_x_active_moieties(X,Y) :- medicine_x_drug_ingredient_x_more_general_ingredient(Y,X) {r450}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_country_x_first_level_divisions(Y,X) {r451}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_containedby(X,Z), base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(Z,Y) {r452}.
+i_medicine_x_drug_ingredient_x_more_general_ingredient(X,Y) :- food_x_food_x_nutrients_x_food_x_nutrition_fact_x_nutrient(Y,X) {r453}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_position_x_players_x_sports_x_sports_team_roster_x_team(Y,X) {r454}.
+i_military_x_military_conflict_x_combatants_x_military_x_military_combatant_group_x_combatants(X,Y) :- location_x_location_x_events(Y,X) {r455}.
+i_cvg_x_computer_videogame_x_gameplay_modes(X,Y) :- cvg_x_computer_videogame_x_sequel(X,Z), cvg_x_computer_videogame_x_gameplay_modes(Z,Y) {r456}.
+i_location_x_location_x_containedby(X,Y) :- common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) {r457}.
+i_military_x_military_conflict_x_casualties_x_military_x_casualties_x_combatant(X,Y) :- location_x_location_x_events(Y,X) {r458}.
+i_government_x_political_ideology_x_political_parties(X,Y) :- government_x_political_ideology_x_political_parties(X,Z), government_x_political_party_x_ideology(Z,Y) {r459}.
+i_military_x_military_conflict_x_casualties_x_military_x_casualties_x_combatant(X,Y) :- military_x_military_combatant_x_military_commanders_x_military_x_military_command_x_military_conflict(Y,X) {r460}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_location_x_containedby(X,Z), location_x_administrative_division_x_country(Z,Y) {r461}.
+i_transportation_x_bridge_type_x_bridges_of_this_type(X,Y) :- transportation_x_bridge_x_bridge_type(Y,X) {r462}.
+i_location_x_us_county_x_hud_county_place(X,Y) :- location_x_hud_county_place_x_county(X,Y) {r463}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_location_x_containedby(X,Z), location_x_administrative_division_x_second_level_division_of(Z,Y) {r464}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_location_x_containedby(X,Z), location_x_location_x_containedby(Z,Y) {r465}.
+i_military_x_military_conflict_x_casualties_x_military_x_casualties_x_combatant(X,Y) :- military_x_military_combatant_x_casualties_x_military_x_casualties_x_military_conflict(Y,X) {r466}.
+i_user_x_tsegaran_x_random_x_taxonomy_subject_x_entry_x_user_x_tsegaran_x_random_x_taxonomy_entry_x_taxonomy(X,Y) :- astronomy_x_celestial_object_category_x_objects(X,Z), astronomy_x_orbital_relationship_x_orbited_by(Z,Y) {r467}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_sports_team_x_colors(X,Y) {r468}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_player(X,Y) {r469}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(Z,Y) {r470}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Z), location_x_administrative_division_x_second_level_division_of(Z,Y) {r471}.
+i_education_x_educational_institution_campus_x_educational_institution(X,Y) :- education_x_educational_institution_x_campuses(X,Z), education_x_educational_institution_x_campuses(Z,Y) {r472}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Z), location_x_administrative_division_x_country(Z,Y) {r473}.
+i_location_x_location_x_containedby(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_capital(X,Z), location_x_location_x_containedby(Z,Y) {r474}.
+i_location_x_location_x_containedby(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Z), base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(Z,Y) {r475}.
+i_medicine_x_drug_ingredient_x_active_moiety_of_drug(X,Y) :- food_x_food_x_nutrients_x_food_x_nutrition_fact_x_nutrient(Y,X) {r476}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Z), location_x_location_x_containedby(Z,Y) {r477}.
+i_location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(Y,X) {r478}.
+i_military_x_military_conflict_x_combatants_x_military_x_military_combatant_group_x_combatants(X,Y) :- time_x_event_x_locations(X,Y) {r479}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- travel_x_travel_destination_x_how_to_get_here_x_travel_x_transportation_x_mode_of_transportation(X,Z), film_x_film_subject_x_films(Z,Y) {r480}.
+i_education_x_educational_institution_x_school_type(X,Y) :- education_x_educational_institution_x_school_type(X,Z), education_x_school_category_x_schools_of_this_kind(Z,Y) {r481}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_contains(X,Z), location_x_location_x_containedby(Z,Y) {r482}.
+i_location_x_location_x_containedby(X,Y) :- travel_x_tourist_attraction_x_near_travel_destination(X,Z), location_x_location_x_containedby(Z,Y) {r483}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_containedby(Y,X) {r484}.
+i_military_x_military_conflict_x_casualties_x_military_x_casualties_x_combatant(X,Y) :- military_x_military_conflict_x_commanders_x_military_x_military_command_x_military_combatant(X,Y) {r485}.
+i_military_x_military_conflict_x_casualties_x_military_x_casualties_x_combatant(X,Y) :- base_x_culturalevent_x_event_x_entity_involved(X,Y) {r486}.
+i_sports_x_sports_team_x_roster_x_baseball_x_baseball_roster_position_x_position(X,Y) :- sports_x_sports_team_x_colors(X,Y) {r487}.
+i_location_x_location_x_containedby(X,Y) :- education_x_educational_institution_x_campuses(X,Z), organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(Z,Y) {r488}.
+i_film_x_film_subject_x_films(X,Y) :- film_x_film_x_subjects(Y,X) {r489}.
+i_location_x_location_x_containedby(X,Y) :- education_x_educational_institution_campus_x_educational_institution(X,Z), organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(Z,Y) {r490}.
+i_education_x_educational_institution_x_campuses(X,Y) :- education_x_educational_degree_x_people_with_this_degree_x_education_x_education_x_institution(Y,X) {r491}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) :- education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) {r492}.
+i_military_x_military_conflict_x_casualties_x_military_x_casualties_x_combatant(X,Y) :- time_x_event_x_locations(X,Y) {r493}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) {r494}.
+i_people_x_ethnicity_x_people(X,Y) :- people_x_ethnicity_x_languages_spoken(X,Y) {r495}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_country_x_second_level_divisions(Y,X) {r496}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_contains(X,Z), base_x_biblioness_x_bibs_location_x_country(Z,Y) {r497}.
+i_user_x_tsegaran_x_random_x_taxonomy_subject_x_entry_x_user_x_tsegaran_x_random_x_taxonomy_entry_x_taxonomy(X,Y) :- astronomy_x_celestial_object_category_x_objects(X,Z), user_x_radiusrs_x_default_domain_x_astrology_x_related_topics(Z,Y) {r498}.
+i_location_x_location_x_containedby(X,Y) :- common_x_annotation_category_x_annotations_x_common_x_webpage_x_topic(Y,X) {r499}.
+i_cvg_x_gameplay_mode_x_games_with_this_mode(X,Y) :- cvg_x_gameplay_mode_x_games_with_this_mode(X,Z), cvg_x_computer_videogame_x_gameplay_modes(Z,Y) {r500}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r501}.
+i_sports_x_sports_team_x_league_x_sports_x_sports_league_participation_x_league(X,Y) :- sports_x_sports_position_x_players_x_sports_x_sports_team_roster_x_team(Y,X) {r502}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- soccer_x_football_player_x_current_team_x_soccer_x_football_roster_position_x_team(Y,X) {r503}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_player(X,Y) :- sports_x_pro_athlete_x_teams_x_sports_x_sports_team_roster_x_team(Y,X) {r504}.
+i_media_common_x_media_genre_x_child_genres(X,Y) :- media_common_x_media_genre_x_child_genres(X,Z), media_common_x_media_genre_x_parent_genre(Z,Y) {r505}.
+i_location_x_administrative_division_x_country(X,Y) :- government_x_political_district_x_representatives_x_government_x_government_position_held_x_jurisdiction_of_office(X,Y) {r506}.
+i_location_x_administrative_division_x_country(X,Y) :- government_x_governmental_jurisdiction_x_governing_officials_x_government_x_government_position_held_x_district_represented(Y,X) {r507}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- time_x_time_zone_x_locations_in_this_time_zone(Y,X) {r508}.
+i_location_x_location_x_time_zones(X,Y) :- location_x_location_x_containedby(X,Z), location_x_location_x_contains(Z,Y) {r509}.
+i_people_x_ethnicity_x_people(X,Y) :- people_x_ethnicity_x_people(X,Y) {r510}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_player(X,Y) :- soccer_x_football_player_x_current_team_x_sports_x_sports_team_roster_x_team(Y,X) {r511}.
+i_location_x_location_x_containedby(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_state_province_region(X,Y) {r512}.
+i_basketball_x_basketball_position_x_player_roster_position_x_basketball_x_basketball_roster_position_x_team(X,Y) :- sports_x_sports_position_x_players_x_sports_x_sports_team_roster_x_team(X,Y) {r513}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- aviation_x_airline_x_airports_served_x_aviation_x_airline_airport_presence_x_cities_served(X,Y) {r514}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- base_x_x2010fifaworldcupsouthafrica_x_world_cup_squad_x_current_world_cup_squad_x_base_x_x2010fifaworldcupsouthafrica_x_current_world_cup_squad_x_current_club(X,Y) {r515}.
+i_military_x_military_conflict_x_combatants_x_military_x_military_combatant_group_x_combatants(X,Y) :- base_x_culturalevent_x_event_x_entity_involved(X,Y) {r516}.
+i_language_x_human_language_x_countries_spoken_in(X,Y) :- people_x_person_x_languages(Y,X) {r517}.
+i_location_x_location_x_containedby(X,Y) :- organization_x_endowed_organization_x_endowment_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r518}.
+i_sports_x_sports_position_x_players_x_sports_x_sports_team_roster_x_team(X,Y) :- sports_x_sports_position_x_players_x_baseball_x_baseball_roster_position_x_team(X,Y) {r519}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_containedby(X,Z), location_x_administrative_division_x_country(Z,Y) {r520}.
+i_location_x_location_x_containedby(X,Y) :- location_x_statistical_region_x_rent50_1_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r521}.
+i_government_x_political_ideology_x_political_parties(X,Y) :- government_x_political_ideology_x_political_parties(X,Z), common_x_topic_x_webpage_x_common_x_webpage_x_category(Z,Y) {r522}.
+i_organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(X,Y) :- common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) {r523}.
+i_location_x_location_x_containedby(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_capital(X,Z), base_x_biblioness_x_bibs_location_x_country(Z,Y) {r524}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Y) :- people_x_person_x_profession(X,Y) {r525}.
+i_location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_people_born_here(X,Y) {r526}.
+i_sports_x_sports_team_x_sport(X,Y) :- sports_x_sports_team_x_colors(X,Y) {r527}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- base_x_x2010fifaworldcupsouthafrica_x_world_cup_squad_x_current_world_cup_squad_x_base_x_x2010fifaworldcupsouthafrica_x_current_world_cup_squad_x_current_club(X,Y) {r528}.
+i_sports_x_sports_team_x_roster_x_american_football_x_football_historical_roster_position_x_position_s(X,Y) :- sports_x_sports_position_x_players_x_sports_x_sports_team_roster_x_team(Y,X) {r529}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- computer_x_programming_language_paradigm_x_languages(X,Z), computer_x_programming_language_x_language_paradigms(Z,Y) {r530}.
+i_location_x_hud_foreclosure_area_x_hhuniv_x_measurement_unit_x_dated_integer_x_source(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(Y,X) {r531}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- user_x_hangy_x_default_domain_x_sports_team_gender_x_gender(X,Y) {r532}.
+i_language_x_human_language_x_countries_spoken_in(X,Y) :- language_x_human_language_x_writing_system(X,Z), language_x_language_writing_system_x_languages(Z,Y) {r533}.
+i_location_x_location_x_containedby(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(Y,X) {r534}.
+i_base_x_biblioness_x_bibs_location_x_state(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) {r535}.
+i_location_x_location_x_containedby(X,Y) :- education_x_university_x_local_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r536}.
+i_base_x_x2010fifaworldcupsouthafrica_x_world_cup_squad_x_current_world_cup_squad_x_base_x_x2010fifaworldcupsouthafrica_x_current_world_cup_squad_x_position(X,Y) :- base_x_x2010fifaworldcupsouthafrica_x_world_cup_squad_x_current_world_cup_squad_x_base_x_x2010fifaworldcupsouthafrica_x_current_world_cup_squad_x_current_club(X,Y) {r537}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_location_x_containedby(X,Z), base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(Z,Y) {r538}.
+i_location_x_location_x_containedby(X,Y) :- location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r539}.
+i_basketball_x_basketball_position_x_player_roster_position_x_basketball_x_basketball_roster_position_x_team(X,Y) :- sports_x_sports_position_x_players_x_basketball_x_basketball_roster_position_x_team(X,Y) {r540}.
+i_tv_x_tv_genre_x_programs(X,Y) :- tv_x_tv_genre_x_programs(X,Z), tv_x_tv_program_x_genre(Z,Y) {r541}.
+i_location_x_hud_foreclosure_area_x_hhuniv_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_us_county_x_hud_county_place(Y,X) {r542}.
+i_influence_x_influence_node_x_influenced_by(X,Y) :- people_x_person_x_profession(X,Y) {r543}.
+i_basketball_x_basketball_position_x_player_roster_position_x_basketball_x_basketball_roster_position_x_team(X,Y) :- sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(Y,X) {r544}.
+i_location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_containedby(X,Y) {r545}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) :- education_x_educational_institution_x_students_graduates_x_education_x_education_x_major_field_of_study(X,Y) {r546}.
+i_location_x_location_x_containedby(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Z), base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(Z,Y) {r547}.
+i_business_x_business_operation_x_industry(X,Y) :- common_x_annotation_category_x_annotations_x_common_x_webpage_x_topic(Y,X) {r548}.
+i_location_x_hud_foreclosure_area_x_hhuniv_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_time_zones(X,Y) {r549}.
+i_location_x_location_x_containedby(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Z), location_x_location_x_containedby(Z,Y) {r550}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_containedby(X,Z), location_x_administrative_division_x_first_level_division_of(Z,Y) {r551}.
+i_language_x_human_language_x_countries_spoken_in(X,Y) :- film_x_film_x_language(Y,X) {r552}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) {r553}.
+i_location_x_location_x_time_zones(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(Y,X) {r554}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) :- education_x_field_of_study_x_students_majoring_x_education_x_education_x_institution(Y,X) {r555}.
+i_base_x_biblioness_x_bibs_location_x_state(X,Y) :- location_x_location_x_time_zones(X,Y) {r556}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- organization_x_role_x_leaders_x_organization_x_leadership_x_organization(Y,X) {r557}.
+i_basketball_x_basketball_position_x_player_roster_position_x_basketball_x_basketball_roster_position_x_team(X,Y) :- basketball_x_basketball_team_x_roster_x_basketball_x_basketball_roster_position_x_position(Y,X) {r558}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Y) :- medicine_x_notable_person_with_medical_condition_x_condition(X,Y) {r559}.
+i_location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_country_x_second_level_divisions(Y,X) {r560}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_pro_athlete_x_teams_x_sports_x_sports_team_roster_x_team(Y,X) {r561}.
+i_tv_x_tv_genre_x_programs(X,Y) :- tv_x_tv_genre_x_programs(X,Z), tv_x_tv_program_x_languages(Z,Y) {r562}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) {r563}.
+i_education_x_educational_institution_campus_x_educational_institution(X,Y) :- education_x_educational_institution_x_students_graduates_x_education_x_education_x_student(X,Y) {r564}.
+i_music_x_genre_x_subgenre(X,Y) :- music_x_artist_x_genre(Y,X) {r565}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(Y,X) {r566}.
+i_user_x_tsegaran_x_random_x_taxonomy_subject_x_entry_x_user_x_tsegaran_x_random_x_taxonomy_entry_x_taxonomy(X,Y) :- location_x_location_x_contains(X,Z), location_x_location_x_containedby(Z,Y) {r567}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Y) :- people_x_person_x_education_x_education_x_education_x_institution(X,Y) {r568}.
+i_base_x_biblioness_x_bibs_location_x_state(X,Y) :- location_x_statistical_region_x_rent50_3_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r569}.
+i_basketball_x_basketball_position_x_player_roster_position_x_basketball_x_basketball_roster_position_x_team(X,Y) :- basketball_x_basketball_team_x_roster_x_sports_x_sports_team_roster_x_position(Y,X) {r570}.
+i_basketball_x_basketball_position_x_player_roster_position_x_basketball_x_basketball_roster_position_x_team(X,Y) :- basketball_x_basketball_position_x_player_roster_position_x_sports_x_sports_team_roster_x_team(X,Y) {r571}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) {r572}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) :- education_x_school_category_x_schools_of_this_kind(Y,X) {r573}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_hud_foreclosure_area_x_hhuniv_x_measurement_unit_x_dated_integer_x_source(X,Y) {r574}.
+i_cvg_x_game_character_x_games_x_cvg_x_game_performance_x_game(X,Y) :- cvg_x_computer_videogame_x_characters_x_cvg_x_game_performance_x_character(Y,X) {r575}.
+i_location_x_location_x_containedby(X,Y) :- people_x_person_x_place_of_birth(Y,X) {r576}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_student(X,Y) :- common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) {r577}.
+i_sports_x_sports_team_x_league_x_sports_x_sports_league_participation_x_league(X,Y) :- sports_x_sports_team_x_colors(X,Y) {r578}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_pro_athlete_x_teams_x_soccer_x_football_roster_position_x_team(Y,X) {r579}.
+i_basketball_x_basketball_position_x_player_roster_position_x_basketball_x_basketball_roster_position_x_team(X,Y) :- sports_x_sports_team_x_roster_x_basketball_x_basketball_roster_position_x_position(Y,X) {r580}.
+i_location_x_location_x_containedby(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Z), location_x_location_x_contains(Z,Y) {r581}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) :- organization_x_role_x_leaders_x_organization_x_leadership_x_organization(Y,X) {r582}.
+i_sports_x_sports_team_x_roster_x_baseball_x_baseball_roster_position_x_position(X,Y) :- sports_x_sports_team_x_roster_x_baseball_x_baseball_roster_position_x_position(X,Y) {r583}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_location_x_contains(X,Z), location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(Z,Y) {r584}.
+i_base_x_biblioness_x_bibs_location_x_state(X,Y) :- base_x_biblioness_x_bibs_location_x_country(X,Y) {r585}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_children(X,Y) :- location_x_location_x_contains(X,Z), location_x_location_x_containedby(Z,Y) {r586}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), location_x_administrative_division_x_first_level_division_of(Z,Y) {r587}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) {r588}.
+i_location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_contains(Y,X) {r589}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_children(X,Y) :- location_x_location_x_containedby(X,Y) {r590}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_location_x_contains(X,Y) {r591}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) {r592}.
+i_baseball_x_baseball_team_x_current_roster_x_baseball_x_baseball_roster_position_x_position(X,Y) :- sports_x_sports_team_x_colors(X,Y) {r593}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) :- education_x_educational_institution_x_students_graduates_x_education_x_education_x_major_field_of_study(X,Y) {r594}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_location_x_contains(X,Z), location_x_location_x_people_born_here(Z,Y) {r595}.
+i_education_x_educational_institution_x_campuses(X,Y) :- education_x_field_of_study_x_students_majoring_x_education_x_education_x_institution(Y,X) {r596}.
+i_location_x_location_x_containedby(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Z), location_x_administrative_division_x_first_level_division_of(Z,Y) {r597}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) {r598}.
+i_tv_x_tv_genre_x_programs(X,Y) :- tv_x_tv_genre_x_programs(X,Z), tv_x_tv_program_x_original_network_x_tv_x_tv_network_duration_x_network(Z,Y) {r599}.
+i_location_x_administrative_division_x_country(X,Y) :- people_x_person_x_place_of_birth(Y,X) {r600}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_location_x_containedby(Y,X) {r601}.
+i_location_x_administrative_division_x_country(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_capital(X,Z), location_x_administrative_division_x_country(Z,Y) {r602}.
+i_people_x_person_x_spouse_s_x_people_x_marriage_x_type_of_union(X,Y) :- tv_x_tv_actor_x_starring_roles_x_tv_x_regular_tv_appearance_x_character(X,Y) {r603}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) {r604}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_sport_x_teams(Y,X) {r605}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(Z,Y) {r606}.
+i_location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) :- time_x_time_zone_x_locations_in_this_time_zone(Y,X) {r607}.
+i_people_x_person_x_profession(X,Y) :- people_x_person_x_nationality(X,Y) {r608}.
+i_location_x_location_x_containedby(X,Y) :- education_x_university_x_international_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r609}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) :- education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) {r610}.
+i_people_x_person_x_place_of_birth(X,Y) :- people_x_person_x_gender(X,Y) {r611}.
+i_location_x_location_x_containedby(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Z), location_x_location_x_people_born_here(Z,Y) {r612}.
+i_sports_x_sports_team_x_league_x_sports_x_sports_league_participation_x_league(X,Y) :- sports_x_sports_team_x_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) {r613}.
+i_business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) :- business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) {r614}.
+i_business_x_business_operation_x_industry(X,Y) :- common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) {r615}.
+i_award_x_ranked_item_x_appears_in_ranked_lists_x_award_x_ranking_x_list(X,Y) :- business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) {r616}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- soccer_x_football_player_x_current_team_x_sports_x_sports_team_roster_x_team(Y,X) {r617}.
+i_government_x_politician_x_party_x_government_x_political_party_tenure_x_party(X,Y) :- people_x_person_x_profession(X,Y) {r618}.
+i_sports_x_sports_team_x_roster_x_american_football_x_football_historical_roster_position_x_position_s(X,Y) :- sports_x_sports_position_x_players_x_american_football_x_football_historical_roster_position_x_team(Y,X) {r619}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_location_x_contains(X,Z), location_x_administrative_division_x_country(Z,Y) {r620}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) {r621}.
+i_base_x_schemastaging_x_tv_character_extra_x_regular_dubbing_performances_x_base_x_schemastaging_x_tv_star_dubbing_performance_x_language(X,Y) :- cvg_x_computer_videogame_x_characters_x_cvg_x_game_performance_x_character(Y,X) {r622}.
+i_tv_x_tv_program_x_tv_producer_x_tv_x_tv_producer_term_x_producer_type(X,Y) :- award_x_award_winning_work_x_awards_won_x_award_x_award_honor_x_award(X,Z), award_x_award_category_x_winners_x_award_x_award_honor_x_honored_for(Z,Y) {r623}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- location_x_location_x_time_zones(X,Y) {r624}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- base_x_schemastaging_x_organization_extra_x_phone_number_x_base_x_schemastaging_x_phone_sandbox_x_service_location(X,Y) {r625}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_sports_team_location_x_teams(Y,X) {r626}.
+i_location_x_location_x_containedby(X,Y) :- education_x_university_x_domestic_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r627}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_pro_athlete_x_teams_x_soccer_x_football_roster_position_x_team(Y,X) {r628}.
+i_language_x_human_language_x_countries_spoken_in(X,Y) :- language_x_human_language_x_writing_system(X,Y) {r629}.
+i_location_x_us_county_x_hud_county_place(X,Y) :- location_x_location_x_containedby(X,Y) {r630}.
+i_cvg_x_cvg_genre_x_games(X,Y) :- cvg_x_cvg_genre_x_games(X,Z), cvg_x_computer_videogame_x_cvg_genre(Z,Y) {r631}.
+i_government_x_politician_x_party_x_government_x_political_party_tenure_x_party(X,Y) :- people_x_person_x_religion(X,Y) {r632}.
+i_base_x_schemastaging_x_tv_character_extra_x_regular_dubbing_performances_x_base_x_schemastaging_x_tv_star_dubbing_performance_x_language(X,Y) :- fictional_universe_x_fictional_universe_x_characters(Y,X) {r633}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_people_born_here(X,Y) {r634}.
+i_location_x_us_county_x_hud_county_place(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) {r635}.
+i_government_x_politician_x_party_x_government_x_political_party_tenure_x_party(X,Y) :- people_x_person_x_religion(X,Z), user_x_tsegaran_x_random_x_taxonomy_subject_x_entry_x_user_x_tsegaran_x_random_x_taxonomy_entry_x_taxonomy(Z,Y) {r636}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_events(X,Z), time_x_event_x_locations(Z,Y) {r637}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_hud_foreclosure_area_x_hhuniv_x_measurement_unit_x_dated_integer_x_source(X,Y) {r638}.
+i_business_x_business_operation_x_industry(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(X,Y) {r639}.
+i_location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_statistical_region_x_rent50_3_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r640}.
+i_travel_x_travel_destination_x_tourist_attractions(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(Y,X) {r641}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) {r642}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) {r643}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Z), base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(Z,Y) {r644}.
+i_tv_x_tv_actor_x_guest_roles_x_tv_x_tv_guest_role_x_special_performance_type(X,Y) :- film_x_actor_x_film_x_film_x_performance_x_film(X,Y) {r645}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_contains(X,Y) {r646}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(Y,X) {r647}.
+i_sports_x_sports_team_x_location(X,Y) :- sports_x_sport_x_teams(Y,X) {r648}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- sports_x_sports_position_x_players_x_sports_x_sports_team_roster_x_team(Y,X) {r649}.
+i_location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_containedby(X,Y) {r650}.
+i_government_x_politician_x_party_x_government_x_political_party_tenure_x_party(X,Y) :- people_x_person_x_nationality(X,Y) {r651}.
+i_location_x_hud_foreclosure_area_x_hhuniv_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_containedby(X,Y) {r652}.
+i_base_x_biblioness_x_bibs_location_x_state(X,Y) :- location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r653}.
+i_location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_containedby(Y,X) {r654}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Z), location_x_administrative_division_x_country(Z,Y) {r655}.
+i_location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) {r656}.
+i_location_x_location_x_time_zones(X,Y) :- base_x_biblioness_x_bibs_location_x_country(X,Y) {r657}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Z), location_x_location_x_containedby(Z,Y) {r658}.
+i_location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_contains(Y,X) {r659}.
+i_sports_x_sports_team_x_roster_x_baseball_x_baseball_roster_position_x_position(X,Y) :- sports_x_sport_x_teams(Y,X) {r660}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_children(X,Y) :- location_x_location_x_contains(Y,X) {r661}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- soccer_x_football_player_x_current_team_x_soccer_x_football_roster_position_x_team(Y,X) {r662}.
+i_location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r663}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- base_x_x2010fifaworldcupsouthafrica_x_world_cup_squad_x_current_world_cup_squad_x_base_x_x2010fifaworldcupsouthafrica_x_current_world_cup_squad_x_current_club(X,Y) {r664}.
+i_base_x_biblioness_x_bibs_location_x_state(X,Y) :- common_x_annotation_category_x_annotations_x_common_x_webpage_x_topic(Y,X) {r665}.
+i_film_x_film_x_distributors_x_film_x_film_film_distributor_relationship_x_distributor(X,Y) :- film_x_film_x_genre(X,Y) {r666}.
+i_location_x_administrative_division_x_country(X,Y) :- film_x_film_x_featured_film_locations(Y,X) {r667}.
+i_comic_books_x_comic_book_fictional_universe_x_characters_primarily_appearing_in_this_universe(X,Y) :- comic_books_x_comic_book_character_x_primary_universe(Y,X) {r668}.
+i_people_x_ethnicity_x_included_in_group(X,Y) :- people_x_person_x_ethnicity(Y,X) {r669}.
+i_base_x_culturalevent_x_event_x_entity_involved(X,Y) :- base_x_argumentmaps_x_morally_disputed_activity_x_instance_of_abstract_moral_dispute(X,Z), base_x_argumentmaps_x_abstract_moral_dispute_x_particular_instances(Z,Y) {r670}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(Z,Y) {r671}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) {r672}.
+i_cvg_x_gameplay_mode_x_games_with_this_mode(X,Y) :- cvg_x_gameplay_mode_x_games_with_this_mode(X,Z), cvg_x_computer_videogame_x_publisher(Z,Y) {r673}.
+i_location_x_location_x_people_born_here(X,Y) :- common_x_annotation_category_x_annotations_x_common_x_webpage_x_topic(Y,X) {r674}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) {r675}.
+i_religion_x_religion_x_is_part_of(X,Y) :- religion_x_religion_x_is_part_of(X,Z), religion_x_religion_x_is_part_of(Z,Y) {r676}.
+i_location_x_location_x_containedby(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Z), location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(Z,Y) {r677}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- soccer_x_football_player_x_current_team_x_soccer_x_football_roster_position_x_team(Y,X) {r678}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- education_x_field_of_study_x_students_majoring_x_education_x_education_x_institution(Y,X) {r679}.
+i_business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) :- base_x_schemastaging_x_organization_extra_x_phone_number_x_base_x_schemastaging_x_phone_sandbox_x_contact_category(X,Y) {r680}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_player(X,Y) {r681}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) {r682}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- sports_x_sports_position_x_players_x_ice_hockey_x_hockey_roster_position_x_team(Y,X) {r683}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) {r684}.
+i_location_x_location_x_time_zones(X,Y) :- location_x_country_x_second_level_divisions(Y,X) {r685}.
+i_business_x_business_operation_x_industry(X,Y) :- organization_x_organization_x_child_x_organization_x_organization_relationship_x_child(X,Z), organization_x_organization_x_parent_x_organization_x_organization_relationship_x_parent(Z,Y) {r686}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_player(X,Y) {r687}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) {r688}.
+i_location_x_hud_county_place_x_county(X,Y) :- people_x_person_x_place_of_birth(Y,X) {r689}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_location_x_containedby(Y,X) {r690}.
+i_music_x_genre_x_artists(X,Y) :- music_x_genre_x_parent_genre(X,Y) {r691}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_children(Y,X) {r692}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_team_location_x_teams(Y,X) {r693}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(X,Y) {r694}.
+i_business_x_business_operation_x_industry(X,Y) :- organization_x_role_x_leaders_x_organization_x_leadership_x_organization(Y,X) {r695}.
+i_tv_x_tv_genre_x_programs(X,Y) :- tv_x_tv_genre_x_programs(X,Y) {r696}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_country_x_administrative_divisions(Y,X) {r697}.
+i_people_x_ethnicity_x_people(X,Y) :- people_x_ethnicity_x_people(X,Z), people_x_person_x_spouse_s_x_people_x_marriage_x_type_of_union(Z,Y) {r698}.
+i_government_x_political_ideology_x_political_parties(X,Y) :- government_x_political_ideology_x_political_parties(X,Z), organization_x_organization_x_geographic_scope(Z,Y) {r699}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- people_x_marriage_union_type_x_unions_of_this_type_x_people_x_marriage_x_location_of_ceremony(Y,X) {r700}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), location_x_location_x_containedby(Z,Y) {r701}.
+i_business_x_business_operation_x_industry(X,Y) :- organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) {r702}.
+i_people_x_person_x_spouse_s_x_people_x_marriage_x_type_of_union(X,Y) :- tv_x_tv_character_x_appeared_in_tv_program_x_tv_x_regular_tv_appearance_x_actor(Y,X) {r703}.
+i_influence_x_influence_node_x_influenced_by(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(X,Y) {r704}.
+i_organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(X,Y) :- education_x_university_x_local_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r705}.
+i_location_x_hud_county_place_x_county(X,Y) :- common_x_annotation_category_x_annotations_x_common_x_webpage_x_topic(Y,X) {r706}.
+i_people_x_ethnicity_x_people(X,Y) :- people_x_ethnicity_x_people(X,Z), film_x_film_subject_x_films(Z,Y) {r707}.
+i_people_x_person_x_spouse_s_x_people_x_marriage_x_type_of_union(X,Y) :- people_x_person_x_nationality(X,Y) {r708}.
+i_location_x_us_county_x_hud_county_place(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(Y,X) {r709}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_student(X,Y) :- common_x_annotation_category_x_annotations_x_common_x_webpage_x_topic(Y,X) {r710}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) {r711}.
+i_base_x_biblioness_x_bibs_location_x_state(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(Y,X) {r712}.
+i_military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_conflict(X,Y) :- military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_conflict(X,Y) {r713}.
+i_organization_x_organization_x_headquarters_x_location_x_mailing_address_x_country(X,Y) :- education_x_educational_institution_x_colors(X,Y) {r714}.
+i_location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) :- common_x_annotation_category_x_annotations_x_common_x_webpage_x_topic(Y,X) {r715}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_administrative_division_x_second_level_division_of(X,Y) {r716}.
+i_dining_x_cuisine_x_dishes(X,Y) :- food_x_dish_x_cuisine(X,Z), dining_x_cuisine_x_restaurant(Z,Y) {r717}.
+i_influence_x_influence_node_x_influenced_by(X,Y) :- people_x_person_x_nationality(X,Y) {r718}.
+i_people_x_person_x_place_of_birth(X,Y) :- people_x_deceased_person_x_place_of_death(X,Y) {r719}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- sports_x_sports_team_x_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) {r720}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) {r721}.
+i_sports_x_sports_team_x_location(X,Y) :- base_x_x2010fifaworldcupsouthafrica_x_world_cup_squad_x_current_world_cup_squad_x_base_x_x2010fifaworldcupsouthafrica_x_current_world_cup_squad_x_current_club(Y,X) {r722}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- base_x_x2010fifaworldcupsouthafrica_x_world_cup_squad_x_current_world_cup_squad_x_base_x_x2010fifaworldcupsouthafrica_x_current_world_cup_squad_x_current_club(Y,X) {r723}.
+i_business_x_business_operation_x_industry(X,Y) :- business_x_business_operation_x_industry(X,Y) {r724}.
+i_people_x_person_x_spouse_s_x_people_x_marriage_x_type_of_union(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(X,Z), common_x_topic_x_webpage_x_common_x_webpage_x_category(Z,Y) {r725}.
+i_music_x_genre_x_parent_genre(X,Y) :- music_x_genre_x_subgenre(X,Z), music_x_genre_x_parent_genre(Z,Y) {r726}.
+i_government_x_politician_x_party_x_government_x_political_party_tenure_x_party(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(X,Z), location_x_location_x_containedby(Z,Y) {r727}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_student(X,Y) :- education_x_university_x_domestic_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r728}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_children(X,Y) :- location_x_location_x_contains(X,Z), common_x_topic_x_webpage_x_common_x_webpage_x_category(Z,Y) {r729}.
+i_user_x_tsegaran_x_random_x_taxonomy_subject_x_entry_x_user_x_tsegaran_x_random_x_taxonomy_entry_x_taxonomy(X,Y) :- astronomy_x_celestial_object_category_x_objects(X,Y) {r730}.
+i_organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(X,Y) :- education_x_university_x_domestic_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r731}.
+i_people_x_person_x_spouse_s_x_people_x_marriage_x_type_of_union(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(X,Y) {r732}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_statistical_region_x_rent50_2_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r733}.
+i_film_x_actor_x_dubbing_performances_x_film_x_dubbing_performance_x_language(X,Y) :- people_x_person_x_gender(X,Y) {r734}.
+i_business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) :- organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) {r735}.
+i_location_x_location_x_contains(X,Y) :- location_x_statistical_region_x_rent50_1_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r736}.
+i_business_x_business_operation_x_industry(X,Y) :- business_x_business_operation_x_operating_income_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r737}.
+i_sports_x_sports_team_x_roster_x_baseball_x_baseball_roster_position_x_position(X,Y) :- sports_x_sports_team_x_colors(X,Z), dataworld_x_gardening_hint_x_split_to(Z,Y) {r738}.
+i_location_x_location_x_containedby(X,Y) :- user_x_tsegaran_x_random_x_subject_taxonomy_x_entry_x_user_x_tsegaran_x_random_x_taxonomy_entry_x_subject(Y,X) {r739}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_location_x_containedby(X,Y) {r740}.
+i_location_x_location_x_containedby(X,Y) :- education_x_university_x_local_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Z), common_x_topic_x_webpage_x_common_x_webpage_x_category(Z,Y) {r741}.
+i_people_x_person_x_spouse_s_x_people_x_marriage_x_type_of_union(X,Y) :- people_x_person_x_profession(X,Y) {r742}.
+i_location_x_hud_county_place_x_county(X,Y) :- location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Z), business_x_employer_x_employees_x_business_x_employment_tenure_x_title(Z,Y) {r743}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_children(X,Y) :- location_x_country_x_administrative_divisions(Y,X) {r744}.
+i_location_x_hud_foreclosure_area_x_hhuniv_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_contains(Y,X) {r745}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_statistical_region_x_rent50_0_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r746}.
+i_architecture_x_museum_x_address_x_location_x_mailing_address_x_state_province_region(X,Y) :- protected_sites_x_site_listing_category_x_listed_sites_x_protected_sites_x_natural_or_cultural_site_listing_x_listed_site(Y,X) {r747}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r748}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_statistical_region_x_rent50_1_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r749}.
+i_business_x_business_operation_x_revenue_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_country(X,Y) {r750}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- location_x_location_x_contains(X,Y) {r751}.
+i_medicine_x_drug_ingredient_x_more_general_ingredient(X,Y) :- medicine_x_drug_x_legal_status(X,Y) {r752}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(Y,X) {r753}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- location_x_location_x_contains(X,Z), location_x_location_x_people_born_here(Z,Y) {r754}.
+i_medicine_x_drug_ingredient_x_more_specific_ingredient(X,Y) :- food_x_food_x_nutrients_x_food_x_nutrition_fact_x_nutrient(Y,X) {r755}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_team_x_colors(X,Y) {r756}.
+i_sports_x_sports_team_x_sport(X,Y) :- soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r757}.
+i_sports_x_sports_team_x_league_x_sports_x_sports_league_participation_x_league(X,Y) :- sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) {r758}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sport_x_teams(Y,X) {r759}.
+i_language_x_human_language_x_countries_spoken_in(X,Y) :- people_x_ethnicity_x_languages_spoken(Y,X) {r760}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) {r761}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) :- education_x_educational_institution_x_colors(X,Y) {r762}.
+i_film_x_film_x_distributors_x_film_x_film_film_distributor_relationship_x_distributor(X,Y) :- film_x_film_x_dubbing_performances_x_film_x_dubbing_performance_x_actor(X,Y) {r763}.
+i_sports_x_sports_team_x_league_x_sports_x_sports_league_participation_x_league(X,Y) :- ice_hockey_x_hockey_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r764}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) :- education_x_school_category_x_schools_of_this_kind(Y,X) {r765}.
+i_business_x_business_operation_x_industry(X,Y) :- business_x_business_operation_x_revenue_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r766}.
+i_business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) :- base_x_schemastaging_x_organization_extra_x_phone_number_x_base_x_schemastaging_x_phone_open_times_x_time_zone(X,Y) {r767}.
+i_sports_x_sports_team_x_sport(X,Y) :- sports_x_sports_team_x_location(X,Y) {r768}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_events(X,Y) {r769}.
+i_location_x_statistical_region_x_rent50_3_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(Y,X) {r770}.
+i_location_x_administrative_division_x_first_level_division_of(X,Y) :- location_x_statistical_region_x_gdp_nominal_per_capita_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r771}.
+i_location_x_administrative_division_x_first_level_division_of(X,Y) :- government_x_legislative_session_x_members_x_government_x_government_position_held_x_district_represented(Y,X) {r772}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) {r773}.
+i_location_x_administrative_division_x_first_level_division_of(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) {r774}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_team_x_location(X,Y) {r775}.
+i_location_x_administrative_division_x_country(X,Y) :- location_x_location_x_people_born_here(X,Y) {r776}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- people_x_person_x_education_x_education_x_education_x_institution(Y,X) {r777}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- soccer_x_football_player_x_current_team_x_sports_x_sports_team_roster_x_team(Y,X) {r778}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) :- education_x_university_x_international_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r779}.
+i_location_x_hud_foreclosure_area_x_hhuniv_x_measurement_unit_x_dated_integer_x_source(X,Y) :- music_x_artist_x_origin(Y,X) {r780}.
+i_location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r781}.
+i_award_x_award_category_x_nominees_x_award_x_award_nomination_x_award_nominee(X,Y) :- award_x_award_category_x_nominees_x_award_x_award_nomination_x_award_nominee(X,Y) {r782}.
+i_military_x_military_combatant_x_military_commanders_x_military_x_military_command_x_military_commander(X,Y) :- military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_combatants(X,Z), military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_conflict(Z,Y) {r783}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- soccer_x_football_player_x_current_team_x_sports_x_sports_team_roster_x_team(Y,X) {r784}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_pro_athlete_x_teams_x_sports_x_sports_team_roster_x_team(Y,X) {r785}.
+i_military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_conflict(X,Y) :- military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_combatants(Y,X) {r786}.
+i_location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_containedby(Y,X) {r787}.
+i_tv_x_tv_program_x_tv_producer_x_tv_x_tv_producer_term_x_producer_type(X,Y) :- award_x_award_winning_work_x_awards_won_x_award_x_award_honor_x_award(X,Z), award_x_award_category_x_nominees_x_award_x_award_nomination_x_nominated_for(Z,Y) {r788}.
+i_sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- base_x_x2010fifaworldcupsouthafrica_x_world_cup_squad_x_current_world_cup_squad_x_base_x_x2010fifaworldcupsouthafrica_x_current_world_cup_squad_x_current_club(Y,X) {r789}.
+i_film_x_film_x_distributors_x_film_x_film_film_distributor_relationship_x_distributor(X,Y) :- film_x_film_x_language(X,Y) {r790}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_student(X,Y) :- education_x_university_x_local_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r791}.
+i_location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_containedby(X,Y) {r792}.
+i_location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- people_x_person_x_place_of_birth(Y,X) {r793}.
+i_location_x_hud_county_place_x_county(X,Y) :- location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Z), government_x_government_agency_x_jurisdiction(Z,Y) {r794}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(Z,Y) {r795}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) {r796}.
+i_people_x_person_x_spouse_s_x_people_x_marriage_x_type_of_union(X,Y) :- people_x_profession_x_people_with_this_profession(Y,X) {r797}.
+i_government_x_governmental_jurisdiction_x_governing_officials_x_government_x_government_position_held_x_basic_title(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), common_x_topic_x_webpage_x_common_x_webpage_x_category(Z,Y) {r798}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_player(X,Y) {r799}.
+i_sports_x_sports_team_x_league_x_sports_x_sports_league_participation_x_league(X,Y) :- sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r800}.
+i_location_x_location_x_contains(X,Y) :- location_x_statistical_region_x_rent50_2_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r801}.
+i_tv_x_tv_program_x_tv_producer_x_tv_x_tv_producer_term_x_producer_type(X,Y) :- award_x_award_winning_work_x_awards_won_x_award_x_award_honor_x_award(X,Z), award_x_award_category_x_winners_x_award_x_award_honor_x_ceremony(Z,Y) {r802}.
+i_business_x_business_operation_x_industry(X,Y) :- organization_x_organization_x_place_founded(X,Y) {r803}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) :- sports_x_sports_team_x_colors(X,Y) {r804}.
+i_location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- government_x_governmental_jurisdiction_x_governing_officials_x_government_x_government_position_held_x_basic_title(X,Y) {r805}.
+i_sports_x_sports_team_x_sport(X,Y) :- soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) {r806}.
+i_education_x_educational_institution_x_school_type(X,Y) :- education_x_educational_institution_x_school_type(X,Y) {r807}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- ice_hockey_x_hockey_team_x_current_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) {r808}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) :- sports_x_sports_team_x_sport(X,Y) {r809}.
+i_location_x_hud_county_place_x_county(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(Y,X) {r810}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- location_x_location_x_containedby(Y,X) {r811}.
+i_education_x_university_x_domestic_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- education_x_school_category_x_schools_of_this_kind(Y,X) {r812}.
+i_base_x_argumentmaps_x_abstract_moral_dispute_x_particular_instances(X,Y) :- base_x_argumentmaps_x_abstract_moral_dispute_x_particular_instances(X,Z), base_x_culturalevent_x_event_x_entity_involved(Z,Y) {r813}.
+i_location_x_administrative_division_x_country(X,Y) :- people_x_marriage_union_type_x_unions_of_this_type_x_people_x_marriage_x_location_of_ceremony(Y,X) {r814}.
+i_location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_capital(X,Z), base_x_biblioness_x_bibs_location_x_country(Z,Y) {r815}.
+i_base_x_culturalevent_x_event_x_entity_involved(X,Y) :- military_x_military_conflict_x_commanders_x_military_x_military_command_x_military_combatant(X,Y) {r816}.
+i_tv_x_tv_network_x_programs_x_tv_x_tv_network_duration_x_program(X,Y) :- tv_x_tv_network_x_programs_x_tv_x_tv_network_duration_x_program(X,Z), tv_x_tv_program_x_country_of_origin(Z,Y) {r817}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) {r818}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) {r819}.
+i_people_x_person_x_place_of_birth(X,Y) :- people_x_person_x_languages(X,Y) {r820}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_ice_hockey_x_hockey_roster_position_x_position(X,Y) :- sports_x_sports_team_x_location(X,Y) {r821}.
+i_base_x_biblioness_x_bibs_location_x_state(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(Y,X) {r822}.
+i_tv_x_tv_actor_x_guest_roles_x_tv_x_tv_guest_role_x_special_performance_type(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(X,Y) {r823}.
+i_location_x_location_x_contains(X,Y) :- location_x_us_county_x_hud_county_place(X,Y) {r824}.
+i_location_x_hud_county_place_x_county(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(Y,X) {r825}.
+i_sports_x_sports_team_location_x_teams(X,Y) :- location_x_location_x_containedby(X,Y) {r826}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_hud_county_place_x_county(X,Y) {r827}.
+i_location_x_hud_county_place_x_county(X,Y) :- location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) {r828}.
+i_people_x_ethnicity_x_included_in_group(X,Y) :- people_x_ethnicity_x_languages_spoken(X,Z), language_x_language_dialect_x_language(Z,Y) {r829}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_us_county_x_hud_county_place(Y,X) {r830}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- time_x_time_zone_x_locations_in_this_time_zone(Y,X) {r831}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- location_x_location_x_people_born_here(X,Y) {r832}.
+i_location_x_hud_county_place_x_place(X,Y) :- common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) {r833}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- location_x_location_x_contains(X,Z), common_x_topic_x_webpage_x_common_x_webpage_x_category(Z,Y) {r834}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- symbols_x_name_source_x_namesakes(X,Y) {r835}.
+i_influence_x_influence_node_x_influenced_by(X,Y) :- award_x_award_category_x_winners_x_award_x_award_honor_x_award_winner(Y,X) {r836}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_hud_county_place_x_place(Y,X) {r837}.
+i_location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_administrative_division_x_second_level_division_of(X,Y) {r838}.
+i_location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- common_x_annotation_category_x_annotations_x_common_x_webpage_x_topic(Y,X) {r839}.
+i_baseball_x_baseball_team_x_current_roster_x_baseball_x_baseball_roster_position_x_position(X,Y) :- baseball_x_baseball_team_x_current_roster_x_baseball_x_baseball_roster_position_x_position(X,Y) {r840}.
+i_people_x_person_x_spouse_s_x_people_x_marriage_x_type_of_union(X,Y) :- people_x_person_x_languages(X,Y) {r841}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_student(X,Y) :- location_x_location_x_containedby(X,Y) {r842}.
+i_organization_x_organization_x_headquarters_x_location_x_mailing_address_x_country(X,Y) :- education_x_educational_institution_x_school_type(X,Y) {r843}.
+i_location_x_location_x_containedby(X,Y) :- education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) {r844}.
+i_base_x_schemastaging_x_tv_character_extra_x_regular_dubbing_performances_x_base_x_schemastaging_x_tv_star_dubbing_performance_x_language(X,Y) :- tv_x_tv_character_x_appeared_in_tv_program_x_tv_x_regular_tv_appearance_x_special_performance_type(X,Y) {r845}.
+i_location_x_hud_county_place_x_county(X,Y) :- time_x_time_zone_x_locations_in_this_time_zone(Y,X) {r846}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- time_x_time_zone_x_locations_in_this_time_zone(Y,X) {r847}.
+i_location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), location_x_administrative_division_x_first_level_division_of(Z,Y) {r848}.
+i_government_x_governmental_jurisdiction_x_governing_officials_x_government_x_government_position_held_x_basic_title(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), location_x_administrative_division_x_country(Z,Y) {r849}.
+i_location_x_location_x_containedby(X,Y) :- organization_x_organization_member_x_member_of_x_organization_x_organization_membership_x_organization(X,Y) {r850}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_hud_county_place_x_place(X,Y) {r851}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- education_x_educational_institution_x_campuses(X,Z), location_x_location_x_containedby(Z,Y) {r852}.
+i_location_x_location_x_containedby(X,Y) :- location_x_statistical_region_x_rent50_0_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r853}.
+i_location_x_hud_foreclosure_area_x_hhuniv_x_measurement_unit_x_dated_integer_x_source(X,Y) :- people_x_marriage_union_type_x_unions_of_this_type_x_people_x_marriage_x_location_of_ceremony(Y,X) {r854}.
+i_award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(X,Y) :- film_x_film_x_production_companies(Y,X) {r855}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Y) :- common_x_annotation_category_x_annotations_x_common_x_webpage_x_topic(Y,X) {r856}.
+i_people_x_ethnicity_x_people(X,Y) :- people_x_ethnicity_x_languages_spoken(X,Z), language_x_human_language_x_countries_spoken_in(Z,Y) {r857}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- education_x_educational_institution_x_campuses(X,Z), education_x_educational_institution_campus_x_educational_institution(Z,Y) {r858}.
+i_location_x_location_x_containedby(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_children(X,Z), location_x_location_x_containedby(Z,Y) {r859}.
+i_location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(Y,X) {r860}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) {r861}.
+i_location_x_us_county_x_hud_county_place(X,Y) :- location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) {r862}.
+i_location_x_statistical_region_x_rent50_3_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_country_x_second_level_divisions(Y,X) {r863}.
+i_location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- time_x_time_zone_x_locations_in_this_time_zone(Y,X) {r864}.
+i_location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) :- location_x_location_x_contains(X,Z), base_x_biblioness_x_bibs_location_x_country(Z,Y) {r865}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- business_x_business_operation_x_net_profit_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r866}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_major_field_of_study(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(X,Y) {r867}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_player(X,Y) {r868}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) {r869}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) {r870}.
+i_tv_x_tv_program_x_genre(X,Y) :- tv_x_tv_program_x_regular_cast_x_tv_x_regular_tv_appearance_x_actor(X,Y) {r871}.
+i_location_x_location_x_containedby(X,Y) :- location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) {r872}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_player(X,Y) {r873}.
+i_sports_x_sports_team_x_sport(X,Y) :- sports_x_sports_position_x_players_x_sports_x_sports_team_roster_x_team(Y,X) {r874}.
+i_organization_x_organization_x_founders(X,Y) :- business_x_job_title_x_people_with_this_title_x_business_x_employment_tenure_x_company(Y,X) {r875}.
+i_organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) :- education_x_educational_institution_x_students_graduates_x_education_x_education_x_specialization(X,Y) {r876}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_children(X,Y) :- base_x_biblioness_x_bibs_location_x_country(X,Y) {r877}.
+i_location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_capital_of_administrative_division_x_capital_of_x_location_x_administrative_division_capital_relationship_x_administrative_division(X,Y) {r878}.
+i_location_x_us_county_x_hud_county_place(X,Y) :- location_x_us_county_x_hud_county_place(X,Y) {r879}.
+i_location_x_location_x_containedby(X,Y) :- time_x_time_zone_x_locations_in_this_time_zone(Y,X) {r880}.
+i_location_x_location_x_containedby(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_capital(X,Z), location_x_location_x_people_born_here(Z,Y) {r881}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_student(X,Y) :- education_x_school_category_x_schools_of_this_kind(Y,X) {r882}.
+i_education_x_educational_institution_x_campuses(X,Y) :- people_x_person_x_education_x_education_x_education_x_institution(Y,X) {r883}.
+i_tv_x_tv_actor_x_starring_roles_x_tv_x_regular_tv_appearance_x_special_performance_type(X,Y) :- film_x_film_x_starring_x_film_x_performance_x_actor(Y,X) {r884}.
+i_location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_statistical_region_x_rent50_0_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r885}.
+i_education_x_educational_institution_x_campuses(X,Y) :- organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) {r886}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Y) :- award_x_award_winning_work_x_awards_won_x_award_x_award_honor_x_award_winner(Y,X) {r887}.
+i_business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) :- business_x_business_operation_x_assets_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r888}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) :- organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) {r889}.
+i_baseball_x_baseball_team_x_current_roster_x_baseball_x_baseball_roster_position_x_position(X,Y) :- sports_x_sports_team_x_sport(X,Y) {r890}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), common_x_topic_x_webpage_x_common_x_webpage_x_category(Z,Y) {r891}.
+i_location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_us_county_x_county_seat(Y,X) {r892}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_student(X,Y) :- organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) {r893}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(Y,X) {r894}.
+i_location_x_hud_county_place_x_county(X,Y) :- location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Z), organization_x_organization_x_founders(Z,Y) {r895}.
+i_education_x_university_x_domestic_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- organization_x_non_profit_organization_x_registered_with_x_organization_x_non_profit_registration_x_registering_agency(X,Z), organization_x_organization_x_phone_number_x_common_x_phone_number_x_category(Z,Y) {r896}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_administrative_division_x_second_level_division_of(X,Y) {r897}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_major_field_of_study(X,Y) :- organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) {r898}.
+i_location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_hud_county_place_x_place(Y,X) {r899}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- education_x_educational_institution_x_campuses(X,Z), education_x_educational_institution_x_campuses(Z,Y) {r900}.
+i_location_x_location_x_containedby(X,Y) :- film_x_film_x_subjects(Y,X) {r901}.
+i_location_x_location_x_containedby(X,Y) :- location_x_us_county_x_county_seat(X,Y) {r902}.
+i_film_x_film_x_distributors_x_film_x_film_film_distributor_relationship_x_distributor(X,Y) :- film_x_film_x_production_companies(X,Z), film_x_production_company_x_films(Z,Y) {r903}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), common_x_topic_x_webpage_x_common_x_webpage_x_category(Z,Y) {r904}.
+i_base_x_culturalevent_x_event_x_entity_involved(X,Y) :- military_x_military_conflict_x_combatants_x_military_x_military_combatant_group_x_combatants(X,Z), military_x_military_combatant_x_military_conflicts_x_military_x_military_combatant_group_x_conflict(Z,Y) {r905}.
+i_location_x_location_x_containedby(X,Y) :- government_x_governmental_jurisdiction_x_governing_officials_x_government_x_government_position_held_x_basic_title(X,Y) {r906}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_parent(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_capital(X,Y) {r907}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_location_x_containedby(X,Z), base_x_biblioness_x_bibs_location_x_country(Z,Y) {r908}.
+i_soccer_x_football_team_x_current_roster_x_soccer_x_football_roster_position_x_player(X,Y) :- sports_x_sports_team_x_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r909}.
+i_location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- people_x_person_x_place_of_birth(Y,X) {r910}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- location_x_location_x_time_zones(X,Y) {r911}.
+i_tv_x_tv_actor_x_guest_roles_x_tv_x_tv_guest_role_x_special_performance_type(X,Y) :- people_x_profession_x_people_with_this_profession(Y,X) {r912}.
+i_base_x_biblioness_x_bibs_location_x_country(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Z), location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(Z,Y) {r913}.
+i_organization_x_organization_x_organization_type(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_country(X,Y) {r914}.
+i_location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_hud_county_place_x_place(X,Y) {r915}.
+i_organization_x_organization_x_headquarters_x_location_x_mailing_address_x_country(X,Y) :- business_x_business_operation_x_operating_income_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r916}.
+i_location_x_administrative_division_x_second_level_division_of(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_administrative_children(X,Y) {r917}.
+i_computer_x_programming_language_x_influenced_by(X,Y) :- computer_x_programming_language_paradigm_x_languages(Y,X) {r918}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) :- education_x_field_of_study_x_students_majoring_x_education_x_education_x_institution(Y,X) {r919}.
+i_sports_x_sports_team_x_location(X,Y) :- sports_x_sports_position_x_players_x_sports_x_sports_team_roster_x_team(Y,X) {r920}.
+i_location_x_hud_county_place_x_place(X,Y) :- people_x_person_x_place_of_birth(Y,X) {r921}.
+i_organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(X,Y) :- education_x_educational_institution_x_colors(X,Y) {r922}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_team_location_x_teams(Y,X) {r923}.
+i_education_x_educational_institution_campus_x_educational_institution(X,Y) :- education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) {r924}.
+i_location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_time_zones(X,Y) {r925}.
+i_base_x_biblioness_x_bibs_location_x_state(X,Y) :- common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) {r926}.
+i_location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_statistical_region_x_rent50_1_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r927}.
+i_sports_x_sports_team_x_roster_x_soccer_x_football_roster_position_x_position(X,Y) :- sports_x_sports_league_x_teams_x_sports_x_sports_league_participation_x_team(Y,X) {r928}.
+i_location_x_hud_county_place_x_place(X,Y) :- location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r929}.
+i_base_x_aareas_x_schema_x_administrative_area_x_administrative_children(X,Y) :- location_x_administrative_division_x_second_level_division_of(X,Y) {r930}.
+i_sports_x_sports_team_x_league_x_sports_x_sports_league_participation_x_league(X,Y) :- sports_x_sports_position_x_players_x_soccer_x_football_roster_position_x_team(Y,X) {r931}.
+i_location_x_administrative_division_x_country(X,Y) :- user_x_tsegaran_x_random_x_taxonomy_subject_x_entry_x_user_x_tsegaran_x_random_x_taxonomy_entry_x_taxonomy(X,Y) {r932}.
+i_organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(X,Y) :- education_x_educational_institution_x_campuses(X,Y) {r933}.
+i_organization_x_organization_x_headquarters_x_location_x_mailing_address_x_state_province_region(X,Y) :- education_x_educational_degree_x_people_with_this_degree_x_education_x_education_x_institution(Y,X) {r934}.
+i_location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_hud_county_place_x_place(Y,X) {r935}.
+i_award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(X,Y) :- common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) {r936}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- education_x_educational_institution_x_students_graduates_x_education_x_education_x_degree(X,Y) {r937}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_location_x_contains(Y,X) {r938}.
+i_influence_x_influence_node_x_influenced_by(X,Y) :- people_x_person_x_gender(X,Y) {r939}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sport_x_teams(Y,X) {r940}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_pro_athlete_x_teams_x_sports_x_sports_team_roster_x_team(Y,X) {r941}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- business_x_job_title_x_people_with_this_title_x_business_x_employment_tenure_x_company(Y,X) {r942}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_student(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_state_province_region(X,Y) {r943}.
+i_location_x_statistical_region_x_rent50_0_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) {r944}.
+i_education_x_university_x_domestic_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- organization_x_non_profit_organization_x_registered_with_x_organization_x_non_profit_registration_x_registering_agency(X,Z), government_x_government_agency_x_jurisdiction(Z,Y) {r945}.
+i_location_x_location_x_containedby(X,Y) :- education_x_educational_institution_x_students_graduates_x_education_x_education_x_major_field_of_study(X,Y) {r946}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_honored_for(X,Y) :- people_x_person_x_spouse_s_x_people_x_marriage_x_type_of_union(X,Y) {r947}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- symbols_x_name_source_x_namesakes(Y,X) {r948}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_country_x_second_level_divisions(Y,X) {r949}.
+i_organization_x_organization_x_organization_type(X,Y) :- business_x_business_operation_x_revenue_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r950}.
+i_ice_hockey_x_hockey_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) :- sports_x_sports_team_x_location(X,Y) {r951}.
+i_education_x_educational_institution_x_students_graduates_x_education_x_education_x_major_field_of_study(X,Y) :- people_x_person_x_education_x_education_x_education_x_institution(Y,X) {r952}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_country_x_capital(Y,X) {r953}.
+i_location_x_location_x_adjoin_s_x_location_x_adjoining_relationship_x_adjoins(X,Y) :- base_x_aareas_x_schema_x_administrative_area_x_capital(X,Z), location_x_location_x_containedby(Z,Y) {r954}.
+i_location_x_location_x_containedby(X,Y) :- organization_x_membership_organization_x_members_x_organization_x_organization_membership_x_member(Y,X) {r955}.
+i_business_x_business_operation_x_industry(X,Y) :- organization_x_organization_x_parent_x_organization_x_organization_relationship_x_parent(X,Z), organization_x_organization_x_child_x_organization_x_organization_relationship_x_child(Z,Y) {r956}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Y) :- education_x_educational_institution_x_students_graduates_x_education_x_education_x_student(Y,X) {r957}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Y) :- award_x_award_winner_x_awards_won_x_award_x_award_honor_x_ceremony(X,Y) {r958}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- government_x_governmental_body_x_members_x_government_x_government_position_held_x_district_represented(Y,X) {r959}.
+i_location_x_hud_foreclosure_area_x_hhuniv_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_location_x_containedby(Y,X) {r960}.
+i_people_x_person_x_place_of_birth(X,Y) :- people_x_ethnicity_x_people(Y,X) {r961}.
+i_education_x_university_x_domestic_tuition_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- people_x_person_x_education_x_education_x_education_x_institution(Y,X) {r962}.
+i_location_x_us_county_x_county_seat(X,Y) :- location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r963}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Y) :- award_x_award_nominee_x_award_nominations_x_award_x_award_nomination_x_nominated_for(X,Y) {r964}.
+i_people_x_ethnicity_x_people(X,Y) :- people_x_ethnicity_x_geographic_distribution(X,Y) {r965}.
+i_location_x_hud_foreclosure_area_x_total_90_day_vacant_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- sports_x_sports_team_location_x_teams(X,Y) {r966}.
+i_location_x_location_x_containedby(X,Y) :- location_x_location_x_time_zones(X,Z), time_x_time_zone_x_locations_in_this_time_zone(Z,Y) {r967}.
+i_organization_x_organization_x_headquarters_x_location_x_mailing_address_x_country(X,Y) :- organization_x_organization_x_leadership_x_organization_x_leadership_x_role(X,Y) {r968}.
+i_location_x_hud_foreclosure_area_x_estimated_number_foreclosures_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_hud_county_place_x_place(X,Y) {r969}.
+i_sports_x_sports_team_x_league_x_sports_x_sports_league_participation_x_league(X,Y) :- soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r970}.
+i_soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_player(X,Y) :- soccer_x_football_team_x_current_roster_x_sports_x_sports_team_roster_x_position(X,Y) {r971}.
+i_sports_x_sports_team_x_sport(X,Y) :- sports_x_sports_position_x_players_x_soccer_x_football_roster_position_x_team(Y,X) {r972}.
+i_location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) :- location_x_location_x_containedby(X,Y) {r973}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- location_x_us_county_x_county_seat(Y,X) {r974}.
+i_base_x_biblioness_x_bibs_location_x_state(X,Y) :- people_x_person_x_place_of_birth(Y,X) {r975}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- business_x_industry_x_companies(Y,X) {r976}.
+i_tv_x_tv_network_x_programs_x_tv_x_tv_network_duration_x_program(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_country(X,Y) {r977}.
+i_location_x_hud_foreclosure_area_x_total_residential_addresses_x_measurement_unit_x_dated_integer_x_source(X,Y) :- base_x_biblioness_x_bibs_location_x_country(X,Y) {r978}.
+i_location_x_hud_foreclosure_area_x_estimated_number_of_mortgages_x_measurement_unit_x_dated_integer_x_source(X,Y) :- organization_x_organization_x_headquarters_x_location_x_mailing_address_x_citytown(Y,X) {r979}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- computer_x_programming_language_paradigm_x_languages(X,Z), computer_x_programming_language_x_influenced(Z,Y) {r980}.
+i_business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) :- organization_x_organization_x_phone_number_x_common_x_phone_number_x_category(X,Y) {r981}.
+i_tv_x_tv_genre_x_programs(X,Y) :- tv_x_tv_genre_x_programs(X,Z), tv_x_tv_program_x_country_of_origin(Z,Y) {r982}.
+i_business_x_sponsor_x_sponsorship_x_business_x_sponsorship_x_sponsored_recipient(X,Y) :- base_x_schemastaging_x_organization_extra_x_phone_number_x_base_x_schemastaging_x_phone_sandbox_x_service_language(X,Y) {r983}.
+i_location_x_location_x_containedby(X,Y) :- education_x_field_of_study_x_students_majoring_x_education_x_education_x_institution(Y,X) {r984}.
+i_business_x_employer_x_employees_x_business_x_employment_tenure_x_title(X,Y) :- business_x_business_operation_x_retained_earnings_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r985}.
+i_common_x_topic_x_webpage_x_common_x_webpage_x_category(X,Y) :- education_x_educational_institution_campus_x_educational_institution(X,Z), education_x_educational_institution_campus_x_educational_institution(Z,Y) {r986}.
+i_location_x_hud_foreclosure_area_x_hhuniv_x_measurement_unit_x_dated_integer_x_source(X,Y) :- location_x_statistical_region_x_rent50_4_x_measurement_unit_x_dated_money_value_x_currency(X,Y) {r987}.
+i_location_x_administrative_division_x_capital_x_location_x_administrative_division_capital_relationship_x_capital(X,Y) :- people_x_person_x_places_lived_x_people_x_place_lived_x_location(Y,X) {r988}.
+i_cvg_x_computer_videogame_x_gameplay_modes(X,Y) :- cvg_x_computer_videogame_x_cvg_genre(X,Z), media_common_x_media_genre_x_child_genres(Z,Y) {r989}.
+i_computer_x_programming_language_x_influenced_by(X,Y) :- computer_x_programming_language_x_influenced_by(X,Z), computer_x_programming_language_x_language_paradigms(Z,Y) {r990}.
+i_olympics_x_olympic_sport_x_olympic_games_contested(X,Y) :- olympics_x_olympic_participating_country_x_athletes_x_olympics_x_olympic_athlete_affiliation_x_sport(Y,X) {r991}.
+i_award_x_award_winner_x_awards_won_x_award_x_award_honor_x_award(X,Y) :- award_x_award_nominated_work_x_award_nominations_x_award_x_award_nomination_x_award_nominee(Y,X) {r992}.
+i_location_x_location_x_containedby(X,Y) :- base_x_biblioness_x_bibs_location_x_state(Y,X) {r993}.

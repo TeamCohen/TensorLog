@@ -6,6 +6,7 @@ import expt
 import tensorlog
 import matrixdb
 import mutil
+import ops
 
 def uncacheDB(dbFile):
     if not os.path.exists(dbFile):
@@ -25,6 +26,7 @@ def uncacheMatPairs(cacheFile,dbFile,exampleFile):
         return d
         
 if __name__=="__main__":
+    ops.OPTIMIZE_COMPONENT_MULTIPLY=False
     dTrain = uncacheMatPairs('cora-XY.mat','cora.db','inputs/train.examples')
     dTest = uncacheMatPairs('cora-XY.mat','cora.db','inputs/test.examples')
     prog = tensorlog.ProPPRProgram.load(["cora.db","cora.ppr"])

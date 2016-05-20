@@ -1,9 +1,14 @@
-currently failing - I think due to one of the optimizations but I need to test
+Cora:
+ - samebib, depth 1, ops.OPTIMIZE_COMPONENT_MULTIPLY=False
 
-training: 88.690sec (1 thread,maxdepth 1)
-proppr eval cora-test.examples cora-test.solutions.txt --metric auc --defaultNeg
+training ... done in 97.899 sec
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
 . micro: 0.975902362875
 . macro: 0.514227693342
 
-proppr: grounding is 43s
+ - ProPPR: 
+Grounding time: 57989
+Training time: 1027673
+. micro: 0.832085195942
+. macro: 0.506248091654
 

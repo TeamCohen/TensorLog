@@ -1,3 +1,5 @@
+HYPERNYM (46 rules):
+
 training ... done in 27.924 sec
 
 INFO:root:calling: python /afs/cs.cmu.edu/user/wcohen/shared-home/code/ProPPR/scripts/answermetrics.py --data hypernym-test.examples --answers hypernym-test.solutions.txt --metric auc --defaultNeg
@@ -31,30 +33,31 @@ metric auc (AUC): The probability of a positive example scoring higher than a ne
 . micro: 0.933065362892
 . macro: 0.530242898096
 
+HYPONYM (46 rules):
 
+30 epochs - training ... done in 165.583 sec
 
-Experimental process:
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.921190465949
+. macro: 0.515266747431
 
-make -B wnet.db - db for wordnet KBC task
-python expt.py  - trained results, also saves the following in proppr format
-              'savedTestPreds':'hypernym-test.solutions.txt',
-              'savedTrainExamples':'hypernym-train.examples',
-              'savedTestExamples':'hypernym-test.examples',
-#tensorlog MAP result . macro: 0.947144075021 w/o softmax optimization, 0.946291560102 w
-# learning time, 
-# 1400+ initially
-#  409.148 sec after removing stacking from weightByRowSum
-#  214.368 sec after removing broadcast from op
-#   36.696 sec after more optimization
-#   36.696 sec after final broadcast operation
-#   23.128 sec after softmax optimization
-proppr eval hypernym-test.examples hypernym-test.solutions.txt --metric map  
+ProPPR:
+Grounding time: 15575
+Training time: 152455
 
-#proppr result - grounding 9.5 sec, training 1:13.8, answer 10.0, map 0.945439045183 [even with only one thread]
-proppr set --programFiles wnet-learned.wam:wnet.cfacts
-proppr ground hypernym-train.examples --duplicateCheck -1
-proppr train hypernym-train hypernym
-proppr answer hypernym-test.examples proppr-test.solutions.txt --params hypernym.params --duplicateCheck -1
-proppr eval hypernym-test.examples proppr-test.solutions.txt --metric map
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.928485235518
+. macro: 0.544266396523
 
-#profiling: python -m cProfile -o toy.prof expt.py
+DERIVATIONALLY_RELATED_FORM (49 rules):
+
+training ... done in 166.618 sec
+. micro: 0.0820437349597
+. macro: 0.0754953195882
+
+ProPPR:
+Grounding time: 16807
+Training time: 168244
+
+. micro: 0.0665152080646
+. macro: 0.0709995786891

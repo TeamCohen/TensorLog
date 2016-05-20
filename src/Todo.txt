@@ -1,0 +1,4 @@
+optimization: python -m cProfile -o bench.prof benchmark.py fb-rule-answer-matrix
+
+benchmark: fb-rule-answer-matrix [original]
+time 4.495

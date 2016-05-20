@@ -12,3 +12,7 @@ wnet.cfacts: wnet-ruleids.cfacts
 wnet-learned.ppr wnet-ruleids.cfacts:
 	python bin/convert-rules.py
 
+clean:
+	rm -f *.pyc *.prof *~
+	rm hypernym-train.examples hypernym-test.examples hypernym-test.solutions.txt
+	rm -rf hypernym-trained.db	

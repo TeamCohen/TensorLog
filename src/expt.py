@@ -19,7 +19,7 @@ class Expt(object):
 
     def _run(self,
              initFiles=None, initProgram=None,
-             theoryPred=None, 
+             theoryPred=None, epochs=5,
              trainMatPair=None, testMatPair=None,
              trainPred=None, testPred=None, 
              savedTestPreds=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None):
@@ -51,7 +51,7 @@ class Expt(object):
                 'prepare test data',
                 lambda:ti.db.matrixAsTrainingData(testPred,2))
 
-        learner = learn.FixedRateGDLearner(ti.prog,TX,TY,epochs=5)
+        learner = learn.FixedRateGDLearner(ti.prog,TX,TY,epochs=epochs)
 
         TP0 = Expt.timeAction(
             'running untrained theory on train data',
@@ -87,7 +87,7 @@ class Expt(object):
             Expt.timeAction('saving train examples', lambda:Expt.dataAsProPPRExamples(savedTrainExamples,theoryPred,ti.db,TX,TY))
 
         if savedTestPreds and savedTestExamples:
-            print 'ready for commands like: proppr eval %s %s --metric map' % (savedTestExamples,savedTestPreds)
+            print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' % (savedTestExamples,savedTestPreds)
 
     @staticmethod
     def timeAction(msg, act):

@@ -13,6 +13,8 @@ import symtab
 import parser
 import mutil
 
+ALLOW_WEIGHTED_TUPLES = False
+
 NULL_ENTITY_NAME = '__NULL__'
 
 class MatrixParseError(Exception):
@@ -301,14 +303,14 @@ class MatrixDB(object):
 
         parts = line.split("\t")
         #TODO add ability to read in weights
-        if len(parts)==4:
+        if ALLOW_WEIGHTED_TUPLES and len(parts)==4:
             f,a1,a2,wstr = parts[0],parts[1],parts[2],parts[3]
             arity = 2
             w = atof(wstr)
         elif len(parts)==3:
             f,a1,a2 = parts[0],parts[1],parts[2]
             w = atof(a2)
-            if w==0:
+            if not ALLOW_WEIGHTED_TUPLES or w==0:
                 arity = 2
                 w = 1.0
             else:

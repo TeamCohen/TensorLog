@@ -1,3 +1,5 @@
+import sys
+
 import expt
 import os.path
 import scipy.sparse as SS
@@ -38,14 +40,20 @@ def uncacheMatPairs(cacheFile,dbFile,trainPred,testPred):
         return d
         
 if __name__=="__main__":
-    d = uncacheMatPairs('wnet-XY.mat','wnet.db','train_i_hypernym','valid_i_hypernym')
+    if len(sys.argv)<=1:
+        pred = 'hypernym'
+    else:
+        pred = sys.argv[1]
+    print '== pred',pred
+    d = uncacheMatPairs('wnet-%s-XY.mat' % pred,'wnet.db','train_i_%s' % pred,'valid_i_%s' % pred)
     params = {'initFiles':["wnet.db","wnet-learned.ppr"],
-              'theoryPred':'i_hypernym',
+              'theoryPred':'i_%s' % pred,
               'trainMatPair':(d['tx'],d['ty']),
               'testMatPair':(d['ux'],d['uy']),
-              'savedModel':'hypernym-trained.db',
-              'savedTestPreds':'hypernym-test.solutions.txt',
-              'savedTrainExamples':'hypernym-train.examples',
-              'savedTestExamples':'hypernym-test.examples',
+              'savedModel':'%s-trained.db' % pred,
+              'savedTestPreds':'%s-test.solutions.txt' % pred,
+              'savedTrainExamples':'%s-train.examples' % pred,
+              'savedTestExamples':'%s-test.examples' % pred,
+              'epochs':30,
     }
     expt.Expt(params).run()
