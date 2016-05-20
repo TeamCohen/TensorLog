@@ -1,4 +1,34 @@
-optimization: python -m cProfile -o bench.prof benchmark.py fb-rule-answer-matrix
+tutorial/docs
 
-benchmark: fb-rule-answer-matrix [original]
-time 4.495
+configuration:
+ - think thru how to do this, it's ok if it's done in python,
+ so maybe a global config.Config dictionary is fine
+ - might want some sort of documentation/typechecking in parallel with the config dict?
+
+more experiments:
+ - representation learning/recommendation
+
+clean up experiments
+ - numeric stability checks
+
+real learning
+ - serializable multi-task datasets
+ - adagrad & holdout set for convergence
+ - multithreading
+
+extensions:
+ - typed relations/predicates
+ - multi-input literals and "one-hot" propagation
+ - non-linearities:
+ mlp(X,Y) :- 
+    w1(X,Z1),bias1(B1),biasedSigmoid(B1,Z1,A1),
+    w2(A1,Z2),bias2(B2),biasedSigmoid(B2,Z2,Y).
+
+integration w/ theano, tensorflow, ...
+
+implement some sort of structure learning
+
+compare to other languages
+ - yap prolog
+ - problog2, in more detail
+ - some ddb system?
