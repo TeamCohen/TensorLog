@@ -172,9 +172,10 @@ class TestSmallProofs(unittest.TestCase):
         self.inferenceCheck(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
 
     def testRec1(self):
-        tensorlog.MAXDEPTH=4
+        #TODO check that these work
+        tensorlog.DEFAULT_MAXDEPTH=4
         self.inferenceCheck(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
-        tensorlog.MAXDEPTH=10
+        tensorlog.DEFAULT_MAXDEPTH=10
         self.inferenceCheck(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
 
     def testConstOutput(self):

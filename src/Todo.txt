@@ -1,9 +1,13 @@
 tutorial/docs
 
-configuration:
- - think thru how to do this, it's ok if it's done in python,
- so maybe a global config.Config dictionary is fine
- - might want some sort of documentation/typechecking in parallel with the config dict?
+configuration: see config.py
+
+ - might want to include, in tlog, an overall configuration which includes
+ the others as subconfigurations.  also might want to serialize/deserialize,
+ maybe in json?
+
+debugging:
+ - printf(id,X,Y) literal - with ops.conf.printf params on what's output?
 
 more experiments:
  - representation learning/recommendation
@@ -13,6 +17,7 @@ clean up experiments
 
 real learning
  - serializable multi-task datasets
+  propprExamplesAsData(db,fileName): convert to provide (xdict,ydict) outputs
  - adagrad & holdout set for convergence
  - multithreading
 

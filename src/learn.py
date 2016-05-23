@@ -8,8 +8,6 @@ import numpy as NP
 import collections
 import mutil
 
-ROBUST_ACCURACY_CHECK = False
-
 class GradAccumulator(object):
     """ Accumulate the sum gradients for perhaps many parameters, indexing
     them by parameter name.
@@ -51,20 +49,10 @@ class Learner(object):
         n = mutil.numRows(P)
         ok = 0.0
         for i in range(n):
-            if not ROBUST_ACCURACY_CHECK:
-                pi = P.getrow(i)
-                yi = Y.getrow(i)
-                ti = mutil.mapData(allZerosButArgmax,pi)
-                ok += yi.multiply(ti).sum()
-            else:
-                #TODO: WAY slower
-                maxp = -1
-                maxj = -1
-                for j in mutil.nzCols(P,i):
-                    if P[i,j]>maxp:                
-                        maxp = P[i,j]
-                        maxj = j
-                ok += Y[i,maxj]
+            pi = P.getrow(i)
+            yi = Y.getrow(i)
+            ti = mutil.mapData(allZerosButArgmax,pi)
+            ok += yi.multiply(ti).sum()
         return ok/n
 
     @staticmethod

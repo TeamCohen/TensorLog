@@ -4,14 +4,13 @@ import numpy
 import logging
 
 import mutil
+import config
 
-# if true print ops as they are executed
-TRACE = False
-# if true print outputs of ops - only use this for tiny test cases
-LONG_TRACE = False
-
-OPTIMIZE_WEIGHTED_VEC = True
-OPTIMIZE_COMPONENT_MULTIPLY = True
+conf = config.Config()
+conf.trace = False;                     conf.help.trace =                       "Print debug info during op execution"
+conf.long_trace = False;                conf.help.long_trace =                  "Print output of functions after op - only for small tasks"
+conf.optimize_weighted_vec=True;        conf.help.optimize_weighted_vec =       "Use optimized version of WeightedVec op"
+conf.optimize_component_multiply=True;  conf.help.optimize_component_multiply = "Use optimized version of ComponentwiseVecMulOp"
 
 ##############################################################################
 #
@@ -64,22 +63,25 @@ class Op(object):
         self.msgFrom = msgFrom
         self.msgTo = msgTo
     #TODO docstrings
-    #TODO make this like what was done in funs.py, with _doEval and _doBackprop
     def eval(self,env):
-        if TRACE:
+        """Evaluate an operator inside an environment."""
+        if conf.trace:
             print 'eval',self,
         self._doEval(env)
-        if TRACE:
-            if LONG_TRACE: print 'stores',env.db.matrixAsSymbolDict(env[self.dst])
-            else: print
+        if conf.trace:
+            if conf.long_trace: print 'stores',env.db.matrixAsSymbolDict(env[self.dst])
+            else: print env[self.dst].nnz,'nonzeros',mutil.numRows(env[self.dst]),'rows'
     def backprop(self,env,gradAccum):
-        #these should all call eval first
-        if TRACE:
+        """Backpropagate errors - stored in the env.delta[...] from outputs of
+        the operator to the inputs.  Assumes that 'eval' has been
+        called first.
+        """
+        if conf.trace:
             print 'call bp',self,'delta[',self.dst,'] shape',env.delta[self.dst].get_shape(),
-            if LONG_TRACE: print env.db.matrixAsSymbolDict(env.delta[self.dst])
+            if conf.long_trace: print env.db.matrixAsSymbolDict(env.delta[self.dst])
             else: print
         self._doBackprop(env,gradAccum)
-        if TRACE: 
+        if conf.trace: 
             print 'end bp',self
     def showDeltaShape(self,env,key):
         print 'shape of env.delta[%s]' % key,env.delta[key].get_shape()
@@ -235,13 +237,13 @@ class ComponentwiseVecMulOp(Op):
     def _ppLHS(self):
         return "%s o %s" % (self.src,self.src2)
     def _doEval(self,env):
-        if OPTIMIZE_COMPONENT_MULTIPLY:
+        if conf.optimize_component_multiply:
             env[self.dst] = mutil.broadcastAndComponentwiseMultiply(env[self.src],env[self.src2])
         else:
             m1,m2 = mutil.broadcastBinding(env,self.src,self.src2)
             env[self.dst] = m1.multiply(m2)
     def _doBackprop(self,env,gradAccum):
-        if OPTIMIZE_COMPONENT_MULTIPLY:
+        if conf.optimize_component_multiply:
             env.delta[self.src] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src2])
             env.delta[self.src2] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src])
         else:
@@ -268,7 +270,7 @@ class WeightedVec(Op):
     def _ppLHS(self):
         return "%s * %s.sum()" % (self.vec,self.weighter)
     def _doEval(self,env):
-        if OPTIMIZE_WEIGHTED_VEC:
+        if conf.optimize_weighted_vec:
             env[self.dst] = mutil.broadcastAndWeightByRowSum(env[self.vec],env[self.weighter])
         else:
             m1,m2 = mutil.broadcastBinding(env, self.vec, self.weighter)
@@ -282,7 +284,7 @@ class WeightedVec(Op):
         # and then backprop through step 2, then step 1
         # step 2a: bp from delta[dst] to delta[vec]
         #   delta[vec] = delta[dst]*weighterSum
-        if OPTIMIZE_WEIGHTED_VEC:
+        if conf.optimize_weighted_vec:
             env.delta[self.vec] = mutil.broadcastAndWeightByRowSum(env.delta[self.dst],env[self.weighter]) 
         else:
             deltaDst,mWeighter = mutil.broadcast2(env.delta[self.dst], env[self.weighter])
@@ -293,8 +295,8 @@ class WeightedVec(Op):
         # step 1: bp from delta[weighterSum] to weighter
         #   delta[weighter] = delta[weighterSum]*weighter
         # but we can combine 2b and 1 as follows (optimized):
-        if OPTIMIZE_WEIGHTED_VEC:
-            if OPTIMIZE_COMPONENT_MULTIPLY:
+        if conf.optimize_weighted_vec:
+            if conf.optimize_component_multiply:
                 tmp = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.vec])
             else:
                 m1,m2 = mutil.broadcast2(env.delta[self.dst],env[self.vec])

@@ -12,11 +12,8 @@ import matrixdb
 import bpcompiler
 import learn
 
-
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE=True
-
-TRACE=True
 
 ##############################################################################
 ## a program
@@ -73,7 +70,6 @@ class Program(object):
         symbols that will be converted to onehot vectors, and bound to
         the corresponding input arguments.
         """
-        if TRACE: logging.debug('evalSymbols %s inputs %r' % (str(mode),symbols))
         return self.eval(mode, [self.db.onehot(s) for s in symbols])
 
     def eval(self,mode,inputs):
@@ -83,8 +79,6 @@ class Program(object):
         """
         if (mode,0) not in self.function: self.compile(mode)
         fun = self.function[(mode,0)]
-        if TRACE: logging.debug('eval function %s' % str(fun))
-        if TRACE: logging.debug('\n'.join(fun.pprint()))
         return fun.eval(self.db, inputs)
 
     def evalGradSymbols(self,mode,symbols):
