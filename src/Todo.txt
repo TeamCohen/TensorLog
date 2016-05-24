@@ -8,6 +8,7 @@ configuration: see config.py
 
 debugging:
  - printf(id,X,Y) literal - with ops.conf.printf params on what's output?
+ - should I just call this printf? are there any other IO operators I want to have?
 
 more experiments:
  - representation learning/recommendation

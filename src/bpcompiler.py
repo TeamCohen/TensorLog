@@ -266,7 +266,9 @@ class BPCompiler(object):
                     return msgName
                 else:
                     fx = msgVar2Goal(only(gin.inputs),j,traceDepth+1) #ask for the message forward from the input to goal j
-                    if not gin.definedPred:
+                    if ops.isBuiltinIOOp(mode):
+                        addOp(ops.BuiltInIOOp(msgName,fx,mode), traceDepth,j,v)
+                    elif not gin.definedPred:
                         addOp(ops.VecMatMulOp(msgName,fx,mode), traceDepth,j,v)
                     else:
                         addOp(ops.DefinedPredOp(self.tensorlogProg,msgName,fx,mode,self.depth+1), traceDepth,j,v)
@@ -291,6 +293,7 @@ class BPCompiler(object):
                         assert len(gin.outputs)==1, 'need single output from %s' % self.goals[j]
                         #this variable now is connected to the main chain
                         self.varDict[only(gin.outputs)].connected = True
+                        assert not ops.isBuiltinIOOp(mode), 'can only use built in io operators where inputs and outputs are used'
                         addOp(ops.AssignPreimageToVar(msgName,mode), traceDepth,j,v)
                     else:
                         addOp(ops.AssignVectorToVar(msgName,mode), traceDepth,j,v)

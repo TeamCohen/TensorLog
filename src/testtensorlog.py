@@ -308,6 +308,14 @@ class TestGrad(unittest.TestCase):
                        {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
 
 
+    def testPrintf(self):
+        rules = ['p(X,Z1):-printf(X,X1),spouse(X1,Y),printf(Y,Y1),sister(Y1,Z),printf(Z,Z1).']
+        mode = 'p(i,o)'  
+        self.gradCheck(rules,mode,
+                       [('sister',2)], 
+                       [('susan',['rachel'])],
+                       {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
+
     def testCall1(self):
         rules = ['q(X,Y):-sister(X,Y).','p(Z,W):-q(Z,W).']
         mode = 'p(i,o)'  
