@@ -189,6 +189,13 @@ class Interp(object):
         self.db = self.prog.db
         self.learner = None
 
+    def help(self):
+        print "ti.list(\"functor/arity\"): list predicate definition, eg ti.list(\"foo/2\")"
+        print "ti.list(\"functor/mode\"): list compiled function, eg ti.list(\"foo/io\")"
+        print "ti.listRules(): list all predicate definitions"
+        print "ti.listFacts(): summary info on all database predicates"
+        print "ti.eval(\"functor/mode\",\"c\"): evaluate a function on a database constant c"
+
     def list(self,str):
         assert str.find("/")>=0, 'supported formats are functor/arity, function/io, function/oi, function/o, function/i'
         functor,rest = str.split("/")
@@ -288,3 +295,5 @@ if __name__ == "__main__":
         modeSpec = args[0]
         for a in args[1:]:
             print ("f_%s[%s] =" % (modeSpec,a)),ti.eval(modeSpec,a)
+    else:
+        print "interpreter variable 'ti' set, type ti.help() for help"
