@@ -1,0 +1,63 @@
+HYPERNYM (46 rules):
+
+training ... done in 27.924 sec
+
+INFO:root:calling: python /afs/cs.cmu.edu/user/wcohen/shared-home/code/ProPPR/scripts/answermetrics.py --data hypernym-test.examples --answers hypernym-test.solutions.txt --metric auc --defaultNeg
+queries 1173 answers 18192 labeled answers 18192
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve [5 epochs]
+. micro: 0.765543304146
+. macro: 0.503884585076
+
+10 epochs - training ... done in 56.703 sec
+. micro: 0.854231090496
+. macro: 0.503931915774
+
+15 epochs - training ... done in 85.271 sec
+. micro: 0.923585848405
+. macro: 0.503989134371
+
+20 epochs - training ... done in 111.538 sec
+. micro: 0.932765448235
+. macro: 0.503996210545
+
+30 epochs - training ... done in 166.825 sec
+. micro: 0.93437229711
+. macro: 0.503998225614
+
+Proppr:
+
+Grounding time: 18225
+Training time: 154884
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.933065362892
+. macro: 0.530242898096
+
+HYPONYM (46 rules):
+
+30 epochs - training ... done in 165.583 sec
+
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.921190465949
+. macro: 0.515266747431
+
+ProPPR:
+Grounding time: 15575
+Training time: 152455
+
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.928485235518
+. macro: 0.544266396523
+
+DERIVATIONALLY_RELATED_FORM (49 rules):
+
+training ... done in 166.618 sec
+. micro: 0.0820437349597
+. macro: 0.0754953195882
+
+ProPPR:
+Grounding time: 16807
+Training time: 168244
+
+. micro: 0.0665152080646
+. macro: 0.0709995786891
