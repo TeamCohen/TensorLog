@@ -1,0 +1,18 @@
+Timing results:
+python generate.py 16 g16.cfacts
+python grid-expt.py g16.cfacts n_1_1
+depth 4 time 0.00571799278259 sec
+depth 8 time 0.00844502449036 sec
+depth 16 time 0.014888048172 sec
+depth 32 time 0.0299441814423 sec
+depth 64 time 0.0547881126404 sec
+depth 99 time 0.0845830440521 sec
+
+python generate.py 64 g64.cfacts
+python grid-expt.py g64.cfacts n_1_1
+depth 4 time 0.00711989402771 sec
+depth 8 time 0.00954079627991 sec
+depth 16 time 0.0163309574127 sec
+depth 32 time 0.0326619148254 sec
+depth 64 time 0.0765111446381 sec
+depth 99 time 0.130023002625 sec

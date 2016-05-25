@@ -173,9 +173,10 @@ class TestSmallProofs(unittest.TestCase):
         self.inferenceCheck(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
 
     def testRec1(self):
-        tensorlog.MAXDEPTH=4
+        #TODO check that these work
+        tensorlog.DEFAULT_MAXDEPTH=4
         self.inferenceCheck(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
-        tensorlog.MAXDEPTH=10
+        tensorlog.DEFAULT_MAXDEPTH=10
         self.inferenceCheck(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
 
     def testConstOutput(self):
@@ -383,6 +384,14 @@ class TestGrad(unittest.TestCase):
                        [('susan',['rachel'])],
                        {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
 
+
+    def testPrintf(self):
+        rules = ['p(X,Z1):-printf(X,X1),spouse(X1,Y),printf(Y,Y1),sister(Y1,Z),printf(Z,Z1).']
+        mode = 'p(i,o)'  
+        self.gradCheck(rules,mode,
+                       [('sister',2)], 
+                       [('susan',['rachel'])],
+                       {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
 
     def testCall1(self):
         rules = ['q(X,Y):-sister(X,Y).','p(Z,W):-q(Z,W).']

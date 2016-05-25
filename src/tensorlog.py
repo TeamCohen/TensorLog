@@ -13,11 +13,8 @@ import bpcompiler
 import learn
 import mutil
 
-
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE=True
-
-TRACE=True
 
 ##############################################################################
 ## a program
@@ -74,7 +71,6 @@ class Program(object):
         symbols that will be converted to onehot vectors, and bound to
         the corresponding input arguments.
         """
-        if TRACE: logging.debug('evalSymbols %s inputs %r' % (str(mode),symbols))
         return self.eval(mode, [self.db.onehot(s) for s in symbols])
 
     def eval(self,mode,inputs):
@@ -84,8 +80,6 @@ class Program(object):
         """
         if (mode,0) not in self.function: self.compile(mode)
         fun = self.function[(mode,0)]
-        if TRACE: logging.debug('eval function %s' % str(fun))
-        if TRACE: logging.debug('\n'.join(fun.pprint()))
         return fun.eval(self.db, inputs)
 
     def evalGradSymbols(self,mode,symbols):
@@ -195,6 +189,13 @@ class Interp(object):
             self.prog = Program.load(initFiles)
         self.db = self.prog.db
         self.learner = None
+
+    def help(self):
+        print "ti.list(\"functor/arity\"): list predicate definition, eg ti.list(\"foo/2\")"
+        print "ti.list(\"functor/mode\"): list compiled function, eg ti.list(\"foo/io\")"
+        print "ti.listRules(): list all predicate definitions"
+        print "ti.listFacts(): summary info on all database predicates"
+        print "ti.eval(\"functor/mode\",\"c\"): evaluate a function on a database constant c"
 
     def list(self,str):
         assert str.find("/")>=0, 'supported formats are functor/arity, function/io, function/oi, function/o, function/i'
@@ -306,3 +307,5 @@ if __name__ == "__main__":
         modeSpec = args[0]
         for a in args[1:]:
             print ("f_%s[%s] =" % (modeSpec,a)),ti.eval(modeSpec,a)
+    else:
+        print "interpreter variable 'ti' set, type ti.help() for help"

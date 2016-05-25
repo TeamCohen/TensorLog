@@ -2,7 +2,6 @@
 
 import parser
 
-
 class AbstractDeclaration(object):
     """Mode - or later - type - declaration for a predicate."""
     def __init__(self,goal):

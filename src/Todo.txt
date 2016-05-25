@@ -1,0 +1,40 @@
+tutorial/docs
+
+configuration: see config.py
+
+ - might want to include, in tlog, an overall configuration which includes
+ the others as subconfigurations.  also might want to serialize/deserialize,
+ maybe in json?
+
+debugging:
+ - printf(id,X,Y) literal - with ops.conf.printf params on what's output?
+ - should I just call this printf? are there any other IO operators I want to have?
+
+more experiments:
+ - representation learning/recommendation
+
+clean up experiments
+ - numeric stability checks
+
+real learning
+ - serializable multi-task datasets
+  propprExamplesAsData(db,fileName): convert to provide (xdict,ydict) outputs
+ - adagrad & holdout set for convergence
+ - multithreading
+
+extensions:
+ - typed relations/predicates
+ - multi-input literals and "one-hot" propagation
+ - non-linearities:
+ mlp(X,Y) :- 
+    w1(X,Z1),bias1(B1),biasedSigmoid(B1,Z1,A1),
+    w2(A1,Z2),bias2(B2),biasedSigmoid(B2,Z2,Y).
+
+integration w/ theano, tensorflow, ...
+
+implement some sort of structure learning
+
+compare to other languages
+ - yap prolog
+ - problog2, in more detail
+ - some ddb system?

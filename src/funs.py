@@ -1,36 +1,37 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
-import logging
-import traceback
-
 import sys
+import logging
+
 import ops
+import config
 import mutil
 import tlerr
 
-TRACE = False
-LONG_TRACE = False
+conf = config.Config()
+conf.trace = False;         conf.help.trace =         "Print debug info during function eval"
+conf.long_trace = False;    conf.help.long_trace =    "Print output of functions during eval - only for small tasks"
 
 class Function(object):
     """The tensorlog representation of a function. This supports eval and
     evalGrad operations, and take a list of input values as the inputs.
     """
     def eval(self,db,values):
-        if TRACE:
+        if conf.trace:
             print "Invoking %s:\n%s" % (str(self),"\n. . ".join(self.pprint()))
         result = self._doEval(db,values)
-        if TRACE:
+        if conf.trace:
             print "Function completed:\n%s" % "\n. . ".join(self.pprint())
-            if LONG_TRACE:
+            if conf.long_trace:
                 for k,v in enumerate(values):
                     print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
                 print '. result :',db.matrixAsSymbolDict(result)
         return result
     def backprop(self,delta,gradAccum):
-        if TRACE:
+        if conf.trace:
             print "Backprop %s:\n%s" % (str(self),"\n. . ".join(self.pprint()))
         result = self._doBackprop(delta,gradAccum)
-        if TRACE:
+        if conf.trace:
             print "Backprop completed:\n%s" % "\n. . ".join(self.pprint())
         return result
     def pprint(self,depth=0):

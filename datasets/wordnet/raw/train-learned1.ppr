@@ -1,0 +1,893 @@
+interp(i_also_see,X,Y) :- rel(also_see,Y,X) {lr_ifInv(i_also_see,also_see)}.
+interp(i_hypernym,X,Y) :- rel(hyponym,Y,X) {lr_ifInv(i_hypernym,hyponym)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Y) {lr_if(i_hyponym,hyponym)}.
+interp(i_part_of,X,Y) :- rel(has_part,Y,X) {lr_ifInv(i_part_of,has_part)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(member_of_domain_topic,Y,X) {lr_ifInv(i_synset_domain_topic_of,member_of_domain_topic)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hyponym,hyponym,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_hyponym,hyponym,derivationally_related_form)}.
+interp(i_member_holonym,X,Y) :- rel(member_meronym,Y,X) {lr_ifInv(i_member_holonym,member_meronym)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hyponym,hyponym,hyponym)}.
+interp(i_synset_domain_usage_of,X,Y) :- rel(member_of_domain_usage,Y,X) {lr_ifInv(i_synset_domain_usage_of,member_of_domain_usage)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_hyponym,hyponym,member_holonym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_of_domain_topic,X,Y) {lr_if(i_member_of_domain_topic,member_of_domain_topic)}.
+interp(i_similar_to,X,Y) :- rel(similar_to,Y,X) {lr_ifInv(i_similar_to,similar_to)}.
+interp(i_instance_hyponym,X,Y) :- rel(instance_hyponym,X,Y) {lr_if(i_instance_hyponym,instance_hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(derivationally_related_form,X,Z), rel(hypernym,Z,Y) {lr_chain(i_derivationally_related_form,derivationally_related_form,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_hyponym,hyponym,member_meronym)}.
+interp(i_member_meronym,X,Y) :- rel(member_meronym,X,Y) {lr_if(i_member_meronym,member_meronym)}.
+interp(i_verb_group,X,Y) :- rel(verb_group,X,Z), rel(hypernym,Z,Y) {lr_chain(i_verb_group,verb_group,hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(member_meronym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_meronym,member_meronym,member_meronym)}.
+interp(i_member_meronym,X,Y) :- rel(member_meronym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_meronym,member_meronym,hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_instance_hyponym,instance_hyponym,instance_hypernym)}.
+interp(i_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hyponym,derivationally_related_form,hyponym)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,Y,X) {lr_ifInv(i_hyponym,hyponym)}.
+interp(i_has_part,X,Y) :- rel(has_part,X,Y) {lr_if(i_has_part,has_part)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_usage,X,Y) {lr_if(i_member_of_domain_usage,member_of_domain_usage)}.
+interp(i_hypernym,X,Y) :- rel(has_part,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hypernym,has_part,hypernym)}.
+interp(i_verb_group,X,Y) :- rel(hyponym,X,Y) {lr_if(i_verb_group,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(derivationally_related_form,X,Y) {lr_if(i_derivationally_related_form,derivationally_related_form)}.
+interp(i_part_of,X,Y) :- rel(synset_domain_topic_of,X,Y) {lr_if(i_part_of,synset_domain_topic_of)}.
+interp(i_verb_group,X,Y) :- rel(hypernym,Y,X) {lr_ifInv(i_verb_group,hypernym)}.
+interp(i_has_part,X,Y) :- rel(has_part,X,Z), rel(has_part,Z,Y) {lr_chain(i_has_part,has_part,has_part)}.
+interp(i_hypernym,X,Y) :- rel(part_of,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hypernym,part_of,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(derivationally_related_form,X,Y) {lr_if(i_hyponym,derivationally_related_form)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Y) {lr_if(i_derivationally_related_form,hyponym)}.
+interp(i_member_meronym,X,Y) :- rel(member_meronym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_meronym,member_meronym,member_holonym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_member_of_domain_topic,member_of_domain_topic,synset_domain_topic_of)}.
+interp(i_hyponym,X,Y) :- rel(derivationally_related_form,Y,X) {lr_ifInv(i_hyponym,derivationally_related_form)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_derivationally_related_form,hyponym,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_derivationally_related_form,hyponym,hypernym)}.
+interp(i_has_part,X,Y) :- rel(has_part,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_has_part,has_part,instance_hypernym)}.
+interp(i_part_of,X,Y) :- rel(hyponym,X,Z), rel(part_of,Z,Y) {lr_chain(i_part_of,hyponym,part_of)}.
+interp(i_verb_group,X,Y) :- rel(hypernym,X,Y) {lr_if(i_verb_group,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hyponym,derivationally_related_form,hypernym)}.
+interp(i_hypernym,X,Y) :- rel(derivationally_related_form,Y,X) {lr_ifInv(i_hypernym,derivationally_related_form)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hyponym,hyponym,synset_domain_topic_of)}.
+interp(i_hypernym,X,Y) :- rel(hypernym,Y,X) {lr_ifInv(i_hypernym,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hypernym,Y,X) {lr_ifInv(i_derivationally_related_form,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,Y,X) {lr_ifInv(i_derivationally_related_form,hyponym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_usage,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_usage,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(derivationally_related_form,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_derivationally_related_form,derivationally_related_form,member_holonym)}.
+interp(i_member_holonym,X,Y) :- rel(hypernym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_holonym,hypernym,member_holonym)}.
+interp(i_synset_domain_region_of,X,Y) :- rel(has_part,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_synset_domain_region_of,has_part,synset_domain_region_of)}.
+interp(i_hypernym,X,Y) :- rel(hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_hypernym,hyponym,derivationally_related_form)}.
+interp(i_derivationally_related_form,X,Y) :- rel(also_see,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_derivationally_related_form,also_see,derivationally_related_form)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hypernym,Y,X) {lr_ifInv(i_member_of_domain_topic,hypernym)}.
+interp(i_member_holonym,X,Y) :- rel(derivationally_related_form,Y,X) {lr_ifInv(i_member_holonym,derivationally_related_form)}.
+interp(i_verb_group,X,Y) :- rel(verb_group,X,Z), rel(verb_group,Z,Y) {lr_chain(i_verb_group,verb_group,verb_group)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hyponym,X,Y) {lr_if(i_member_of_domain_topic,hyponym)}.
+interp(i_synset_domain_region_of,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_synset_domain_region_of,hyponym,synset_domain_region_of)}.
+interp(i_part_of,X,Y) :- rel(hypernym,X,Z), rel(part_of,Z,Y) {lr_chain(i_part_of,hypernym,part_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(derivationally_related_form,X,Z), rel(also_see,Z,Y) {lr_chain(i_derivationally_related_form,derivationally_related_form,also_see)}.
+interp(i_hypernym,X,Y) :- rel(derivationally_related_form,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hypernym,derivationally_related_form,hyponym)}.
+interp(i_has_part,X,Y) :- rel(hypernym,Y,X) {lr_ifInv(i_has_part,hypernym)}.
+interp(i_has_part,X,Y) :- rel(has_part,X,Z), rel(part_of,Z,Y) {lr_chain(i_has_part,has_part,part_of)}.
+interp(i_hypernym,X,Y) :- rel(hyponym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hypernym,hyponym,hypernym)}.
+interp(i_synset_domain_usage_of,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_synset_domain_usage_of,hyponym,synset_domain_usage_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(part_of,X,Y) {lr_if(i_synset_domain_topic_of,part_of)}.
+interp(i_has_part,X,Y) :- rel(hyponym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_has_part,hyponym,hypernym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(derivationally_related_form,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_of_domain_topic,derivationally_related_form,derivationally_related_form)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(derivationally_related_form,X,Z), rel(hypernym,Z,Y) {lr_chain(i_synset_domain_topic_of,derivationally_related_form,hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(member_meronym,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_meronym,member_meronym,has_part)}.
+interp(i_hyponym,X,Y) :- rel(hypernym,X,Y) {lr_if(i_hyponym,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(derivationally_related_form,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_derivationally_related_form,derivationally_related_form,derivationally_related_form)}.
+interp(i_hypernym,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hypernym,hyponym,synset_domain_topic_of)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_hyponym,hyponym,instance_hyponym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(derivationally_related_form,X,Y) {lr_if(i_synset_domain_topic_of,derivationally_related_form)}.
+interp(i_part_of,X,Y) :- rel(synset_domain_region_of,X,Y) {lr_if(i_part_of,synset_domain_region_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(derivationally_related_form,Y,X) {lr_ifInv(i_synset_domain_topic_of,derivationally_related_form)}.
+interp(i_hyponym,X,Y) :- rel(part_of,Y,X) {lr_ifInv(i_hyponym,part_of)}.
+interp(i_synset_domain_region_of,X,Y) :- rel(hypernym,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_synset_domain_region_of,hypernym,synset_domain_usage_of)}.
+interp(i_hyponym,X,Y) :- rel(also_see,Y,X) {lr_ifInv(i_hyponym,also_see)}.
+interp(i_part_of,X,Y) :- rel(instance_hypernym,X,Z), rel(part_of,Z,Y) {lr_chain(i_part_of,instance_hypernym,part_of)}.
+interp(i_member_meronym,X,Y) :- rel(derivationally_related_form,Y,X) {lr_ifInv(i_member_meronym,derivationally_related_form)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_hyponym,hyponym,has_part)}.
+interp(i_hypernym,X,Y) :- rel(hyponym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hypernym,hyponym,hyponym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(has_part,Y,X) {lr_ifInv(i_synset_domain_topic_of,has_part)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_usage,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_usage,synset_domain_usage_of)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(part_of,Z,Y) {lr_chain(i_hyponym,hyponym,part_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(has_part,X,Z), rel(part_of,Z,Y) {lr_chain(i_derivationally_related_form,has_part,part_of)}.
+interp(i_synset_domain_region_of,X,Y) :- rel(hypernym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_synset_domain_region_of,hypernym,synset_domain_region_of)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_region,Y,X) {lr_ifInv(i_part_of,member_of_domain_region)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_region,X,Y) {lr_if(i_has_part,member_of_domain_region)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_region,X,Y) {lr_if(i_member_of_domain_region,member_of_domain_region)}.
+interp(i_member_of_domain_region,X,Y) :- rel(has_part,X,Y) {lr_if(i_member_of_domain_region,has_part)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_of_domain_topic,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_of_domain_topic,member_of_domain_topic,derivationally_related_form)}.
+interp(i_has_part,X,Y) :- rel(hyponym,X,Y) {lr_if(i_has_part,hyponym)}.
+interp(i_member_holonym,X,Y) :- rel(hyponym,X,Y) {lr_if(i_member_holonym,hyponym)}.
+interp(i_hyponym,X,Y) :- rel(member_holonym,X,Y) {lr_if(i_hyponym,member_holonym)}.
+interp(i_hyponym,X,Y) :- rel(has_part,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hyponym,has_part,hyponym)}.
+interp(i_member_holonym,X,Y) :- rel(hypernym,Y,X) {lr_ifInv(i_member_holonym,hypernym)}.
+interp(i_member_holonym,X,Y) :- rel(derivationally_related_form,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_holonym,derivationally_related_form,derivationally_related_form)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_region,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_region,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(synset_domain_topic_of,Y,X) {lr_ifInv(i_hyponym,synset_domain_topic_of)}.
+interp(i_verb_group,X,Y) :- rel(derivationally_related_form,Y,X) {lr_ifInv(i_verb_group,derivationally_related_form)}.
+interp(i_hypernym,X,Y) :- rel(has_part,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_hypernym,has_part,derivationally_related_form)}.
+interp(i_hyponym,X,Y) :- rel(member_meronym,Y,X) {lr_ifInv(i_hyponym,member_meronym)}.
+interp(i_has_part,X,Y) :- rel(derivationally_related_form,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_has_part,derivationally_related_form,derivationally_related_form)}.
+interp(i_hyponym,X,Y) :- rel(instance_hypernym,Y,X) {lr_ifInv(i_hyponym,instance_hypernym)}.
+interp(i_hypernym,X,Y) :- rel(member_holonym,Y,X) {lr_ifInv(i_hypernym,member_holonym)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_topic,X,Y) {lr_if(i_hyponym,member_of_domain_topic)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hyponym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_of_domain_topic,hyponym,hyponym)}.
+interp(i_hyponym,X,Y) :- rel(instance_hyponym,X,Y) {lr_if(i_hyponym,instance_hyponym)}.
+interp(i_verb_group,X,Y) :- rel(hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_verb_group,hyponym,derivationally_related_form)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_region,X,Z), rel(hypernym,Z,Y) {lr_chain(i_has_part,member_of_domain_region,hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(hyponym,X,Y) {lr_if(i_instance_hyponym,hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(hypernym,Y,X) {lr_ifInv(i_instance_hyponym,hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(derivationally_related_form,X,Y) {lr_if(i_member_meronym,derivationally_related_form)}.
+interp(i_verb_group,X,Y) :- rel(derivationally_related_form,X,Y) {lr_if(i_verb_group,derivationally_related_form)}.
+interp(i_has_part,X,Y) :- rel(hyponym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_has_part,hyponym,hyponym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(has_part,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_of_domain_region,has_part,part_of)}.
+interp(i_hyponym,X,Y) :- rel(has_part,X,Y) {lr_if(i_hyponym,has_part)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_region,synset_domain_region_of)}.
+interp(i_has_part,X,Y) :- rel(hyponym,X,Z), rel(part_of,Z,Y) {lr_chain(i_has_part,hyponym,part_of)}.
+interp(i_instance_hyponym,X,Y) :- rel(hypernym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_instance_hyponym,hypernym,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(instance_hypernym,Y,X) {lr_ifInv(i_derivationally_related_form,instance_hypernym)}.
+interp(i_hypernym,X,Y) :- rel(part_of,Y,X) {lr_ifInv(i_hypernym,part_of)}.
+interp(i_instance_hypernym,X,Y) :- rel(instance_hypernym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_instance_hypernym,instance_hypernym,hyponym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(has_part,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_of_domain_region,has_part,instance_hypernym)}.
+interp(i_hypernym,X,Y) :- rel(member_meronym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hypernym,member_meronym,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(instance_hyponym,X,Y) {lr_if(i_derivationally_related_form,instance_hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_instance_hyponym,instance_hyponym,synset_domain_region_of)}.
+interp(i_hyponym,X,Y) :- rel(has_part,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hyponym,has_part,hypernym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(has_part,X,Z), rel(has_part,Z,Y) {lr_chain(i_synset_domain_topic_of,has_part,has_part)}.
+interp(i_verb_group,X,Y) :- rel(hyponym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_verb_group,hyponym,hypernym)}.
+interp(i_has_part,X,Y) :- rel(derivationally_related_form,X,Z), rel(hypernym,Z,Y) {lr_chain(i_has_part,derivationally_related_form,hypernym)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_has_part,member_of_domain_region,synset_domain_region_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_derivationally_related_form,hyponym,synset_domain_topic_of)}.
+interp(i_hyponym,X,Y) :- rel(hypernym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hyponym,hypernym,hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(part_of,Z,Y) {lr_chain(i_instance_hyponym,instance_hyponym,part_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(part_of,Y,X) {lr_ifInv(i_member_of_domain_topic,part_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(has_part,X,Y) {lr_if(i_member_of_domain_topic,has_part)}.
+interp(i_hypernym,X,Y) :- rel(derivationally_related_form,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hypernym,derivationally_related_form,synset_domain_topic_of)}.
+interp(i_hyponym,X,Y) :- rel(member_holonym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_hyponym,member_holonym,member_meronym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hyponym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_topic,hyponym,hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(hyponym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_instance_hyponym,hyponym,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(verb_group,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_hyponym,verb_group,derivationally_related_form)}.
+interp(i_instance_hypernym,X,Y) :- rel(has_part,X,Z), rel(part_of,Z,Y) {lr_chain(i_instance_hypernym,has_part,part_of)}.
+interp(i_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_hyponym,instance_hyponym,instance_hypernym)}.
+interp(i_hyponym,X,Y) :- rel(also_see,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hyponym,also_see,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(verb_group,Y,X) {lr_ifInv(i_derivationally_related_form,verb_group)}.
+interp(i_derivationally_related_form,X,Y) :- rel(verb_group,X,Y) {lr_if(i_derivationally_related_form,verb_group)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(instance_hyponym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_synset_domain_topic_of,instance_hyponym,instance_hypernym)}.
+interp(i_has_part,X,Y) :- rel(instance_hyponym,Y,X) {lr_ifInv(i_has_part,instance_hyponym)}.
+interp(i_also_see,X,Y) :- rel(also_see,X,Z), rel(also_see,Z,Y) {lr_chain(i_also_see,also_see,also_see)}.
+interp(i_has_part,X,Y) :- rel(derivationally_related_form,Y,X) {lr_ifInv(i_has_part,derivationally_related_form)}.
+interp(i_derivationally_related_form,X,Y) :- rel(member_holonym,Y,X) {lr_ifInv(i_derivationally_related_form,member_holonym)}.
+interp(i_hypernym,X,Y) :- rel(derivationally_related_form,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_hypernym,derivationally_related_form,instance_hyponym)}.
+interp(i_hypernym,X,Y) :- rel(member_holonym,X,Z), rel(part_of,Z,Y) {lr_chain(i_hypernym,member_holonym,part_of)}.
+interp(i_has_part,X,Y) :- rel(synset_domain_topic_of,Y,X) {lr_ifInv(i_has_part,synset_domain_topic_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hyponym,Y,X) {lr_ifInv(i_member_of_domain_topic,hyponym)}.
+interp(i_hyponym,X,Y) :- rel(has_part,X,Z), rel(part_of,Z,Y) {lr_chain(i_hyponym,has_part,part_of)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_topic,X,Y) {lr_if(i_has_part,member_of_domain_topic)}.
+interp(i_has_part,X,Y) :- rel(member_holonym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_has_part,member_holonym,member_meronym)}.
+interp(i_has_part,X,Y) :- rel(derivationally_related_form,X,Y) {lr_if(i_has_part,derivationally_related_form)}.
+interp(i_hypernym,X,Y) :- rel(member_meronym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_hypernym,member_meronym,member_meronym)}.
+interp(i_instance_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_instance_hyponym,instance_hyponym,member_holonym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(has_part,X,Z), rel(hypernym,Z,Y) {lr_chain(i_derivationally_related_form,has_part,hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_instance_hyponym,hyponym,derivationally_related_form)}.
+interp(i_member_meronym,X,Y) :- rel(member_meronym,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_meronym,member_meronym,part_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(synset_domain_topic_of,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_derivationally_related_form,synset_domain_topic_of,member_of_domain_topic)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hyponym,member_of_domain_topic,hypernym)}.
+interp(i_instance_hypernym,X,Y) :- rel(member_of_domain_region,X,Y) {lr_if(i_instance_hypernym,member_of_domain_region)}.
+interp(i_derivationally_related_form,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_derivationally_related_form,member_of_domain_topic,synset_domain_topic_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(hypernym,Y,X) {lr_ifInv(i_synset_domain_topic_of,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(verb_group,X,Z), rel(verb_group,Z,Y) {lr_chain(i_derivationally_related_form,verb_group,verb_group)}.
+interp(i_has_part,X,Y) :- rel(instance_hypernym,X,Y) {lr_if(i_has_part,instance_hypernym)}.
+interp(i_part_of,X,Y) :- rel(has_part,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_part_of,has_part,instance_hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(derivationally_related_form,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_meronym,derivationally_related_form,derivationally_related_form)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hypernym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_of_domain_topic,hypernym,hyponym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(hyponym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_synset_domain_topic_of,hyponym,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(has_part,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_hyponym,has_part,derivationally_related_form)}.
+interp(i_instance_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_instance_hyponym,instance_hyponym,member_meronym)}.
+interp(i_instance_hypernym,X,Y) :- rel(synset_domain_region_of,Y,X) {lr_ifInv(i_instance_hypernym,synset_domain_region_of)}.
+interp(i_has_part,X,Y) :- rel(hypernym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_has_part,hypernym,member_holonym)}.
+interp(i_hyponym,X,Y) :- rel(part_of,X,Z), rel(part_of,Z,Y) {lr_chain(i_hyponym,part_of,part_of)}.
+interp(i_hypernym,X,Y) :- rel(part_of,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hypernym,part_of,hyponym)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_topic,Y,X) {lr_ifInv(i_hyponym,member_of_domain_topic)}.
+interp(i_member_meronym,X,Y) :- rel(part_of,Y,X) {lr_ifInv(i_member_meronym,part_of)}.
+interp(i_member_meronym,X,Y) :- rel(derivationally_related_form,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_meronym,derivationally_related_form,hyponym)}.
+interp(i_member_meronym,X,Y) :- rel(hyponym,Y,X) {lr_ifInv(i_member_meronym,hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(hypernym,X,Y) {lr_if(i_instance_hyponym,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hyponym,member_of_domain_topic,synset_domain_topic_of)}.
+interp(i_instance_hyponym,X,Y) :- rel(hyponym,Y,X) {lr_ifInv(i_instance_hyponym,hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(hyponym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_instance_hyponym,hyponym,instance_hyponym)}.
+interp(i_hyponym,X,Y) :- rel(hypernym,X,Z), rel(part_of,Z,Y) {lr_chain(i_hyponym,hypernym,part_of)}.
+interp(i_part_of,X,Y) :- rel(has_part,X,Z), rel(hypernym,Z,Y) {lr_chain(i_part_of,has_part,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(part_of,Z,Y) {lr_chain(i_hyponym,instance_hyponym,part_of)}.
+interp(i_has_part,X,Y) :- rel(instance_hyponym,X,Z), rel(part_of,Z,Y) {lr_chain(i_has_part,instance_hyponym,part_of)}.
+interp(i_has_part,X,Y) :- rel(has_part,Y,X) {lr_ifInv(i_has_part,has_part)}.
+interp(i_hyponym,X,Y) :- rel(synset_domain_topic_of,X,Y) {lr_if(i_hyponym,synset_domain_topic_of)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_hyponym,hyponym,member_of_domain_topic)}.
+interp(i_has_part,X,Y) :- rel(part_of,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_has_part,part_of,instance_hypernym)}.
+interp(i_part_of,X,Y) :- rel(instance_hyponym,X,Y) {lr_if(i_part_of,instance_hyponym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(has_part,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_topic,has_part,hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(member_meronym,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_member_meronym,member_meronym,member_of_domain_region)}.
+interp(i_member_of_domain_region,X,Y) :- rel(has_part,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_region,has_part,has_part)}.
+interp(i_part_of,X,Y) :- rel(instance_hypernym,Y,X) {lr_ifInv(i_part_of,instance_hypernym)}.
+interp(i_hypernym,X,Y) :- rel(synset_domain_topic_of,Y,X) {lr_ifInv(i_hypernym,synset_domain_topic_of)}.
+interp(i_hyponym,X,Y) :- rel(has_part,Y,X) {lr_ifInv(i_hyponym,has_part)}.
+interp(i_member_meronym,X,Y) :- rel(part_of,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_meronym,part_of,derivationally_related_form)}.
+interp(i_member_meronym,X,Y) :- rel(has_part,X,Y) {lr_if(i_member_meronym,has_part)}.
+interp(i_instance_hypernym,X,Y) :- rel(part_of,Y,X) {lr_ifInv(i_instance_hypernym,part_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(part_of,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_region,part_of,has_part)}.
+interp(i_derivationally_related_form,X,Y) :- rel(synset_domain_topic_of,X,Z), rel(hypernym,Z,Y) {lr_chain(i_derivationally_related_form,synset_domain_topic_of,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(also_see,Z,Y) {lr_chain(i_hyponym,derivationally_related_form,also_see)}.
+interp(i_has_part,X,Y) :- rel(has_part,X,Z), rel(hyponym,Z,Y) {lr_chain(i_has_part,has_part,hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(part_of,X,Z), rel(has_part,Z,Y) {lr_chain(i_instance_hyponym,part_of,has_part)}.
+interp(i_part_of,X,Y) :- rel(member_holonym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_part_of,member_holonym,member_meronym)}.
+interp(i_synset_domain_region_of,X,Y) :- rel(hypernym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_synset_domain_region_of,hypernym,synset_domain_topic_of)}.
+interp(i_has_part,X,Y) :- rel(hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_has_part,hyponym,has_part)}.
+interp(i_hypernym,X,Y) :- rel(hyponym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_hypernym,hyponym,member_meronym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(instance_hypernym,Y,X) {lr_ifInv(i_synset_domain_topic_of,instance_hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(derivationally_related_form,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_derivationally_related_form,derivationally_related_form,synset_domain_usage_of)}.
+interp(i_instance_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_instance_hyponym,derivationally_related_form,derivationally_related_form)}.
+interp(i_derivationally_related_form,X,Y) :- rel(part_of,Y,X) {lr_ifInv(i_derivationally_related_form,part_of)}.
+interp(i_part_of,X,Y) :- rel(has_part,X,Y) {lr_if(i_part_of,has_part)}.
+interp(i_instance_hyponym,X,Y) :- rel(hypernym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_instance_hyponym,hypernym,hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hyponym,Z,Y) {lr_chain(i_instance_hyponym,member_of_domain_topic,hyponym)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_region,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_has_part,member_of_domain_region,instance_hypernym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(instance_hyponym,X,Y) {lr_if(i_synset_domain_topic_of,instance_hyponym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(has_part,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_of_domain_topic,has_part,part_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_member_of_domain_topic,member_of_domain_topic,synset_domain_region_of)}.
+interp(i_hypernym,X,Y) :- rel(has_part,X,Y) {lr_if(i_hypernym,has_part)}.
+interp(i_hyponym,X,Y) :- rel(has_part,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hyponym,has_part,synset_domain_topic_of)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_hyponym,hyponym,synset_domain_region_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_region,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_region,instance_hypernym)}.
+interp(i_part_of,X,Y) :- rel(instance_hyponym,Y,X) {lr_ifInv(i_part_of,instance_hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_instance_hyponym,instance_hyponym,derivationally_related_form)}.
+interp(i_has_part,X,Y) :- rel(instance_hypernym,Y,X) {lr_ifInv(i_has_part,instance_hypernym)}.
+interp(i_hyponym,X,Y) :- rel(also_see,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hyponym,also_see,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(verb_group,X,Z), rel(hyponym,Z,Y) {lr_chain(i_derivationally_related_form,verb_group,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(derivationally_related_form,X,Z), rel(part_of,Z,Y) {lr_chain(i_derivationally_related_form,derivationally_related_form,part_of)}.
+interp(i_has_part,X,Y) :- rel(instance_hyponym,X,Y) {lr_if(i_has_part,instance_hyponym)}.
+interp(i_synset_domain_region_of,X,Y) :- rel(hypernym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_synset_domain_region_of,hypernym,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(also_see,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_hyponym,also_see,derivationally_related_form)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_hyponym,member_of_domain_topic,derivationally_related_form)}.
+interp(i_member_holonym,X,Y) :- rel(hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_holonym,hyponym,has_part)}.
+interp(i_has_part,X,Y) :- rel(part_of,X,Y) {lr_if(i_has_part,part_of)}.
+interp(i_hypernym,X,Y) :- rel(has_part,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hypernym,has_part,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(has_part,Y,X) {lr_ifInv(i_derivationally_related_form,has_part)}.
+interp(i_has_part,X,Y) :- rel(hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_has_part,hyponym,derivationally_related_form)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_has_part,member_of_domain_region,synset_domain_topic_of)}.
+interp(i_verb_group,X,Y) :- rel(hyponym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_verb_group,hyponym,hyponym)}.
+interp(i_instance_hypernym,X,Y) :- rel(has_part,X,Y) {lr_if(i_instance_hypernym,has_part)}.
+interp(i_also_see,X,Y) :- rel(hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_also_see,hyponym,derivationally_related_form)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(synset_domain_usage_of,X,Z), rel(member_of_domain_usage,Z,Y) {lr_chain(i_synset_domain_topic_of,synset_domain_usage_of,member_of_domain_usage)}.
+interp(i_has_part,X,Y) :- rel(instance_hypernym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_has_part,instance_hypernym,instance_hyponym)}.
+interp(i_verb_group,X,Y) :- rel(derivationally_related_form,X,Z), rel(hyponym,Z,Y) {lr_chain(i_verb_group,derivationally_related_form,hyponym)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hypernym,Z,Y) {lr_chain(i_has_part,member_of_domain_topic,hypernym)}.
+interp(i_hypernym,X,Y) :- rel(hyponym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_hypernym,hyponym,member_of_domain_topic)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hypernym,X,Y) {lr_if(i_member_of_domain_topic,hypernym)}.
+interp(i_synset_domain_region_of,X,Y) :- rel(hypernym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_synset_domain_region_of,hypernym,hyponym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_of_domain_topic,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_of_domain_topic,member_of_domain_topic,instance_hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(derivationally_related_form,Y,X) {lr_ifInv(i_instance_hyponym,derivationally_related_form)}.
+interp(i_hypernym,X,Y) :- rel(derivationally_related_form,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_hypernym,derivationally_related_form,member_holonym)}.
+interp(i_has_part,X,Y) :- rel(member_holonym,Y,X) {lr_ifInv(i_has_part,member_holonym)}.
+interp(i_has_part,X,Y) :- rel(member_holonym,X,Y) {lr_if(i_has_part,member_holonym)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_topic,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_has_part,member_of_domain_topic,derivationally_related_form)}.
+interp(i_part_of,X,Y) :- rel(derivationally_related_form,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_part_of,derivationally_related_form,derivationally_related_form)}.
+interp(i_also_see,X,Y) :- rel(hyponym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_also_see,hyponym,hyponym)}.
+interp(i_hyponym,X,Y) :- rel(verb_group,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hyponym,verb_group,hyponym)}.
+interp(i_hyponym,X,Y) :- rel(has_part,X,Z), rel(has_part,Z,Y) {lr_chain(i_hyponym,has_part,has_part)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(hyponym,X,Y) {lr_if(i_synset_domain_topic_of,hyponym)}.
+interp(i_instance_hypernym,X,Y) :- rel(member_holonym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_instance_hypernym,member_holonym,member_meronym)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_region,X,Y) {lr_if(i_member_meronym,member_of_domain_region)}.
+interp(i_hypernym,X,Y) :- rel(derivationally_related_form,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_hypernym,derivationally_related_form,synset_domain_usage_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(derivationally_related_form,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_derivationally_related_form,derivationally_related_form,synset_domain_topic_of)}.
+interp(i_hyponym,X,Y) :- rel(verb_group,X,Z), rel(verb_group,Z,Y) {lr_chain(i_hyponym,verb_group,verb_group)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(hypernym,Y,X) {lr_ifInv(i_member_of_domain_usage,hypernym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_usage,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_usage,derivationally_related_form)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(hyponym,X,Y) {lr_if(i_member_of_domain_usage,hyponym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(instance_hypernym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_of_domain_region,instance_hypernym,instance_hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(hyponym,Z,Y) {lr_chain(i_instance_hyponym,derivationally_related_form,hyponym)}.
+interp(i_has_part,X,Y) :- rel(has_part,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_has_part,has_part,synset_domain_region_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hypernym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_topic,hypernym,hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(member_holonym,X,Y) {lr_if(i_member_meronym,member_holonym)}.
+interp(i_member_meronym,X,Y) :- rel(hyponym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_meronym,hyponym,member_meronym)}.
+interp(i_instance_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(hypernym,Z,Y) {lr_chain(i_instance_hyponym,derivationally_related_form,hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_of_domain_topic,X,Y) {lr_if(i_instance_hyponym,member_of_domain_topic)}.
+interp(i_member_meronym,X,Y) :- rel(synset_domain_region_of,Y,X) {lr_ifInv(i_member_meronym,synset_domain_region_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_region,synset_domain_topic_of)}.
+interp(i_has_part,X,Y) :- rel(has_part,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_has_part,has_part,member_of_domain_region)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(derivationally_related_form,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_topic,derivationally_related_form,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(verb_group,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hyponym,verb_group,hypernym)}.
+interp(i_has_part,X,Y) :- rel(member_meronym,X,Z), rel(has_part,Z,Y) {lr_chain(i_has_part,member_meronym,has_part)}.
+interp(i_member_holonym,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_member_holonym,hyponym,synset_domain_topic_of)}.
+interp(i_has_part,X,Y) :- rel(part_of,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_has_part,part_of,member_of_domain_region)}.
+interp(i_has_part,X,Y) :- rel(instance_hyponym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_has_part,instance_hyponym,instance_hypernym)}.
+interp(i_has_part,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_has_part,hyponym,synset_domain_region_of)}.
+interp(i_hyponym,X,Y) :- rel(member_meronym,X,Y) {lr_if(i_hyponym,member_meronym)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_has_part,member_of_domain_topic,synset_domain_topic_of)}.
+interp(i_has_part,X,Y) :- rel(derivationally_related_form,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_has_part,derivationally_related_form,instance_hyponym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(has_part,X,Z), rel(hyponym,Z,Y) {lr_chain(i_synset_domain_topic_of,has_part,hyponym)}.
+interp(i_member_meronym,X,Y) :- rel(hyponym,X,Y) {lr_if(i_member_meronym,hyponym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(has_part,Y,X) {lr_ifInv(i_member_of_domain_region,has_part)}.
+interp(i_derivationally_related_form,X,Y) :- rel(has_part,X,Y) {lr_if(i_derivationally_related_form,has_part)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_derivationally_related_form,hyponym,has_part)}.
+interp(i_part_of,X,Y) :- rel(hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_part_of,hyponym,derivationally_related_form)}.
+interp(i_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(part_of,Z,Y) {lr_chain(i_hyponym,derivationally_related_form,part_of)}.
+interp(i_hyponym,X,Y) :- rel(member_holonym,Y,X) {lr_ifInv(i_hyponym,member_holonym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(part_of,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_of_domain_region,part_of,part_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_of_domain_usage,hyponym,derivationally_related_form)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(derivationally_related_form,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_of_domain_topic,derivationally_related_form,hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(part_of,Y,X) {lr_ifInv(i_instance_hyponym,part_of)}.
+interp(i_member_meronym,X,Y) :- rel(hypernym,Y,X) {lr_ifInv(i_member_meronym,hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(hypernym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_instance_hyponym,hypernym,derivationally_related_form)}.
+interp(i_member_of_domain_region,X,Y) :- rel(part_of,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_of_domain_region,part_of,instance_hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(synset_domain_topic_of,Y,X) {lr_ifInv(i_instance_hyponym,synset_domain_topic_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(part_of,X,Y) {lr_if(i_member_of_domain_region,part_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(also_see,X,Z), rel(hyponym,Z,Y) {lr_chain(i_derivationally_related_form,also_see,hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(has_part,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_instance_hyponym,has_part,instance_hyponym)}.
+interp(i_instance_hypernym,X,Y) :- rel(instance_hypernym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_instance_hypernym,instance_hypernym,hypernym)}.
+interp(i_part_of,X,Y) :- rel(part_of,Y,X) {lr_ifInv(i_part_of,part_of)}.
+interp(i_part_of,X,Y) :- rel(instance_hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_part_of,instance_hyponym,has_part)}.
+interp(i_member_meronym,X,Y) :- rel(instance_hypernym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_meronym,instance_hypernym,instance_hyponym)}.
+interp(i_has_part,X,Y) :- rel(has_part,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_has_part,has_part,member_meronym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(instance_hypernym,X,Y) {lr_if(i_member_of_domain_region,instance_hypernym)}.
+interp(i_part_of,X,Y) :- rel(has_part,X,Z), rel(has_part,Z,Y) {lr_chain(i_part_of,has_part,has_part)}.
+interp(i_hypernym,X,Y) :- rel(member_of_domain_usage,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hypernym,member_of_domain_usage,hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(derivationally_related_form,X,Y) {lr_if(i_instance_hyponym,derivationally_related_form)}.
+interp(i_member_meronym,X,Y) :- rel(member_meronym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_meronym,member_meronym,instance_hypernym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(derivationally_related_form,X,Z), rel(part_of,Z,Y) {lr_chain(i_synset_domain_topic_of,derivationally_related_form,part_of)}.
+interp(i_has_part,X,Y) :- rel(member_meronym,X,Y) {lr_if(i_has_part,member_meronym)}.
+interp(i_instance_hypernym,X,Y) :- rel(member_meronym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_instance_hypernym,member_meronym,hypernym)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_region,X,Z), rel(hypernym,Z,Y) {lr_chain(i_part_of,member_of_domain_region,hypernym)}.
+interp(i_part_of,X,Y) :- rel(has_part,X,Z), rel(part_of,Z,Y) {lr_chain(i_part_of,has_part,part_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(derivationally_related_form,X,Z), rel(similar_to,Z,Y) {lr_chain(i_derivationally_related_form,derivationally_related_form,similar_to)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(has_part,X,Y) {lr_if(i_synset_domain_topic_of,has_part)}.
+interp(i_part_of,X,Y) :- rel(synset_domain_region_of,Y,X) {lr_ifInv(i_part_of,synset_domain_region_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_usage,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_usage,synset_domain_region_of)}.
+interp(i_instance_hypernym,X,Y) :- rel(has_part,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_instance_hypernym,has_part,synset_domain_region_of)}.
+interp(i_hyponym,X,Y) :- rel(part_of,X,Y) {lr_if(i_hyponym,part_of)}.
+interp(i_instance_hypernym,X,Y) :- rel(derivationally_related_form,X,Z), rel(hypernym,Z,Y) {lr_chain(i_instance_hypernym,derivationally_related_form,hypernym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(hyponym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_synset_domain_topic_of,hyponym,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_derivationally_related_form,hyponym,synset_domain_region_of)}.
+interp(i_hyponym,X,Y) :- rel(synset_domain_topic_of,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_hyponym,synset_domain_topic_of,member_of_domain_topic)}.
+interp(i_hypernym,X,Y) :- rel(synset_domain_usage_of,Y,X) {lr_ifInv(i_hypernym,synset_domain_usage_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_region,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_region,part_of)}.
+interp(i_has_part,X,Y) :- rel(derivationally_related_form,X,Z), rel(hyponym,Z,Y) {lr_chain(i_has_part,derivationally_related_form,hyponym)}.
+interp(i_hypernym,X,Y) :- rel(hyponym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_hypernym,hyponym,instance_hyponym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(part_of,Y,X) {lr_ifInv(i_synset_domain_topic_of,part_of)}.
+interp(i_has_part,X,Y) :- rel(member_holonym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_has_part,member_holonym,hypernym)}.
+interp(i_similar_to,X,Y) :- rel(also_see,X,Z), rel(also_see,Z,Y) {lr_chain(i_similar_to,also_see,also_see)}.
+interp(i_part_of,X,Y) :- rel(derivationally_related_form,X,Z), rel(hypernym,Z,Y) {lr_chain(i_part_of,derivationally_related_form,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(also_see,X,Z), rel(hypernym,Z,Y) {lr_chain(i_derivationally_related_form,also_see,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(member_holonym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hyponym,member_holonym,hyponym)}.
+interp(i_hypernym,X,Y) :- rel(member_of_domain_usage,X,Y) {lr_if(i_hypernym,member_of_domain_usage)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_of_domain_topic,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_topic,member_of_domain_topic,has_part)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(hyponym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_usage,hyponym,hypernym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(hyponym,Y,X) {lr_ifInv(i_member_of_domain_usage,hyponym)}.
+interp(i_hyponym,X,Y) :- rel(hypernym,X,Z), rel(verb_group,Z,Y) {lr_chain(i_hyponym,hypernym,verb_group)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_region,X,Y) {lr_if(i_part_of,member_of_domain_region)}.
+interp(i_synset_domain_region_of,X,Y) :- rel(derivationally_related_form,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_synset_domain_region_of,derivationally_related_form,derivationally_related_form)}.
+interp(i_synset_domain_region_of,X,Y) :- rel(derivationally_related_form,X,Z), rel(hypernym,Z,Y) {lr_chain(i_synset_domain_region_of,derivationally_related_form,hypernym)}.
+interp(i_hypernym,X,Y) :- rel(derivationally_related_form,X,Z), rel(similar_to,Z,Y) {lr_chain(i_hypernym,derivationally_related_form,similar_to)}.
+interp(i_has_part,X,Y) :- rel(member_meronym,Y,X) {lr_ifInv(i_has_part,member_meronym)}.
+interp(i_also_see,X,Y) :- rel(hyponym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_also_see,hyponym,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_hyponym,derivationally_related_form,member_holonym)}.
+interp(i_instance_hyponym,X,Y) :- rel(has_part,X,Y) {lr_if(i_instance_hyponym,has_part)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(has_part,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_of_domain_topic,has_part,derivationally_related_form)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_region,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_meronym,member_of_domain_region,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hypernym,X,Z), rel(verb_group,Z,Y) {lr_chain(i_derivationally_related_form,hypernym,verb_group)}.
+interp(i_derivationally_related_form,X,Y) :- rel(derivationally_related_form,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_derivationally_related_form,derivationally_related_form,synset_domain_region_of)}.
+interp(i_hyponym,X,Y) :- rel(hypernym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_hyponym,hypernym,member_meronym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(has_part,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_member_of_domain_region,has_part,member_of_domain_region)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(has_part,X,Z), rel(hypernym,Z,Y) {lr_chain(i_synset_domain_topic_of,has_part,hypernym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(derivationally_related_form,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_of_domain_usage,derivationally_related_form,derivationally_related_form)}.
+interp(i_instance_hyponym,X,Y) :- rel(hyponym,X,Z), rel(part_of,Z,Y) {lr_chain(i_instance_hyponym,hyponym,part_of)}.
+interp(i_has_part,X,Y) :- rel(hyponym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_has_part,hyponym,member_of_domain_topic)}.
+interp(i_has_part,X,Y) :- rel(instance_hypernym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_has_part,instance_hypernym,hypernym)}.
+interp(i_verb_group,X,Y) :- rel(also_see,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_verb_group,also_see,derivationally_related_form)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_holonym,X,Y) {lr_if(i_member_of_domain_region,member_holonym)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(similar_to,Z,Y) {lr_chain(i_hyponym,hyponym,similar_to)}.
+interp(i_hypernym,X,Y) :- rel(member_of_domain_usage,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_hypernym,member_of_domain_usage,synset_domain_usage_of)}.
+interp(i_part_of,X,Y) :- rel(part_of,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_part_of,part_of,instance_hypernym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(instance_hyponym,Y,X) {lr_ifInv(i_member_of_domain_region,instance_hyponym)}.
+interp(i_hypernym,X,Y) :- rel(hyponym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_hypernym,hyponym,member_holonym)}.
+interp(i_instance_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_instance_hyponym,instance_hyponym,member_of_domain_region)}.
+interp(i_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_hyponym,instance_hyponym,has_part)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(has_part,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_topic,has_part,has_part)}.
+interp(i_instance_hyponym,X,Y) :- rel(hyponym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_instance_hyponym,hyponym,hyponym)}.
+interp(i_member_holonym,X,Y) :- rel(hyponym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_holonym,hyponym,member_meronym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(hypernym,X,Y) {lr_if(i_member_of_domain_usage,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hyponym,Z,Y) {lr_chain(i_derivationally_related_form,member_of_domain_topic,hyponym)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_part_of,member_of_domain_region,synset_domain_region_of)}.
+interp(i_similar_to,X,Y) :- rel(also_see,X,Y) {lr_if(i_similar_to,also_see)}.
+interp(i_hyponym,X,Y) :- rel(member_meronym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_hyponym,member_meronym,member_holonym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_meronym,X,Y) {lr_if(i_member_of_domain_region,member_meronym)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_instance_hyponym,member_of_domain_topic,synset_domain_topic_of)}.
+interp(i_also_see,X,Y) :- rel(hyponym,Y,X) {lr_ifInv(i_also_see,hyponym)}.
+interp(i_member_meronym,X,Y) :- rel(derivationally_related_form,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_meronym,derivationally_related_form,hypernym)}.
+interp(i_hypernym,X,Y) :- rel(derivationally_related_form,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_hypernym,derivationally_related_form,synset_domain_region_of)}.
+interp(i_part_of,X,Y) :- rel(member_holonym,X,Y) {lr_if(i_part_of,member_holonym)}.
+interp(i_instance_hyponym,X,Y) :- rel(has_part,Y,X) {lr_ifInv(i_instance_hyponym,has_part)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hyponym,Z,Y) {lr_chain(i_part_of,member_of_domain_topic,hyponym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_holonym,Y,X) {lr_ifInv(i_member_of_domain_region,member_holonym)}.
+interp(i_hyponym,X,Y) :- rel(part_of,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_hyponym,part_of,derivationally_related_form)}.
+interp(i_member_of_domain_region,X,Y) :- rel(derivationally_related_form,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_of_domain_region,derivationally_related_form,derivationally_related_form)}.
+interp(i_part_of,X,Y) :- rel(instance_hyponym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_part_of,instance_hyponym,instance_hypernym)}.
+interp(i_hypernym,X,Y) :- rel(synset_domain_topic_of,X,Y) {lr_if(i_hypernym,synset_domain_topic_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_of_domain_topic,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_of_domain_topic,member_of_domain_topic,member_holonym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(hypernym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_synset_domain_topic_of,hypernym,instance_hyponym)}.
+interp(i_verb_group,X,Y) :- rel(verb_group,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_verb_group,verb_group,derivationally_related_form)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_derivationally_related_form,hyponym,member_holonym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(synset_domain_usage_of,X,Z), rel(hypernym,Z,Y) {lr_chain(i_synset_domain_topic_of,synset_domain_usage_of,hypernym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_meronym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_of_domain_region,member_meronym,member_holonym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(synset_domain_region_of,X,Z), rel(has_part,Z,Y) {lr_chain(i_synset_domain_topic_of,synset_domain_region_of,has_part)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(derivationally_related_form,Y,X) {lr_ifInv(i_member_of_domain_usage,derivationally_related_form)}.
+interp(i_verb_group,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_verb_group,hyponym,synset_domain_topic_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(derivationally_related_form,X,Y) {lr_if(i_member_of_domain_usage,derivationally_related_form)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_usage,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_usage,has_part)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(instance_hyponym,X,Z), rel(part_of,Z,Y) {lr_chain(i_synset_domain_topic_of,instance_hyponym,part_of)}.
+interp(i_instance_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_instance_hyponym,derivationally_related_form,member_of_domain_topic)}.
+interp(i_hyponym,X,Y) :- rel(member_meronym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hyponym,member_meronym,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Z), rel(also_see,Z,Y) {lr_chain(i_derivationally_related_form,hyponym,also_see)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_meronym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_region,member_meronym,hypernym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_meronym,Y,X) {lr_ifInv(i_member_of_domain_region,member_meronym)}.
+interp(i_verb_group,X,Y) :- rel(also_see,X,Y) {lr_if(i_verb_group,also_see)}.
+interp(i_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(verb_group,Z,Y) {lr_chain(i_hyponym,derivationally_related_form,verb_group)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(hypernym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_synset_domain_topic_of,hypernym,member_of_domain_topic)}.
+interp(i_hypernym,X,Y) :- rel(hyponym,X,Z), rel(also_see,Z,Y) {lr_chain(i_hypernym,hyponym,also_see)}.
+interp(i_member_meronym,X,Y) :- rel(hyponym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_meronym,hyponym,member_holonym)}.
+interp(i_part_of,X,Y) :- rel(part_of,X,Z), rel(part_of,Z,Y) {lr_chain(i_part_of,part_of,part_of)}.
+interp(i_instance_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_instance_hyponym,derivationally_related_form,synset_domain_topic_of)}.
+interp(i_synset_domain_usage_of,X,Y) :- rel(hypernym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_synset_domain_usage_of,hypernym,derivationally_related_form)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hyponym,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_of_domain_topic,hyponym,part_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Z), rel(part_of,Z,Y) {lr_chain(i_derivationally_related_form,hyponym,part_of)}.
+interp(i_has_part,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_has_part,hyponym,synset_domain_usage_of)}.
+interp(i_member_meronym,X,Y) :- rel(member_meronym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_meronym,member_meronym,derivationally_related_form)}.
+interp(i_hypernym,X,Y) :- rel(hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_hypernym,hyponym,has_part)}.
+interp(i_derivationally_related_form,X,Y) :- rel(has_part,X,Z), rel(has_part,Z,Y) {lr_chain(i_derivationally_related_form,has_part,has_part)}.
+interp(i_member_meronym,X,Y) :- rel(has_part,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_meronym,has_part,part_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Z), rel(verb_group,Z,Y) {lr_chain(i_derivationally_related_form,hyponym,verb_group)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hypernym,Z,Y) {lr_chain(i_instance_hyponym,member_of_domain_topic,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(has_part,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_derivationally_related_form,has_part,derivationally_related_form)}.
+interp(i_member_meronym,X,Y) :- rel(has_part,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_meronym,has_part,instance_hypernym)}.
+interp(i_has_part,X,Y) :- rel(member_meronym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_has_part,member_meronym,hyponym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_topic,hyponym,has_part)}.
+interp(i_has_part,X,Y) :- rel(member_holonym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_has_part,member_holonym,member_holonym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_meronym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_of_domain_region,member_meronym,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(synset_domain_region_of,X,Y) {lr_if(i_derivationally_related_form,synset_domain_region_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(hypernym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_synset_domain_topic_of,hypernym,member_meronym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(instance_hypernym,Y,X) {lr_ifInv(i_member_of_domain_topic,instance_hypernym)}.
+interp(i_instance_hypernym,X,Y) :- rel(member_meronym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_instance_hypernym,member_meronym,member_holonym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hypernym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_derivationally_related_form,hypernym,member_of_domain_topic)}.
+interp(i_member_of_domain_region,X,Y) :- rel(derivationally_related_form,X,Y) {lr_if(i_member_of_domain_region,derivationally_related_form)}.
+interp(i_instance_hyponym,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_instance_hyponym,hyponym,synset_domain_topic_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hypernym,X,Z), rel(has_part,Z,Y) {lr_chain(i_derivationally_related_form,hypernym,has_part)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(instance_hyponym,X,Y) {lr_if(i_member_of_domain_topic,instance_hyponym)}.
+interp(i_member_meronym,X,Y) :- rel(has_part,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_meronym,has_part,has_part)}.
+interp(i_part_of,X,Y) :- rel(member_meronym,Y,X) {lr_ifInv(i_part_of,member_meronym)}.
+interp(i_also_see,X,Y) :- rel(similar_to,X,Y) {lr_if(i_also_see,similar_to)}.
+interp(i_member_meronym,X,Y) :- rel(hypernym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_meronym,hypernym,member_holonym)}.
+interp(i_hypernym,X,Y) :- rel(hypernym,X,Z), rel(part_of,Z,Y) {lr_chain(i_hypernym,hypernym,part_of)}.
+interp(i_instance_hyponym,X,Y) :- rel(hypernym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_instance_hyponym,hypernym,synset_domain_topic_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(instance_hypernym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_region,instance_hypernym,hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_instance_hyponym,member_of_domain_topic,derivationally_related_form)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(hyponym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_of_domain_usage,hyponym,hyponym)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_topic,X,Z), rel(part_of,Z,Y) {lr_chain(i_has_part,member_of_domain_topic,part_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(instance_hyponym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_derivationally_related_form,instance_hyponym,instance_hypernym)}.
+interp(i_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_hyponym,instance_hyponym,derivationally_related_form)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(synset_domain_region_of,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_synset_domain_topic_of,synset_domain_region_of,member_of_domain_region)}.
+interp(i_has_part,X,Y) :- rel(derivationally_related_form,X,Z), rel(also_see,Z,Y) {lr_chain(i_has_part,derivationally_related_form,also_see)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(instance_hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_topic,instance_hyponym,has_part)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(has_part,Y,X) {lr_ifInv(i_member_of_domain_topic,has_part)}.
+interp(i_member_of_domain_region,X,Y) :- rel(derivationally_related_form,Y,X) {lr_ifInv(i_member_of_domain_region,derivationally_related_form)}.
+interp(i_has_part,X,Y) :- rel(member_meronym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_has_part,member_meronym,member_holonym)}.
+interp(i_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_hyponym,instance_hyponym,synset_domain_region_of)}.
+interp(i_has_part,X,Y) :- rel(member_meronym,X,Z), rel(part_of,Z,Y) {lr_chain(i_has_part,member_meronym,part_of)}.
+interp(i_part_of,X,Y) :- rel(member_meronym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_part_of,member_meronym,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_derivationally_related_form,hyponym,member_of_domain_topic)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_of_domain_topic,Y,X) {lr_ifInv(i_instance_hyponym,member_of_domain_topic)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_derivationally_related_form,hyponym,synset_domain_usage_of)}.
+interp(i_member_holonym,X,Y) :- rel(instance_hypernym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_holonym,instance_hypernym,instance_hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(hypernym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_instance_hyponym,hypernym,instance_hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(has_part,X,Z), rel(hypernym,Z,Y) {lr_chain(i_instance_hyponym,has_part,hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(has_part,X,Z), rel(part_of,Z,Y) {lr_chain(i_instance_hyponym,has_part,part_of)}.
+interp(i_has_part,X,Y) :- rel(part_of,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_has_part,part_of,member_meronym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hyponym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_of_domain_topic,hyponym,member_holonym)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_holonym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_instance_hyponym,member_holonym,member_meronym)}.
+interp(i_verb_group,X,Y) :- rel(verb_group,X,Z), rel(hyponym,Z,Y) {lr_chain(i_verb_group,verb_group,hyponym)}.
+interp(i_has_part,X,Y) :- rel(instance_hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_has_part,instance_hyponym,has_part)}.
+interp(i_hyponym,X,Y) :- rel(synset_domain_usage_of,Y,X) {lr_ifInv(i_hyponym,synset_domain_usage_of)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_hyponym,member_of_domain_topic,instance_hyponym)}.
+interp(i_hyponym,X,Y) :- rel(member_holonym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_hyponym,member_holonym,member_of_domain_topic)}.
+interp(i_member_of_domain_region,X,Y) :- rel(has_part,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_of_domain_region,has_part,member_meronym)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_usage,X,Y) {lr_if(i_hyponym,member_of_domain_usage)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hyponym,Z,Y) {lr_chain(i_has_part,member_of_domain_topic,hyponym)}.
+interp(i_verb_group,X,Y) :- rel(hyponym,X,Z), rel(verb_group,Z,Y) {lr_chain(i_verb_group,hyponym,verb_group)}.
+interp(i_has_part,X,Y) :- rel(member_meronym,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_has_part,member_meronym,member_of_domain_region)}.
+interp(i_derivationally_related_form,X,Y) :- rel(member_of_domain_region,Y,X) {lr_ifInv(i_derivationally_related_form,member_of_domain_region)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_member_meronym,member_of_domain_region,synset_domain_topic_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(synset_domain_usage_of,X,Y) {lr_if(i_synset_domain_topic_of,synset_domain_usage_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(instance_hyponym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_of_domain_topic,instance_hyponym,instance_hypernym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(derivationally_related_form,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_usage,derivationally_related_form,hypernym)}.
+interp(i_part_of,X,Y) :- rel(hypernym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_part_of,hypernym,derivationally_related_form)}.
+interp(i_instance_hypernym,X,Y) :- rel(member_holonym,X,Y) {lr_if(i_instance_hypernym,member_holonym)}.
+interp(i_has_part,X,Y) :- rel(member_meronym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_has_part,member_meronym,instance_hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(instance_hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_derivationally_related_form,instance_hyponym,synset_domain_region_of)}.
+interp(i_hypernym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hypernym,member_of_domain_topic,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(instance_hyponym,X,Z), rel(part_of,Z,Y) {lr_chain(i_derivationally_related_form,instance_hyponym,part_of)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_member_meronym,member_of_domain_region,synset_domain_region_of)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_region,X,Z), rel(hyponym,Z,Y) {lr_chain(i_has_part,member_of_domain_region,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(verb_group,X,Z), rel(also_see,Z,Y) {lr_chain(i_derivationally_related_form,verb_group,also_see)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_region,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_has_part,member_of_domain_region,member_holonym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_holonym,X,Y) {lr_if(i_member_of_domain_topic,member_holonym)}.
+interp(i_also_see,X,Y) :- rel(similar_to,Y,X) {lr_ifInv(i_also_see,similar_to)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_holonym,Y,X) {lr_ifInv(i_member_of_domain_topic,member_holonym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(member_holonym,X,Y) {lr_if(i_synset_domain_topic_of,member_holonym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_region,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_region,member_holonym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(member_of_domain_region,X,Y) {lr_if(i_derivationally_related_form,member_of_domain_region)}.
+interp(i_hyponym,X,Y) :- rel(part_of,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hyponym,part_of,hypernym)}.
+interp(i_has_part,X,Y) :- rel(hypernym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_has_part,hypernym,member_of_domain_topic)}.
+interp(i_part_of,X,Y) :- rel(instance_hyponym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_part_of,instance_hyponym,member_holonym)}.
+interp(i_synset_domain_usage_of,X,Y) :- rel(member_of_domain_region,Y,X) {lr_ifInv(i_synset_domain_usage_of,member_of_domain_region)}.
+interp(i_part_of,X,Y) :- rel(part_of,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_part_of,part_of,member_of_domain_region)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_usage,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_usage,synset_domain_topic_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_meronym,X,Y) {lr_if(i_member_of_domain_topic,member_meronym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(member_of_domain_topic,X,Z), rel(part_of,Z,Y) {lr_chain(i_derivationally_related_form,member_of_domain_topic,part_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(instance_hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_member_of_domain_topic,instance_hyponym,synset_domain_region_of)}.
+interp(i_has_part,X,Y) :- rel(member_meronym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_has_part,member_meronym,derivationally_related_form)}.
+interp(i_member_of_domain_region,X,Y) :- rel(has_part,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_member_of_domain_region,has_part,synset_domain_topic_of)}.
+interp(i_member_meronym,X,Y) :- rel(synset_domain_region_of,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_meronym,synset_domain_region_of,has_part)}.
+interp(i_instance_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_instance_hyponym,instance_hyponym,instance_hyponym)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_hyponym,member_of_domain_topic,instance_hypernym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(derivationally_related_form,X,Z), rel(also_see,Z,Y) {lr_chain(i_member_of_domain_topic,derivationally_related_form,also_see)}.
+interp(i_instance_hyponym,X,Y) :- rel(hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_instance_hyponym,hyponym,has_part)}.
+interp(i_instance_hypernym,X,Y) :- rel(member_meronym,Y,X) {lr_ifInv(i_instance_hypernym,member_meronym)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_part_of,member_of_domain_region,synset_domain_topic_of)}.
+interp(i_instance_hypernym,X,Y) :- rel(has_part,Y,X) {lr_ifInv(i_instance_hypernym,has_part)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hyponym,X,Z), rel(similar_to,Z,Y) {lr_chain(i_derivationally_related_form,hyponym,similar_to)}.
+interp(i_derivationally_related_form,X,Y) :- rel(similar_to,X,Z), rel(similar_to,Z,Y) {lr_chain(i_derivationally_related_form,similar_to,similar_to)}.
+interp(i_derivationally_related_form,X,Y) :- rel(has_part,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_derivationally_related_form,has_part,synset_domain_topic_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(member_meronym,Y,X) {lr_ifInv(i_synset_domain_topic_of,member_meronym)}.
+interp(i_instance_hyponym,X,Y) :- rel(hypernym,X,Z), rel(part_of,Z,Y) {lr_chain(i_instance_hyponym,hypernym,part_of)}.
+interp(i_part_of,X,Y) :- rel(derivationally_related_form,X,Z), rel(part_of,Z,Y) {lr_chain(i_part_of,derivationally_related_form,part_of)}.
+interp(i_synset_domain_usage_of,X,Y) :- rel(synset_domain_region_of,X,Y) {lr_if(i_synset_domain_usage_of,synset_domain_region_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_usage,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_usage,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(member_of_domain_topic,X,Z), rel(verb_group,Z,Y) {lr_chain(i_derivationally_related_form,member_of_domain_topic,verb_group)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(derivationally_related_form,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_of_domain_usage,derivationally_related_form,instance_hyponym)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_region,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_has_part,member_of_domain_region,derivationally_related_form)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_holonym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_topic,member_holonym,hypernym)}.
+interp(i_verb_group,X,Y) :- rel(hypernym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_verb_group,hypernym,synset_domain_topic_of)}.
+interp(i_verb_group,X,Y) :- rel(hyponym,X,Z), rel(also_see,Z,Y) {lr_chain(i_verb_group,hyponym,also_see)}.
+interp(i_has_part,X,Y) :- rel(hyponym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_has_part,hyponym,instance_hyponym)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_usage,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hyponym,member_of_domain_usage,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_usage,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_hyponym,member_of_domain_usage,synset_domain_usage_of)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_region,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_meronym,member_of_domain_region,instance_hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(instance_hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_derivationally_related_form,instance_hyponym,has_part)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_holonym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_of_domain_region,member_holonym,member_meronym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_region,synset_domain_usage_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(instance_hypernym,X,Y) {lr_if(i_member_of_domain_topic,instance_hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(part_of,X,Z), rel(hypernym,Z,Y) {lr_chain(i_instance_hyponym,part_of,hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(part_of,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_member_meronym,part_of,member_of_domain_region)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(hyponym,X,Z), rel(part_of,Z,Y) {lr_chain(i_synset_domain_topic_of,hyponym,part_of)}.
+interp(i_instance_hyponym,X,Y) :- rel(hypernym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_instance_hyponym,hypernym,member_holonym)}.
+interp(i_member_meronym,X,Y) :- rel(synset_domain_region_of,X,Y) {lr_if(i_member_meronym,synset_domain_region_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(part_of,X,Y) {lr_if(i_derivationally_related_form,part_of)}.
+interp(i_synset_domain_region_of,X,Y) :- rel(derivationally_related_form,X,Y) {lr_if(i_synset_domain_region_of,derivationally_related_form)}.
+interp(i_has_part,X,Y) :- rel(derivationally_related_form,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_has_part,derivationally_related_form,synset_domain_usage_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(has_part,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_of_domain_region,has_part,derivationally_related_form)}.
+interp(i_also_see,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_also_see,hyponym,synset_domain_topic_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(similar_to,X,Y) {lr_if(i_derivationally_related_form,similar_to)}.
+interp(i_derivationally_related_form,X,Y) :- rel(similar_to,Y,X) {lr_ifInv(i_derivationally_related_form,similar_to)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_topic,X,Y) {lr_if(i_part_of,member_of_domain_topic)}.
+interp(i_derivationally_related_form,X,Y) :- rel(synset_domain_region_of,Y,X) {lr_ifInv(i_derivationally_related_form,synset_domain_region_of)}.
+interp(i_member_holonym,X,Y) :- rel(hypernym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_holonym,hypernym,member_meronym)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_meronym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_instance_hyponym,member_meronym,synset_domain_region_of)}.
+interp(i_also_see,X,Y) :- rel(verb_group,X,Y) {lr_if(i_also_see,verb_group)}.
+interp(i_hyponym,X,Y) :- rel(member_meronym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hyponym,member_meronym,synset_domain_topic_of)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(part_of,Z,Y) {lr_chain(i_instance_hyponym,member_of_domain_topic,part_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(hypernym,X,Z), rel(has_part,Z,Y) {lr_chain(i_synset_domain_topic_of,hypernym,has_part)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_of_domain_topic,X,Z), rel(also_see,Z,Y) {lr_chain(i_member_of_domain_topic,member_of_domain_topic,also_see)}.
+interp(i_part_of,X,Y) :- rel(instance_hyponym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_part_of,instance_hyponym,member_meronym)}.
+interp(i_has_part,X,Y) :- rel(instance_hypernym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_has_part,instance_hypernym,member_of_domain_topic)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_hyponym,member_of_domain_topic,member_holonym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(member_of_domain_topic,X,Y) {lr_if(i_synset_domain_topic_of,member_of_domain_topic)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(member_of_domain_usage,Y,X) {lr_ifInv(i_synset_domain_topic_of,member_of_domain_usage)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_meronym,Y,X) {lr_ifInv(i_instance_hyponym,member_meronym)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(part_of,Z,Y) {lr_chain(i_hyponym,member_of_domain_topic,part_of)}.
+interp(i_has_part,X,Y) :- rel(instance_hypernym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_has_part,instance_hypernym,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(synset_domain_topic_of,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_derivationally_related_form,synset_domain_topic_of,synset_domain_topic_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(derivationally_related_form,X,Z), rel(verb_group,Z,Y) {lr_chain(i_member_of_domain_topic,derivationally_related_form,verb_group)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(verb_group,X,Y) {lr_if(i_synset_domain_topic_of,verb_group)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_region,Y,X) {lr_ifInv(i_member_meronym,member_of_domain_region)}.
+interp(i_also_see,X,Y) :- rel(verb_group,Y,X) {lr_ifInv(i_also_see,verb_group)}.
+interp(i_hypernym,X,Y) :- rel(derivationally_related_form,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_hypernym,derivationally_related_form,member_meronym)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_region,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_part_of,member_of_domain_region,instance_hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(instance_hypernym,X,Y) {lr_if(i_member_meronym,instance_hypernym)}.
+interp(i_hyponym,X,Y) :- rel(member_meronym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_hyponym,member_meronym,derivationally_related_form)}.
+interp(i_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_hyponym,derivationally_related_form,instance_hyponym)}.
+interp(i_instance_hypernym,X,Y) :- rel(has_part,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_instance_hypernym,has_part,member_of_domain_region)}.
+interp(i_member_of_domain_region,X,Y) :- rel(part_of,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_of_domain_region,part_of,member_meronym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_derivationally_related_form,member_of_domain_region,synset_domain_topic_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(has_part,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_synset_domain_topic_of,has_part,instance_hypernym)}.
+interp(i_part_of,X,Y) :- rel(hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_part_of,hyponym,has_part)}.
+interp(i_instance_hyponym,X,Y) :- rel(part_of,X,Z), rel(part_of,Z,Y) {lr_chain(i_instance_hyponym,part_of,part_of)}.
+interp(i_has_part,X,Y) :- rel(part_of,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_has_part,part_of,synset_domain_topic_of)}.
+interp(i_part_of,X,Y) :- rel(member_meronym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_part_of,member_meronym,hyponym)}.
+interp(i_verb_group,X,Y) :- rel(also_see,X,Z), rel(hyponym,Z,Y) {lr_chain(i_verb_group,also_see,hyponym)}.
+interp(i_has_part,X,Y) :- rel(member_holonym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_has_part,member_holonym,instance_hypernym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_meronym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_of_domain_region,member_meronym,derivationally_related_form)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(synset_domain_topic_of,Y,X) {lr_ifInv(i_synset_domain_topic_of,synset_domain_topic_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(has_part,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_synset_domain_topic_of,has_part,synset_domain_topic_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(part_of,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_topic,part_of,has_part)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_holonym,X,Y) {lr_if(i_instance_hyponym,member_holonym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(part_of,X,Y) {lr_if(i_member_of_domain_topic,part_of)}.
+interp(i_instance_hyponym,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_instance_hyponym,hyponym,synset_domain_region_of)}.
+interp(i_instance_hypernym,X,Y) :- rel(member_of_domain_region,X,Z), rel(hypernym,Z,Y) {lr_chain(i_instance_hypernym,member_of_domain_region,hypernym)}.
+interp(i_synset_domain_region_of,X,Y) :- rel(derivationally_related_form,Y,X) {lr_ifInv(i_synset_domain_region_of,derivationally_related_form)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hyponym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_of_domain_topic,hyponym,instance_hyponym)}.
+interp(i_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(has_part,Z,Y) {lr_chain(i_hyponym,derivationally_related_form,has_part)}.
+interp(i_member_meronym,X,Y) :- rel(has_part,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_meronym,has_part,member_holonym)}.
+interp(i_hyponym,X,Y) :- rel(member_holonym,X,Z), rel(has_part,Z,Y) {lr_chain(i_hyponym,member_holonym,has_part)}.
+interp(i_member_meronym,X,Y) :- rel(synset_domain_topic_of,Y,X) {lr_ifInv(i_member_meronym,synset_domain_topic_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(verb_group,X,Z), rel(hypernym,Z,Y) {lr_chain(i_synset_domain_topic_of,verb_group,hypernym)}.
+interp(i_part_of,X,Y) :- rel(instance_hyponym,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_part_of,instance_hyponym,member_of_domain_region)}.
+interp(i_hypernym,X,Y) :- rel(synset_domain_topic_of,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_hypernym,synset_domain_topic_of,synset_domain_region_of)}.
+interp(i_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_hyponym,derivationally_related_form,synset_domain_usage_of)}.
+interp(i_part_of,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_part_of,hyponym,synset_domain_usage_of)}.
+interp(i_member_meronym,X,Y) :- rel(has_part,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_meronym,has_part,member_meronym)}.
+interp(i_member_meronym,X,Y) :- rel(has_part,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_meronym,has_part,hypernym)}.
+interp(i_has_part,X,Y) :- rel(derivationally_related_form,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_has_part,derivationally_related_form,synset_domain_topic_of)}.
+interp(i_instance_hyponym,X,Y) :- rel(part_of,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_instance_hyponym,part_of,instance_hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_instance_hyponym,instance_hyponym,member_of_domain_topic)}.
+interp(i_part_of,X,Y) :- rel(synset_domain_topic_of,Y,X) {lr_ifInv(i_part_of,synset_domain_topic_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(part_of,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_member_of_domain_region,part_of,member_of_domain_region)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_region,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_meronym,member_of_domain_region,part_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_usage,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_usage,member_meronym)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_topic,X,Z), rel(verb_group,Z,Y) {lr_chain(i_has_part,member_of_domain_topic,verb_group)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hypernym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_of_domain_topic,hypernym,member_holonym)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_part_of,member_of_domain_topic,synset_domain_topic_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(derivationally_related_form,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_of_domain_usage,derivationally_related_form,hyponym)}.
+interp(i_hypernym,X,Y) :- rel(member_of_domain_usage,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_hypernym,member_of_domain_usage,synset_domain_region_of)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_hyponym,member_of_domain_topic,synset_domain_region_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_region,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_region,has_part)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(synset_domain_region_of,Y,X) {lr_ifInv(i_member_of_domain_usage,synset_domain_region_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(member_holonym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_synset_domain_topic_of,member_holonym,hypernym)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_hyponym,hyponym,instance_hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_topic,X,Y) {lr_if(i_member_meronym,member_of_domain_topic)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_region,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_part_of,member_of_domain_region,member_holonym)}.
+interp(i_has_part,X,Y) :- rel(synset_domain_usage_of,X,Y) {lr_if(i_has_part,synset_domain_usage_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(instance_hyponym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_derivationally_related_form,instance_hyponym,member_holonym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hypernym,X,Z), rel(member_of_domain_usage,Z,Y) {lr_chain(i_derivationally_related_form,hypernym,member_of_domain_usage)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_usage,Y,X) {lr_ifInv(i_has_part,member_of_domain_usage)}.
+interp(i_hypernym,X,Y) :- rel(hyponym,X,Z), rel(similar_to,Z,Y) {lr_chain(i_hypernym,hyponym,similar_to)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_meronym,X,Y) {lr_if(i_instance_hyponym,member_meronym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(synset_domain_usage_of,Y,X) {lr_ifInv(i_member_of_domain_region,synset_domain_usage_of)}.
+interp(i_verb_group,X,Y) :- rel(also_see,X,Z), rel(hypernym,Z,Y) {lr_chain(i_verb_group,also_see,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_derivationally_related_form,member_of_domain_region,synset_domain_region_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Y) {lr_if(i_member_of_domain_usage,member_of_domain_region)}.
+interp(i_also_see,X,Y) :- rel(verb_group,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_also_see,verb_group,derivationally_related_form)}.
+interp(i_instance_hypernym,X,Y) :- rel(derivationally_related_form,X,Y) {lr_if(i_instance_hypernym,derivationally_related_form)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_holonym,Y,X) {lr_ifInv(i_instance_hyponym,member_holonym)}.
+interp(i_hypernym,X,Y) :- rel(also_see,X,Z), rel(also_see,Z,Y) {lr_chain(i_hypernym,also_see,also_see)}.
+interp(i_member_of_domain_region,X,Y) :- rel(instance_hyponym,X,Y) {lr_if(i_member_of_domain_region,instance_hyponym)}.
+interp(i_instance_hypernym,X,Y) :- rel(member_holonym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_instance_hypernym,member_holonym,synset_domain_region_of)}.
+interp(i_has_part,X,Y) :- rel(synset_domain_topic_of,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_has_part,synset_domain_topic_of,instance_hyponym)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_meronym,member_of_domain_topic,hypernym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_member_of_domain_usage,hyponym,synset_domain_region_of)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(verb_group,Z,Y) {lr_chain(i_hyponym,member_of_domain_topic,verb_group)}.
+interp(i_hyponym,X,Y) :- rel(hypernym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_hyponym,hypernym,synset_domain_region_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_usage,X,Y) {lr_if(i_member_of_domain_region,member_of_domain_usage)}.
+interp(i_verb_group,X,Y) :- rel(hyponym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_verb_group,hyponym,instance_hypernym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_meronym,Y,X) {lr_ifInv(i_member_of_domain_topic,member_meronym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_region,synset_domain_region_of)}.
+interp(i_hypernym,X,Y) :- rel(member_of_domain_usage,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_hypernym,member_of_domain_usage,derivationally_related_form)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hypernym,Z,Y) {lr_chain(i_synset_domain_topic_of,member_of_domain_topic,hypernym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(hyponym,X,Z), rel(verb_group,Z,Y) {lr_chain(i_synset_domain_topic_of,hyponym,verb_group)}.
+interp(i_member_of_domain_region,X,Y) :- rel(has_part,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_of_domain_region,has_part,member_holonym)}.
+interp(i_has_part,X,Y) :- rel(instance_hypernym,X,Z), rel(part_of,Z,Y) {lr_chain(i_has_part,instance_hypernym,part_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_synset_domain_topic_of,member_of_domain_topic,synset_domain_topic_of)}.
+interp(i_has_part,X,Y) :- rel(instance_hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_has_part,instance_hyponym,synset_domain_region_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(instance_hypernym,Y,X) {lr_ifInv(i_member_of_domain_region,instance_hypernym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(instance_hypernym,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_of_domain_topic,instance_hypernym,part_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(instance_hypernym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_topic,instance_hypernym,hypernym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(instance_hypernym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_of_domain_topic,instance_hypernym,instance_hyponym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(instance_hypernym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_of_domain_topic,instance_hypernym,hyponym)}.
+interp(i_hyponym,X,Y) :- rel(hypernym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hyponym,hypernym,synset_domain_topic_of)}.
+interp(i_has_part,X,Y) :- rel(instance_hypernym,X,Z), rel(has_part,Z,Y) {lr_chain(i_has_part,instance_hypernym,has_part)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_usage,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_usage,synset_domain_usage_of)}.
+interp(i_part_of,X,Y) :- rel(hypernym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_part_of,hypernym,instance_hyponym)}.
+interp(i_member_meronym,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_member_meronym,hyponym,synset_domain_usage_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_holonym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_of_domain_topic,member_holonym,member_holonym)}.
+interp(i_hypernym,X,Y) :- rel(member_holonym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_hypernym,member_holonym,member_of_domain_topic)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_has_part,member_of_domain_region,synset_domain_usage_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hypernym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_member_of_domain_topic,hypernym,member_of_domain_topic)}.
+interp(i_member_of_domain_region,X,Y) :- rel(instance_hyponym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_of_domain_region,instance_hyponym,instance_hypernym)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_region,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_has_part,member_of_domain_region,instance_hyponym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_holonym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_of_domain_topic,member_holonym,member_meronym)}.
+interp(i_verb_group,X,Y) :- rel(synset_domain_topic_of,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_verb_group,synset_domain_topic_of,member_of_domain_topic)}.
+interp(i_hyponym,X,Y) :- rel(also_see,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hyponym,also_see,synset_domain_topic_of)}.
+interp(i_has_part,X,Y) :- rel(hypernym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_has_part,hypernym,synset_domain_topic_of)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_region,X,Z), rel(has_part,Z,Y) {lr_chain(i_has_part,member_of_domain_region,has_part)}.
+interp(i_instance_hypernym,X,Y) :- rel(derivationally_related_form,Y,X) {lr_ifInv(i_instance_hypernym,derivationally_related_form)}.
+interp(i_hyponym,X,Y) :- rel(hypernym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_hyponym,hypernym,instance_hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(similar_to,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_derivationally_related_form,similar_to,derivationally_related_form)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(has_part,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_of_domain_topic,has_part,instance_hyponym)}.
+interp(i_instance_hyponym,X,Y) :- rel(has_part,X,Z), rel(hyponym,Z,Y) {lr_chain(i_instance_hyponym,has_part,hyponym)}.
+interp(i_hyponym,X,Y) :- rel(has_part,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_hyponym,has_part,member_meronym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(instance_hyponym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_member_of_domain_region,instance_hyponym,synset_domain_topic_of)}.
+interp(i_hyponym,X,Y) :- rel(member_holonym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hyponym,member_holonym,synset_domain_topic_of)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hypernym,Z,Y) {lr_chain(i_part_of,member_of_domain_topic,hypernym)}.
+interp(i_has_part,X,Y) :- rel(member_meronym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_has_part,member_meronym,synset_domain_region_of)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_member_meronym,member_of_domain_topic,synset_domain_topic_of)}.
+interp(i_part_of,X,Y) :- rel(has_part,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_part_of,has_part,member_meronym)}.
+interp(i_hyponym,X,Y) :- rel(part_of,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_hyponym,part_of,member_meronym)}.
+interp(i_has_part,X,Y) :- rel(instance_hyponym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_has_part,instance_hyponym,member_holonym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hypernym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_of_domain_topic,hypernym,instance_hyponym)}.
+interp(i_hyponym,X,Y) :- rel(member_holonym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_hyponym,member_holonym,hypernym)}.
+interp(i_also_see,X,Y) :- rel(verb_group,X,Z), rel(hypernym,Z,Y) {lr_chain(i_also_see,verb_group,hypernym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(part_of,X,Z), rel(part_of,Z,Y) {lr_chain(i_derivationally_related_form,part_of,part_of)}.
+interp(i_hypernym,X,Y) :- rel(has_part,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_hypernym,has_part,synset_domain_region_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(also_see,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_derivationally_related_form,also_see,synset_domain_topic_of)}.
+interp(i_hyponym,X,Y) :- rel(member_meronym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_hyponym,member_meronym,synset_domain_region_of)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_topic,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_has_part,member_of_domain_topic,member_meronym)}.
+interp(i_has_part,X,Y) :- rel(member_of_domain_topic,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_has_part,member_of_domain_topic,member_holonym)}.
+interp(i_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hyponym,instance_hyponym,synset_domain_topic_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(hypernym,Y,X) {lr_ifInv(i_member_of_domain_region,hypernym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(member_holonym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_synset_domain_topic_of,member_holonym,member_meronym)}.
+interp(i_part_of,X,Y) :- rel(member_holonym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_part_of,member_holonym,hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(has_part,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_instance_hyponym,has_part,derivationally_related_form)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_usage,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_usage,hyponym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(hyponym,X,Y) {lr_if(i_member_of_domain_region,hyponym)}.
+interp(i_also_see,X,Y) :- rel(also_see,X,Z), rel(hypernym,Z,Y) {lr_chain(i_also_see,also_see,hypernym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_member_of_domain_topic,member_of_domain_topic,synset_domain_usage_of)}.
+interp(i_has_part,X,Y) :- rel(member_holonym,X,Z), rel(has_part,Z,Y) {lr_chain(i_has_part,member_holonym,has_part)}.
+interp(i_hyponym,X,Y) :- rel(member_meronym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_hyponym,member_meronym,member_meronym)}.
+interp(i_has_part,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_has_part,hyponym,synset_domain_topic_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(hyponym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_region,hyponym,hypernym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_member_of_domain_topic,hyponym,synset_domain_region_of)}.
+interp(i_hypernym,X,Y) :- rel(has_part,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_hypernym,has_part,member_holonym)}.
+interp(i_also_see,X,Y) :- rel(derivationally_related_form,X,Z), rel(part_of,Z,Y) {lr_chain(i_also_see,derivationally_related_form,part_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(derivationally_related_form,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_of_domain_region,derivationally_related_form,member_holonym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(derivationally_related_form,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_region,derivationally_related_form,hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(member_meronym,X,Z), rel(similar_to,Z,Y) {lr_chain(i_member_meronym,member_meronym,similar_to)}.
+interp(i_derivationally_related_form,X,Y) :- rel(member_of_domain_region,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_derivationally_related_form,member_of_domain_region,instance_hypernym)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(member_of_domain_topic,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_synset_domain_topic_of,member_of_domain_topic,derivationally_related_form)}.
+interp(i_hypernym,X,Y) :- rel(member_of_domain_usage,X,Z), rel(hyponym,Z,Y) {lr_chain(i_hypernym,member_of_domain_usage,hyponym)}.
+interp(i_has_part,X,Y) :- rel(instance_hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_has_part,instance_hyponym,derivationally_related_form)}.
+interp(i_verb_group,X,Y) :- rel(also_see,X,Z), rel(verb_group,Z,Y) {lr_chain(i_verb_group,also_see,verb_group)}.
+interp(i_has_part,X,Y) :- rel(instance_hyponym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_has_part,instance_hyponym,member_of_domain_topic)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hypernym,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_topic,hypernym,has_part)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(hyponym,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_usage,hyponym,has_part)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_topic,hypernym)}.
+interp(i_has_part,X,Y) :- rel(synset_domain_region_of,X,Y) {lr_if(i_has_part,synset_domain_region_of)}.
+interp(i_instance_hypernym,X,Y) :- rel(member_of_domain_region,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_instance_hypernym,member_of_domain_region,derivationally_related_form)}.
+interp(i_verb_group,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_verb_group,hyponym,synset_domain_region_of)}.
+interp(i_member_meronym,X,Y) :- rel(member_holonym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_meronym,member_holonym,hyponym)}.
+interp(i_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_hyponym,instance_hyponym,member_of_domain_topic)}.
+interp(i_member_holonym,X,Y) :- rel(member_of_domain_topic,Y,X) {lr_ifInv(i_member_holonym,member_of_domain_topic)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(member_of_domain_topic,X,Z), rel(verb_group,Z,Y) {lr_chain(i_synset_domain_topic_of,member_of_domain_topic,verb_group)}.
+interp(i_has_part,X,Y) :- rel(instance_hypernym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_has_part,instance_hypernym,derivationally_related_form)}.
+interp(i_member_meronym,X,Y) :- rel(synset_domain_region_of,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_member_meronym,synset_domain_region_of,member_of_domain_region)}.
+interp(i_part_of,X,Y) :- rel(member_holonym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_part_of,member_holonym,instance_hypernym)}.
+interp(i_instance_hypernym,X,Y) :- rel(instance_hyponym,X,Y) {lr_if(i_instance_hypernym,instance_hyponym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(hyponym,X,Z), rel(member_of_domain_usage,Z,Y) {lr_chain(i_member_of_domain_usage,hyponym,member_of_domain_usage)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_region,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_part_of,member_of_domain_region,derivationally_related_form)}.
+interp(i_member_holonym,X,Y) :- rel(instance_hypernym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_holonym,instance_hypernym,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(part_of,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_derivationally_related_form,part_of,member_holonym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(member_of_domain_region,X,Z), rel(hypernym,Z,Y) {lr_chain(i_derivationally_related_form,member_of_domain_region,hypernym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(hyponym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_of_domain_region,hyponym,instance_hypernym)}.
+interp(i_hypernym,X,Y) :- rel(synset_domain_region_of,X,Z), rel(has_part,Z,Y) {lr_chain(i_hypernym,synset_domain_region_of,has_part)}.
+interp(i_hypernym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_hypernym,member_of_domain_topic,synset_domain_region_of)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_topic,Y,X) {lr_ifInv(i_member_meronym,member_of_domain_topic)}.
+interp(i_instance_hypernym,X,Y) :- rel(instance_hypernym,Y,X) {lr_ifInv(i_instance_hypernym,instance_hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(synset_domain_region_of,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_meronym,synset_domain_region_of,part_of)}.
+interp(i_instance_hyponym,X,Y) :- rel(member_meronym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_instance_hyponym,member_meronym,member_holonym)}.
+interp(i_member_holonym,X,Y) :- rel(hypernym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_member_holonym,hypernym,synset_domain_topic_of)}.
+interp(i_instance_hypernym,X,Y) :- rel(instance_hyponym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_instance_hypernym,instance_hyponym,synset_domain_topic_of)}.
+interp(i_synset_domain_usage_of,X,Y) :- rel(member_meronym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_synset_domain_usage_of,member_meronym,member_holonym)}.
+interp(i_member_meronym,X,Y) :- rel(synset_domain_topic_of,X,Y) {lr_if(i_member_meronym,synset_domain_topic_of)}.
+interp(i_derivationally_related_form,X,Y) :- rel(synset_domain_topic_of,X,Z), rel(has_part,Z,Y) {lr_chain(i_derivationally_related_form,synset_domain_topic_of,has_part)}.
+interp(i_also_see,X,Y) :- rel(also_see,X,Z), rel(hyponym,Z,Y) {lr_chain(i_also_see,also_see,hyponym)}.
+interp(i_instance_hypernym,X,Y) :- rel(instance_hyponym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_instance_hypernym,instance_hyponym,instance_hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_meronym,member_of_domain_topic,derivationally_related_form)}.
+interp(i_part_of,X,Y) :- rel(member_of_domain_topic,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_part_of,member_of_domain_topic,derivationally_related_form)}.
+interp(i_verb_group,X,Y) :- rel(derivationally_related_form,X,Z), rel(also_see,Z,Y) {lr_chain(i_verb_group,derivationally_related_form,also_see)}.
+interp(i_verb_group,X,Y) :- rel(derivationally_related_form,X,Z), rel(has_part,Z,Y) {lr_chain(i_verb_group,derivationally_related_form,has_part)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(synset_domain_region_of,X,Z), rel(part_of,Z,Y) {lr_chain(i_synset_domain_topic_of,synset_domain_region_of,part_of)}.
+interp(i_member_meronym,X,Y) :- rel(hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_meronym,hyponym,derivationally_related_form)}.
+interp(i_synset_domain_usage_of,X,Y) :- rel(member_meronym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_synset_domain_usage_of,member_meronym,derivationally_related_form)}.
+interp(i_member_meronym,X,Y) :- rel(instance_hypernym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_meronym,instance_hypernym,hypernym)}.
+interp(i_also_see,X,Y) :- rel(verb_group,X,Z), rel(verb_group,Z,Y) {lr_chain(i_also_see,verb_group,verb_group)}.
+interp(i_hypernym,X,Y) :- rel(also_see,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_hypernym,also_see,derivationally_related_form)}.
+interp(i_instance_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(similar_to,Z,Y) {lr_chain(i_instance_hyponym,derivationally_related_form,similar_to)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_meronym,member_of_domain_topic,hyponym)}.
+interp(i_member_meronym,X,Y) :- rel(synset_domain_region_of,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_meronym,synset_domain_region_of,instance_hypernym)}.
+interp(i_hypernym,X,Y) :- rel(verb_group,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hypernym,verb_group,synset_domain_topic_of)}.
+interp(i_part_of,X,Y) :- rel(derivationally_related_form,X,Z), rel(also_see,Z,Y) {lr_chain(i_part_of,derivationally_related_form,also_see)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(derivationally_related_form,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_member_of_domain_topic,derivationally_related_form,synset_domain_topic_of)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(synset_domain_region_of,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_synset_domain_topic_of,synset_domain_region_of,instance_hypernym)}.
+interp(i_instance_hyponym,X,Y) :- rel(has_part,X,Z), rel(has_part,Z,Y) {lr_chain(i_instance_hyponym,has_part,has_part)}.
+interp(i_derivationally_related_form,X,Y) :- rel(instance_hyponym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_derivationally_related_form,instance_hyponym,derivationally_related_form)}.
+interp(i_instance_hypernym,X,Y) :- rel(member_meronym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_instance_hypernym,member_meronym,hyponym)}.
+interp(i_derivationally_related_form,X,Y) :- rel(similar_to,X,Z), rel(hypernym,Z,Y) {lr_chain(i_derivationally_related_form,similar_to,hypernym)}.
+interp(i_instance_hypernym,X,Y) :- rel(derivationally_related_form,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_instance_hypernym,derivationally_related_form,member_holonym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_holonym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_region,member_holonym,hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(hyponym,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_meronym,hyponym,hyponym)}.
+interp(i_synset_domain_usage_of,X,Y) :- rel(member_holonym,Y,X) {lr_ifInv(i_synset_domain_usage_of,member_holonym)}.
+interp(i_instance_hypernym,X,Y) :- rel(member_meronym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_instance_hypernym,member_meronym,derivationally_related_form)}.
+interp(i_derivationally_related_form,X,Y) :- rel(hypernym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_derivationally_related_form,hypernym,member_holonym)}.
+interp(i_has_part,X,Y) :- rel(member_holonym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_has_part,member_holonym,derivationally_related_form)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(synset_domain_region_of,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_synset_domain_topic_of,synset_domain_region_of,member_meronym)}.
+interp(i_instance_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(also_see,Z,Y) {lr_chain(i_instance_hyponym,derivationally_related_form,also_see)}.
+interp(i_derivationally_related_form,X,Y) :- rel(also_see,X,Z), rel(verb_group,Z,Y) {lr_chain(i_derivationally_related_form,also_see,verb_group)}.
+interp(i_member_meronym,X,Y) :- rel(member_meronym,X,Z), rel(also_see,Z,Y) {lr_chain(i_member_meronym,member_meronym,also_see)}.
+interp(i_derivationally_related_form,X,Y) :- rel(member_holonym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_derivationally_related_form,member_holonym,synset_domain_topic_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_region,derivationally_related_form)}.
+interp(i_verb_group,X,Y) :- rel(synset_domain_topic_of,X,Z), rel(hyponym,Z,Y) {lr_chain(i_verb_group,synset_domain_topic_of,hyponym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_region,X,Z), rel(similar_to,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_region,similar_to)}.
+interp(i_member_holonym,X,Y) :- rel(instance_hypernym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_holonym,instance_hypernym,member_meronym)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_usage,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_usage,has_part)}.
+interp(i_hypernym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(also_see,Z,Y) {lr_chain(i_hypernym,member_of_domain_topic,also_see)}.
+interp(i_hypernym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(verb_group,Z,Y) {lr_chain(i_hypernym,member_of_domain_topic,verb_group)}.
+interp(i_part_of,X,Y) :- rel(part_of,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_part_of,part_of,member_of_domain_topic)}.
+interp(i_instance_hyponym,X,Y) :- rel(has_part,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_instance_hyponym,has_part,synset_domain_topic_of)}.
+interp(i_member_of_domain_region,X,Y) :- rel(member_of_domain_usage,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_of_domain_region,member_of_domain_usage,derivationally_related_form)}.
+interp(i_member_meronym,X,Y) :- rel(also_see,Y,X) {lr_ifInv(i_member_meronym,also_see)}.
+interp(i_member_meronym,X,Y) :- rel(also_see,X,Z), rel(also_see,Z,Y) {lr_chain(i_member_meronym,also_see,also_see)}.
+interp(i_member_meronym,X,Y) :- rel(also_see,X,Y) {lr_if(i_member_meronym,also_see)}.
+interp(i_hyponym,X,Y) :- rel(hyponym,X,Z), rel(member_of_domain_usage,Z,Y) {lr_chain(i_hyponym,hyponym,member_of_domain_usage)}.
+interp(i_member_meronym,X,Y) :- rel(instance_hypernym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_meronym,instance_hypernym,member_meronym)}.
+interp(i_member_meronym,X,Y) :- rel(has_part,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_member_meronym,has_part,synset_domain_region_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hyponym,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_member_of_domain_topic,hyponym,synset_domain_usage_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_usage,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_usage,part_of)}.
+interp(i_verb_group,X,Y) :- rel(hypernym,X,Z), rel(also_see,Z,Y) {lr_chain(i_verb_group,hypernym,also_see)}.
+interp(i_synset_domain_topic_of,X,Y) :- rel(member_holonym,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_synset_domain_topic_of,member_holonym,synset_domain_region_of)}.
+interp(i_member_holonym,X,Y) :- rel(member_holonym,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_holonym,member_holonym,instance_hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(synset_domain_region_of,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_meronym,synset_domain_region_of,member_meronym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_region,part_of)}.
+interp(i_hypernym,X,Y) :- rel(synset_domain_topic_of,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hypernym,synset_domain_topic_of,synset_domain_topic_of)}.
+interp(i_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_hyponym,instance_hyponym,member_of_domain_region)}.
+interp(i_part_of,X,Y) :- rel(instance_hypernym,X,Z), rel(has_part,Z,Y) {lr_chain(i_part_of,instance_hypernym,has_part)}.
+interp(i_member_meronym,X,Y) :- rel(also_see,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_meronym,also_see,derivationally_related_form)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Z), rel(hyponym,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_region,hyponym)}.
+interp(i_member_holonym,X,Y) :- rel(instance_hypernym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_holonym,instance_hypernym,hypernym)}.
+interp(i_verb_group,X,Y) :- rel(synset_domain_topic_of,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_verb_group,synset_domain_topic_of,derivationally_related_form)}.
+interp(i_hyponym,X,Y) :- rel(derivationally_related_form,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hyponym,derivationally_related_form,synset_domain_topic_of)}.
+interp(i_hyponym,X,Y) :- rel(instance_hyponym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_hyponym,instance_hyponym,member_meronym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hypernym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_of_domain_topic,hypernym,derivationally_related_form)}.
+interp(i_hyponym,X,Y) :- rel(part_of,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hyponym,part_of,synset_domain_topic_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_usage_of,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_region,synset_domain_usage_of)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(part_of,Z,Y) {lr_chain(i_member_meronym,member_of_domain_topic,part_of)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hyponym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_of_domain_topic,hyponym,member_meronym)}.
+interp(i_verb_group,X,Y) :- rel(synset_domain_topic_of,X,Z), rel(hypernym,Z,Y) {lr_chain(i_verb_group,synset_domain_topic_of,hypernym)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_meronym,member_of_domain_topic,member_meronym)}.
+interp(i_member_meronym,X,Y) :- rel(member_holonym,X,Z), rel(derivationally_related_form,Z,Y) {lr_chain(i_member_meronym,member_holonym,derivationally_related_form)}.
+interp(i_hyponym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_hyponym,member_of_domain_topic,member_meronym)}.
+interp(i_instance_hyponym,X,Y) :- rel(hyponym,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_instance_hyponym,hyponym,member_holonym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(has_part,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_of_domain_topic,has_part,instance_hypernym)}.
+interp(i_hypernym,X,Y) :- rel(synset_domain_region_of,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_hypernym,synset_domain_region_of,instance_hypernym)}.
+interp(i_has_part,X,Y) :- rel(instance_hyponym,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_has_part,instance_hyponym,member_of_domain_region)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Z), rel(has_part,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_region,has_part)}.
+interp(i_member_meronym,X,Y) :- rel(member_meronym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_meronym,member_meronym,instance_hyponym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(member_of_domain_region,Y,X) {lr_ifInv(i_member_of_domain_topic,member_of_domain_region)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Z), rel(instance_hypernym,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_region,instance_hypernym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(synset_domain_region_of,X,Y) {lr_if(i_member_of_domain_topic,synset_domain_region_of)}.
+interp(i_hypernym,X,Y) :- rel(synset_domain_region_of,X,Z), rel(part_of,Z,Y) {lr_chain(i_hypernym,synset_domain_region_of,part_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_region,synset_domain_topic_of)}.
+interp(i_hypernym,X,Y) :- rel(synset_domain_region_of,X,Z), rel(member_of_domain_region,Z,Y) {lr_chain(i_hypernym,synset_domain_region_of,member_of_domain_region)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_meronym,member_of_domain_topic,instance_hyponym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(instance_hypernym,X,Z), rel(hypernym,Z,Y) {lr_chain(i_member_of_domain_usage,instance_hypernym,hypernym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(has_part,X,Y) {lr_if(i_member_of_domain_usage,has_part)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(part_of,Y,X) {lr_ifInv(i_member_of_domain_usage,part_of)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_meronym,member_of_domain_topic,member_holonym)}.
+interp(i_hypernym,X,Y) :- rel(member_meronym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_hypernym,member_meronym,synset_domain_topic_of)}.
+interp(i_has_part,X,Y) :- rel(instance_hyponym,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_has_part,instance_hyponym,member_meronym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Z), rel(similar_to,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_region,similar_to)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_meronym,Y,X) {lr_ifInv(i_member_of_domain_usage,member_meronym)}.
+interp(i_has_part,X,Y) :- rel(instance_hyponym,X,Z), rel(synset_domain_topic_of,Z,Y) {lr_chain(i_has_part,instance_hyponym,synset_domain_topic_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Z), rel(member_holonym,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_region,member_holonym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_region,instance_hyponym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_holonym,X,Y) {lr_if(i_member_of_domain_usage,member_holonym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(member_of_domain_region,X,Z), rel(member_meronym,Z,Y) {lr_chain(i_member_of_domain_usage,member_of_domain_region,member_meronym)}.
+interp(i_member_meronym,X,Y) :- rel(member_of_domain_topic,X,Z), rel(synset_domain_region_of,Z,Y) {lr_chain(i_member_meronym,member_of_domain_topic,synset_domain_region_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(part_of,X,Y) {lr_if(i_member_of_domain_usage,part_of)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(instance_hyponym,Y,X) {lr_ifInv(i_member_of_domain_usage,instance_hyponym)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(has_part,Y,X) {lr_ifInv(i_member_of_domain_usage,has_part)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(instance_hypernym,X,Z), rel(instance_hyponym,Z,Y) {lr_chain(i_member_of_domain_usage,instance_hypernym,instance_hyponym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(hyponym,X,Z), rel(member_of_domain_usage,Z,Y) {lr_chain(i_member_of_domain_topic,hyponym,member_of_domain_usage)}.
+interp(i_member_of_domain_usage,X,Y) :- rel(instance_hypernym,X,Y) {lr_if(i_member_of_domain_usage,instance_hypernym)}.
+interp(i_member_of_domain_topic,X,Y) :- rel(has_part,X,Z), rel(member_of_domain_topic,Z,Y) {lr_chain(i_member_of_domain_topic,has_part,member_of_domain_topic)}.

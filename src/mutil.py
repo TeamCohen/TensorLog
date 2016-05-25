@@ -128,7 +128,7 @@ def broadcastAndComponentwiseMultiply(m1,m2):
                 if k in vd:
                     result.data[j] = result.data[j] * vd[k]
                 else:
-                    result.data[j] = 0
+                    result.data[j] = 0.0
         return result
     r1 = numRows(m1)
     r2 = numRows(m2)

@@ -1,9 +1,17 @@
-default:
-	echo make what?
+expt:
+	python cora-expt.py
 
-cora.db: cora.cfacts
-	time python $(TLOG)/matrixdb.py --serialize cora.cfacts cora.db
+#cora.db: cora.cfacts
+#	time python $(TLOG)/matrixdb.py --serialize cora.cfacts cora.db
+#
 
 cora.cfacts: 
-	cat cora-*.cfacts > cora.cfacts
+	cat raw/cora-*.cfacts > cora.cfacts
+
+clean:
+	rm -rf *~ 
+	rm -rf cora-trained.db cora.db 
+
+
+
 

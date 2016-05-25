@@ -28,4 +28,6 @@ wc-all:
 	wc `ls *.py | grep -v pyparsing`
 
 clean:
-	rm *.pyc *.py~
+	rm -f *.pyc *.py~ *.prof
+	rm -f toy-test.examples toy-test.solutions.txt toy-train.examples 
+	rm -rf toy-trained.db

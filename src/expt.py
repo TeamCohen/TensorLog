@@ -8,6 +8,12 @@ import tensorlog
 import declare
 import learn
 import mutil
+import config
+
+conf = config.Config()
+
+conf.help.num_train_predictions_shown = 'Number of training-data predictions to display'
+conf.num_train_predictions_shown = 0
 
 class Expt(object):
 
@@ -19,7 +25,7 @@ class Expt(object):
 
     def _run(self,
              initFiles=None, initProgram=None,
-             theoryPred=None, 
+             theoryPred=None, epochs=5,
              trainMatPair=None, testMatPair=None,
              trainPred=None, testPred=None, 
              savedTestPreds=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None):
@@ -37,8 +43,11 @@ class Expt(object):
         # TODO: should be a parameter, and should work with a sparse parameter vector
         # ti.prog.setWeights(ti.db.vector(declare.ModeDeclaration('rule(o)')))
 
+        conf.pprint()
+
         if trainMatPair:
             TX,TY = trainMatPair
+            print 'number of examples:',mutil.numRows(TX)
         else:
             TX,TY = Expt.timeAction(
                 'prepare training data',
@@ -51,11 +60,17 @@ class Expt(object):
                 'prepare test data',
                 lambda:ti.db.matrixAsTrainingData(testPred,2))
 
-        learner = learn.FixedRateGDLearner(ti.prog,TX,TY,epochs=5)
+        learner = learn.FixedRateGDLearner(ti.prog,TX,TY,epochs=epochs)
 
         TP0 = Expt.timeAction(
             'running untrained theory on train data',
             lambda:learner.predict(mode,TX))
+        if conf.num_train_predictions_shown>0:
+            print 'predictions:'
+            d = ti.db.matrixAsSymbolDict(TP0)
+            for k in d:
+                if k<conf.num_train_predictions_shown:
+                    print k,d[k]
         UP0 = Expt.timeAction(
             'running untrained theory on test data',
             lambda:learner.predict(mode,UX))
@@ -87,7 +102,7 @@ class Expt(object):
             Expt.timeAction('saving train examples', lambda:Expt.dataAsProPPRExamples(savedTrainExamples,theoryPred,ti.db,TX,TY))
 
         if savedTestPreds and savedTestExamples:
-            print 'ready for commands like: proppr eval %s %s --metric map' % (savedTestExamples,savedTestPreds)
+            print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' % (savedTestExamples,savedTestPreds)
 
     @staticmethod
     def timeAction(msg, act):
@@ -251,6 +266,8 @@ class BatchExpt(Expt):
             print 'ready for commands like: proppr eval %s %s --metric map' % (savedTestExamples,savedTestPreds)
 
 
+# a sample main
+
 if __name__=="__main__":
     toyparams = {'initFiles':["test/textcattoy.cfacts","test/textcat.ppr"],
                  'theoryPred':'predict',
@@ -261,9 +278,14 @@ if __name__=="__main__":
                  'savedTrainExamples':'toy-train.examples',
                  'savedTestExamples':'toy-test.examples',
     }
-#    Expt(toyparams).run()
-    ti = tensorlog.Interp(initFiles=["test/textcattoy.cfacts","test/textcat.ppr"])
-    d = Expt.propprExamplesAsData(ti.db,'test/toytrain.examples')
-    for pred,(X,Y) in d.items():
-        print pred,ti.db.matrixAsSymbolDict(X)
-        print pred,ti.db.matrixAsSymbolDict(Y)
+    Expt(toyparams).run()
+
+# some other stuff you might do:
+#
+#    ti = tensorlog.Interp(initFiles=["test/textcattoy.cfacts","test/textcat.ppr"])
+#    d = Expt.propprExamplesAsData(ti.db,'test/toytrain.examples')
+#    for pred,(X,Y) in d.items():
+#        print pred,ti.db.matrixAsSymbolDict(X)
+#        print pred,ti.db.matrixAsSymbolDict(Y)
+
+
