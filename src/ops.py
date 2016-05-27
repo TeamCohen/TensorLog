@@ -46,6 +46,9 @@ class Envir(object):
 #
 ##############################################################################
 
+def isBuiltinIOOp(mode):
+    return mode.functor=='printf'
+
 class Op(object):
     """Sort of like a function but side-effects an environment.  More
     specifically, this is the tensorlog encoding for matrix-db
@@ -221,6 +224,32 @@ class VecMatMulOp(Op):
             # finally save the update
             key = (self.matMode.functor,self.matMode.arity)
             gradAccum.accum(key,update)
+
+class BuiltInIOOp(Op):
+    """Built-in special op, like printf(src,dst), with one input and one
+    output variable.
+    """
+    def __init__(self,dst,src,matMode):
+        super(BuiltInIOOp,self).__init__(dst)
+        self.src = src
+        self.matMode = matMode
+    def __repr__(self):
+        return "BuiltInIOOp(%r,%r,%s)" % (self.dst,self.src,self.matMode)
+    def _ppLHS(self):
+        return "buitin_%s(%s)" % (self.matMode.functor,self.src)
+    def _doEval(self,env):
+        assert self.matMode.functor=='printf'
+        d = env.db.matrixAsSymbolDict(env[self.src])
+        print '= %s->%s' % (self.msgFrom,self.msgTo),
+        if len(d.keys())==1:
+            print d[0]
+        else:
+            print
+            for k in d:
+                print '= row',k,'=>',d[k]
+        env[self.dst] = env[self.src]
+    def _doBackprop(self,env,gradAccum):
+        env.delta[self.src] = env.delta[self.dst]
 
 class ComponentwiseVecMulOp(Op):
     """ Computes dst = src*Diag(src2), i.e., the component-wise product of

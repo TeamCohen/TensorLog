@@ -1,35 +1,25 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
-# compile a rule into a series of operations that perform belief
-# propogation
-#
+# compile a single definite clause into a series of operations that
+# perform belief propogation
 
 import sys
+import collections
+import logging
+
 import ops
 import funs
+import config
 import symtab 
-import collections
 import parser
 import declare
 import matrixdb
-import logging
 import tensorlog
 
-# check that a clause fits assumptions
-STRICT = True
-
-# print debug info during BP
-TRACE = False
-#TRACE = True
-
-# turn off to debug analysis
-PRODUCE_OPS = True
-#PRODUCE_OPS = False
-
-def only(c):
-    """Return only member of a singleton set, or raise an error if the set's not a singleton."""
-    assert len(c)==1,'non-singleton ' + repr(c)
-    for elt in c: return elt
+conf = config.Config()
+conf.strict = True;         conf.help.strict =        "Check that a clause fits all assumptions"
+conf.trace = False;         conf.help.trace =         "Print debug info during BP"
+conf.produce_ops = True;    conf.help.produce_ops =   "Turn off to debug analysis"
 
 #
 # helper classes - info on variables and goals
@@ -80,7 +70,7 @@ class BPCompiler(object):
         self.inputs = None #inputs of the function associated with performing BP for the mode
         self.goals = [self.rule.lhs] + self.rule.rhs  #so we can systematically index goals with an int j
         self.compiled = False               #set to True when compilation is finihe
-        if STRICT: self.validateRuleBeforeAnalysis()
+        if conf.strict: self.validateRuleBeforeAnalysis()
 
     #
     # compile and then access the result of compilation
@@ -136,7 +126,7 @@ class BPCompiler(object):
         self.compileDefinedPredicates()
 
         # generate an operation sequence that implements the BP algorithm
-        if PRODUCE_OPS:
+        if conf.produce_ops:
             self.generateOps()
 
         self.compiled = True
@@ -243,7 +233,7 @@ class BPCompiler(object):
 
         def addOp(op,traceDepth,msgFrom,msgTo):
             """Add an operation to self.ops, echo if required"""
-            if TRACE: print '%s+%s' % (('| '*traceDepth),op)
+            if conf.trace: print '%s+%s' % (('| '*traceDepth),op)
             def jToGoal(msg): return str(self.goals[msg]) if type(msg)==type(0) else msg
             op.setMessage(jToGoal(msgFrom),jToGoal(msgTo))
             self.ops.append(op)
@@ -255,7 +245,7 @@ class BPCompiler(object):
             is LHS on RHS, and if the variable is an input or
             output."""
             gin = self.goalDict[j]
-            if TRACE: print '%smsg: %d->%s' % (('| '*traceDepth),j,v)
+            if conf.trace: print '%smsg: %d->%s' % (('| '*traceDepth),j,v)
             # The lhs goal, j==0, is the input factor
             if j==0 and v in self.goalDict[j].inputs:
                 #input port -> input variable
@@ -275,7 +265,9 @@ class BPCompiler(object):
                     return msgName
                 else:
                     fx = msgVar2Goal(only(gin.inputs),j,traceDepth+1) #ask for the message forward from the input to goal j
-                    if not gin.definedPred:
+                    if ops.isBuiltinIOOp(mode):
+                        addOp(ops.BuiltInIOOp(msgName,fx,mode), traceDepth,j,v)
+                    elif not gin.definedPred:
                         addOp(ops.VecMatMulOp(msgName,fx,mode), traceDepth,j,v)
                     else:
                         addOp(ops.DefinedPredOp(self.tensorlogProg,msgName,fx,mode,self.depth+1), traceDepth,j,v)
@@ -300,6 +292,7 @@ class BPCompiler(object):
                         assert len(gin.outputs)==1, 'need single output from %s' % self.goals[j]
                         #this variable now is connected to the main chain
                         self.varDict[only(gin.outputs)].connected = True
+                        assert not ops.isBuiltinIOOp(mode), 'can only use built in io operators where inputs and outputs are used'
                         addOp(ops.AssignPreimageToVar(msgName,mode), traceDepth,j,v)
                     else:
                         addOp(ops.AssignVectorToVar(msgName,mode), traceDepth,j,v)
@@ -316,7 +309,7 @@ class BPCompiler(object):
             gin = self.goalDict[j]
             #variables have one outputOf, but possily many inputTo connections
             vNeighbors = [j2 for j2 in [vin.outputOf]+list(vin.inputTo) if j2!=j]
-            if TRACE: print '%smsg from %s to %d, vNeighbors=%r' % ('| '*traceDepth,v,j,vNeighbors)
+            if conf.trace: print '%smsg from %s to %d, vNeighbors=%r' % ('| '*traceDepth,v,j,vNeighbors)
             assert len(vNeighbors),'variables should have >1 neighbor but %s has only one: %d' % (v,j)
             #form product of the incoming messages, cleverly
             #generating only the variables we really need
@@ -368,17 +361,24 @@ class BPCompiler(object):
         self.output = currentProduct
         self.inputs = list(self.goalDict[0].inputs)
 
+def only(c):
+    """Return only member of a singleton set, or raise an error if the set's not a singleton."""
+    assert len(c)==1,'non-singleton ' + repr(c)
+    for elt in c: return elt
+
 #
 # a test driver
 #
 
 if __name__ == "__main__":
+    conf.pprint()
+
     if len(sys.argv)<2:
         print 'usage: rule mode'
         sys.exit(-1)
 
-    STRICT = False
-    #PRODUCE_OPS = False
+    conf.strict = False
+    #conf.produce_ops = False
     p = parser.Parser()
 
     ruleString = sys.argv[1]
@@ -393,3 +393,6 @@ if __name__ == "__main__":
     c.showRule()
     c.showVars()
     c.showOps()
+
+
+
