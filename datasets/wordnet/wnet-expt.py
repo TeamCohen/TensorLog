@@ -17,7 +17,7 @@ def uncacheDB(dbFile):
         return matrixdb.MatrixDB.deserialize(dbFile)
 
 def uncacheMatPairs(cacheFile,dbFile,trainPred,testPred):
-    if not os.path.exists(cacheFile):
+    if True: # not os.path.exists(cacheFile):
         db = uncacheDB(dbFile)
         print 'creating matrix pairs from %s and %s...' % (trainPred,testPred)
         TX,TY = db.matrixAsTrainingData(trainPred,2)
@@ -28,9 +28,9 @@ def uncacheMatPairs(cacheFile,dbFile,trainPred,testPred):
         scipy.io.savemat(cacheFile,d, do_compression=True)
         print 'saved in',cacheFile
         return d
-    else:
+    else: #sort of broken
         d = {}
-        scipy.io.loadmat("wnet-XY.mat",d)
+        scipy.io.loadmat("wnet-%s-XY.mat" % trainPred,d)
         # bleeping scipy.io utils convert from csr_matrix to csc_matrix
         # when you serialize/deserialize, like they think it doesn't
         # make a difference or somethin'
