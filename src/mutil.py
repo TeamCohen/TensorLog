@@ -5,8 +5,12 @@ import scipy.io
 import numpy as np
 import math
 
+import config
+
+conf = config.Config()
+conf.optimize_softmax = True;   conf.help.optimize_softmax = 'use optimized version of softmax code'
+
 # miscellaneous broadcast utilities used my ops.py and funs.py
-OPTIMIZE_SOFTMAX = True
 
 def mean(mat):
     """Return the average of the rows."""
@@ -79,7 +83,7 @@ def softmax(db,m):
     numr = numRows(m)
     if numr==1:
         return softmaxRow(m + db.nullMatrix(1)*nullEpsilon)
-    elif not OPTIMIZE_SOFTMAX:
+    elif not conf.optimize_softmax:
         m1 = m + db.nullMatrix(numr)*nullEpsilon
         rows = [m1.getrow(i) for i in range(numr)]
         return stack([softmaxRow(r) for r in rows])
