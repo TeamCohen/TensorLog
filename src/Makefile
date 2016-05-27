@@ -13,10 +13,12 @@ fb15k-valid.db:
 wnet-test:
 	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet/; python wnet-expt.py; \
 	 proppr eval hypernym-test.examples hypernym-test.solutions.txt --metric auc --defaultNeg)
+	echo expected . micro: 0.93437229711
 
 cora-test:
 	(export PYTHONPATH=`pwd`; cd ../datasets/cora/; python cora-expt.py; \
 	 proppr eval cora-test.examples cora-test.solutions.txt --metric auc --defaultNeg)
+	echo expected . micro: 0.975902362875
 
 prepare-for-long-tests:
 	make fb15k-valid.db 
