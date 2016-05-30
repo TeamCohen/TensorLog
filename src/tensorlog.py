@@ -104,13 +104,13 @@ class Program(object):
         return fun.evalGrad(self.db, inputs)
 
     @staticmethod 
-    def _load(fileNames):
+    def _load(fileNames,db=None):
         ruleFiles = [f for f in fileNames if f.endswith(".ppr") or f.endswith(".tlog")]
         dbFiles = [f for f in fileNames if f.endswith(".db")]
         factFiles = [f for f in fileNames if f.endswith(".cfacts")]
         assert (not dbFiles) or (not factFiles), 'cannot combine a serialized database and .cfacts files'
         assert (not dbFiles) or (len(dbFiles)==1), 'cannot combine multiple serialized databases'
-        assert dbFiles or factFiles,'no db specified'
+        assert db or dbFiles or factFiles,'no db specified'
         assert ruleFiles,'no rules specified'
         rules = parser.Parser.parseFile(ruleFiles[0])
         for f in ruleFiles[1:]:
@@ -126,8 +126,10 @@ class Program(object):
         return (db,rules)
 
     @staticmethod
-    def load(fileNames):
-        (db,rules) = Program._load(fileNames)
+    def load(fileNames,db=None):
+        if not db: (db,rules) = Program._load(fileNames)
+        else: (dummy,rules) = Program._load(fileNames,db=db)
+        return Program(db,rules)
         return Program(db,rules)
 
 #
@@ -174,9 +176,10 @@ class ProPPRProgram(Program):
         return rule
 
     @staticmethod
-    def load(fileNames):
-        (db,rules) = Program._load(fileNames)
-        return ProPPRProgram(db,rules)
+    def load(fileNames,db=None):
+        if not db: (db,rules) = Program._load(fileNames)
+        else: (dummy,rules) = Program._load(fileNames,db=db)
+        return ProPPRProgram(db=db,rules=rules)
 
 class Interp(object):
     """High-level interface to tensor log."""

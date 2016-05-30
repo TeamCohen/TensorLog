@@ -12,6 +12,9 @@ conf.optimize_softmax = True;   conf.help.optimize_softmax = 'use optimized vers
 
 # miscellaneous broadcast utilities used my ops.py and funs.py
 
+def summary(mat):
+    return 'nnz %d rows %d cols %d' % (mat.nnz,numRows(mat),numCols(mat))
+
 def mean(mat):
     """Return the average of the rows."""
     return SS.csr_matrix(mat.mean(axis=0))
