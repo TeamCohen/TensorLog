@@ -14,8 +14,6 @@ import symtab
 import parser
 import mutil
 
-ALLOW_WEIGHTED_TUPLES = False
-
 conf = config.Config()
 conf.allow_weighted_tuples = True; conf.help.allow_weighted_tuples = 'Allow last column of cfacts file to be a weight for the fact'
 
@@ -324,14 +322,14 @@ class MatrixDB(object):
 
         parts = line.split("\t")
         #TODO add ability to read in weights
-        if ALLOW_WEIGHTED_TUPLES and len(parts)==4:
+        if conf.allow_weighted_tuples and len(parts)==4:
             f,a1,a2,wstr = parts[0],parts[1],parts[2],parts[3]
             arity = 2
             w = atof(wstr)
         elif len(parts)==3:
             f,a1,a2 = parts[0],parts[1],parts[2]
             w = atof(a2)
-            if not ALLOW_WEIGHTED_TUPLES or w==0:
+            if not conf.allow_weighted_tuples or w==0:
                 arity = 2
                 w = 1.0
             else:
