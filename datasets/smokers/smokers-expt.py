@@ -2,7 +2,7 @@ import sys
 import time
 
 import tensorlog
-import expt
+import exptv1
 import declare
 import mutil
 
