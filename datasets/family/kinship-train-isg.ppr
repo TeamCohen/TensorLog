@@ -1,0 +1,154 @@
+# 'adapter' which can be added to a bunch of mutuallly recursive
+# learnedPred rules
+
+i_father(X,Y) :- father(X,Y) {lr_if(i_father$father)}.
+i_husband(X,Y) :- husband(X,Y) {lr_if(i_husband$husband)}.
+i_husband(X,Y) :- wife(Y,X) {lr_ifInv(i_husband$wife)}.
+i_aunt(X,Y) :- aunt(X,Y) {lr_if(i_aunt$aunt)}.
+i_wife(X,Y) :- husband(Y,X) {lr_ifInv(i_wife$husband)}.
+i_mother(X,Y) :- mother(X,Y) {lr_if(i_mother$mother)}.
+i_father(X,Y) :- son(Y,X) {lr_ifInv(i_father$son)}.
+i_uncle(X,Y) :- uncle(X,Y) {lr_if(i_uncle$uncle)}.
+i_mother(X,Y) :- wife(X,Z), father(Z,Y) {lr_chain(i_mother$wife$father)}.
+i_father(X,Y) :- daughter(Y,X) {lr_ifInv(i_father$daughter)}.
+i_mother(X,Y) :- daughter(Y,X) {lr_ifInv(i_mother$daughter)}.
+i_wife(X,Y) :- wife(X,Y) {lr_if(i_wife$wife)}.
+i_mother(X,Y) :- son(Y,X) {lr_ifInv(i_mother$son)}.
+i_father(X,Y) :- husband(X,Z), mother(Z,Y) {lr_chain(i_father$husband$mother)}.
+i_daughter(X,Y) :- daughter(X,Y) {lr_if(i_daughter$daughter)}.
+i_son(X,Y) :- son(X,Y) {lr_if(i_son$son)}.
+i_uncle(X,Y) :- nephew(Y,X) {lr_ifInv(i_uncle$nephew)}.
+i_uncle(X,Y) :- niece(Y,X) {lr_ifInv(i_uncle$niece)}.
+i_aunt(X,Y) :- niece(Y,X) {lr_ifInv(i_aunt$niece)}.
+i_aunt(X,Y) :- nephew(Y,X) {lr_ifInv(i_aunt$nephew)}.
+i_nephew(X,Y) :- nephew(X,Y) {lr_if(i_nephew$nephew)}.
+i_uncle(X,Y) :- husband(X,Z), aunt(Z,Y) {lr_chain(i_uncle$husband$aunt)}.
+i_niece(X,Y) :- niece(X,Y) {lr_if(i_niece$niece)}.
+i_son(X,Y) :- father(Y,X) {lr_ifInv(i_son$father)}.
+i_daughter(X,Y) :- father(Y,X) {lr_ifInv(i_daughter$father)}.
+i_daughter(X,Y) :- mother(Y,X) {lr_ifInv(i_daughter$mother)}.
+i_husband(X,Y) :- father(X,Z), son(Z,Y) {lr_chain(i_husband$father$son)}.
+i_husband(X,Y) :- father(X,Z), daughter(Z,Y) {lr_chain(i_husband$father$daughter)}.
+i_father(X,Y) :- father(X,Z), brother(Z,Y) {lr_chain(i_father$father$brother)}.
+i_brother(X,Y) :- brother(X,Y) {lr_if(i_brother$brother)}.
+i_wife(X,Y) :- aunt(X,Z), niece(Z,Y) {lr_chain(i_wife$aunt$niece)}.
+i_wife(X,Y) :- aunt(X,Z), nephew(Z,Y) {lr_chain(i_wife$aunt$nephew)}.
+i_wife(X,Y) :- mother(X,Z), daughter(Z,Y) {lr_chain(i_wife$mother$daughter)}.
+i_son(X,Y) :- mother(Y,X) {lr_ifInv(i_son$mother)}.
+i_niece(X,Y) :- uncle(Y,X) {lr_ifInv(i_niece$uncle)}.
+i_nephew(X,Y) :- aunt(Y,X) {lr_ifInv(i_nephew$aunt)}.
+i_niece(X,Y) :- aunt(Y,X) {lr_ifInv(i_niece$aunt)}.
+i_aunt(X,Y) :- aunt(X,Z), sister(Z,Y) {lr_chain(i_aunt$aunt$sister)}.
+i_aunt(X,Y) :- aunt(X,Z), brother(Z,Y) {lr_chain(i_aunt$aunt$brother)}.
+i_husband(X,Y) :- uncle(X,Z), niece(Z,Y) {lr_chain(i_husband$uncle$niece)}.
+i_mother(X,Y) :- mother(X,Z), brother(Z,Y) {lr_chain(i_mother$mother$brother)}.
+i_brother(X,Y) :- sister(Y,X) {lr_ifInv(i_brother$sister)}.
+i_sister(X,Y) :- sister(X,Y) {lr_if(i_sister$sister)}.
+i_sister(X,Y) :- brother(Y,X) {lr_ifInv(i_sister$brother)}.
+i_son(X,Y) :- brother(X,Z), daughter(Z,Y) {lr_chain(i_son$brother$daughter)}.
+i_uncle(X,Y) :- uncle(X,Z), sister(Z,Y) {lr_chain(i_uncle$uncle$sister)}.
+i_father(X,Y) :- father(X,Z), sister(Z,Y) {lr_chain(i_father$father$sister)}.
+i_son(X,Y) :- son(X,Z), husband(Z,Y) {lr_chain(i_son$son$husband)}.
+i_daughter(X,Y) :- daughter(X,Z), wife(Z,Y) {lr_chain(i_daughter$daughter$wife)}.
+i_brother(X,Y) :- son(X,Z), mother(Z,Y) {lr_chain(i_brother$son$mother)}.
+i_daughter(X,Y) :- daughter(X,Z), husband(Z,Y) {lr_chain(i_daughter$daughter$husband)}.
+i_aunt(X,Y) :- wife(X,Z), uncle(Z,Y) {lr_chain(i_aunt$wife$uncle)}.
+i_husband(X,Y) :- uncle(X,Z), nephew(Z,Y) {lr_chain(i_husband$uncle$nephew)}.
+i_uncle(X,Y) :- uncle(X,Z), brother(Z,Y) {lr_chain(i_uncle$uncle$brother)}.
+i_son(X,Y) :- son(X,Z), wife(Z,Y) {lr_chain(i_son$son$wife)}.
+i_nephew(X,Y) :- uncle(Y,X) {lr_ifInv(i_nephew$uncle)}.
+i_brother(X,Y) :- son(X,Z), father(Z,Y) {lr_chain(i_brother$son$father)}.
+i_niece(X,Y) :- niece(X,Z), husband(Z,Y) {lr_chain(i_niece$niece$husband)}.
+i_nephew(X,Y) :- nephew(X,Z), husband(Z,Y) {lr_chain(i_nephew$nephew$husband)}.
+i_daughter(X,Y) :- sister(X,Z), son(Z,Y) {lr_chain(i_daughter$sister$son)}.
+i_uncle(X,Y) :- brother(X,Z), mother(Z,Y) {lr_chain(i_uncle$brother$mother)}.
+i_sister(X,Y) :- niece(X,Z), aunt(Z,Y) {lr_chain(i_sister$niece$aunt)}.
+i_father(X,Y) :- brother(X,Z), aunt(Z,Y) {lr_chain(i_father$brother$aunt)}.
+i_brother(X,Y) :- nephew(X,Z), aunt(Z,Y) {lr_chain(i_brother$nephew$aunt)}.
+i_brother(X,Y) :- nephew(X,Z), uncle(Z,Y) {lr_chain(i_brother$nephew$uncle)}.
+i_sister(X,Y) :- daughter(X,Z), mother(Z,Y) {lr_chain(i_sister$daughter$mother)}.
+i_sister(X,Y) :- daughter(X,Z), father(Z,Y) {lr_chain(i_sister$daughter$father)}.
+i_mother(X,Y) :- sister(X,Z), uncle(Z,Y) {lr_chain(i_mother$sister$uncle)}.
+i_daughter(X,Y) :- niece(X,Z), brother(Z,Y) {lr_chain(i_daughter$niece$brother)}.
+i_niece(X,Y) :- niece(X,Z), wife(Z,Y) {lr_chain(i_niece$niece$wife)}.
+i_son(X,Y) :- nephew(X,Z), brother(Z,Y) {lr_chain(i_son$nephew$brother)}.
+i_sister(X,Y) :- niece(X,Z), uncle(Z,Y) {lr_chain(i_sister$niece$uncle)}.
+i_nephew(X,Y) :- nephew(X,Z), wife(Z,Y) {lr_chain(i_nephew$nephew$wife)}.
+i_wife(X,Y) :- mother(X,Z), son(Z,Y) {lr_chain(i_wife$mother$son)}.
+i_mother(X,Y) :- mother(X,Z), sister(Z,Y) {lr_chain(i_mother$mother$sister)}.
+i_brother(X,Y) :- uncle(X,Z), daughter(Z,Y) {lr_chain(i_brother$uncle$daughter)}.
+i_brother(X,Y) :- father(X,Z), niece(Z,Y) {lr_chain(i_brother$father$niece)}.
+i_brother(X,Y) :- father(X,Z), nephew(Z,Y) {lr_chain(i_brother$father$nephew)}.
+i_sister(X,Y) :- mother(X,Z), niece(Z,Y) {lr_chain(i_sister$mother$niece)}.
+i_sister(X,Y) :- mother(X,Z), nephew(Z,Y) {lr_chain(i_sister$mother$nephew)}.
+i_son(X,Y) :- wife(X,Z), husband(Z,Y) {lr_chain(i_son$wife$husband)}.
+i_sister(X,Y) :- husband(X,Z), daughter(Z,Y) {lr_chain(i_sister$husband$daughter)}.
+i_aunt(X,Y) :- husband(X,Z), wife(Z,Y) {lr_chain(i_aunt$husband$wife)}.
+i_husband(X,Y) :- mother(X,Z), aunt(Z,Y) {lr_chain(i_husband$mother$aunt)}.
+i_aunt(X,Y) :- husband(X,Z), daughter(Z,Y) {lr_chain(i_aunt$husband$daughter)}.
+i_daughter(X,Y) :- mother(X,Z), mother(Z,Y) {lr_chain(i_daughter$mother$mother)}.
+i_nephew(X,Y) :- father(X,Z), aunt(Z,Y) {lr_chain(i_nephew$father$aunt)}.
+i_niece(X,Y) :- wife(X,Z), son(Z,Y) {lr_chain(i_niece$wife$son)}.
+i_uncle(X,Y) :- father(X,Z), father(Z,Y) {lr_chain(i_uncle$father$father)}.
+i_brother(X,Y) :- wife(X,Z), husband(Z,Y) {lr_chain(i_brother$wife$husband)}.
+i_niece(X,Y) :- father(X,Z), aunt(Z,Y) {lr_chain(i_niece$father$aunt)}.
+i_nephew(X,Y) :- uncle(X,Z), son(Z,Y) {lr_chain(i_nephew$uncle$son)}.
+i_mother(X,Y) :- father(X,Z), aunt(Z,Y) {lr_chain(i_mother$father$aunt)}.
+i_brother(X,Y) :- father(X,Z), father(Z,Y) {lr_chain(i_brother$father$father)}.
+i_father(X,Y) :- uncle(X,Z), son(Z,Y) {lr_chain(i_father$uncle$son)}.
+i_sister(X,Y) :- father(X,Z), wife(Z,Y) {lr_chain(i_sister$father$wife)}.
+i_niece(X,Y) :- father(X,Z), father(Z,Y) {lr_chain(i_niece$father$father)}.
+i_niece(X,Y) :- brother(X,Z), wife(Z,Y) {lr_chain(i_niece$brother$wife)}.
+i_husband(X,Y) :- wife(X,Z), son(Z,Y) {lr_chain(i_husband$wife$son)}.
+i_aunt(X,Y) :- wife(X,Z), son(Z,Y) {lr_chain(i_aunt$wife$son)}.
+i_son(X,Y) :- father(X,Z), aunt(Z,Y) {lr_chain(i_son$father$aunt)}.
+i_aunt(X,Y) :- uncle(X,Z), son(Z,Y) {lr_chain(i_aunt$uncle$son)}.
+i_mother(X,Y) :- father(X,Z), husband(Z,Y) {lr_chain(i_mother$father$husband)}.
+i_wife(X,Y) :- father(X,Z), mother(Z,Y) {lr_chain(i_wife$father$mother)}.
+i_sister(X,Y) :- uncle(X,Z), son(Z,Y) {lr_chain(i_sister$uncle$son)}.
+i_nephew(X,Y) :- father(X,Z), uncle(Z,Y) {lr_chain(i_nephew$father$uncle)}.
+i_daughter(X,Y) :- father(X,Z), mother(Z,Y) {lr_chain(i_daughter$father$mother)}.
+i_daughter(X,Y) :- father(X,Z), nephew(Z,Y) {lr_chain(i_daughter$father$nephew)}.
+i_mother(X,Y) :- uncle(X,Z), son(Z,Y) {lr_chain(i_mother$uncle$son)}.
+i_nephew(X,Y) :- wife(X,Z), son(Z,Y) {lr_chain(i_nephew$wife$son)}.
+i_sister(X,Y) :- mother(X,Z), uncle(Z,Y) {lr_chain(i_sister$mother$uncle)}.
+i_wife(X,Y) :- father(X,Z), aunt(Z,Y) {lr_chain(i_wife$father$aunt)}.
+i_niece(X,Y) :- mother(X,Z), niece(Z,Y) {lr_chain(i_niece$mother$niece)}.
+i_aunt(X,Y) :- father(X,Z), nephew(Z,Y) {lr_chain(i_aunt$father$nephew)}.
+i_mother(X,Y) :- father(X,Z), nephew(Z,Y) {lr_chain(i_mother$father$nephew)}.
+i_son(X,Y) :- father(X,Z), mother(Z,Y) {lr_chain(i_son$father$mother)}.
+i_uncle(X,Y) :- mother(X,Z), husband(Z,Y) {lr_chain(i_uncle$mother$husband)}.
+i_niece(X,Y) :- father(X,Z), mother(Z,Y) {lr_chain(i_niece$father$mother)}.
+i_daughter(X,Y) :- husband(X,Z), wife(Z,Y) {lr_chain(i_daughter$husband$wife)}.
+i_aunt(X,Y) :- father(X,Z), mother(Z,Y) {lr_chain(i_aunt$father$mother)}.
+i_son(X,Y) :- uncle(X,Z), son(Z,Y) {lr_chain(i_son$uncle$son)}.
+i_uncle(X,Y) :- niece(X,Z), daughter(Z,Y) {lr_chain(i_uncle$niece$daughter)}.
+i_mother(X,Y) :- father(X,Z), father(Z,Y) {lr_chain(i_mother$father$father)}.
+i_niece(X,Y) :- sister(X,Z), husband(Z,Y) {lr_chain(i_niece$sister$husband)}.
+i_daughter(X,Y) :- father(X,Z), aunt(Z,Y) {lr_chain(i_daughter$father$aunt)}.
+i_husband(X,Y) :- nephew(X,Z), daughter(Z,Y) {lr_chain(i_husband$nephew$daughter)}.
+i_sister(X,Y) :- wife(X,Z), husband(Z,Y) {lr_chain(i_sister$wife$husband)}.
+i_wife(X,Y) :- father(X,Z), niece(Z,Y) {lr_chain(i_wife$father$niece)}.
+i_mother(X,Y) :- husband(X,Z), sister(Z,Y) {lr_chain(i_mother$husband$sister)}.
+i_mother(X,Y) :- father(X,Z), uncle(Z,Y) {lr_chain(i_mother$father$uncle)}.
+i_son(X,Y) :- father(X,Z), uncle(Z,Y) {lr_chain(i_son$father$uncle)}.
+i_aunt(X,Y) :- husband(X,Z), sister(Z,Y) {lr_chain(i_aunt$husband$sister)}.
+i_aunt(X,Y) :- mother(X,Z), nephew(Z,Y) {lr_chain(i_aunt$mother$nephew)}.
+i_mother(X,Y) :- father(X,Z), niece(Z,Y) {lr_chain(i_mother$father$niece)}.
+i_daughter(X,Y) :- father(X,Z), niece(Z,Y) {lr_chain(i_daughter$father$niece)}.
+i_niece(X,Y) :- wife(X,Z), brother(Z,Y) {lr_chain(i_niece$wife$brother)}.
+i_daughter(X,Y) :- father(X,Z), uncle(Z,Y) {lr_chain(i_daughter$father$uncle)}.
+i_sister(X,Y) :- mother(X,Z), husband(Z,Y) {lr_chain(i_sister$mother$husband)}.
+i_daughter(X,Y) :- nephew(X,Z), daughter(Z,Y) {lr_chain(i_daughter$nephew$daughter)}.
+i_niece(X,Y) :- mother(X,Z), nephew(Z,Y) {lr_chain(i_niece$mother$nephew)}.
+i_sister(X,Y) :- mother(X,Z), wife(Z,Y) {lr_chain(i_sister$mother$wife)}.
+i_father(X,Y) :- mother(X,Z), aunt(Z,Y) {lr_chain(i_father$mother$aunt)}.
+i_nephew(X,Y) :- father(X,Z), mother(Z,Y) {lr_chain(i_nephew$father$mother)}.
+i_son(X,Y) :- niece(X,Z), son(Z,Y) {lr_chain(i_son$niece$son)}.
+i_aunt(X,Y) :- nephew(X,Z), son(Z,Y) {lr_chain(i_aunt$nephew$son)}.
+i_uncle(X,Y) :- mother(X,Z), uncle(Z,Y) {lr_chain(i_uncle$mother$uncle)}.
+i_daughter(X,Y) :- father(X,Z), wife(Z,Y) {lr_chain(i_daughter$father$wife)}.
+i_brother(X,Y) :- father(X,Z), aunt(Z,Y) {lr_chain(i_brother$father$aunt)}.
+i_wife(X,Y) :- husband(X,Z), sister(Z,Y) {lr_chain(i_wife$husband$sister)}.
+i_wife(X,Y) :- father(X,Z), nephew(Z,Y) {lr_chain(i_wife$father$nephew)}.
+i_sister(X,Y) :- brother(X,Z), sister(Z,Y) {lr_chain(i_sister$brother$sister)}.
