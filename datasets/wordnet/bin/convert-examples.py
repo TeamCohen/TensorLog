@@ -23,7 +23,7 @@ def cvtExamples(fIn,fOut,prefix,targetPred):
     print 'produced',fOut
 
 if __name__ == "__main__":
-    for rel in ['hyponym','derivationally_related_form','member_meronym','member_holonym']:
+    for rel in ['hypernym','hyponym','derivationally_related_form','member_meronym','member_holonym']:
         for pref in ['train','valid']:
             cvtExamples('raw/%s.examples' % pref, 'wnet-%s-%s.cfacts' % (rel,pref), pref, 'i_%s' % rel)
 

@@ -77,7 +77,7 @@ class Op(object):
         self._doEval(env)
         if conf.trace:
             if conf.long_trace: print 'stores',env.db.matrixAsSymbolDict(env[self.dst])
-            else: print env[self.dst].nnz,'nonzeros',mutil.numRows(env[self.dst]),'rows'
+            else: print
     def backprop(self,env,gradAccum):
         """Backpropagate errors - stored in the env.delta[...] from outputs of
         the operator to the inputs.  Assumes that 'eval' has been
@@ -246,7 +246,6 @@ class VecMatMulOp(Op):
             key = (self.matMode.functor,self.matMode.arity)
             gradAccum.accum(key,update)
 
-
 class BuiltInIOOp(Op):
     """Built-in special op, like printf(src,dst), with one input and one
     output variable.
@@ -272,6 +271,7 @@ class BuiltInIOOp(Op):
         env[self.dst] = env[self.src]
     def _doBackprop(self,env,gradAccum):
         env.delta[self.src] = env.delta[self.dst]
+
 
 class ComponentwiseVecMulOp(Op):
     """ Computes dst = src*Diag(src2), i.e., the component-wise product of

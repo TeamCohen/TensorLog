@@ -2,7 +2,7 @@ import os.path
 import scipy.sparse as SS
 import scipy.io
 
-import expt
+import exptv1
 import tensorlog
 import matrixdb
 import mutil
@@ -21,12 +21,12 @@ def uncacheDB(dbFile):
 def uncacheMatPairs(cacheFile,dbFile,exampleFile):
         db = uncacheDB(dbFile)
         print 'preparing examples...'
-        d = expt.Expt.propprExamplesAsData(db,exampleFile)
+        d = exptv1.Expt.propprExamplesAsData(db,exampleFile)
         print 'prepared',d.keys()
         return d
         
 if __name__=="__main__":
-    ops.OPTIMIZE_COMPONENT_MULTIPLY=False
+    ops.conf.optimize_component_multiply=False
     dTrain = uncacheMatPairs('cora-XY.mat','cora.db','inputs/train.examples')
     dTest = uncacheMatPairs('cora-XY.mat','cora.db','inputs/test.examples')
     prog = tensorlog.ProPPRProgram.load(["cora.db","cora.ppr"])
@@ -45,4 +45,4 @@ if __name__=="__main__":
               'savedTestExamples':'cora-test.examples',
     }
     print 'maxdepth',prog.maxDepth
-    expt.Expt(params).run()
+    exptv1.Expt(params).run()

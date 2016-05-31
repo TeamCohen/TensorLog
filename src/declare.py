@@ -1,6 +1,20 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
+# mode declarations for Tensorlog (and eventually type declarations)
+
 import parser
+
+def asMode(spec):
+    """Convert strings like "foo(i,o)" or "foo/io" to ModeDeclarations.
+    Or, if given a ModeDeclaration object, return that object.
+    """
+    if type(spec)==type("") and spec.find("/")>=0:
+        functor,rest = spec.split("/")            
+        return ModeDeclaration(parser.Goal(functor,list(rest)))
+    elif type(spec)==type(""):
+        return ModeDeclaration(spec)
+    else:
+        return spec
 
 class AbstractDeclaration(object):
     """Mode - or later - type - declaration for a predicate."""

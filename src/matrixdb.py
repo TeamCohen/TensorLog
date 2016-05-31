@@ -295,6 +295,23 @@ class MatrixDB(object):
                 db.matEncoding[eval(stringKey)] = mat
         return db
 
+    @staticmethod
+    def uncache(dbFile,factFile):
+        """ Build a database file from a factFile, serialize it, and
+        return the de-serialized database.  Or if that's not necessary,
+        just deserialize it.
+        """
+        if not os.path.exists(dbFile) or os.path.getmtime(factFile)>os.path.getmtime(dbFile):
+            print 'loading factFile',factFile,'...'
+            db = MatrixDB.loadFile(factFile)
+            print 'serializing dbFile',dbFile,'...'
+            db.serialize(dbFile)
+            return db
+        else:
+            print 'de-serializing dbFile',dbFile,'...'
+            return MatrixDB.deserialize(dbFile)
+
+
     def bufferLine(self,line):
         """Load a single triple encoded as a tab-separated line.."""
         def atof(s):

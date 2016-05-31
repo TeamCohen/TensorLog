@@ -1,8 +1,7 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
-# compile a rule into a series of operations that perform belief
-# propogation
-#
+# compile a single definite clause into a series of operations that
+# perform belief propogation
 
 import sys
 import collections
