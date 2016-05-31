@@ -1,4 +1,37 @@
-optimization: python -m cProfile -o bench.prof benchmark.py fb-rule-answer-matrix
+TUTORIAL/DOCS
 
-benchmark: fb-rule-answer-matrix [original]
-time 4.495
+  see docs/README.txt
+
+BUGS: 
+
+ - weights should work with a sparse parameter vector
+ - cora fails with optimize_component_multiply turned on
+ - csc_matrixes seem to cause unpredictable behavior, should
+ double check these in optimized sections 
+ - head p(X,X) doesn't work
+
+CLEANUPS:
+ - clean up experiments to use expv2 and clean out the dead code
+
+DESIGN FLAWS: 1 fails but 2 is ok
+
+ 1 p(X,Y) :- q(X,X1),r(Y,Y1),s(X1,Y1)
+ 2 p(X,Y) :- q(X,X1),s(X1,Y1),r(Y,Y1)
+
+EXTENSIONS:
+
+config:
+ - might want to include, in config.py, an overall 'top' configuration
+ which includes the others as subconfigurations.  also might want to
+ serialize/deserialize them.
+
+learning:
+ - serializable multi-task datasets
+  propprExamplesAsData(db,fileName): convert to provide (xdict,ydict) outputs
+ - adagrad & holdout set for convergence
+ - multithreading
+
+MORE EXPERIMENTS:
+
+ - Rose's representation learning/recommendation
+ - SSL
