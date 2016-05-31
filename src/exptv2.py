@@ -26,7 +26,7 @@ class Expt(object):
         self.config = configDict
 
     def run(self):
-        self._run(**self.config)
+        return self._run(**self.config)
 
     def _run(self,
              initProgram=None,trainData=None, testData=None, targetPred=None, epochs=5,
@@ -80,7 +80,7 @@ class Expt(object):
         Expt.printStats('untrained theory','train',learner,TP0,TY)
         Expt.printStats('..trained theory','train',learner,TP1,TY)
         Expt.printStats('untrained theory','test',learner,UP0,UY)
-        Expt.printStats('..trained theory','test',learner,UP1,UY)
+        testAcc,testXent = Expt.printStats('..trained theory','test',learner,UP1,UY)
 
         if savedModel:
             Expt.timeAction('saving trained model', lambda:ti.db.serialize(savedModel))
@@ -95,6 +95,9 @@ class Expt(object):
             Expt.timeAction('saving train examples', lambda:trainData.saveProPPRExamples(savedTrainExamples,ti.db))
         if savedTestPreds and savedTestExamples:
             print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' % (savedTestExamples,savedTestPreds)
+
+        return testAcc,testXent
+
 
     @staticmethod
     def predictionAsProPPRSolutions(fileName,theoryPred,db,X,P,append=False):
@@ -125,7 +128,10 @@ class Expt(object):
     @staticmethod
     def printStats(modelMsg,testSet,learner,P,Y):
         """Print accuracy and crossEntropy for some named model on a named eval set."""
-        print 'eval',modelMsg,'on',testSet,': acc',learner.accuracy(Y,P),'xent',learner.crossEntropy(Y,P)
+        acc = learner.accuracy(Y,P)
+        xent = learner.crossEntropy(Y,P)
+        print 'eval',modelMsg,'on',testSet,': acc',acc,'xent',xent
+        return (acc,xent)
 
 class BatchExpt(Expt):
     def __init__(self,configDict,options={}):
@@ -205,21 +211,15 @@ class BatchExpt(Expt):
 
 if __name__=="__main__":
 
-    db = matrixdb.MatrixDB.uncache('tmp-toy.db','test/textcattoy.cfacts')
-    trainData = dataset.Dataset.uncacheMatrix('tmp-train.dset',db,'predict/io','train')
-    testData = dataset.Dataset.uncacheMatrix('tmp-test.dset',db,'predict/io','test')
+    db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
+    trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
+    testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
     prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr"],db=db)
     prog.setWeights(db.ones())
     params = {'initProgram':prog,
               'trainData':trainData, 'testData':testData,
               'savedModel':'toy-trained.db',
-              'savedTestPreds':'tmp-toy-test.solutions.txt',
-              'savedTrainExamples':'tmp-toy-train.examples',
-              'savedTestExamples':'tmp-toy-test.examples'}
+              'savedTestPreds':'tlog-cache/toy-test.solutions.txt',
+              'savedTrainExamples':'tlog-cache/toy-train.examples',
+              'savedTestExamples':'tlog-cache/toy-test.examples'}
     Expt(params).run()
-
-
-
-
-
-

@@ -22,7 +22,7 @@ class Function(object):
         result = self._doEval(db,values)
         if conf.trace:
             print "Function completed:\n%s" % "\n. . ".join(self.pprint())
-            if conf.LONG_TRACE:
+            if conf.long_trace:
                 for k,v in enumerate(values):
                     print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
                 print '. result :',db.matrixAsSymbolDict(result)
