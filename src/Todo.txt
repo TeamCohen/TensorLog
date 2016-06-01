@@ -1,40 +1,37 @@
-tutorial/docs
+TUTORIAL/DOCS
 
-configuration: see config.py
+  see docs/README.txt
 
- - might want to include, in tlog, an overall configuration which includes
- the others as subconfigurations.  also might want to serialize/deserialize,
- maybe in json?
+BUGS: 
 
-debugging:
- - printf(id,X,Y) literal - with ops.conf.printf params on what's output?
- - should I just call this printf? are there any other IO operators I want to have?
+ - weights should work with a sparse parameter vector
+ - cora fails with optimize_component_multiply turned on
+ - csc_matrixes seem to cause unpredictable behavior, should
+ double check these in optimized sections 
+ - head p(X,X) doesn't work
 
-more experiments:
- - representation learning/recommendation
+CLEANUPS:
+ - clean up experiments to use expv2 and clean out the dead code
 
-clean up experiments
- - numeric stability checks
+DESIGN FLAWS: 1 fails but 2 is ok
 
-real learning
+ 1 p(X,Y) :- q(X,X1),r(Y,Y1),s(X1,Y1)
+ 2 p(X,Y) :- q(X,X1),s(X1,Y1),r(Y,Y1)
+
+EXTENSIONS:
+
+config:
+ - might want to include, in config.py, an overall 'top' configuration
+ which includes the others as subconfigurations.  also might want to
+ serialize/deserialize them.
+
+learning:
  - serializable multi-task datasets
   propprExamplesAsData(db,fileName): convert to provide (xdict,ydict) outputs
  - adagrad & holdout set for convergence
  - multithreading
 
-extensions:
- - typed relations/predicates
- - multi-input literals and "one-hot" propagation
- - non-linearities:
- mlp(X,Y) :- 
-    w1(X,Z1),bias1(B1),biasedSigmoid(B1,Z1,A1),
-    w2(A1,Z2),bias2(B2),biasedSigmoid(B2,Z2,Y).
+MORE EXPERIMENTS:
 
-integration w/ theano, tensorflow, ...
-
-implement some sort of structure learning
-
-compare to other languages
- - yap prolog
- - problog2, in more detail
- - some ddb system?
+ - Rose's representation learning/recommendation
+ - SSL

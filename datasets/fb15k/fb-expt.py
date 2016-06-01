@@ -1,6 +1,6 @@
 import sys
 
-import expt
+import exptv1
 import os.path
 import scipy.sparse as SS
 import scipy.io
@@ -56,4 +56,4 @@ if __name__=="__main__":
               'savedTestExamples':'%s-test.examples' % pred,
               'epochs':30,
     }
-    expt.Expt(params).run()
+    exptv1.Expt(params).run()

@@ -45,6 +45,8 @@ class Dataset(object):
         #print 'serialized keys',self.xDict.keys(),self.yDict.keys()
         dx = dict(map(lambda (k,v):(str(k),v), self.xDict.items()))
         dy = dict(map(lambda (k,v):(str(k),v), self.yDict.items()))
+        #print 'dx',self.xDict
+        #print 'dy',self.yDict
         SIO.savemat(os.path.join(dir,"xDict"),dx,do_compression=True)
         SIO.savemat(os.path.join(dir,"yDict"),dy,do_compression=True)
         
@@ -54,12 +56,14 @@ class Dataset(object):
         yDict = {}
         SIO.loadmat(os.path.join(dir,"xDict"),xDict)
         SIO.loadmat(os.path.join(dir,"yDict"),yDict)
-        #serialization converts nodes to strings so convert them back....
+        #serialization converts modes to strings so convert them back....
         for d in (xDict,yDict):
             for stringKey,mat in d.items():
                 del d[stringKey]
                 if not stringKey.startswith('__'):
-                    d[declare.asMode(stringKey)] = mat
+                    d[declare.asMode(stringKey)] = SS.csr_matrix(mat)
+        #print 'dx',xDict
+        #print 'dy',yDict
         #print 'deserialized keys',xDict.keys(),yDict.keys()
         return Dataset(xDict,yDict)
 

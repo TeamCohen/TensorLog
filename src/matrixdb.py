@@ -78,7 +78,8 @@ class MatrixDB(object):
         assert self.stab.hasId(s),'constant %s not in db' % s
         n = self.dim()
         i = self.stab.getId(s)
-        return scipy.sparse.csr_matrix( ([1.0],([0],[i])), shape=(1,n))
+        return scipy.sparse.csr_matrix( ([1.0],([0],[i])),
+        shape=(1,n))
 
     def zeros(self,numRows=1):
         """An all-zeros matrix."""
@@ -216,7 +217,7 @@ class MatrixDB(object):
         return 'in DB: %s' % mutil.summary(m)
 
     def listing(self):
-        for (functor,arity),m in self.matEncoding.items():
+        for (functor,arity),m in sorted(self.matEncoding.items()):
             print '%s/%d: %s' % (functor,arity,self.summary(functor,arity))
 
     #
@@ -288,11 +289,12 @@ class MatrixDB(object):
             k += 1
         scipy.io.loadmat(os.path.join(dir,"db.mat"),db.matEncoding)
         #serialization/deserialization ends up converting
-        #(functor,arity) pairs to strings so convert them back....
+        #(functor,arity) pairs to strings and csr_matrix to csc_matrix
+        #so convert them back....
         for stringKey,mat in db.matEncoding.items():
             del db.matEncoding[stringKey]
             if not stringKey.startswith('__'):
-                db.matEncoding[eval(stringKey)] = mat
+                db.matEncoding[eval(stringKey)] = scipy.sparse.csr_matrix(mat)
         return db
 
     @staticmethod

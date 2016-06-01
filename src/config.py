@@ -1,5 +1,7 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
+# A class to contain configuration information
+
 class Config(object):
 
     def __init__(self):

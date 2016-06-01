@@ -95,7 +95,7 @@ def softmax(db,m):
             #that would be: d_sm = e_d / (e_d.sum() + numCols(r) - r.nnz)
             d_sm = e_d / e_d.sum()
             return SS.csr_matrix((d_sm,r.indices,r.indptr),shape=r.shape)
-    assert (isinstance(m,SS.csr_matrix) or isinstance(m,SS.csc_matrix)),'bad type for %r' % m
+    assert isinstance(m,SS.csr_matrix),'bad type for %r' % m
     numr = numRows(m)
     if numr==1:
         return softmaxRow(m + db.nullMatrix(1)*nullEpsilon)

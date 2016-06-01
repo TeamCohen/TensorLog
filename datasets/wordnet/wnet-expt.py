@@ -1,6 +1,6 @@
 import sys
 
-import expt
+import exptv1
 import os.path
 import scipy.sparse as SS
 import scipy.io
@@ -9,6 +9,8 @@ import matrixdb
 def uncacheDB(dbFile):
     if not os.path.exists(dbFile):
         print 'creating',dbFile,'...'
+        #synset id's are integers, and we don't want these interpreted as weights....
+        matrixdb.conf.allow_weighted_tuples = False
         db = matrixdb.MatrixDB.loadFile('wnet.cfacts')
         db.serialize(dbFile)
         print 'created',dbFile
@@ -56,4 +58,4 @@ if __name__=="__main__":
               'savedTestExamples':'%s-test.examples' % pred,
               'epochs':30,
     }
-    expt.Expt(params).run()
+    exptv1.Expt(params).run()

@@ -6,7 +6,11 @@ import logging.config
 import collections
 import sys
 import math
+import os
+import os.path
+import shutil
 
+import funs
 import tensorlog 
 import declare
 import parser
@@ -16,6 +20,8 @@ import ops
 import funs
 import learn
 import mutil
+import dataset
+import exptv2
 
 # can call a single test with, e.g.,
 # python -m unittest testtensorlog.TestSmallProofs.testIf
@@ -667,8 +673,50 @@ class TestProPPR(unittest.TestCase):
             for k in actual.keys():
                 self.assertAlmostEqual(actual[k], expected[k], delta=0.05)
 
+class TestExpt(unittest.TestCase):
 
+    def setUp(self):
+        for f in os.listdir("tlog-cache"):
+            p = os.path.join("tlog-cache",f)
+            if os.path.isdir(p):
+                print 'removing dir',p
+                shutil.rmtree(p)
+            else:
+                print 'removing file',p
+                os.remove(p)
 
+    def testExpt(self):
+        #test serialization and uncaching by running the experiment 2x
+        acc1,xent1 = self.runExpt()
+        acc2,xent2 = self.runExpt()
+        print 'acc:',acc1,'/',acc2,'xent',xent1,'/',xent2
+        self.assertAlmostEqual(acc1,acc2)
+        self.assertAlmostEqual(acc1,1.0)
+        self.assertAlmostEqual(xent1,xent2)
+
+    def runExpt(self):
+        #funs.conf.trace = True
+        #funs.conf.long_trace = True
+        #ops.conf.trace = True
+        #ops.conf.long_trace = True
+        #ops.conf.optimize_component_multiply = False
+        #ops.conf.optimize_weighted_vec = False
+        #print ops.conf.pprint()
+        db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
+        db.listing()
+        trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
+        testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
+        print 'trainData:\n','\n'.join(trainData.pprint())
+        print 'testData"\n','\n'.join(testData.pprint())
+        prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr"],db=db)
+        prog.setWeights(db.ones())
+        params = {'initProgram':prog,
+                  'trainData':trainData, 'testData':testData,
+                  'savedModel':'toy-trained.db',
+                  'savedTestPreds':'tlog-cache/toy-test.solutions.txt',
+                  'savedTrainExamples':'tlog-cache/toy-train.examples',
+                  'savedTestExamples':'tlog-cache/toy-test.examples'}
+        return exptv2.Expt(params).run()
 
 if __name__=="__main__":
     if len(sys.argv)==1:
