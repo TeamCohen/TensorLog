@@ -68,14 +68,14 @@ class Dataset(object):
         return Dataset(xDict,yDict)
 
     @staticmethod
-    def uncacheExamples(dsetFile,db,exampleFile):
+    def uncacheExamples(dsetFile,db,exampleFile,proppr=True):
         """Build a dataset file from an examples file, serialize it, and
         return the de-serialized dataset.  Or if that's not necessary,
         just deserialize it.
         """
         if not os.path.exists(dsetFile) or os.path.getmtime(exampleFile)>os.path.getmtime(dsetFile):
             print 'loading exampleFile',exampleFile,'...'
-            dset = Dataset.loadProPPRExamples(db,exampleFile)
+            dset = Dataset.loadExamples(db,exampleFile,proppr=proppr)
             print 'serializing dsetFile',dsetFile,'...'
             dset.serialize(dsetFile)
             return dset
@@ -118,32 +118,58 @@ class Dataset(object):
             yrows.append(rx.multiply(1.0/rx.sum()))
         return Dataset({functorToLearn:mutil.stack(xrows)},{functorToLearn:mutil.stack(yrows)})
 
-    @staticmethod
-    #TODO refactor to also load examples in form: 'functor X Y1
-    #... Yk'
-
-    def loadProPPRExamples(db,fileName):
-        """Convert a foo.examples file to a two dictionaries of
-        modename->matrix pairs, one for the Xs, one for the Ys"""
-        xsTmp = collections.defaultdict(list)
-        ysTmp = collections.defaultdict(list)
-        regex = re.compile('(\w+)\((\w+),(\w+)\)')
-        fp = open(fileName)
-        for line in fp:
-            parts = line.strip().split("\t")
+    @staticmethod 
+    def _parseLine(line,proppr=True):
+        #returns mode, x, positive y's where x and ys are symbols
+        if not line.strip() or line[0]=='#':
+            return None,None,None
+        parts = line.strip().split("\t")
+        if not proppr:
+            assert len(parts)>=2, 'bad line: %r parts %r' % (line,parts)
+            return declare.asMode(parts[0]+"/io"),parts[1],parts[2:]
+        else:
+            regex = re.compile('(\w+)\((\w+),(\w+)\)')
             mx = regex.search(parts[0])
-            if mx:
-                pred = declare.asMode(mx.group(1)+"/io")
+            if not mx:
+                return None,None,None
+            else:
+                mode = declare.asMode(mx.group(1)+"/io")
                 x = mx.group(2)
                 pos = []
                 for ans in parts[1:]:
                     label = ans[0]
                     my = regex.search(ans[1:])
                     assert my,'problem at line '+line
-                    assert my.group(1)==pred.functor,'mismatched preds %s %s at line %s' % (my.group(1),pred,line)
+                    assert my.group(1)==mode.functor,'mismatched modes %s %s at line %s' % (my.group(1),mode,line)
                     assert my.group(2)==x,'mismatched x\'s at line '+line
                     if label=='+':
                         pos.append(my.group(3))
+                return mode,x,pos
+        
+
+    @staticmethod
+    def loadProPPRExamples(db,fileName):
+        """Convert a proppr-style foo.examples file to a two dictionaries of
+        modename->matrix pairs, one for the Xs, one for the Ys"""
+        loadExamples(db,fileName,proppr=True)
+
+    @staticmethod
+    def loadExamples(db,fileName,proppr=False):
+        """Convert foo.exam file, where each line is of the form
+
+          functor <TAB> x <TAB> y1 ... yk
+
+        to two dictionaries of modename->matrix pairs, one for the Xs,
+        one for the Ys.
+
+        """
+        xsTmp = collections.defaultdict(list)
+        ysTmp = collections.defaultdict(list)
+        regex = re.compile('(\w+)\((\w+),(\w+)\)')
+        fp = open(fileName)
+        for line in fp:
+            pred,x,pos = Dataset._parseLine(line,proppr=proppr)
+            if pred:
                 xsTmp[pred].append(x)
                 ysTmp[pred].append(pos)
         xsResult = {}
@@ -183,9 +209,11 @@ class Dataset(object):
                 fp.write('\n')
 
 if __name__=="__main__":
-    db = matrixdb.MatrixDB.uncache('tmp-toy.db','test/textcattoy.cfacts')
-    trainData = Dataset.loadMatrix(db,'predict/io','train')
-    trainData.serialize("foo.dset")
-    newTrainData = Dataset.deserialize("foo.dset")
+    db = matrixdb.MatrixDB.uncache('tlog-cache/mtoy.db','test/matchtoy.cfacts')
+    dset = Dataset.uncacheExamples('tlog-cache/mtoy.dset',db,'test/matchtoy-train.examples')
+    for m in dset.modesToLearn():
+        print 'type',type(m)
+        print m,'X',db.matrixAsSymbolDict(dset.getX(m))
+        print m,'Y',db.matrixAsSymbolDict(dset.getY(m))        
 
     

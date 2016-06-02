@@ -629,6 +629,42 @@ class TestExpt(unittest.TestCase):
                   'savedTestExamples':'tlog-cache/toy-test.examples'}
         return exptv2.Expt(params).run()
 
+class TestDataset(unittest.TestCase):
+
+    def setUp(self):
+        self.db = matrixdb.MatrixDB.loadFile('test/matchtoy.cfacts')
+
+    def testProPPRLoadExamples(self):
+        self.checkMatchExamples('test/matchtoy-train.examples', proppr=True)
+
+    def testLoadExamples(self):
+        self.checkMatchExamples('test/matchtoy-train.exam', proppr=False)
+
+    def checkMatchExamples(self,filename,proppr):
+        dset = dataset.Dataset.loadExamples(self.db,filename,proppr=proppr)
+        modes = dset.modesToLearn()
+        self.assertEqual(len(modes),2)
+        m1 = declare.asMode("match/io")
+        m2 = declare.asMode("amatch/io")
+        self.assertTrue(m1 in modes); self.assertTrue(m2 in modes)
+        x1 = dset.getX(m1); y1 = dset.getY(m1)
+        x2 = dset.getX(m2); y2 = dset.getY(m2)
+        ax1,ay1,ax2,ay2 = map(lambda m:self.db.matrixAsSymbolDict(m), (x1,y1,x2,y2))
+        ex1 = {0: {'r1': 1.0}, 1: {'r3': 1.0}}
+        ey1 = {0: {'r1': 0.5, 'r2': 0.5}, 1: {'r4': 0.5, 'r3': 0.5}}
+        ex2 = {0: {'a2': 1.0}, 1: {'a4': 1.0}}
+        ey2 = {0: {'a1': 0.5, 'a2': 0.5}, 1: {'a3': 0.5, 'a4': 0.5}}
+        for actual,expected in [(ax1,ex1),(ax2,ex2),(ay1,ey1),(ay2,ey2)]:
+            for i in (0,1):
+                self.checkDicts(actual,expected)
+        
+    def checkDicts(self,actual,expected):
+        #print 'actual:  ',actual
+        #print 'expected:',expected
+        self.assertEqual(len(actual.keys()), len(expected.keys()))
+        for k in actual.keys():
+            self.assertEqual(actual[k], expected[k])
+
 if __name__=="__main__":
     if len(sys.argv)==1:
         unittest.main()
