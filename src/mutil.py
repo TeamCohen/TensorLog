@@ -13,14 +13,20 @@ conf.optimize_softmax = True;   conf.help.optimize_softmax = 'use optimized vers
 # miscellaneous broadcast utilities used my ops.py and funs.py
 
 def summary(mat):
+    _checkCSR(mat)
     return 'nnz %d rows %d cols %d' % (mat.nnz,numRows(mat),numCols(mat))
+
+def _checkCSR(mat):
+    assert isinstance(mat,SS.csr_matrix),'bad type for %r' % mat
 
 def mean(mat):
     """Return the average of the rows."""
+    _checkCSR(mat)
     return SS.csr_matrix(mat.mean(axis=0))
 
 def mapData(dataFun,mat):
     """Apply some function to the mat.data array of the sparse matrix and return a new one."""
+    _checkCSR(mat)
     def showMat(msg,m): print msg,type(m),m.shape
     newdata = dataFun(mat.data)
     assert newdata.shape==mat.data.shape,'shape mismatch %r vs %r' % (newdata.shape,mat.data.shape)
@@ -28,22 +34,27 @@ def mapData(dataFun,mat):
 
 def nzCols(mat,rowIndex):
     """Enumerate the non-zero column indices in row i."""
+    _checkCSR(mat)
     for colIndex in mat.indices[mat.indptr[rowIndex]:mat.indptr[rowIndex+1]]:
         yield colIndex
 
 def emptyRow(mat,rowIndex):
+    _checkCSR(mat)
     return mat.indptr[rowIndex]==mat.indptr[rowIndex+1]
 
 def stack(mats):
     """Vertically stack matrices and return a sparse csr matrix."""
+    for m in mats: _checkCSR(m)
     return SS.csr_matrix(SS.vstack(mats, dtype='float64'))
 
 def numRows(m): 
     """Number of rows in matrix"""
+    _checkCSR(m)
     return m.get_shape()[0]
 
 def numCols(m): 
     """Number of colunms in matrix"""
+    _checkCSR(m)
     return m.get_shape()[1]
 
 def broadcastBinding(env,var1,var2):
@@ -51,10 +62,12 @@ def broadcastBinding(env,var1,var2):
     in environment registers var1 and var2. """
     m1 = env[var1]
     m2 = env[var2]
+    _checkCSR(m1); _checkCSR(m2)
     return broadcast2(m1,m2)
 
 def broadcast2(m1,m2):
     """Return a pair of shape-compatible matrices for m1, m2 """
+    _checkCSR(m1); _checkCSR(m2)
     r1 = numRows(m1)
     r2 = numRows(m2)
     if r1==r2:
@@ -69,6 +82,7 @@ def softmax(db,m):
     This doesn't really require 'broadcasting' but it seems like you
     need special case handling to deal with multiple rows efficiently.
     """
+    _checkCSR(m)
     nullEpsilon = -10  # scores for null entity will be exp(nullMatrix)
     def softmaxRow(r):
         if not r.nnz:
@@ -82,7 +96,6 @@ def softmax(db,m):
             #that would be: d_sm = e_d / (e_d.sum() + numCols(r) - r.nnz)
             d_sm = e_d / e_d.sum()
             return SS.csr_matrix((d_sm,r.indices,r.indptr),shape=r.shape)
-    assert isinstance(m,SS.csr_matrix),'bad type for %r' % m
     numr = numRows(m)
     if numr==1:
         return softmaxRow(m + db.nullMatrix(1)*nullEpsilon)
@@ -109,6 +122,7 @@ def softmax(db,m):
         return result
 
 def broadcastAndComponentwiseMultiply(m1,m2):
+    _checkCSR(m1); _checkCSR(m2)
     def multiplyByBroadcastRowVec(r,m,v):
         vd = {}
         for j in range(v.indptr[0],v.indptr[1]):
@@ -136,6 +150,7 @@ def broadcastAndComponentwiseMultiply(m1,m2):
         assert False, 'mismatched matrix sizes: #rows %d,%d' % (r1,r2)
 
 def broadcastAndWeightByRowSum(m1,m2):
+    _checkCSR(m1); _checkCSR(m2)
     """ Optimized combination of broadcast2 and weightByRowSum operations
     """ 
     r1 = numRows(m1)
@@ -164,22 +179,6 @@ def broadcastAndWeightByRowSum(m1,m2):
             ptr += nnz1
         result = SS.csr_matrix((data,indices,indptr),shape=(m2.shape[0],m2.shape[1]), dtype='float64')
         return result
-
-#        #alternate implementation - 1
-#        #hold the values of the result - need to duplicate m1 for each row of m2
-#        buf = SS.lil_matrix((r2,n))
-#        m1ColIndices = list(nzCols(m1,0))
-#        m1Vals = map(lambda j:m1[0,j], m1ColIndices)
-#        for i in xrange(r2):
-#            wi = m2.data[m2.indptr[i]:m2.indptr[i+1]].sum()
-#            for j in range(len(m1ColIndices)):
-#                buf[i,m1ColIndices[j]] = m1Vals[j]*wi
-#        result = SS.csr_matrix(buf)
-#        
-#        #alternate implementation - 2
-#        ref = stack([m1.getrow(0) * m2.getrow(i).sum() for i in range(r2)])
-#        print 'ref',ref.get_shape(),'result',result.get_shape()
-        return result
     else:
         assert r1==r2
         result = m1.copy()
@@ -191,6 +190,7 @@ def broadcastAndWeightByRowSum(m1,m2):
 
 def weightByRowSum(m1,m2):
     """Weight a rows of matrix m1 by the row sum of matrix m2."""
+    _checkCSR(m1); _checkCSR(m2)
     r = numRows(m1)  #also m2
     assert numRows(m2)==r
     if r==1:

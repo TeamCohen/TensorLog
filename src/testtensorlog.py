@@ -1,5 +1,8 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
+# can call a single test with, e.g.,
+# python -m unittest testtensorlog.TestSmallProofs.testIf
+
 import unittest
 import logging
 import logging.config
@@ -21,9 +24,8 @@ import learn
 import mutil
 import dataset
 import exptv2
+import exptv1
 
-# can call a single test with, e.g.,
-# python -m unittest testtensorlog.TestSmallProofs.testIf
 
 def maybeNormalize(expectedResultDict):
     #softmax normalization
@@ -439,8 +441,8 @@ class TestGrad(unittest.TestCase):
         for functor,arity in params:
             prog.db.markAsParam(functor,arity)
         #compute gradient
-        learner = learn.Learner(prog,data.getX(),data.getY())
-        updates = learner.crossEntropyGrad(mode)
+        learner = learn.Learner(prog)
+        updates = learner.crossEntropyGrad(mode,data.getX(),data.getY())
         return prog,updates
     
 class TestProPPR(unittest.TestCase):
@@ -495,8 +497,8 @@ class TestProPPR(unittest.TestCase):
     def testGradMatrix(self):
         data = DataBuffer(self.prog.db)
         X,Y = self.labeledData.matrixAsTrainingData('train',2)
-        learner = learn.Learner(self.prog,X,Y)
-        updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'))
+        learner = learn.Learner(self.prog)
+        updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X,Y)
         w = updates[('weighted',1)]
         def checkGrad(i,x,psign,nsign):
             ri = w.getrow(i)            
@@ -523,13 +525,13 @@ class TestProPPR(unittest.TestCase):
     def testLearn(self):
         mode = declare.ModeDeclaration('predict(i,o)')
         X,Y = self.labeledData.matrixAsTrainingData('train',2)
-        learner = learn.FixedRateGDLearner(self.prog,X,Y,epochs=5)
+        learner = learn.FixedRateGDLearner(self.prog,epochs=5)
         P0 = learner.predict(mode,X)
         acc0 = learner.accuracy(Y,P0)
         xent0 = learner.crossEntropy(Y,P0)
 
-        learner.train(mode)
-        P1 = learner.predict(mode)
+        learner.train(mode,X,Y)
+        P1 = learner.predict(mode,X)
         acc1 = learner.accuracy(Y,P1)
         xent1 = learner.crossEntropy(Y,P1)
         
@@ -580,6 +582,19 @@ class TestExpt(unittest.TestCase):
             else:
                 print 'removing file',p
                 os.remove(p)
+
+    def testExptV1(self):
+        params = {'initFiles':["test/textcattoy.cfacts","test/textcat.ppr"],
+                  'theoryPred':'predict',
+                  'trainPred':'train',
+                  'testPred':'test',
+                  'savedModel':'tmp/toy-trained.db',
+                  'savedTestPreds':'tmp/toy-test.solutions.txt',
+                  'savedTrainExamples':'tmp/toy-train.examples',
+                  'savedTestExamples':'tmp/toy-test.examples',
+              }
+        exptv1.Expt(params).run()
+        
 
     def testExpt(self):
         #test serialization and uncaching by running the experiment 2x
