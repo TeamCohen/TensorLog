@@ -78,10 +78,10 @@ class Expt(object):
                 'running trained theory on test data',
                 lambda:learner.predict(mode,UX))
 
-            Expt.printStats('untrained theory','train',learner,TY,TP0)
-            Expt.printStats('..trained theory','train',learner,TY,TP1)
-            Expt.printStats('untrained theory','test',learner,UY,UP0)
-            testAcc,testXent = Expt.printStats('..trained theory','test',learner,UY,UP1)
+            Expt.printStats('untrained theory','train',TY,TP0)
+            Expt.printStats('..trained theory','train',TY,TP1)
+            Expt.printStats('untrained theory','test',UY,UP0)
+            testAcc,testXent = Expt.printStats('..trained theory','test',UY,UP1)
 
         else:
             learner = learn.MultiPredFixedRateGDLearner(ti.prog,epochs=epochs)
