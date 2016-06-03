@@ -5,6 +5,7 @@
 #
 
 import time
+import logging
 import collections
 
 import dataset
@@ -39,60 +40,92 @@ class Expt(object):
         """
 
         if targetPred: targetPred = declare.asMode(targetPred)
-
         ti = tensorlog.Interp(initProgram=initProgram)
 
         tmodes = trainData.modesToLearn()
-        if targetPred==None: assert len(tmodes)==1,'multipredicate training not implemented'
-        else: assert targetPred in tmodes, 'target predicate %r not in training data' % targetPred
-        mode = targetPred or tmodes[0]
-        print 'mode',mode
-        TX,TY = trainData.getX(mode),trainData.getY(mode)
+        if targetPred!=None: 
+            assert targetPred in tmodes, 'target predicate %r not in training data' % targetPred
 
-        umodes = testData.modesToLearn()
-        assert mode in umodes,'target predicate %r not in test data' % mode
-        UX,UY = testData.getX(mode),testData.getY(mode)
+        singlePred = targetPred!=None or (targetPred==None and len(tmodes)==1)
+        if singlePred:
 
-        learner = learn.FixedRateGDLearner(ti.prog,epochs=epochs)
+            mode = targetPred or tmodes[0]
+            assert testData.hasMode(mode)
+            TX,TY = trainData.getX(mode),trainData.getY(mode)
+            UX,UY = testData.getX(mode),testData.getY(mode)
+            
+            learner = learn.FixedRateGDLearner(ti.prog,epochs=epochs)
 
-        TP0 = Expt.timeAction(
-            'running untrained theory on train data',
-            lambda:learner.predict(mode,TX))
-        if conf.num_train_predictions_shown>0:
-            print 'predictions:'
-            d = ti.db.matrixAsSymbolDict(TP0)
-            for k in d:
-                if k<conf.num_train_predictions_shown:
-                    print k,d[k]
-        UP0 = Expt.timeAction(
-            'running untrained theory on test data',
-            lambda:learner.predict(mode,UX))
+            TP0 = Expt.timeAction(
+                'running untrained theory on train data',
+                lambda:learner.predict(mode,TX))
+            if conf.num_train_predictions_shown>0:
+                print 'predictions:'
+                d = ti.db.matrixAsSymbolDict(TP0)
+                for k in d:
+                    if k<conf.num_train_predictions_shown:
+                        print k,d[k]
+            UP0 = Expt.timeAction(
+                'running untrained theory on test data',
+                lambda:learner.predict(mode,UX))
 
-        Expt.timeAction('training', lambda:learner.train(mode,TX,TY))
+            Expt.timeAction('training', lambda:learner.train(mode,TX,TY))
 
-        TP1 = Expt.timeAction(
-            'running trained theory on train data',
-            lambda:learner.predict(mode,TX))
-        UP1 = Expt.timeAction(
-            'running trained theory on test data',
-            lambda:learner.predict(mode,UX))
+            TP1 = Expt.timeAction(
+                'running trained theory on train data',
+                lambda:learner.predict(mode,TX))
+            UP1 = Expt.timeAction(
+                'running trained theory on test data',
+                lambda:learner.predict(mode,UX))
 
-        Expt.printStats('untrained theory','train',learner,TP0,TY)
-        Expt.printStats('..trained theory','train',learner,TP1,TY)
-        Expt.printStats('untrained theory','test',learner,UP0,UY)
-        testAcc,testXent = Expt.printStats('..trained theory','test',learner,UP1,UY)
+            Expt.printStats('untrained theory','train',learner,TY,TP0)
+            Expt.printStats('..trained theory','train',learner,TY,TP1)
+            Expt.printStats('untrained theory','test',learner,UY,UP0)
+            testAcc,testXent = Expt.printStats('..trained theory','test',learner,UY,UP1)
+
+        else:
+            learner = learn.MultiPredFixedRateGDLearner(ti.prog,epochs=epochs)
+            print 'multipred learner',type(learner)
+
+            TP0 = Expt.timeAction(
+                'running untrained theory on train data',
+                lambda:learner.multiPredict(trainData))
+            if conf.num_train_predictions_shown>0:
+                logging.warn('sample predictions not implemented')
+            UP0 = Expt.timeAction(
+                'running untrained theory on test data',
+                lambda:learner.multiPredict(testData))
+
+            Expt.timeAction('training', lambda:learner.multiTrain(trainData))
+
+            TP1 = Expt.timeAction(
+                'running trained theory on train data',
+                lambda:learner.multiPredict(trainData))
+            UP1 = Expt.timeAction(
+                'running trained theory on test data',
+                lambda:learner.multiPredict(testData))
+
+            Expt.printMultiPredStats('untrained theory','train',trainData,TP0)
+            Expt.printMultiPredStats('..trained theory','train',trainData,TP1)
+            Expt.printMultiPredStats('untrained theory','test',testData,UP0)
+            testAcc,testXent = Expt.printMultiPredStats('..trained theory','test',testData,UP1)
 
         if savedModel:
             Expt.timeAction('saving trained model', lambda:ti.db.serialize(savedModel))
 
         if savedTestPreds:
-            Expt.timeAction('saving test predictions', lambda:Expt.predictionAsProPPRSolutions(savedTestPreds,mode.functor,ti.db,UX,UP1))
+            if singlePred:
+                Expt.timeAction('saving test predictions', lambda:Expt.predictionAsProPPRSolutions(savedTestPreds,mode.functor,ti.db,UX,UP1))
+            else:
+                logging.warn('cannot save multipred test predictions yet')
+                savedTestPreds = None
 
         if savedTestExamples:
             Expt.timeAction('saving test examples', lambda:testData.saveProPPRExamples(savedTestExamples,ti.db))
 
         if savedTrainExamples:
             Expt.timeAction('saving train examples', lambda:trainData.saveProPPRExamples(savedTrainExamples,ti.db))
+
         if savedTestPreds and savedTestExamples:
             print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' % (savedTestExamples,savedTestPreds)
 
@@ -126,10 +159,18 @@ class Expt(object):
         return result
 
     @staticmethod
-    def printStats(modelMsg,testSet,learner,P,Y):
+    def printStats(modelMsg,testSet,Y,P):
         """Print accuracy and crossEntropy for some named model on a named eval set."""
-        acc = learner.accuracy(Y,P)
-        xent = learner.crossEntropy(Y,P)
+        acc = learn.Learner.accuracy(Y,P)
+        xent = learn.Learner.crossEntropy(Y,P)
+        print 'eval',modelMsg,'on',testSet,': acc',acc,'xent',xent
+        return (acc,xent)
+
+    @staticmethod
+    def printMultiPredStats(modelMsg,testSet,goldData,predictedData):
+        """Print accuracy and crossEntropy for some named model on a named eval set."""
+        acc = learn.MultiPredLearner.multiAccuracy(goldData,predictedData)
+        xent = learn.MultiPredLearner.multiCrossEntropy(goldData,predictedData)
         print 'eval',modelMsg,'on',testSet,': acc',acc,'xent',xent
         return (acc,xent)
 

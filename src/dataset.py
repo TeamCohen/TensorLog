@@ -22,9 +22,16 @@ class Dataset(object):
         # likewise for Y matrices
         self.yDict = yDict
 
+    def isSinglePredicate(self):
+        """Return list of modes associated with the data."""
+        return len(self.xDict.keys())==1
+
     def modesToLearn(self):
         """Return list of modes associated with the data."""
         return self.xDict.keys()
+
+    def hasMode(self,mode):
+        return (mode in self.yDict and mode in self.xDict)
 
     def getX(self,mode):
         return self.xDict[mode]

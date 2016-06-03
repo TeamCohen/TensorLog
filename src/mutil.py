@@ -22,6 +22,7 @@ def _checkCSR(mat):
 def mean(mat):
     """Return the average of the rows."""
     _checkCSR(mat)
+    #TODO - mat.mean returns a dense matrix which mutil converts, can I avoid that?
     return SS.csr_matrix(mat.mean(axis=0))
 
 def mapData(dataFun,mat):

@@ -596,23 +596,19 @@ class TestExpt(unittest.TestCase):
         exptv1.Expt(params).run()
         
 
-    def testExpt(self):
+    def testMToyExpt(self):
+        acc2,xent1 = self.runMToyExpt()
+
+    def testTCToyExpt(self):
         #test serialization and uncaching by running the experiment 2x
-        acc1,xent1 = self.runExpt()
-        acc2,xent2 = self.runExpt()
+        acc1,xent1 = self.runTCToyExpt()
+        acc2,xent2 = self.runTCToyExpt()
         print 'acc:',acc1,'/',acc2,'xent',xent1,'/',xent2
         self.assertAlmostEqual(acc1,acc2)
         self.assertAlmostEqual(acc1,1.0)
         self.assertAlmostEqual(xent1,xent2)
 
-    def runExpt(self):
-        #funs.conf.trace = True
-        #funs.conf.long_trace = True
-        #ops.conf.trace = True
-        #ops.conf.long_trace = True
-        #ops.conf.optimize_component_multiply = False
-        #ops.conf.optimize_weighted_vec = False
-        #print ops.conf.pprint()
+    def runTCToyExpt(self):
         db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
         db.listing()
         trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
@@ -627,6 +623,17 @@ class TestExpt(unittest.TestCase):
                   'savedTestPreds':'tlog-cache/toy-test.solutions.txt',
                   'savedTrainExamples':'tlog-cache/toy-train.examples',
                   'savedTestExamples':'tlog-cache/toy-test.examples'}
+        return exptv2.Expt(params).run()
+
+    def runMToyExpt(self):
+        db = matrixdb.MatrixDB.uncache('tlog-cache/matchtoy.db','test/matchtoy.cfacts')
+        db.listing()
+        trainData = dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test/matchtoy-train.exam',proppr=False)
+        testData = trainData
+        print 'trainData:\n','\n'.join(trainData.pprint())
+        prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
+        prog.setWeights(db.ones())
+        params = {'initProgram':prog,'trainData':trainData, 'testData':testData}
         return exptv2.Expt(params).run()
 
 class TestDataset(unittest.TestCase):
