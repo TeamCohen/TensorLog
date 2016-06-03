@@ -9,6 +9,7 @@ import collections
 import mutil
 import declare
 import logging as L
+import tlerr
 logging = L.getLogger()
 
 MIN_PROBABILITY = NP.finfo(dtype='float64').eps
@@ -71,7 +72,14 @@ class Learner(object):
         If X==None, use the training data. """
         if X==None: X = self.X
         predictFun = self.prog.getPredictFunction(mode)
-        result = predictFun.eval(self.prog.db, [X])
+        try:
+            result = predictFun.eval(self.prog.db, [X])
+        except tlerr.InvalidEvalState as e:
+            for r in range(mutil.numRows(e.data)):
+                if NP.isinf(e.data.data[e.data.indptr[r]:e.data.indptr[r+1]]).any():
+                    print "Infinity in row %d" % r
+            raise
+            
         #mutil.reNormalize(result,threshold=MIN_PROBABILITY)
         return result
 

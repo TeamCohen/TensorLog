@@ -104,7 +104,8 @@ def softmax(db,m):
         rows = [m1.getrow(i) for i in range(numr)]
         return stack([softmaxRow(r) for r in rows])
     else:
-        result = m + db.nullMatrix(numr)*nullEpsilon
+        nullnumr = db.nullMatrix(numr)
+        result = m + nullnumr*nullEpsilon
         for i in xrange(numr):
             #rowMax = max(result[i,j] for j in nzCols(result,i))
             rowMax = max(result.data[result.indptr[i]:result.indptr[i+1]])
@@ -113,8 +114,20 @@ def softmax(db,m):
             for j in range(result.indptr[i],result.indptr[i+1]):
                 #result[i,j] = math.exp(result[i,j] - rowMax)
                 #rowNorm += result[i,j]
-                result.data[j] = math.exp(result.data[j] - rowMax)
-                rowNorm += result.data[j]
+                try:
+                    result.data[j] = math.exp(result.data[j] - rowMax)
+                    rowNorm += result.data[j]
+                except FloatingPointError as e:
+                    print "Trouble in softmax at row %d, nz item %d:" % (i,j)
+                    print "result.data %g" % result.data[j]
+                    print "rowMax %g" % rowMax
+                    print "m %g" % max(m.data)
+                    print "nullnumr %g" % max(nullnumr.data)
+                    print "nullEpsilon %g" % nullEpsilon
+                    #print "m inf: %s" % np.isinf(m).any()
+                    #print "nullnumr inf: %s" % np.isinf(nullnumr).any()
+                    #print "nullEpsilon inf: %s" % np.isinf(nullEpsilon).any()
+                    raise
             #for j in nzCols(result,i):            
             for j in range(result.indptr[i],result.indptr[i+1]):
                 #result[i,j] = result[i,j]/rowNorm
