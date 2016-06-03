@@ -51,7 +51,7 @@ class Expt(object):
                 'prepare test data',
                 lambda:ti.db.matrixAsTrainingData(testPred,2))
 
-        learner = learn.FixedRateGDLearner(ti.prog,TX,TY,epochs=epochs)
+        learner = learn.FixedRateGDLearner(ti.prog,epochs=epochs)
 
         TP0 = Expt.timeAction(
             'running untrained theory on train data',
@@ -60,7 +60,7 @@ class Expt(object):
             'running untrained theory on test data',
             lambda:learner.predict(mode,UX))
 
-        Expt.timeAction('training', lambda:learner.train(mode))
+        Expt.timeAction('training', lambda:learner.train(mode,TX,TY))
 
         TP1 = Expt.timeAction(
             'running trained theory on train data',
@@ -183,16 +183,16 @@ if __name__=="__main__":
                  'theoryPred':'predict',
                  'trainPred':'train',
                  'testPred':'test',
-                 'savedModel':'toy-trained.db',
-                 'savedTestPreds':'toy-test.solutions.txt',
-                 'savedTrainExamples':'toy-train.examples',
-                 'savedTestExamples':'toy-test.examples',
+                 'savedModel':'tmp/toy-trained.db',
+                 'savedTestPreds':'tmp/toy-test.solutions.txt',
+                 'savedTrainExamples':'tmp/toy-train.examples',
+                 'savedTestExamples':'tmp/toy-test.examples',
     }
-#    Expt(toyparams).run()
-    ti = tensorlog.Interp(initFiles=["test/textcattoy.cfacts","test/textcat.ppr"])
-    d = Expt.propprExamplesAsData(ti.db,'test/toytrain.examples')
-    for pred,(X,Y) in d.items():
-        print pred,ti.db.matrixAsSymbolDict(X)
-        print pred,ti.db.matrixAsSymbolDict(Y)
+    Expt(toyparams).run()
+#    ti = tensorlog.Interp(initFiles=["test/textcattoy.cfacts","test/textcat.ppr"])
+#    d = Expt.propprExamplesAsData(ti.db,'test/toytrain.examples')
+#    for pred,(X,Y) in d.items():
+#        print pred,ti.db.matrixAsSymbolDict(X)
+#        print pred,ti.db.matrixAsSymbolDict(Y)
 
 

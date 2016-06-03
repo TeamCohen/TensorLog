@@ -53,7 +53,7 @@ class Expt(object):
         assert mode in umodes,'target predicate %r not in test data' % mode
         UX,UY = testData.getX(mode),testData.getY(mode)
 
-        learner = learn.FixedRateGDLearner(ti.prog,TX,TY,epochs=epochs)
+        learner = learn.FixedRateGDLearner(ti.prog,epochs=epochs)
 
         TP0 = Expt.timeAction(
             'running untrained theory on train data',
@@ -68,7 +68,7 @@ class Expt(object):
             'running untrained theory on test data',
             lambda:learner.predict(mode,UX))
 
-        Expt.timeAction('training', lambda:learner.train(mode))
+        Expt.timeAction('training', lambda:learner.train(mode,TX,TY))
 
         TP1 = Expt.timeAction(
             'running trained theory on train data',
@@ -132,80 +132,6 @@ class Expt(object):
         xent = learner.crossEntropy(Y,P)
         print 'eval',modelMsg,'on',testSet,': acc',acc,'xent',xent
         return (acc,xent)
-
-class BatchExpt(Expt):
-    def __init__(self,configDict,options={}):
-        super(BatchExpt,self).__init__(configDict)
-        self.options=options
-    def _run(self,
-             initFiles=None, initProgram=None,
-             trainData=None, testData=None,
-             theoryPred=None,
-             savedTestPreds=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None):
-
-        """ Run an experiment, given a whole bunch of parameters.
-        trainData, testData: functor -> (X,Y); as from propprExamplesAsData
-        theoryPred: if not None, a list of functors to select from *Data for training/testing (assumes i,o)
-        savedTestPreds, savedTestExamples, savedTrainExamples: filename; if not None, then
-        serialize predictions and examples for later eval with ProPPR tools.
-        savedModel: filename; save result of training somewhere
-        """
-        ti = tensorlog.Interp(initFiles=initFiles,initProgram=initProgram)
-        # TODO: should be a parameter, and should work with a sparse parameter vector
-        # ti.prog.setWeights(ti.db.vector(declare.ModeDeclaration('rule(o)')))
-        
-        if theoryPred == None: theoryPred = set(trainData.keys()+testData.keys())
-        elif type(theoryPred)==type(""): theoryPred = [theoryPred]
-        modes = [declare.ModeDeclaration('%s(i,o)' % p) for p in theoryPred]
-        trainModes = [m for m in modes if m.functor in trainData]
-        testModes = [m for m in modes if m.functor in testData]
-
-        learner = learn.MultiModeLearner(ti.prog,trainModes,data=trainData,epochs=self.options['epochs'] if 'epochs' in self.options else 5)
-
-        TP0 = Expt.timeAction(
-            'running untrained theory on train data',
-            lambda:learner.predict(trainModes,data=trainData))
-        UP0 = Expt.timeAction(
-            'running untrained theory on test data',
-            lambda:learner.predict(testModes,data=testData))
-
-        Expt.timeAction('training', lambda:learner.train())
-
-        TP1 = Expt.timeAction(
-            'running trained theory on train data',
-            lambda:learner.predict(trainModes,data=trainData))
-        UP1 = Expt.timeAction(
-            'running trained theory on test data',
-            lambda:learner.predict(testModes,data=testData))
-        
-        TY = [trainData[m.functor][1] for m in trainModes]
-        UY = [testData[m.functor][1] for m in testModes]
-        Expt.printStats('untrained theory','train',learner,TP0,TY)
-        Expt.printStats('..trained theory','train',learner,TP1,TY)
-        Expt.printStats('untrained theory','test',learner,UP0,UY)
-        Expt.printStats('..trained theory','test',learner,UP1,UY)
-
-        if savedModel:
-            Expt.timeAction('saving trained model', lambda:ti.db.serialize(savedModel))
-
-        if savedTestPreds:
-            open(savedTestPreds,'w').close()
-            Expt.timeAction('saving test predictions', lambda:
-                [Expt.predictionAsProPPRSolutions(savedTestPreds,m.functor,ti.db,testData[m.functor][0],up1,append=True) for m,up1 in zip(testModes,UP1)])
-
-        if savedTestExamples:
-            open(savedTestExamples,'w').close()
-            Expt.timeAction('saving test examples', lambda:
-                [Expt.dataAsProPPRExamples(savedTestExamples,m.functor,ti.db,testData[m.functor][0],testData[m.functor][1],append=True) for m in testModes])
-
-        if savedTrainExamples:
-            open(savedTrainExamples,'w').close()
-            Expt.timeAction('saving train examples', lambda:
-                [Expt.dataAsProPPRExamples(savedTrainExamples,m.functor,ti.db,trainData[m.functor][0],trainData[m.functor][1],append=True) for m in trainModes])
-
-        if savedTestPreds and savedTestExamples:
-            print 'ready for commands like: proppr eval %s %s --metric map' % (savedTestExamples,savedTestPreds)
-
 
 # a sample main
 

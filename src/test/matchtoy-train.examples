@@ -1,5 +1,5 @@
-match(r1,Y)	+match(r1,r2),+match(r1,r1)
-match(r3,y)	+match(r3,r4),+match(r3,r3)
+match(r1,Y)	+match(r1,r2)	+match(r1,r1)
+match(r3,Y)	+match(r3,r4)	+match(r3,r3)
 
-amatch(a2,Y)	+amatch(a2,a1),+amatch(a2,a2)
-amatch(a4,y)	+amatch(a4,a3),+amatch(a4,a4)
+amatch(a2,Y)	+amatch(a2,a1)	+amatch(a2,a2)
+amatch(a4,Y)	+amatch(a4,a3)	+amatch(a4,a4)

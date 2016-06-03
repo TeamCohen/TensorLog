@@ -1,5 +1,8 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
+# can call a single test with, e.g.,
+# python -m unittest testtensorlog.TestSmallProofs.testIf
+
 import unittest
 import logging
 import logging.config
@@ -22,9 +25,8 @@ import learn
 import mutil
 import dataset
 import exptv2
+import exptv1
 
-# can call a single test with, e.g.,
-# python -m unittest testtensorlog.TestSmallProofs.testIf
 
 def maybeNormalize(expectedResultDict):
     #softmax normalization
@@ -517,8 +519,8 @@ class TestGrad(unittest.TestCase):
         for functor,arity in params:
             prog.db.markAsParam(functor,arity)
         #compute gradient
-        learner = learn.Learner(prog,data.getX(),data.getY())
-        updates = learner.crossEntropyGrad(mode)
+        learner = learn.Learner(prog)
+        updates = learner.crossEntropyGrad(mode,data.getX(),data.getY())
         return prog,updates
     
 class TestProPPR(unittest.TestCase):
@@ -574,8 +576,8 @@ class TestProPPR(unittest.TestCase):
     def testGradMatrix(self):
         data = DataBuffer(self.prog.db)
         X,Y = self.labeledData.matrixAsTrainingData('train',2)
-        learner = learn.Learner(self.prog,X,Y)
-        updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'))
+        learner = learn.Learner(self.prog)
+        updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X,Y)
         w = updates[('weighted',1)]
         def checkGrad(i,x,psign,nsign):
             ri = w.getrow(i)            
@@ -627,13 +629,13 @@ class TestProPPR(unittest.TestCase):
     def testLearn(self):
         mode = declare.ModeDeclaration('predict(i,o)')
         X,Y = self.labeledData.matrixAsTrainingData('train',2)
-        learner = learn.FixedRateGDLearner(self.prog,X,Y,epochs=5)
+        learner = learn.FixedRateGDLearner(self.prog,epochs=5)
         P0 = learner.predict(mode,X)
         acc0 = learner.accuracy(Y,P0)
         xent0 = learner.crossEntropy(Y,P0)
 
-        learner.train(mode)
-        P1 = learner.predict(mode)
+        learner.train(mode,X,Y)
+        P1 = learner.predict(mode,X)
         acc1 = learner.accuracy(Y,P1)
         xent1 = learner.crossEntropy(Y,P1)
         
@@ -685,6 +687,19 @@ class TestExpt(unittest.TestCase):
                 print 'removing file',p
                 os.remove(p)
 
+    def testExptV1(self):
+        params = {'initFiles':["test/textcattoy.cfacts","test/textcat.ppr"],
+                  'theoryPred':'predict',
+                  'trainPred':'train',
+                  'testPred':'test',
+                  'savedModel':'tmp/toy-trained.db',
+                  'savedTestPreds':'tmp/toy-test.solutions.txt',
+                  'savedTrainExamples':'tmp/toy-train.examples',
+                  'savedTestExamples':'tmp/toy-test.examples',
+              }
+        exptv1.Expt(params).run()
+        
+
     def testExpt(self):
         #test serialization and uncaching by running the experiment 2x
         acc1,xent1 = self.runExpt()
@@ -717,6 +732,42 @@ class TestExpt(unittest.TestCase):
                   'savedTrainExamples':'tlog-cache/toy-train.examples',
                   'savedTestExamples':'tlog-cache/toy-test.examples'}
         return exptv2.Expt(params).run()
+
+class TestDataset(unittest.TestCase):
+
+    def setUp(self):
+        self.db = matrixdb.MatrixDB.loadFile('test/matchtoy.cfacts')
+
+    def testProPPRLoadExamples(self):
+        self.checkMatchExamples('test/matchtoy-train.examples', proppr=True)
+
+    def testLoadExamples(self):
+        self.checkMatchExamples('test/matchtoy-train.exam', proppr=False)
+
+    def checkMatchExamples(self,filename,proppr):
+        dset = dataset.Dataset.loadExamples(self.db,filename,proppr=proppr)
+        modes = dset.modesToLearn()
+        self.assertEqual(len(modes),2)
+        m1 = declare.asMode("match/io")
+        m2 = declare.asMode("amatch/io")
+        self.assertTrue(m1 in modes); self.assertTrue(m2 in modes)
+        x1 = dset.getX(m1); y1 = dset.getY(m1)
+        x2 = dset.getX(m2); y2 = dset.getY(m2)
+        ax1,ay1,ax2,ay2 = map(lambda m:self.db.matrixAsSymbolDict(m), (x1,y1,x2,y2))
+        ex1 = {0: {'r1': 1.0}, 1: {'r3': 1.0}}
+        ey1 = {0: {'r1': 0.5, 'r2': 0.5}, 1: {'r4': 0.5, 'r3': 0.5}}
+        ex2 = {0: {'a2': 1.0}, 1: {'a4': 1.0}}
+        ey2 = {0: {'a1': 0.5, 'a2': 0.5}, 1: {'a3': 0.5, 'a4': 0.5}}
+        for actual,expected in [(ax1,ex1),(ax2,ex2),(ay1,ey1),(ay2,ey2)]:
+            for i in (0,1):
+                self.checkDicts(actual,expected)
+        
+    def checkDicts(self,actual,expected):
+        #print 'actual:  ',actual
+        #print 'expected:',expected
+        self.assertEqual(len(actual.keys()), len(expected.keys()))
+        for k in actual.keys():
+            self.assertEqual(actual[k], expected[k])
 
 if __name__=="__main__":
     if len(sys.argv)==1:

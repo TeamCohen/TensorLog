@@ -13,7 +13,7 @@ BUGS:
 CLEANUPS:
  - clean up experiments to use expv2 and clean out the dead code
 
-DESIGN FLAWS: 1 fails but 2 is ok
+DESIGN FLAWS: 1 fails but 2 is ok even tho both are polytrees.
 
  1 p(X,Y) :- q(X,X1),r(Y,Y1),s(X1,Y1)
  2 p(X,Y) :- q(X,X1),s(X1,Y1),r(Y,Y1)

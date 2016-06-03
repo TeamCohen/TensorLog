@@ -40,10 +40,8 @@ class GradAccumulator(object):
 class Learner(object):
 
     # prog pts to db, rules
-    def __init__(self,prog,X=None,Y=None):
+    def __init__(self,prog):
         self.prog = prog
-        self.X = X
-        self.Y = Y
 
     @staticmethod
     def accuracy(Y,P):
@@ -67,10 +65,8 @@ class Learner(object):
         logP = mutil.mapData(NP.log,P)
         return -(Y.multiply(logP).sum())
 
-    def predict(self,mode,X=None):
-        """Make predictions on a data matrix associated with the given mode.
-        If X==None, use the training data. """
-        if X==None: X = self.X
+    def predict(self,mode,X):
+        """Make predictions on a data matrix associated with the given mode."""
         predictFun = self.prog.getPredictFunction(mode)
         try:
             result = predictFun.eval(self.prog.db, [X])
@@ -83,7 +79,7 @@ class Learner(object):
         #mutil.reNormalize(result,threshold=MIN_PROBABILITY)
         return result
 
-    def crossEntropyGrad(self,mode,traceFun=None,X=None,Y=None):
+    def crossEntropyGrad(self,mode,X,Y,traceFun=None):
         """Compute the parameter gradient associated with softmax
         normalization followed by a cross-entropy cost function.
         """
@@ -101,9 +97,7 @@ class Learner(object):
         # a check
         predictFun = self.prog.getPredictFunction(mode)
         assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
-        
-        if X==None: X=self.X
-        if Y==None: Y=self.Y
+
         P = self.predict(mode,X)
         
         if traceFun: traceFun(self,Y,P)
@@ -129,12 +123,12 @@ class Learner(object):
 
 class FixedRateGDLearner(Learner):
 
-    def __init__(self,prog,X,Y,epochs=10,rate=0.1):
-        super(FixedRateGDLearner,self).__init__(prog,X,Y)
+    def __init__(self,prog,epochs=10,rate=0.1):
+        super(FixedRateGDLearner,self).__init__(prog)
         self.epochs=epochs
         self.rate=rate
     
-    def train(self,mode):
+    def train(self,mode,X,Y):
         startTime = time.time()
         for i in range(self.epochs):
             def traceFunForEpoch(thisLearner,Y,P):
@@ -142,7 +136,7 @@ class FixedRateGDLearner(Learner):
                 print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
                 print ' acc %.3f' % thisLearner.accuracy(Y,P),            
                 print ' cumSecs %.3f' % (time.time()-startTime)
-            paramGrads = self.crossEntropyGrad(mode,traceFun=traceFunForEpoch)
+            paramGrads = self.crossEntropyGrad(mode,X,Y,traceFun=traceFunForEpoch)
             self.applyMeanUpdate(paramGrads,self.rate)
 
 class MultiModeLearner(FixedRateGDLearner):
