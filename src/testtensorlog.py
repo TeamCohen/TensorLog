@@ -603,7 +603,9 @@ class TestProPPR(unittest.TestCase):
     def testMultiLearn(self):
         mode = declare.ModeDeclaration('predict(i,o)')
         X,Y = self.labeledData.matrixAsTrainingData('train',2)
-        learner = learn.MultiModeLearner(self.prog,[mode],Xs=[X],Ys=[Y],epochs=5)
+        print mutil.summary(X)
+        print mutil.summary(Y)
+        learner = learn.MultiModeLearner(self.prog,[mode],data={mode.functor:(X,Y)},epochs=5)
         P0 = learner.predict([mode],Xs=[X])[0]
         acc0 = learner.accuracy(Y,P0,stack=False)
         xent0 = learner.crossEntropy(Y,P0,stack=False)

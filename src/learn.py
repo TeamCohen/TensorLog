@@ -141,17 +141,11 @@ class FixedRateGDLearner(Learner):
 
 class MultiModeLearner(FixedRateGDLearner):
 
-    def __init__(self,prog,modes,Xs=None,Ys=None,data=None,epochs=10,rate=0.1):
-        super(MultiModeLearner,self).__init__(prog,X=None,Y=None,epochs=epochs,rate=rate)
+    def __init__(self,prog,modes,data,epochs=10,rate=0.1):
+        super(MultiModeLearner,self).__init__(prog,epochs=epochs,rate=rate)
         self.modes = modes
-        if data!=None: 
-            self.trainingData = data
-            self.Ys = [data[m.functor][1] for m in modes]
-        else:
-            self.trainingData = {}
-            for (mode,x,y) in zip(modes,Xs,Ys):
-                self.trainingData[mode.functor] = (x,y)
-            self.Ys = Ys
+        self.trainingData = data
+        self.Ys = [data[m.functor][1] for m in modes]
         self.rate = self.rate / len(self.modes)
     def train(self):
         startTime = time.time()

@@ -16,9 +16,8 @@ conf.optimize_softmax = True;   conf.help.optimize_softmax = 'use optimized vers
 np.seterr('raise') # stop execution & print traceback for divide-by-zero, underflow, overflow, etc
 
 def summary(m):
-    _checkCSR(mat)
-    return 'type %r shape %r non-zeros %d min %g max %g' % (type(m),m.get_shape(),m.nnz,m.min(),m.max())
-
+    _checkCSR(m)
+    return 'non-zeros %d shape %r min %g max %g' % (m.nnz,m.get_shape(),m.min(),m.max())
     #return 'nnz %d rows %d cols %d' % (mat.nnz,numRows(mat),numCols(mat))
 
 def _checkCSR(mat):
