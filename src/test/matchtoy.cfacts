@@ -52,3 +52,14 @@ same	dept		dept
 same	machine-learning	machine-learning
 same	pablo		pablo
 same	william		william
+
+rule	f
+rule	l
+rule	a
+rule	f1
+rule	f2
+rule	l1
+rule	l2
+rule	a1
+rule	w1
+rule	w2

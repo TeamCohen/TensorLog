@@ -19,6 +19,7 @@ DESIGN FLAWS: 1 fails but 2 is ok even tho both are polytrees.
  2 p(X,Y) :- q(X,X1),s(X1,Y1),r(Y,Y1)
 
 EXTENSIONS:
+ - throw sensible error when a novel rule constant is seen
 
 config:
  - might want to include, in config.py, an overall 'top' configuration

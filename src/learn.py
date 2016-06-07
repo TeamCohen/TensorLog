@@ -1,11 +1,12 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
 import funs
-import tensorlog
 import time
-
 import numpy as NP
 import collections
+
+import tensorlog
+import dataset
 import mutil
 import declare
 import logging as L
@@ -43,8 +44,27 @@ class Learner(object):
     def __init__(self,prog):
         self.prog = prog
 
+    #
+    # using and measuring performance
+    #
+
+    def predict(self,mode,X):
+        """Make predictions on a data matrix associated with the given mode."""
+        predictFun = self.prog.getPredictFunction(mode)
+        try:
+            result = predictFun.eval(self.prog.db, [X])
+        except tlerr.InvalidEvalState as e:
+            for r in range(mutil.numRows(e.data)):
+                if NP.isinf(e.data.data[e.data.indptr[r]:e.data.indptr[r+1]]).any():
+                    print "Infinity in row %d" % r
+            raise
+            
+        #mutil.reNormalize(result,threshold=MIN_PROBABILITY)
+        return result
+
     @staticmethod
     def accuracy(Y,P):
+        """Evaluate accuracy of predictions P versus labels Y."""
         #TODO surely there's a better way of doing this
         def allZerosButArgmax(d):
             result = NP.zeros_like(d)
@@ -65,19 +85,6 @@ class Learner(object):
         logP = mutil.mapData(NP.log,P)
         return -(Y.multiply(logP).sum())
 
-    def predict(self,mode,X):
-        """Make predictions on a data matrix associated with the given mode."""
-        predictFun = self.prog.getPredictFunction(mode)
-        try:
-            result = predictFun.eval(self.prog.db, [X])
-        except tlerr.InvalidEvalState as e:
-            for r in range(mutil.numRows(e.data)):
-                if NP.isinf(e.data.data[e.data.indptr[r]:e.data.indptr[r+1]]).any():
-                    print "Infinity in row %d" % r
-            raise
-            
-        #mutil.reNormalize(result,threshold=MIN_PROBABILITY)
-        return result
 
     def crossEntropyGrad(self,mode,X,Y,traceFun=None):
         """Compute the parameter gradient associated with softmax
@@ -107,6 +114,10 @@ class Learner(object):
         predictFun.fun.backprop(Y-P,paramGrads)
         return paramGrads
 
+    #
+    # parameter update
+    #
+
     def applyMeanUpdate(self,paramGrads,rate):
         """ Compute the mean of each parameter gradient, and add it to the
         appropriate param, after scaling by rate. If necessary clip
@@ -114,14 +125,14 @@ class Learner(object):
         """ 
         for (functor,arity),delta in paramGrads.items():
             m0 = self.prog.db.getParameter(functor,arity)
-            #TODO - mean returns a dense matrix, can I avoid that?
-#            mean = SS.csr_matrix(delta.mean(axis=0))  #column mean
             m = m0 + mutil.mean(delta)*rate
             #clip negative entries to zero
             NP.clip(m.data,0.0,NP.finfo('float64').max)
             self.prog.db.setParameter(functor,arity,m)
 
 class FixedRateGDLearner(Learner):
+    """ Very simple one-predicate learner
+    """  
 
     def __init__(self,prog,epochs=10,rate=0.1):
         super(FixedRateGDLearner,self).__init__(prog)
@@ -217,7 +228,60 @@ class MultiModeLearner(FixedRateGDLearner):
         #    xent.append(super(MultiModeLearner,self).crossEntropy(y,p))
         #return xent
     
+class MultiPredLearner(Learner):
 
+    def multiPredict(self,dset,copyXs=True):
+        """ Return predictions as a dataset. """
+        xDict = {}
+        yDict = {}
+        for mode in dset.modesToLearn():
+            X = dset.getX(mode)
+            xDict[mode] = X if copyXs else None
+            yDict[mode] = self.prog.getPredictFunction(mode).eval(self.prog.db, [X])
+        return dataset.Dataset(xDict,yDict)
+
+    @staticmethod
+    def multiAccuracy(goldDset,predictedDset):
+        weightedSum = 0.0
+        totalWeight = 0.0
+        for mode in goldDset.modesToLearn():
+            assert predictedDset.hasMode(mode)
+            Y = goldDset.getY(mode)
+            P = predictedDset.getY(mode)
+            weight = mutil.numRows(Y)
+            weightedSum += weight * Learner.accuracy(Y,P)
+            totalWeight += weight
+        return weightedSum/totalWeight
+
+    @staticmethod
+    def multiCrossEntropy(goldDset,predictedDset):
+        result = 0.0
+        for mode in goldDset.modesToLearn():
+            assert predictedDset.hasMode(mode)
+            Y = goldDset.getY(mode)
+            P = predictedDset.getY(mode)
+            result += Learner.crossEntropy(Y,P)
+        return result
+
+class MultiPredFixedRateGDLearner(MultiPredLearner):
+
+    def __init__(self,prog,epochs=10,rate=0.1):
+        super(MultiPredFixedRateGDLearner,self).__init__(prog)
+        self.epochs=epochs
+        self.rate=rate
+    
+    def multiTrain(self,dset):
+        startTime = time.time()
+        for i in range(self.epochs):
+            for mode in dset.modesToLearn():
+                def myTraceFun(thisLearner,Y,P):
+                    print 'epoch %d of %d: target mode %s' % (i+1,self.epochs,str(mode)),
+                    print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
+                    print ' acc %.3f' % thisLearner.accuracy(Y,P),            
+                    print ' cumSecs %.3f' % (time.time()-startTime)
+                paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),traceFun=myTraceFun)
+                self.applyMeanUpdate(paramGrads,self.rate)
+            
 if __name__ == "__main__":
     pass
 
