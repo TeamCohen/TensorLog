@@ -600,11 +600,7 @@ class TestProPPR(unittest.TestCase):
         self.assertFalse(self.prog.db.inDB('train',2))
         self.assertFalse(self.prog.db.inDB('test',2))
 
-    def testMultiLearn(self):
-        mode = declare.ModeDeclaration('predict(i,o)')
-        X,Y = self.labeledData.matrixAsTrainingData('train',2)
-        print mutil.summary(X)
-        print mutil.summary(Y)
+    def abandoned(self):
         learner = learn.MultiModeLearner(self.prog,[mode],data={mode.functor:(X,Y)},epochs=5)
         P0 = learner.predict([mode],Xs=[X])[0]
         acc0 = learner.accuracy(Y,P0,stack=False)
@@ -626,6 +622,49 @@ class TestProPPR(unittest.TestCase):
         xent2 = learner.crossEntropy(TY,P2,stack=False)
         print 'toy test: acc2',acc2,'xent2',xent2
         self.assertTrue(acc2==1)
+
+    def testMultiLearn(self):
+        mode = declare.ModeDeclaration('predict(i,o)')
+        
+        dset = dataset.Dataset.loadExamples(self.prog.db,"test/textcattoy-train.examples",proppr=True)
+        
+        for mode in dset.modesToLearn():
+            X = dset.getX(mode)
+            Y = dset.getY(mode)
+            print mode
+            print "\t"+mutil.summary(X)
+            print "\t"+mutil.summary(Y)
+        #X,Y = self.labeledData.matrixAsTrainingData('train',2)
+        #print mutil.summary(X)
+        #print mutil.summary(Y)
+        
+        learner = learn.MultiPredFixedRateGDLearner(self.prog,epochs=5)
+        P0 = learner.multiPredict(dset)
+        acc0 = learner.multiAccuracy(dset,P0)
+        xent0 = learner.multiCrossEntropy(dset,P0)
+        print 'toy train: acc0',acc0,'xent1',xent0
+
+        learner.multiTrain(dset)
+        
+        P1 = learner.multiPredict(dset)
+        acc1 = learner.multiAccuracy(dset,P1)
+        xent1 = learner.multiCrossEntropy(dset,P1)
+        print 'toy train: acc1',acc1,'xent1',xent1
+        
+        self.assertTrue(acc0<acc1)
+        self.assertTrue(xent0>xent1)
+        self.assertTrue(acc1==1)
+
+        Udset = dataset.Dataset.loadExamples(self.prog.db,"test/textcattoy-test.examples",proppr=True)
+        
+        P2 = learner.multiPredict(Udset)
+        acc2 = learner.multiAccuracy(Udset,P2)
+        xent2 = learner.multiCrossEntropy(Udset,P2)
+        print 'toy test: acc2',acc2,'xent2',xent2
+        
+        self.assertTrue(acc2==1)
+        ##
+
         
     #seg fault on mac
     def testLearn(self):
