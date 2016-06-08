@@ -19,7 +19,7 @@ def cvtExamples(fIn,fOut,prefix,targetPred):
                     pos.append(m.group(3))
                 #print pred,queryX,pos,line.strip()
             if pos:
-                for p in pos: fp.write('%s_%s\t%s\t%s\n' % (prefix,pred,queryX,p))
+                for p in pos: fp.write('%s_%s\ts%s\ts%s\n' % (prefix,pred,queryX,p))
     print 'produced',fOut
 
 if __name__ == "__main__":

@@ -719,6 +719,8 @@ class TestProPPR(unittest.TestCase):
 class TestExpt(unittest.TestCase):
 
     def setUp(self):
+        if not os.path.exists("tlog-cache"):
+            os.mkdir("tlog-cache")
         for f in os.listdir("tlog-cache"):
             p = os.path.join("tlog-cache",f)
             if os.path.isdir(p):
@@ -728,15 +730,16 @@ class TestExpt(unittest.TestCase):
                 print 'removing file',p
                 os.remove(p)
 
+
     def testExptV1(self):
         params = {'initFiles':["test/textcattoy.cfacts","test/textcat.ppr"],
                   'theoryPred':'predict',
                   'trainPred':'train',
                   'testPred':'test',
-                  'savedModel':'tmp/toy-trained.db',
-                  'savedTestPreds':'tmp/toy-test.solutions.txt',
-                  'savedTrainExamples':'tmp/toy-train.examples',
-                  'savedTestExamples':'tmp/toy-test.examples',
+                  'savedModel':'tlog-cache/toy-trained.db',
+                  'savedTestPreds':'tlog-cache/toy-test.solutions.txt',
+                  'savedTrainExamples':'tlog-cache/toy-train.examples',
+                  'savedTestExamples':'tlog-cache/toy-test.examples',
               }
         exptv1.Expt(params).run()
         

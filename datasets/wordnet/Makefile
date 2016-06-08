@@ -1,3 +1,5 @@
+TLOG=../../src
+
 default:
 	echo make what?
 
@@ -5,7 +7,7 @@ wnet.db: wnet.cfacts
 	time python $(TLOG)/matrixdb.py --serialize wnet.cfacts wnet.db
 
 wnet.cfacts: wnet-ruleids.cfacts
-	cut -f2- raw/train.cfacts raw/valid.cfacts > wnet-core.cfacts
+	cut -f2- raw/train.cfacts raw/valid.cfacts | perl -nae 'print join("\t",$$F[0],"s".$$F[1],"s".$$F[2]),"\n"' > wnet-core.cfacts
 	python bin/convert-examples.py
 	cat wnet-*.cfacts > wnet.cfacts
 
