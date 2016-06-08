@@ -600,40 +600,17 @@ class TestProPPR(unittest.TestCase):
         self.assertFalse(self.prog.db.inDB('train',2))
         self.assertFalse(self.prog.db.inDB('test',2))
 
-    def abandoned(self):
-        learner = learn.MultiModeLearner(self.prog,[mode],data={mode.functor:(X,Y)},epochs=5)
-        P0 = learner.predict([mode],Xs=[X])[0]
-        acc0 = learner.accuracy(Y,P0,stack=False)
-        xent0 = learner.crossEntropy(Y,P0,stack=False)
-
-        learner.train()
-        P1 = learner.predict([mode],Xs=[X])[0]
-        acc1 = learner.accuracy(Y,P1,stack=False)
-        xent1 = learner.crossEntropy(Y,P1,stack=False)
-        
-        self.assertTrue(acc0<acc1)
-        self.assertTrue(xent0>xent1)
-        self.assertTrue(acc1==1)
-        print 'toy train: acc1',acc1,'xent1',xent1
-
-        TX,TY = self.labeledData.matrixAsTrainingData('test',2)
-        P2 = learner.predict([mode],Xs=[TX])[0]
-        acc2 = learner.accuracy(TY,P2,stack=False)
-        xent2 = learner.crossEntropy(TY,P2,stack=False)
-        print 'toy test: acc2',acc2,'xent2',xent2
-        self.assertTrue(acc2==1)
-
     def testMultiLearn(self):
         mode = declare.ModeDeclaration('predict(i,o)')
         
-        dset = dataset.Dataset.loadExamples(self.prog.db,"test/textcattoy-train.examples",proppr=True)
+        dset = dataset.Dataset.loadExamples(self.prog.db,"test/toytrain.examples",proppr=True)
         
         for mode in dset.modesToLearn():
             X = dset.getX(mode)
             Y = dset.getY(mode)
             print mode
-            print "\t"+mutil.summary(X)
-            print "\t"+mutil.summary(Y)
+            print "\tX "+mutil.summary(X)
+            print "\tY "+mutil.summary(Y)
         #X,Y = self.labeledData.matrixAsTrainingData('train',2)
         #print mutil.summary(X)
         #print mutil.summary(Y)
@@ -655,7 +632,7 @@ class TestProPPR(unittest.TestCase):
         self.assertTrue(xent0>xent1)
         self.assertTrue(acc1==1)
 
-        Udset = dataset.Dataset.loadExamples(self.prog.db,"test/textcattoy-test.examples",proppr=True)
+        Udset = dataset.Dataset.loadExamples(self.prog.db,"test/toytest.examples",proppr=True)
         
         P2 = learner.multiPredict(Udset)
         acc2 = learner.multiAccuracy(Udset,P2)

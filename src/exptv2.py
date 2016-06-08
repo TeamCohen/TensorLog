@@ -117,8 +117,12 @@ class Expt(object):
             if singlePred:
                 Expt.timeAction('saving test predictions', lambda:Expt.predictionAsProPPRSolutions(savedTestPreds,mode.functor,ti.db,UX,UP1))
             else:
-                logging.warn('cannot save multipred test predictions yet')
-                savedTestPreds = None
+                open(savedTestPreds,"w").close() # wipe file first
+                def doit():
+                    qid=0
+                    for mode in testData.modesToLearn():
+                        qid+=Expt.predictionAsProPPRSolutions(savedTestPreds,mode.functor,ti.db,UP1.getX(mode),UP1.getY(mode),True,qid) 
+                Expt.timeAction('saving test predictions', doit)
 
         if savedTestExamples:
             Expt.timeAction('saving test examples', lambda:testData.saveProPPRExamples(savedTestExamples,ti.db))
@@ -133,20 +137,22 @@ class Expt(object):
 
 
     @staticmethod
-    def predictionAsProPPRSolutions(fileName,theoryPred,db,X,P,append=False):
+    def predictionAsProPPRSolutions(fileName,theoryPred,db,X,P,append=False,start=0):
         """Print X and P in the ProPPR solutions.txt format."""
         fp = open(fileName,'a' if append else 'w')
         dx = db.matrixAsSymbolDict(X)
         dp = db.matrixAsSymbolDict(P)
-        for i in range(max(dx.keys())):
+        n=max(dx.keys())
+        for i in range(n):
             dix = dx[i]
             dip = dp[i]
-            assert len(dix.keys())==1,'X row %d is not onehot: %r' % (i,dix)
+            assert len(dix.keys())==1,'X %s row %d is not onehot: %r' % (theoryPred,i,dix)
             x = dix.keys()[0]    
-            fp.write('# proved %d\t%s(%s,X1).\t999 msec\n' % (i+1,theoryPred,x))
+            fp.write('# proved %d\t%s(%s,X1).\t999 msec\n' % (i+1+start,theoryPred,x))
             scoresdPs = reversed(sorted([(py,y) for (y,py) in dip.items()]))
             for (r,(py,y)) in enumerate(scoresdPs):
                 fp.write('%d\t%.18f\t%s(%s,%s).\n' % (r+1,py,theoryPred,x,y))
+        return n
 
     @staticmethod
     def timeAction(msg, act):

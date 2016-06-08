@@ -149,84 +149,6 @@ class FixedRateGDLearner(Learner):
                 print ' cumSecs %.3f' % (time.time()-startTime)
             paramGrads = self.crossEntropyGrad(mode,X,Y,traceFun=traceFunForEpoch)
             self.applyMeanUpdate(paramGrads,self.rate)
-
-class MultiModeLearner(FixedRateGDLearner):
-
-    def __init__(self,prog,modes,data,epochs=10,rate=0.1):
-        super(MultiModeLearner,self).__init__(prog,epochs=epochs,rate=rate)
-        self.modes = modes
-        self.trainingData = data
-        self.Ys = [data[m.functor][1] for m in modes]
-        self.rate = self.rate / len(self.modes)
-    def train(self):
-        startTime = time.time()
-        batches = len(self.modes)
-        for i in range(self.epochs):
-            print 'epoch %d of %d' % (i+1,self.epochs)
-            lastPrint = time.time()
-            for b in range(batches):
-                if time.time()-lastPrint > 10: # seconds
-                   print 'batch %d of %d: %s...' % (b+1,batches,str(self.modes[b]))
-                   lastPrint = time.time()
-                if self.modes[b].functor not in self.trainingData: assert "No training data available for mode %s" % str(self.modes[b])
-                try:
-                    self._trainBatch(self.modes[b],*self.trainingData[self.modes[b].functor],startTime=startTime)
-                    if logging.isEnabledFor(L.DEBUG):
-                        for p in self.prog.db.params:
-                            logging.debug("params in %s: max %g min %g sum %s",str(p),self.prog.db.getParameter(*p).max(),self.prog.db.getParameter(*p).min(),self.prog.db.getParameter(*p).sum())
-                except FloatingPointError as e:
-                    print "_trainBatch trouble at mode %d, %s" % (b,str(self.modes[b]))
-                    raise
-            Ps = self.predict(self.modes,data=self.trainingData)
-            print ' crossEnt %.3f' % self.crossEntropy(self.Ys,Ps),
-            print ' acc %.3f' % self.accuracy(self.Ys,Ps),
-            print ' cumSecs %.3f' % (time.time()-startTime)
-            
-    def _trainBatch(self,mode,X,Y,startTime):
-        paramGrads = self.crossEntropyGrad(mode,X=X,Y=Y)
-        if logging.isEnabledFor(L.DEBUG):
-            for (functor,arity),delta in paramGrads.items():
-                logging.debug("paramGrads for %s: max %g min %g %s",functor,delta.max(),delta.min(),mutil.summary(delta))
-        self.applyMeanUpdate(paramGrads,self.rate)
-                
-    def predict(self,modes,Xs=None,data=None):
-        if type(modes) == declare.ModeDeclaration:
-            return super(MultiModeLearner,self).predict(modes,Xs)
-        Y = []
-        
-        if Xs == None: 
-            if data == None: data = self.trainingData
-            Xs = [data[m.functor][0] for m in modes]
-        i=0
-        for m,x in zip(modes,Xs):
-            i+=1
-            logging.debug("Predict: mode %d of %d: %s %s",i,len(modes),str(m),str(x.shape))
-            try:
-                Y.append(super(MultiModeLearner,self).predict(m,x))
-            except FloatingPointError as e:
-                print "predict trouble at mode %d, %s" % (i,str(m))
-                raise
-        return Y
-                             
-    def accuracy(self,Ys,Ps,stack=True):
-        if stack:
-            Ys=mutil.stack(Ys)
-            Ps=mutil.stack(Ps)
-        return super(MultiModeLearner,self).accuracy(Ys,Ps)
-        #acc = []
-        #for y,p in zip(Ys,Ps):
-        #    acc.append(super(MultiModeLearner,self).accuracy(y,p))
-        #return acc
-                           
-    def crossEntropy(self,Ys,Ps,stack=True):
-        if stack:
-            Ys=mutil.stack(Ys)
-            Ps=mutil.stack(Ps)
-        return super(MultiModeLearner,self).crossEntropy(Ys,Ps)
-        #xent = []
-        #for y,p in zip(Ys,Ps):
-        #    xent.append(super(MultiModeLearner,self).crossEntropy(y,p))
-        #return xent
     
 class MultiPredLearner(Learner):
 
@@ -251,6 +173,7 @@ class MultiPredLearner(Learner):
             weight = mutil.numRows(Y)
             weightedSum += weight * Learner.accuracy(Y,P)
             totalWeight += weight
+        if totalWeight == 0: return 0
         return weightedSum/totalWeight
 
     @staticmethod

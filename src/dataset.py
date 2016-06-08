@@ -9,6 +9,7 @@ import scipy.io as SIO
 import mutil
 import matrixdb
 import declare
+import logging
 
 #
 # dealing with labeled training data
@@ -173,26 +174,27 @@ class Dataset(object):
         xsTmp = collections.defaultdict(list)
         ysTmp = collections.defaultdict(list)
         regex = re.compile('(\w+)\((\w+),(\w+)\)')
-        fp = open(fileName)
-        for line in fp:
-            pred,x,pos = Dataset._parseLine(line,proppr=proppr)
-            if pred:
-                xsTmp[pred].append(x)
-                ysTmp[pred].append(pos)
         xsResult = {}
-        for pred in xsTmp.keys():
-            xRows = map(lambda x:db.onehot(x), xsTmp[pred])
-            xsResult[pred] = mutil.stack(xRows)
         ysResult = {}
-        for pred in ysTmp.keys():
-            def yRow(ys):
-                accum = db.onehot(ys[0])
-                for y in ys[1:]:
-                    accum = accum + db.onehot(y)
-                accum = accum * 1.0/len(ys)
-                return accum
-            yRows = map(yRow, ysTmp[pred])
-            ysResult[pred] = mutil.stack(yRows)
+        with open(fileName) as fp:
+            for line in fp:
+                pred,x,pos = Dataset._parseLine(line,proppr=proppr)
+                if pred:
+                    xsTmp[pred].append(x)
+                    ysTmp[pred].append(pos)
+            logging.info("Loading %d predicates from %s..." % (len(xsTmp),fileName))
+            for pred in xsTmp.keys():
+                xRows = map(lambda x:db.onehot(x), xsTmp[pred])
+                xsResult[pred] = mutil.stack(xRows)
+            for pred in ysTmp.keys():
+                def yRow(ys):
+                    accum = db.onehot(ys[0])
+                    for y in ys[1:]:
+                        accum = accum + db.onehot(y)
+                    accum = accum * 1.0/len(ys)
+                    return accum
+                yRows = map(yRow, ysTmp[pred])
+                ysResult[pred] = mutil.stack(yRows)
         return Dataset(xsResult,ysResult)
 
     #TODO refactor to also save examples in form: 'functor X Y1
