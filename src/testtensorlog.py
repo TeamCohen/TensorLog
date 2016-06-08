@@ -312,6 +312,7 @@ class TestMultiRowOps(unittest.TestCase):
         for i in range(len(inputSymbols)):
             y1 = prog.evalSymbols(mode,[inputSymbols[i]])
             self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDicts[i])
+            
     def predictCheck(self,ruleStrings,modeString,inputSymbols,expectedResultDicts):
         print '\n\ntesting predictions for mode',modeString,'on input',inputSymbols,'with rules:'
         for r in ruleStrings:
@@ -332,7 +333,7 @@ class TestMultiRowOps(unittest.TestCase):
         trainingData.addLines(td)
         trainSpec = (mode.functor,mode.arity)
         X,Y = trainingData.matrixAsTrainingData(*trainSpec)
-        learner = learn.FixedRateGDLearner(prog,X,Y,epochs=5)
+        learner = learn.FixedRateGDLearner(prog,epochs=5)
         P0 = learner.predict(mode,X)
         
     def checkDicts(self,actual, expected):
