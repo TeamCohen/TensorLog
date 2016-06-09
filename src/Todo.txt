@@ -36,3 +36,46 @@ MORE EXPERIMENTS:
 
  - Rose's representation learning/recommendation
  - SSL
+
+Structure learning:
+ - se is "superedge", ise is inverse superedge
+
+phase 1, get last arguments of if(Q,R), ifinv(Q,R), chain(P,Q,R).
+phase1 is used as edge in transitive closure/rwr type rules with
+positive examples of any relation.
+
+phase1(X,Y) :- 
+	  se(X,RY),f2(RY,Y),
+	  f1(RY,Y), weight_if2(R).
+phase1(X,Y) :- 
+	  ise(X,RY),f2(RY,Y),
+	  f1(RY,Y), weight_ifinv2(R).
+phase1(X,Y) :-
+	  se(X,QZ),f2(QZ,Z),se(Z,RY),f2(RY,Y)
+	  f1(RY,R),weight_chain3(R).
+
+phase2, get penultinate arguments. We will specialize this theory for
+the r's with high weights from phase1, and then use phase2 as initial
+step in transitive closure rules for facts Q,X,Y [work this out...]
+
+phase2(QX,Y) :- phase2_r1(QX,Y).
+phase2(QX,Y) :- phase2_r2(QX,Y).
+...
+phase2_r(QX,Y) :- 
+	  f2(QX,X),r(X,Y),
+	  f1(QX,Q),weight_if1(Q).
+...
+phase2_r(QX,Y) :- 
+	  f2(QX,X),r(Y,X),
+	  f1(QX,Q),weight_ifinv1(Q).
+...
+phase2_r(X,Y) :-
+	  se(X,QZ),f2(QZ,Z),r(Z,Y),
+	  f1(QZ,Q),weight_chain2_r(Q).
+
+phase3 for chains only:
+
+phase2_rq(PX,Y) :-
+	  f2(PX,X),q(X,Z),r(Z,Y)
+	  f1(PX,P),weight_chain1_rq(P).
+
