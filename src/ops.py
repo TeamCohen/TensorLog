@@ -66,7 +66,6 @@ class Op(object):
         self.msgFrom = msgFrom
         self.msgTo = msgTo
     #TODO docstrings
-    #TODO make this like what was done in funs.py, with _doEval and _doBackprop
     def eval(self,env):
         if conf.trace:
             print 'eval',self,

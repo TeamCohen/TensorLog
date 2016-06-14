@@ -77,6 +77,8 @@ def broadcast2(m1,m2):
         return m1,stack([m2]*r1)
     elif r1==1 and r2>1:
         return stack([m1]*r2),m2
+    else:
+        assert False,'cannot broadcast: #rows %d vs %d' % (r1,r2)
 
 def softmax(db,m):
     """Row-wise softmax of a sparse matrix, returned as a sparse matrix.

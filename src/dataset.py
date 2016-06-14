@@ -63,7 +63,8 @@ class Dataset(object):
         yDict = {}
         SIO.loadmat(os.path.join(dir,"xDict"),xDict)
         SIO.loadmat(os.path.join(dir,"yDict"),yDict)
-        #serialization converts modes to strings so convert them back....
+        #serialization converts modes to strings so convert them
+        #back.... it also converts matrices to csr
         for d in (xDict,yDict):
             for stringKey,mat in d.items():
                 del d[stringKey]
@@ -197,10 +198,11 @@ class Dataset(object):
 
     #TODO refactor to also save examples in form: 'functor X Y1
     #... Yk'
-    def saveProPPRExamples(self,fileName,db,append=False):
+    def saveProPPRExamples(self,fileName,db,append=False,mode=None):
         """Convert X and Y to ProPPR examples and store in a file."""
         fp = open(fileName,'a' if append else 'w')
-        for mode in self.xDict:
+        modeKeys = [mode] if mode else self.xDict.keys()
+        for mode in modeKeys:
             assert mode in self.yDict
             dx = db.matrixAsSymbolDict(self.xDict[mode])
             dy = db.matrixAsSymbolDict(self.yDict[mode])
