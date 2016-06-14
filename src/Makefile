@@ -25,13 +25,13 @@ cora-test:
 
 cora-test-v2:
 	(export PYTHONPATH=`pwd`; cd ../datasets/cora/; python cora-exptv2.py; \
-	 proppr eval cora-test.examples cora-test.solutions.txt --metric auc --defaultNeg)
+	 proppr eval tmp-cache/cora-test.examples tmp-cache/cora-test.solutions.txt --metric auc --defaultNeg)
 	echo expected . micro: 0.975902362875
 
 prepare-for-long-tests:
 	make fb15k-valid.db 
-	(cd ../datasets/wordnet; make wnet.db)
-	(cd ../datasets/cora; make cora.cfacts)
+	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet; make wnet.db)
+	(export PYTHONPATH=`pwd`; cd ../datasets/cora; make cora.cfacts)
 snap:
 	tar -czf backup/snap`date +%m.%d.%H.%M.%S`.tgz *.py Makefile
 	ls -alh backup

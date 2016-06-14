@@ -113,10 +113,24 @@ class Expt(object):
         if savedModel:
             Expt.timeAction('saving trained model', lambda:ti.db.serialize(savedModel))
 
-        if savedTestPreds:
-            if singlePred:
-                Expt.timeAction('saving test predictions', lambda:Expt.predictionAsProPPRSolutions(savedTestPreds,mode.functor,ti.db,UX,UP1))
-            else:
+        if singlePred:
+            if savedTestPreds:
+                Expt.timeAction('saving test predictions for mode %s' % str(mode),
+                                lambda:Expt.predictionAsProPPRSolutions(savedTestPreds,mode.functor,ti.db,UX,UP1))
+
+            if savedTestExamples:
+                Expt.timeAction('saving test examples for mode %s' % str(mode), 
+                                lambda:testData.saveProPPRExamples(savedTestExamples,ti.db,mode=mode))
+
+            if savedTrainExamples:
+                Expt.timeAction('saving train examples for mode %s' % str(mode), 
+                                lambda:trainData.saveProPPRExamples(savedTrainExamples,ti.db,mode=mode))
+
+            if savedTestPreds and savedTestExamples:
+                print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' \
+                      % (savedTestExamples,savedTestPreds)
+        else:
+            if savedTestPreds:
                 open(savedTestPreds,"w").close() # wipe file first
                 def doit():
                     qid=0
@@ -124,14 +138,13 @@ class Expt(object):
                         qid+=Expt.predictionAsProPPRSolutions(savedTestPreds,mode.functor,ti.db,UP1.getX(mode),UP1.getY(mode),True,qid) 
                 Expt.timeAction('saving test predictions', doit)
 
-        if savedTestExamples:
-            Expt.timeAction('saving test examples', lambda:testData.saveProPPRExamples(savedTestExamples,ti.db))
+            if savedTestExamples:
+                Expt.timeAction('saving test examples', 
+                                lambda:testData.saveProPPRExamples(savedTestExamples,ti.db))
 
-        if savedTrainExamples:
-            Expt.timeAction('saving train examples', lambda:trainData.saveProPPRExamples(savedTrainExamples,ti.db))
-
-        if savedTestPreds and savedTestExamples:
-            print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' % (savedTestExamples,savedTestPreds)
+            if savedTrainExamples:
+                Expt.timeAction('saving train examples', 
+                                lambda:trainData.saveProPPRExamples(savedTrainExamples,ti.db))
 
         return testAcc,testXent
 
