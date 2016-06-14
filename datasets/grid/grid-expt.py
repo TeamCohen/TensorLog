@@ -17,5 +17,5 @@ if __name__=="__main__":
         ti = tensorlog.Interp(initFiles=[gridFile,'grid.ppr'],proppr=False)
         ti.prog.maxDepth = d
         start = time.time()
-        ti.prog.evalSymbols(ti._asMode("path/io"), [startNode])
+        ti.prog.evalSymbols(declare.asMode("path/io"), [startNode])
         print 'time',time.time() - start,'sec'

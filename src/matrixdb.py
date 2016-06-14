@@ -1,4 +1,7 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
+#
+# database abstraction which is based on sparse matrices
+#
 
 import sys
 import os
@@ -298,14 +301,16 @@ class MatrixDB(object):
         return db
 
     @staticmethod
-    def uncache(dbFile,factFile):
+    def uncache(dbFile,*factFiles):
         """ Build a database file from a factFile, serialize it, and
         return the de-serialized database.  Or if that's not necessary,
         just deserialize it.
         """
-        if not os.path.exists(dbFile) or os.path.getmtime(factFile)>os.path.getmtime(dbFile):
-            print 'loading factFile',factFile,'...'
-            db = MatrixDB.loadFile(factFile)
+        if not os.path.exists(dbFile) or any([os.path.getmtime(factFile)>os.path.getmtime(dbFile) for factFile in factFiles]):
+            db = MatrixDB()
+            for factFile in factFiles:
+                print 'loading factFile',factFile,'...'
+                db.addFile(factFile)
             print 'serializing dbFile',dbFile,'...'
             db.serialize(dbFile)
             return db
@@ -480,6 +485,9 @@ if __name__ == "__main__":
     elif sys.argv[1]=='--deserialize':
         print 'loading saved db from ',sys.argv[2]
         db = MatrixDB.deserialize(sys.argv[2])
+    elif sys.argv[1]=='--uncache':
+        print 'uncaching facts',sys.argv[3],'from',sys.argv[2]
+        db = MatrixDB.uncache(sys.argv[2],sys.argv[3])
     elif sys.argv[1]=='--loadEcho':
         logging.basicConfig(level=logging.INFO)
         print 'loading cfacts from ',sys.argv[2]

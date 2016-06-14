@@ -1,4 +1,7 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
+#
+# functions, which support evaluation and backprop
+#
 
 import sys
 import logging
@@ -7,7 +10,7 @@ import traceback
 import ops
 import config
 import mutil
-import tlerr
+
 
 conf = config.Config()
 conf.trace = False;         conf.help.trace =         "Print debug info during function eval"
@@ -76,11 +79,6 @@ class OpSeqFunction(Function):
             op = self.ops[n-i-1]
             #print 'calling backprop on op',n-i-1,str(op)
             op.backprop(self.opEnv,gradAccum)
-            #if TRACE: 
-            #    for (functor,arity),delta in gradAccum.items():
-            #        print("OpSeqFunction(%s,%s) gradAccum for %s after %s: %s" % (self.opInputs,self.opOutput,functor,str(op),mutil.summary(delta)))
-            #        if STRICT and delta.min() < -1e5: raise tlerr.InvalidBackpropState("bad gradAccum delta at %s" % self)
-            #print 'op.backprop',n-i-1,'finished'
         assert len(self.opInputs)==1, 'bp for multiple input functions not implemented'
         return self.opEnv.delta[self.opInputs[0]]
 

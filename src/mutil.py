@@ -1,4 +1,7 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
+#
+# miscellaneous matrix utilities
+#
 
 import scipy.sparse as SS
 import scipy.io

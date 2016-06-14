@@ -6,12 +6,12 @@ long-tests: short-tests benchmark-test wnet-test cora-test cora-test-v2
 
 benchmark-test:
 	python benchmark.py
-	
+
 fb15k-valid.db: matrixdb.py
 	python $< --serialize test/fb15k-valid.cfacts:test/fb15k.tensorLog.cfacts $@
 
-fb15k-valid.db:
-	python matrixdb.py --serialize test/fb15k-valid.cfacts  fb15k-valid.db
+#fb15k-valid.db:
+#	python matrixdb.py --serialize test/fb15k-valid.cfacts  fb15k-valid.db
 
 wnet-test:
 	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet/; python wnet-expt.py; \
@@ -30,8 +30,8 @@ cora-test-v2:
 
 prepare-for-long-tests:
 	make fb15k-valid.db 
-	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet; make wnet.db)
-	(export PYTHONPATH=`pwd`; cd ../datasets/cora; make cora.cfacts)
+	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet; make setup)
+	(export PYTHONPATH=`pwd`; cd ../datasets/cora; make setup)
 snap:
 	tar -czf backup/snap`date +%m.%d.%H.%M.%S`.tgz *.py Makefile
 	ls -alh backup

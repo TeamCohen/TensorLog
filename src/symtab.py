@@ -1,4 +1,7 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
+#
+# a symbol table
+#
 
 import logging
 

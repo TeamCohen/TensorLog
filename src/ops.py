@@ -1,10 +1,13 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
+#
+# operators - primitive actions that are performed in sequence during
+#             function evaluation
+#
 
 import numpy
 import logging
 
 import mutil
-import tlerr
 import config
 
 conf = config.Config()
@@ -125,7 +128,6 @@ class DefinedPredOp(Op):
     def _doBackprop(self,env,gradAccum):
         subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
         newDelta = subfun.backprop(env.delta[self.dst],gradAccum)
-        if newDelta == None: raise tlerr.InvalidBackpropState("invalid 'None' delta received from %s\ndst %s, src %s\ndelta was: %s" % (subfun.__class__.__name__,self.dst,self.src,env.delta))
         env.delta[self.src] = newDelta
         #if TRACE: print("%s(%s,%s) delta[%s] set to %s" % (self.__class__.__name__,self.dst,self.src,self.src,mutil.summary(newDelta) if newDelta.nnz else str(newDelta)))
     def pprint(self,depth=-1):

@@ -3,6 +3,8 @@ TLOG=../../src
 default:
 	echo make what?
 
+setup: wnet.db wnet-learned.ppr
+
 wnet.db: wnet.cfacts
 	time python $(TLOG)/matrixdb.py --serialize wnet.cfacts wnet.db
 

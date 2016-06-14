@@ -1,4 +1,7 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
+#
+# top-level constructs for Tensorlog - Programs and Interpreters
+#
 
 import sys
 import logging
@@ -125,7 +128,7 @@ class Program(object):
         if not db: (db,rules) = Program._load(fileNames)
         else: (dummy,rules) = Program._load(fileNames,db=db)
         return Program(db,rules)
-        return Program(db,rules)
+
 
 #
 # subclass of Program that corresponds more or less to Proppr....
@@ -229,18 +232,18 @@ class Interp(object):
     def listAllFacts(self):
         self.db.listing()
 
-    @staticmethod
-    def _asMode(spec):
-        if type(spec)==type("") and spec.find("/")>=0:
-            functor,rest = spec.split("/")            
-            return declare.ModeDeclaration(parser.Goal(functor,list(rest)))
-        elif type(spec)==type(""):
-            return declare.ModeDeclaration(spec)
-        else:
-            return spec
+    # @staticmethod
+    # def _asMode(spec):
+    #     if type(spec)==type("") and spec.find("/")>=0:
+    #         functor,rest = spec.split("/")            
+    #         return declare.ModeDeclaration(parser.Goal(functor,list(rest)))
+    #     elif type(spec)==type(""):
+    #         return declare.ModeDeclaration(spec)
+    #     else:
+    #         return spec
 
     def listFunction(self,modeSpec):
-        mode = self._asMode(modeSpec)
+        mode = declare.asMode(modeSpec)
         key = (mode,0)
         if key not in self.prog.function:
             self.prog.compile(mode)
@@ -248,12 +251,12 @@ class Interp(object):
         print "\n".join(fun.pprint())
 
     def eval(self,modeSpec,x):
-        mode = self._asMode(modeSpec)        
+        mode = declare.asMode(modeSpec)        
         result = self.prog.evalSymbols(mode,[x])
         return self.prog.db.rowAsSymbolDict(result)
     
     def train(self,trainingDataFile,modeSpec):
-        mode = self._asMode(modeSpec)
+        mode = declare.asMode(modeSpec)
         trainingData = self.db.createPartner()
         trainingData.addFile(trainingDataFile)
         trainSpec = (mode.functor,mode.arity)
@@ -274,7 +277,7 @@ class Interp(object):
         print 'trained: acc1',acc1,'xent1',xent1
     
     def predict(self,trainingDataFile,modeSpec):
-        mode = self._asMode(modeSpec)
+        mode = declare.asMode(modeSpec)
         trainingData = self.db.createPartner()
         trainingData.addFile(trainingDataFile)
         trainSpec = (mode.functor,mode.arity)

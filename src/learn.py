@@ -1,4 +1,7 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
+#
+# learning
+#
 
 import funs
 import time
@@ -10,7 +13,6 @@ import dataset
 import mutil
 import declare
 import logging as L
-import tlerr
 logging = L.getLogger()
 
 MIN_PROBABILITY = NP.finfo(dtype='float64').eps
@@ -51,15 +53,7 @@ class Learner(object):
     def predict(self,mode,X):
         """Make predictions on a data matrix associated with the given mode."""
         predictFun = self.prog.getPredictFunction(mode)
-        try:
-            result = predictFun.eval(self.prog.db, [X])
-        except tlerr.InvalidEvalState as e:
-            for r in range(mutil.numRows(e.data)):
-                if NP.isinf(e.data.data[e.data.indptr[r]:e.data.indptr[r+1]]).any():
-                    print "Infinity in row %d" % r
-            raise
-            
-        #mutil.reNormalize(result,threshold=MIN_PROBABILITY)
+        result = predictFun.eval(self.prog.db, [X])
         return result
 
     @staticmethod

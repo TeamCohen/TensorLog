@@ -4,47 +4,34 @@ import os.path
 import scipy.sparse as SS
 import scipy.io
 
-import expt
+import exptv2
+import dataset
 import tensorlog
 import matrixdb
 import mutil
 import ops 
 import funs
-ops.TRACE=False
-funs.TRACE=False
 
-def uncacheDB(dbFile):
-    if not os.path.exists(dbFile):
-        print 'creating',dbFile,'...'
-        db = matrixdb.MatrixDB.loadFile('cora.cfacts')
-        db.serialize(dbFile)
-        print 'created',dbFile
-        return db
-    else:
-        return matrixdb.MatrixDB.deserialize(dbFile)
-
-def uncacheMatPairs(cacheFile,dbFile,exampleFile):
-        db = uncacheDB(dbFile)
-        print 'preparing examples...'
-        d = expt.Expt.propprExamplesAsData(db,exampleFile)
-        print 'prepared',d.keys()
-        return d
-        
 if __name__=="__main__":
-    dTrain = uncacheMatPairs('cora-XY.mat','cora.db','raw/train.examples')
-    dTest = uncacheMatPairs('cora-XY.mat','cora.db','raw/test.examples')
-    prog = tensorlog.ProPPRProgram.load(["cora.db","cora.ppr"])
+    db = matrixdb.MatrixDB.uncache('tmp-cache/cora.db','inputs/cora.cfacts')
+    trainData = dataset.Dataset.uncacheExamples('tmp-cache/cora-train.dset',db,'inputs/train.examples')
+    testData = dataset.Dataset.uncacheExamples('tmp-cache/cora-test.dset',db,'inputs/test.examples')
+    print 'train:','\n  '.join(trainData.pprint())
+    print 'test: ','\n  '.join(testData.pprint())
+    prog = tensorlog.ProPPRProgram.load(["cora.ppr"],db=db)
+    prog.setWeights(db.ones())
     prog.db.markAsParam('kaw',1)
     prog.db.markAsParam('ktw',1)
     prog.db.markAsParam('kvw',1)
-    prog.setWeights(prog.db.ones())
+    prog.maxDepth = 2
+    ops.conf.optimize_component_multiply = False
     params = {'initProgram':prog,
-              #'theoryPred':'samebib',
-              'trainData':dTrain,
-              'testData':dTest,
-              'savedModel':'cora-batch-trained.db',
-              'savedTestPreds':'cora-batch-test.solutions.txt',
-              'savedTrainExamples':'cora-batch-train.examples',
-              'savedTestExamples':'cora-batch-test.examples',
+              'trainData':trainData, 'testData':testData,
+              #'targetPred':'samebib/io',
+              'savedModel':'tmp-cache/cora-trained.db',
+              'savedTestPreds':'tmp-cache/cora-test.solutions.txt',
+              'savedTrainExamples':'tmp-cache/cora-train.examples',
+              'savedTestExamples':'tmp-cache/cora-test.examples',
     }
-    expt.BatchExpt(params,{'epochs':5}).run()
+    print 'maxdepth',prog.maxDepth
+    exptv2.Expt(params).run()
