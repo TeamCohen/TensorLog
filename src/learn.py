@@ -153,7 +153,11 @@ class MultiPredLearner(Learner):
         for mode in dset.modesToLearn():
             X = dset.getX(mode)
             xDict[mode] = X if copyXs else None
-            yDict[mode] = self.prog.getPredictFunction(mode).eval(self.prog.db, [X])
+            try:
+                yDict[mode] = self.prog.getPredictFunction(mode).eval(self.prog.db, [X])
+            except FloatingPointError:
+                print "Trouble with mode %s" % str(mode)
+                raise
         return dataset.Dataset(xDict,yDict)
 
     @staticmethod
