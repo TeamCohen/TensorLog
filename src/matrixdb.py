@@ -273,24 +273,24 @@ class MatrixDB(object):
     # i/o
     #
 
-    def serialize(self,dir):
-        if not os.path.exists(dir):
-            os.mkdir(dir)
-        fp = open(os.path.join(dir,"symbols.txt"), 'w')
+    def serialize(self,direc):
+        if not os.path.exists(direc):
+            os.makedirs(direc)
+        fp = open(os.path.join(direc,"symbols.txt"), 'w')
         for i in range(1,self.dim()):
             fp.write(self.stab.getSymbol(i) + '\n')
         fp.close()
-        scipy.io.savemat(os.path.join(dir,"db.mat"),self.matEncoding,do_compression=True)
+        scipy.io.savemat(os.path.join(direc,"db.mat"),self.matEncoding,do_compression=True)
     
     @staticmethod
-    def deserialize(dir):
+    def deserialize(direc):
         db = MatrixDB()
         k = 1
-        for line in open(os.path.join(dir,"symbols.txt")):
+        for line in open(os.path.join(direc,"symbols.txt")):
             i = db.stab.getId(line.strip())
             assert i==k,'symbols out of sync for symbol "%s": expected index %d actual %d' % (line.strip(),i,k)
             k += 1
-        scipy.io.loadmat(os.path.join(dir,"db.mat"),db.matEncoding)
+        scipy.io.loadmat(os.path.join(direc,"db.mat"),db.matEncoding)
         #serialization/deserialization ends up converting
         #(functor,arity) pairs to strings and csr_matrix to csc_matrix
         #so convert them back....
