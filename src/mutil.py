@@ -13,21 +13,22 @@ conf.optimize_softmax = True;   conf.help.optimize_softmax = 'use optimized vers
 # miscellaneous broadcast utilities used my ops.py and funs.py
 
 def summary(mat):
-    _checkCSR(mat)
+    checkCSR(mat)
     return 'nnz %d rows %d cols %d' % (mat.nnz,numRows(mat),numCols(mat))
 
-def _checkCSR(mat):
-    assert isinstance(mat,SS.csr_matrix),'bad type for %r' % mat
+def checkCSR(mat,context='unknwon'):
+    assert isinstance(mat,SS.csr_matrix),'bad type [context %s] for %r' % (context,mat)
 
 def mean(mat):
     """Return the average of the rows."""
-    _checkCSR(mat)
+    checkCSR(mat)
     #TODO - mat.mean returns a dense matrix which mutil converts, can I avoid that?
+    #TODO - does this need broadcasting?
     return SS.csr_matrix(mat.mean(axis=0))
 
 def mapData(dataFun,mat):
     """Apply some function to the mat.data array of the sparse matrix and return a new one."""
-    _checkCSR(mat)
+    checkCSR(mat)
     def showMat(msg,m): print msg,type(m),m.shape
     newdata = dataFun(mat.data)
     assert newdata.shape==mat.data.shape,'shape mismatch %r vs %r' % (newdata.shape,mat.data.shape)
@@ -35,27 +36,27 @@ def mapData(dataFun,mat):
 
 def nzCols(mat,rowIndex):
     """Enumerate the non-zero column indices in row i."""
-    _checkCSR(mat)
+    checkCSR(mat)
     for colIndex in mat.indices[mat.indptr[rowIndex]:mat.indptr[rowIndex+1]]:
         yield colIndex
 
 def emptyRow(mat,rowIndex):
-    _checkCSR(mat)
+    checkCSR(mat)
     return mat.indptr[rowIndex]==mat.indptr[rowIndex+1]
 
 def stack(mats):
     """Vertically stack matrices and return a sparse csr matrix."""
-    for m in mats: _checkCSR(m)
+    for m in mats: checkCSR(m)
     return SS.csr_matrix(SS.vstack(mats, dtype='float64'))
 
 def numRows(m): 
     """Number of rows in matrix"""
-    _checkCSR(m)
+    checkCSR(m)
     return m.get_shape()[0]
 
 def numCols(m): 
     """Number of colunms in matrix"""
-    _checkCSR(m)
+    checkCSR(m)
     return m.get_shape()[1]
 
 def broadcastBinding(env,var1,var2):
@@ -63,12 +64,12 @@ def broadcastBinding(env,var1,var2):
     in environment registers var1 and var2. """
     m1 = env[var1]
     m2 = env[var2]
-    _checkCSR(m1); _checkCSR(m2)
+    checkCSR(m1); checkCSR(m2)
     return broadcast2(m1,m2)
 
 def broadcast2(m1,m2):
     """Return a pair of shape-compatible matrices for m1, m2 """
-    _checkCSR(m1); _checkCSR(m2)
+    checkCSR(m1); checkCSR(m2)
     r1 = numRows(m1)
     r2 = numRows(m2)
     if r1==r2:
@@ -85,7 +86,7 @@ def softmax(db,m):
     This doesn't really require 'broadcasting' but it seems like you
     need special case handling to deal with multiple rows efficiently.
     """
-    _checkCSR(m)
+    checkCSR(m)
     nullEpsilon = -10  # scores for null entity will be exp(nullMatrix)
     def softmaxRow(r):
         if not r.nnz:
@@ -125,7 +126,7 @@ def softmax(db,m):
         return result
 
 def broadcastAndComponentwiseMultiply(m1,m2):
-    _checkCSR(m1); _checkCSR(m2)
+    checkCSR(m1); checkCSR(m2)
     def multiplyByBroadcastRowVec(r,m,v):
         vd = {}
         for j in range(v.indptr[0],v.indptr[1]):
@@ -153,7 +154,7 @@ def broadcastAndComponentwiseMultiply(m1,m2):
         assert False, 'mismatched matrix sizes: #rows %d,%d' % (r1,r2)
 
 def broadcastAndWeightByRowSum(m1,m2):
-    _checkCSR(m1); _checkCSR(m2)
+    checkCSR(m1); checkCSR(m2)
     """ Optimized combination of broadcast2 and weightByRowSum operations
     """ 
     r1 = numRows(m1)
@@ -193,7 +194,7 @@ def broadcastAndWeightByRowSum(m1,m2):
 
 def weightByRowSum(m1,m2):
     """Weight a rows of matrix m1 by the row sum of matrix m2."""
-    _checkCSR(m1); _checkCSR(m2)
+    checkCSR(m1); checkCSR(m2)
     r = numRows(m1)  #also m2
     assert numRows(m2)==r
     if r==1:

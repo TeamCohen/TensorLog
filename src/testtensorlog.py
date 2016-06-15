@@ -281,6 +281,17 @@ class TestGrad(unittest.TestCase):
                        [('william',['lottie'])], 
                        {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
 
+    def testIf2(self):
+        rules = ['p(X,Y):-sister(X,Y).']
+        mode = 'p(i,o)'  
+        params = [('sister',2)] 
+        self.gradCheck(rules, mode, params,
+                       [('william',['rachel','sarah']), ('william',['rachel','sarah'])], 
+                       {'sister(william,rachel)': +1,'sister(william,sarah)': +1,'sister(william,lottie)': -1})
+        self.gradCheck(rules, mode, params, 
+                       [('william',['lottie']), ('william',['lottie'])], 
+                       {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
+
     def testRevIf(self):
         rules = ['p(X,Y):-parent(Y,X).']
         mode = 'p(i,o)'  

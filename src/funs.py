@@ -69,9 +69,7 @@ class OpSeqFunction(Function):
         n = len(self.ops)
         for i in range(n):
             op = self.ops[n-i-1]
-            #print 'calling backprop on op',n-i-1,str(op)
             op.backprop(self.opEnv,gradAccum)
-            #print 'op.backprop',n-i-1,'finished'
         assert len(self.opInputs)==1, 'bp for multiple input functions not implemented'
         return self.opEnv.delta[self.opInputs[0]]
 

@@ -112,9 +112,12 @@ class MatrixDB(object):
         assert mode.arity==2,'arity of '+str(mode) + ' is wrong: ' + str(mode.arity)
         assert (mode.functor,mode.arity) in self.matEncoding,"can't find matrix for %s" % str(mode)
         if not self.transposeNeeded(mode,transpose):
-            return self.matEncoding[(mode.functor,mode.arity)]
+            result = self.matEncoding[(mode.functor,mode.arity)]
         else:
-            return self.matEncoding[(mode.functor,mode.arity)].transpose()            
+            result = self.matEncoding[(mode.functor,mode.arity)].transpose()            
+            result = scipy.sparse.csr_matrix(result)
+        mutil.checkCSR(result,'db.matrix mode %s transpose %s' % (str(mode),str(transpose)))
+        return result
 
     def vector(self,mode):
         """Returns a row vector for a unary predicate."""
@@ -399,6 +402,7 @@ class MatrixDB(object):
             del self.buf[(f,arity)]
             self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m)
             self.matEncoding[(f,arity)].sort_indices()
+        mutil.checkCSR(self.matEncoding[(f,arity)], 'flushBuffer %s/%d' % (f,arity))
 
     def clearBuffers(self):
         """Save space by removing buffers"""

@@ -2,6 +2,7 @@
 
 import numpy
 import logging
+import scipy.sparse
 
 import mutil
 import config
@@ -206,8 +207,10 @@ class VecMatMulOp(Op):
     def _doBackprop(self,env,gradAccum):
         # dst = f(src,mat)
         env.delta[self.src] = env.delta[self.dst] * env.db.matrix(self.matMode,(not self.transpose))
+        mutil.checkCSR(env.delta[self.src],'delta[%s]' % self.src)
         if env.db.isParameter(self.matMode):
             update = env[self.src].transpose() * (env.delta[self.dst])
+            update = scipy.sparse.csr_matrix(update)
             # The transpose flag is set in BP when sending a message
             # 'backward' from a goal output to variable, an indicates
             # if the operation needs to transpose the matrix.  Since
@@ -218,9 +221,12 @@ class VecMatMulOp(Op):
             # exactly one of these transpositions happen, not two or
             # zero
             transposeUpdate = env.db.transposeNeeded(self.matMode,self.transpose)
-            if transposeUpdate: update=update.transpose()
+            if transposeUpdate: 
+                update = update.transpose()
+                update = scipy.sparse.csr_matrix(update)
             # finally save the update
             key = (self.matMode.functor,self.matMode.arity)
+            mutil.checkCSR(update,'update for %s mode %s transpose %s' % (str(key),str(self.matMode),transposeUpdate))
             gradAccum.accum(key,update)
 
 class BuiltInIOOp(Op):

@@ -3,6 +3,7 @@
 import funs
 import time
 import numpy as NP
+import scipy.sparse as SS
 import collections
 
 import tensorlog
@@ -28,10 +29,13 @@ class GradAccumulator(object):
     def accum(self,paramName,deltaGradient):
         """Increment the parameter with the given name by the appropriate
         amount."""
+        mutil.checkCSR(deltaGradient,('deltaGradient for %s' % str(paramName)))
         if not paramName in self.runningSum:
             self.runningSum[paramName] = deltaGradient
         else:
             self.runningSum[paramName] = self.runningSum[paramName] + deltaGradient
+            mutil.checkCSR(self.runningSum[paramName],('runningSum for %s' % str(paramName)))
+        
 
 #TODO is data part of learner?
 class Learner(object):
@@ -124,7 +128,10 @@ class Learner(object):
         """ 
         for (functor,arity),delta in paramGrads.items():
             m0 = self.prog.db.getParameter(functor,arity)
-            m = m0 + mutil.mean(delta)*rate
+            if mutil.numRows(m0)==1:
+                m = m0 + mutil.mean(delta)*rate
+            else:
+                m = m0 + delta*(1.0/mutil.numRows(m0))*rate
             #clip negative entries to zero
             NP.clip(m.data,0.0,NP.finfo('float64').max)
             self.prog.db.setParameter(functor,arity,m)
