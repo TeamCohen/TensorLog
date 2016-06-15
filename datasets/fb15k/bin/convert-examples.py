@@ -27,4 +27,4 @@ if __name__ == "__main__":
     for rel in ['location_x_location_x_containedby','common_x_topic_x_webpage_x_common_x_webpage_x_category',
                 'location_x_administrative_division_x_country','location_x_administrative_division_x_second_level_division_of']:
         for pref in ['train','valid']:
-            cvtExamples('raw/%s.examples' % pref, 'fb-%s-%s.cfacts' % (rel,pref), pref, 'i_%s' % rel)
+            cvtExamples('inputs/%s.examples' % pref, 'fb-%s-%s.cfacts' % (rel,pref), pref, 'i_%s' % rel)
