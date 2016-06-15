@@ -187,17 +187,32 @@ class MultiPredFixedRateGDLearner(MultiPredLearner):
         self.epochs=epochs
         self.rate=rate
     
-    def multiTrain(self,dset):
+    def multiTrain(self,dset,whinget=5):
         startTime = time.time()
+        last = startTime - whinget
+        modes = dset.modesToLearn()
+        n = len(modes)
         for i in range(self.epochs):
-            for mode in dset.modesToLearn():
-                def myTraceFun(thisLearner,Y,P):
-                    print 'epoch %d of %d: target mode %s' % (i+1,self.epochs,str(mode)),
-                    print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
-                    print ' acc %.3f' % thisLearner.accuracy(Y,P),            
-                    print ' cumSecs %.3f' % (time.time()-startTime)
-                paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),traceFun=myTraceFun)
-                self.applyMeanUpdate(paramGrads,self.rate)
+            print "epoch %d of %d" % (i+1,self.epochs)
+            for j in range(n):
+                mode = modes[j]
+                def myTraceFun(thisLerner,Y,P):
+                    pass
+                if time.time() - last > whinget:
+                    last = time.time()
+                    def myTraceFun(thisLearner,Y,P):
+                        print ' target mode %d of %d %s' % (j+1,n,str(mode)),
+                        print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
+                        print ' acc %.3f' % thisLearner.accuracy(Y,P),            
+                        print ' cumSecs %.3f' % (time.time()-startTime)
+                try:
+                    paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),traceFun=myTraceFun)
+                    self.applyMeanUpdate(paramGrads,self.rate)
+                except FloatingPointError:
+                    print "Trouble with target mode %s" % str(mode)
+                    raise
+                
+
             
 if __name__ == "__main__":
     pass
