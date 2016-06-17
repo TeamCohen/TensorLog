@@ -126,9 +126,6 @@ class Expt(object):
                 Expt.timeAction('saving train examples for mode %s' % str(mode), 
                                 lambda:trainData.saveProPPRExamples(savedTrainExamples,ti.db,mode=mode))
 
-            if savedTestPreds and savedTestExamples:
-                print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' \
-                      % (savedTestExamples,savedTestPreds)
         else:
             if savedTestPreds:
                 open(savedTestPreds,"w").close() # wipe file first
@@ -145,6 +142,10 @@ class Expt(object):
             if savedTrainExamples:
                 Expt.timeAction('saving train examples', 
                                 lambda:trainData.saveProPPRExamples(savedTrainExamples,ti.db))
+                
+        if savedTestPreds and savedTestExamples:
+            print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' \
+                % (savedTestExamples,savedTestPreds)
 
         return testAcc,testXent
 

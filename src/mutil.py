@@ -16,11 +16,16 @@ conf.optimize_softmax = True;   conf.help.optimize_softmax = 'use optimized vers
 
 # miscellaneous broadcast utilities used my ops.py and funs.py
 
-np.seterr('raise') # stop execution & print traceback for divide-by-zero, underflow, overflow, etc
+np.seterr(all='raise',under='ignore') 
+# stop execution & print traceback for various floating-point issues
+# except underflow; aiui we don't mind if very small numbers go to zero --kmm
 
 def summary(m):
-    _checkCSR(m)
-    return 'non-zeros %d shape %r min %g max %g' % (m.nnz,m.get_shape(),m.min(),m.max())
+    if isinstance(m,SS.csr_matrix):
+        return 'csr non-zeros %d shape %r min %g max %g' % (m.nnz,m.get_shape(),m.min(),m.max())
+    elif isinstance(m,np.ndarray):
+        return 'array length %d min %g max %g' % (len(m),m.min(),m.max())
+    else: return 'type %s' % (type(m))
     #return 'nnz %d rows %d cols %d' % (mat.nnz,numRows(mat),numCols(mat))
 
 def _checkCSR(mat):
@@ -32,11 +37,26 @@ def mean(mat):
     #TODO - mat.mean returns a dense matrix which mutil converts, can I avoid that?
     return SS.csr_matrix(mat.mean(axis=0))
 
-def mapData(dataFun,mat):
+def mapData(dataFun,mat,selector=None,default=0):
     """Apply some function to the mat.data array of the sparse matrix and return a new one."""
     _checkCSR(mat)
     def showMat(msg,m): print msg,type(m),m.shape
-    newdata = dataFun(mat.data)
+    dat = mat.data
+
+    # FIXME: indptr isn't the same shape as indices! indptr maps
+    # row->indices range, so if we mean to remove some of the things
+    # in indices, indptr is going to get allllll messed up
+
+    selected = None
+    if selector: 
+        selected = selector(mat.data)
+        dat = dat[selected]
+    newdata = dataFun(dat)
+    if selector:
+        buf = np.ones_like(mat.data) * default
+        buf[selected] = newdata
+        newdata = buf
+
     assert newdata.shape==mat.data.shape,'shape mismatch %r vs %r' % (newdata.shape,mat.data.shape)
     return SS.csr_matrix((newdata,mat.indices,mat.indptr), shape=mat.shape, dtype='float64')
 
