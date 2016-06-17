@@ -41,7 +41,10 @@ def uncacheMatPairs(cacheFile,dbFile,trainPred,testPred):
         
 if __name__=="__main__":
     if len(sys.argv)<=1:
-        pred = 'hypernym'
+        pred = 'common_x_topic_x_webpage_x_common_x_webpage_x_category'
+        # was: 'hypernym'
+        # but train_i_hypernym not included in fb.cfacts...?
+        # -kmm
     else:
         pred = sys.argv[1]
     print '== pred',pred
