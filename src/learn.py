@@ -76,7 +76,11 @@ class Learner(object):
     @staticmethod
     def crossEntropy(Y,P):
         """Compute cross entropy some predications relative to some labels."""
-        logP = mutil.mapData(NP.log,P)
+        if (P.data==0).any():
+            print "Some P.data = 0! :("
+        # print mutil.summary(P)
+        logP = mutil.mapData(NP.log,P,lambda x:x != 0)
+        # print mutil.summary(logP)
         return -(Y.multiply(logP).sum())
 
 
