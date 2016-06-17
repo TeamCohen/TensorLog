@@ -1,3 +1,30 @@
+==
+Results added 17 june 2016 by katie:
+
+exptv2 version runs and outperforms proppr on micro AUC:
+
+ProPPR version:
+
+proppr eval inputs/valid.examples proppr/all-test.solutions.txt --metric auc --defaultNeg
+INFO:root:ProPPR v2
+INFO:root:calling: python /usr0/home/krivard/workspace/ProPPR-2.0/scripts/answermetrics.py --data inputs/valid.examples --answers proppr/all-test.solutions.txt --metric auc --defaultNeg
+queries 538 answers 12771 labeled answers 12771
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.250567752235
+. macro: 0.303153806644
+
+TensorLog:
+
+proppr eval all-test.examples all-test.solutions.txt --metric auc --defaultNeg
+INFO:root:ProPPR v2
+INFO:root:calling: python /usr0/home/krivard/workspace/ProPPR-2.0/scripts/answermetrics.py --data all-test.examples --answers all-test.solutions.txt --metric auc --defaultNeg
+queries 445 answers 13224 labeled answers 13224
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.296303526633
+. macro: 0.287568379864
+==
 common facts in train:
 ['people_x_person_x_profession','film_x_actor_x_film_x_film_x_performance_x_film','people_x_person_x_nationality','music_x_genre_x_artists']:
 
