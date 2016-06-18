@@ -8,10 +8,8 @@ import mutil
 import config
 
 conf = config.Config()
-conf.trace = False;                     conf.help.trace =                       "Print debug info during op execution"
-conf.long_trace = False;                conf.help.long_trace =                  "Print output of functions after op - only for small tasks"
-conf.optimize_weighted_vec=True;        conf.help.optimize_weighted_vec =       "Use optimized version of WeightedVec op"
-conf.optimize_component_multiply=True;  conf.help.optimize_component_multiply = "Use optimized version of ComponentwiseVecMulOp"
+conf.trace = False;      conf.help.trace =      "Print debug info during op execution"
+conf.long_trace = False; conf.help.long_trace = "Print output of functions after op - only for small tasks"
 
 ##############################################################################
 #
@@ -266,25 +264,10 @@ class ComponentwiseVecMulOp(Op):
     def _ppLHS(self):
         return "%s o %s" % (self.src,self.src2)
     def _doEval(self,env):
-        if conf.optimize_component_multiply:
-            env[self.dst] = mutil.broadcastAndComponentwiseMultiply(env[self.src],env[self.src2])
-        else:
-            m1,m2 = mutil.broadcastBinding(env,self.src,self.src2)
-            env[self.dst] = m1.multiply(m2)
+        env[self.dst] = mutil.broadcastAndComponentwiseMultiply(env[self.src],env[self.src2])
     def _doBackprop(self,env,gradAccum):
-        if conf.optimize_component_multiply:
-            env.delta[self.src] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src2])
-            env.delta[self.src2] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src])
-        else:
-            #m1,m2 = mutil.broadcastBinding(env,self.src,self.src2)            
-            #print 'shapes 1/2/delta[',self.dst,']',m1.get_shape(),m2.get_shape(),env.delta[self.dst].get_shape()
-            d1,m1 = mutil.broadcast2(env.delta[self.dst],env[self.src])
-            d2,m2 = mutil.broadcast2(env.delta[self.dst],env[self.src2])
-            assert d1.get_shape()==d2.get_shape()
-            env.delta[self.src] = d2.multiply(m2)
-            env.delta[self.src2] = d1.multiply(m1)
-#            env.delta[self.src] = env.delta[self.dst].multiply(m2)
-#            env.delta[self.src2] = env.delta[self.dst].multiply(m1)
+        env.delta[self.src] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src2])
+        env.delta[self.src2] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src])
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
@@ -299,11 +282,7 @@ class WeightedVec(Op):
     def _ppLHS(self):
         return "%s * %s.sum()" % (self.vec,self.weighter)
     def _doEval(self,env):
-        if conf.optimize_weighted_vec:
-            env[self.dst] = mutil.broadcastAndWeightByRowSum(env[self.vec],env[self.weighter])
-        else:
-            m1,m2 = mutil.broadcastBinding(env, self.vec, self.weighter)
-            env[self.dst] = mutil.weightByRowSum(m1,m2)
+        env[self.dst] = mutil.broadcastAndWeightByRowSum(env[self.vec],env[self.weighter])
     def _doBackprop(self,env,gradAccum):
         # This is written as a single operation
         #    dst = vec * weighter.sum()
@@ -313,29 +292,12 @@ class WeightedVec(Op):
         # and then backprop through step 2, then step 1
         # step 2a: bp from delta[dst] to delta[vec]
         #   delta[vec] = delta[dst]*weighterSum
-        if conf.optimize_weighted_vec:
-            env.delta[self.vec] = mutil.broadcastAndWeightByRowSum(env.delta[self.dst],env[self.weighter]) 
-        else:
-            deltaDst,mWeighter = mutil.broadcast2(env.delta[self.dst], env[self.weighter])
-            env.delta[self.vec] = mutil.weightByRowSum(deltaDst,mWeighter)
+        env.delta[self.vec] = mutil.broadcastAndWeightByRowSum(env.delta[self.dst],env[self.weighter]) 
         # step 2b: bp from delta[dst] to delta[weighterSum]
         #   would be: delta[weighterSum] = (delta[dst].multiply(vec)).sum
         # followed by 
         # step 1: bp from delta[weighterSum] to weighter
         #   delta[weighter] = delta[weighterSum]*weighter
         # but we can combine 2b and 1 as follows (optimized):
-        if conf.optimize_weighted_vec:
-            if conf.optimize_component_multiply:
-                tmp = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.vec])
-            else:
-                m1,m2 = mutil.broadcast2(env.delta[self.dst],env[self.vec])
-                tmp = m1.multiply(m2)
-            env.delta[self.weighter] = \
-                mutil.broadcastAndWeightByRowSum(env[self.weighter], tmp)
-        else:
-            #not clear if this still works
-            m1,m2 = mutil.broadcast2(env.delta[self.dst],env[self.vec])
-            tmp = m1.multiply(m2)
-            mWeighter,mTmp = mutil.broadcast2(env[self.weighter],tmp)
-            env.delta[self.weighter] = mutil.weightByRowSum(mWeighter,mTmp)
-
+        tmp = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.vec])
+        env.delta[self.weighter] = mutil.broadcastAndWeightByRowSum(env[self.weighter], tmp)
