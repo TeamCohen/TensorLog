@@ -183,7 +183,6 @@ class AssignOnehotToVar(Op):
     def _doEval(self,env):
         env[self.dst] = env.db.onehot(self.onehotConst)
     def _doBackprop(self,env,gradAccum):
-        #TODO check
         pass
 
 class VecMatMulOp(Op):
@@ -201,8 +200,6 @@ class VecMatMulOp(Op):
         if self.transpose: buf += ".T"
         return buf
     def _doEval(self,env):
-#        print 'xpose',self.transpose,\
-#              'src',env[self.src].get_shape(),'mat',env.db.matrix(self.matMode,self.transpose).get_shape()
         env[self.dst] = env[self.src] * env.db.matrix(self.matMode,self.transpose)
     def _doBackprop(self,env,gradAccum):
         # dst = f(src,mat)

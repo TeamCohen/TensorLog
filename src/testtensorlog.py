@@ -686,6 +686,22 @@ class TestDataset(unittest.TestCase):
         for k in actual.keys():
             self.assertEqual(actual[k], expected[k])
 
+class TestMatrixUtils(unittest.TestCase):
+
+    def setUp(self):
+        self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
+        self.row1 = self.db.onehot('william')+self.db.onehot('poppy')
+        
+    def testRepeat(self):
+        mat = mutil.repeat(self.row1,3)
+        self.assertEqual(mutil.numRows(mat), 3)
+        dm = self.db.matrixAsSymbolDict(mat)
+        for i in range(3):
+            di = dm[i]
+            self.assertTrue('william' in di)
+            self.assertTrue('poppy' in di)
+            self.assertEqual(len(di.keys()), 2)
+
 if __name__=="__main__":
     if len(sys.argv)==1:
         unittest.main()

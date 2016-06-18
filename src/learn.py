@@ -2,6 +2,7 @@
 
 import funs
 import time
+import math
 import numpy as NP
 import scipy.sparse as SS
 import collections
@@ -83,8 +84,17 @@ class Learner(object):
     @staticmethod
     def crossEntropy(Y,P):
         """Compute cross entropy some predications relative to some labels."""
+        #underflow forces predictions to zero - we don't want to take
+        #log of zero note this is just for monitoring so we don't
+        #really care what gets computed here....
+        #eps = 1e-10 
+        #P1 = mutil.mapData(lambda d:NP.clip(d,eps,NP.finfo('float64').max), P)
         logP = mutil.mapData(NP.log,P)
-        return -(Y.multiply(logP).sum())
+        result = -(Y.multiply(logP).sum())
+        if math.isnan(result):
+            print 'P',P
+            assert False
+        return result
 
     #
     # gradient of crossEntropy loss

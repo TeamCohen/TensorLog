@@ -1,5 +1,10 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
+#TODO refactor
+#  - generic broadcast
+#  - np.tile(array, k) 
+#  - generic row-by-row processing for weightByRowSum and softmax
+
 import scipy.sparse as SS
 import scipy.io
 import numpy as np
@@ -9,14 +14,19 @@ import config
 
 conf = config.Config()
 conf.optimize_softmax = True;   conf.help.optimize_softmax = 'use optimized version of softmax code'
+#np.seterr(invalid='raise',divide='raise',over='raise')
+np.seterr(all='raise')
 
 # miscellaneous broadcast utilities used my ops.py and funs.py
+
+EPSILON = 1e-10
 
 def summary(mat):
     checkCSR(mat)
     return 'nnz %d rows %d cols %d' % (mat.nnz,numRows(mat),numCols(mat))
 
 def checkCSR(mat,context='unknwon'):
+    """Raise error if mat is not a scipy.sparse.csr_matrix."""
     assert isinstance(mat,SS.csr_matrix),'bad type [context %s] for %r' % (context,mat)
 
 def mean(mat):
@@ -34,20 +44,65 @@ def mapData(dataFun,mat):
     assert newdata.shape==mat.data.shape,'shape mismatch %r vs %r' % (newdata.shape,mat.data.shape)
     return SS.csr_matrix((newdata,mat.indices,mat.indptr), shape=mat.shape, dtype='float64')
 
-def nzCols(mat,rowIndex):
-    """Enumerate the non-zero column indices in row i."""
-    checkCSR(mat)
-    for colIndex in mat.indices[mat.indptr[rowIndex]:mat.indptr[rowIndex+1]]:
-        yield colIndex
-
-def emptyRow(mat,rowIndex):
-    checkCSR(mat)
-    return mat.indptr[rowIndex]==mat.indptr[rowIndex+1]
-
 def stack(mats):
     """Vertically stack matrices and return a sparse csr matrix."""
     for m in mats: checkCSR(m)
     return SS.csr_matrix(SS.vstack(mats, dtype='float64'))
+
+def nzCols(m,i):
+    for j in range(m.indptr[i],m.indptr[i+1]):
+        yield j
+
+def repeat(row,n):
+    """Construct an n-row matrix where each row is a copy of the given one."""
+    checkCSR(row)
+    d = np.tile(row.data,n)
+    inds = np.tile(row.indices,n)
+    assert numRows(row)==1
+    numNZCols = row.indptr[1]
+    ptrs = np.array(range(0,numNZCols*n+1,numNZCols))
+    return SS.csr_matrix((d,inds,ptrs),shape=(n,numCols(row)), dtype='float64')
+
+def alterMatrixRows(mat,alterationFun):
+    """ apply alterationFun(data,lo,hi) to each row.
+    """
+    for i in range(numRows(mat)):
+        alterationFun(mat.data,mat.indptr[i],mat.indptr[i+1],mat.indices)
+
+def softmax(db,mat):
+    nullEpsilon = -10  # scores for null entity will be exp(nullMatrix)
+    result = repeat(db.nullMatrix(1)*nullEpsilon, numRows(mat)) + mat
+    def softMaxAlteration(data,lo,hi,unused):
+        rowMax = max(data[lo:hi])
+        for j in range(lo,hi):
+            data[j] = math.exp(data[j] - rowMax)
+        rowNorm = sum(data[lo:hi])
+        for j in range(lo,hi):
+            data[j] = data[j]/rowNorm
+    alterMatrixRows(result,softMaxAlteration)
+    return result
+
+def broadcastAndComponentwiseMultiply(m1,m2):
+    checkCSR(m1); checkCSR(m2)
+    def multiplyByBroadcastRowVec(m,v):
+        #convert v to a dictionary
+        vd = dict( (v.indices[j],v.data[j]) for j in range(v.indptr[0],v.indptr[1]) )
+        def multiplyByVAlteration(data,lo,hi,indices):
+            for j in range(lo,hi):
+                data[j] *= vd.get(indices[j],0.0)
+        result = m.copy()
+        alterMatrixRows(result,multiplyByVAlteration)
+        return result
+    r1 = numRows(m1); r2 = numRows(m2)
+    if r1==r2:
+        return  m1.multiply(m2)
+    elif r1==1:
+        return multiplyByBroadcastRowVec(m1,m2)        
+    elif r2==1:
+        return multiplyByBroadcastRowVec(m1,m2)        
+    else:
+        assert False, 'mismatched matrix sizes: #rows %d,%d' % (r1,r2)
+    return result
 
 def numRows(m): 
     """Number of rows in matrix"""
@@ -81,7 +136,7 @@ def broadcast2(m1,m2):
     else:
         assert False,'cannot broadcast: #rows %d vs %d' % (r1,r2)
 
-def softmax(db,m):
+def oldsoftmax(db,m):
     """Row-wise softmax of a sparse matrix, returned as a sparse matrix.
     This doesn't really require 'broadcasting' but it seems like you
     need special case handling to deal with multiple rows efficiently.
@@ -98,10 +153,12 @@ def softmax(db,m):
             e_d = np.exp(d - np.max(d))
             #TODO should I correct the denominator for the (r.numCols()-r.nnz) zeros in the row?
             #that would be: d_sm = e_d / (e_d.sum() + numCols(r) - r.nnz)
-            d_sm = e_d / e_d.sum()
+            d_sm0 = e_d / e_d.sum()
+            d_sm = np.clip(d_sm0, EPSILON, np.finfo('float64').max)
             return SS.csr_matrix((d_sm,r.indices,r.indptr),shape=r.shape)
     numr = numRows(m)
     if numr==1:
+        print 'numr==1'
         return softmaxRow(m + db.nullMatrix(1)*nullEpsilon)
     elif not conf.optimize_softmax:
         m1 = m + db.nullMatrix(numr)*nullEpsilon
@@ -112,7 +169,7 @@ def softmax(db,m):
         for i in xrange(numr):
             #rowMax = max(result[i,j] for j in nzCols(result,i))
             rowMax = max(result.data[result.indptr[i]:result.indptr[i+1]])
-            rowNorm = 0
+            rowNorm = 0.0
             #for j in nzCols(result,i):
             for j in range(result.indptr[i],result.indptr[i+1]):
                 #result[i,j] = math.exp(result[i,j] - rowMax)
@@ -122,10 +179,15 @@ def softmax(db,m):
             #for j in nzCols(result,i):            
             for j in range(result.indptr[i],result.indptr[i+1]):
                 #result[i,j] = result[i,j]/rowNorm
-                result.data[j] = result.data[j] / rowNorm
+                try:
+                    result.data[j] = result.data[j] / rowNorm
+                except FloatingPointError:
+                    result.data[j] = 0.0
+                result.data[j] = max(result.data[j], EPSILON)
+                assert not math.isnan(result.data[j]), 'problem in softmax norm %f max %f' % (rowNorm,rowMax)
         return result
 
-def broadcastAndComponentwiseMultiply(m1,m2):
+def oldbroadcastAndComponentwiseMultiply(m1,m2):
     checkCSR(m1); checkCSR(m2)
     def multiplyByBroadcastRowVec(r,m,v):
         vd = {}

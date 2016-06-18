@@ -7,6 +7,7 @@ import sys
 import ops
 import mutil
 import config
+import numpy
 
 conf = config.Config()
 conf.trace = False;         conf.help.trace =         "Print debug info during function eval"
@@ -89,6 +90,24 @@ class NullFunction(OpSeqFunction):
         return self.result
     def _doBackprop(self,delta,gradAccum):
         return self.result
+
+class LogFunction(Function):
+    """Returns an all-zeros vector."""
+    def __init__(self,fun):
+        self.fun = fun
+        self.result = None
+    def __repr__(self):
+        return 'LogFunction(%r)' % self.fun
+    def pprint(self,depth=0):
+        return [('| '*depth) + 'LogFunction:'] + self.fun.pprint(depth+1)
+    def _doEval(self,db,values):
+        self.inner = self.fun.eval(db,values)
+        self.result = mutil.mapData(lambda d:numpy.log1p(d.clip(0,d)), self.inner)
+        #self.result = self.inner
+        return self.result
+    def _doBackprop(self,delta,gradAccum):
+        newDelta = mutil.mapData(lambda d:numpy.reciprocal(d+1), self.inner).multiply(delta)
+        return self.fun.backprop(newDelta,gradAccum)
 
 class SumFunction(Function):
     """A function which computes the sum of a bunch of other functions."""
