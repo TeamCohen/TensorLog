@@ -326,7 +326,6 @@ class MatrixDB(object):
                 return 0.0
 
         parts = line.split("\t")
-        #TODO add ability to read in weights
         if conf.allow_weighted_tuples and len(parts)==4:
             f,a1,a2,wstr = parts[0],parts[1],parts[2],parts[3]
             arity = 2

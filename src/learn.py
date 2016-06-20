@@ -11,7 +11,10 @@ import tensorlog
 import dataset
 import mutil
 
-ROBUST_ACCURACY_CHECK = False
+# clip to avoid exploding gradients
+
+MIN_GRADIENT = -1000.0
+MAX_GRADIENT = +1000.0
 
 class GradAccumulator(object):
     """ Accumulate the sum gradients for perhaps many parameters, indexing
@@ -65,36 +68,18 @@ class Learner(object):
         n = mutil.numRows(P)
         ok = 0.0
         for i in range(n):
-            if not ROBUST_ACCURACY_CHECK:
-                pi = P.getrow(i)
-                yi = Y.getrow(i)
-                ti = mutil.mapData(allZerosButArgmax,pi)
-                ok += yi.multiply(ti).sum()
-            else:
-                #TODO: WAY slower
-                maxp = -1
-                maxj = -1
-                for j in mutil.nzCols(P,i):
-                    if P[i,j]>maxp:                
-                        maxp = P[i,j]
-                        maxj = j
-                ok += Y[i,maxj]
+            pi = P.getrow(i)
+            yi = Y.getrow(i)
+            ti = mutil.mapData(allZerosButArgmax,pi)
+            ok += yi.multiply(ti).sum()
         return ok/n
 
     @staticmethod
-    def crossEntropy(Y,P):
+    def crossEntropy(Y,P,perExample=False):
         """Compute cross entropy some predications relative to some labels."""
-        #underflow forces predictions to zero - we don't want to take
-        #log of zero note this is just for monitoring so we don't
-        #really care what gets computed here....
-        #eps = 1e-10 
-        #P1 = mutil.mapData(lambda d:NP.clip(d,eps,NP.finfo('float64').max), P)
         logP = mutil.mapData(NP.log,P)
         result = -(Y.multiply(logP).sum())
-        if math.isnan(result):
-            print 'P',P
-            assert False
-        return result
+        return result/mutil.numRows(Y) if perExample else result
 
     #
     # gradient of crossEntropy loss
@@ -131,40 +116,50 @@ class Learner(object):
     # parameter update
     #
 
-    def applyMeanUpdate(self,paramGrads,rate):
+    def applyMeanUpdate(self,paramGrads,rate,n):
         """ Compute the mean of each parameter gradient, and add it to the
         appropriate param, after scaling by rate. If necessary clip
         negative parameters to zero.
         """ 
-        for (functor,arity),delta in paramGrads.items():
+        for (functor,arity),delta0 in paramGrads.items():
+            #clip the delta vector to avoid exploding gradients
+            #TODO have a clip function in mutil?
+            delta = mutil.mapData(lambda d:NP.clip(d,MIN_GRADIENT,MAX_GRADIENT), delta0)
             m0 = self.prog.db.getParameter(functor,arity)
             if mutil.numRows(m0)==1:
-                m = m0 + mutil.mean(delta)*rate
+                #for a parameter that is a row-vector, we have one gradient per example
+                m1 = m0 + mutil.mean(delta)*rate
             else:
-                m = m0 + delta*(1.0/mutil.numRows(m0))*rate
-            #clip negative entries to zero
-            NP.clip(m.data,0.0,NP.finfo('float64').max)
+                #for a parameter that is matrix, we have one gradient for the whole
+                m1 = m0 + delta*(1.0/n)*rate
+            #clip negative entries of parameters to zero
+            m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
             self.prog.db.setParameter(functor,arity,m)
 
 class FixedRateGDLearner(Learner):
     """ Very simple one-predicate learner
     """  
 
-    def __init__(self,prog,epochs=10,rate=0.1):
+    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None):
         super(FixedRateGDLearner,self).__init__(prog)
+        self.regularizer = regularizer or NullRegularizer()
         self.epochs=epochs
         self.rate=rate
     
     def train(self,mode,X,Y):
         startTime = time.time()
         for i in range(self.epochs):
+            n = mutil.numRows(X)
             def traceFunForEpoch(thisLearner,Y,P):
-                print 'epoch %d of %d' % (i+1,self.epochs),
-                print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
-                print ' acc %.3f' % thisLearner.accuracy(Y,P),            
-                print ' cumSecs %.3f' % (time.time()-startTime)
+                xe = thisLearner.crossEntropy(Y,P)
+                reg = thisLearner.regularizer.regularizationCost(thisLearner.prog)
+                print 'epoch %2d of %d' % (i+1,self.epochs),
+                print ' : loss %.3f = crossEnt %.3f + reg %.3f' % (xe+reg,xe,reg),
+                print ' ; acc %.3f' % thisLearner.accuracy(Y,P),
+                print ' ; cumSecs %.3f' % (time.time()-startTime)
             paramGrads = self.crossEntropyGrad(mode,X,Y,traceFun=traceFunForEpoch)
-            self.applyMeanUpdate(paramGrads,self.rate)
+            self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
+            self.applyMeanUpdate(paramGrads,self.rate,n)
         
 class MultiPredLearner(Learner):
 
@@ -192,19 +187,21 @@ class MultiPredLearner(Learner):
         return weightedSum/totalWeight
 
     @staticmethod
-    def multiCrossEntropy(goldDset,predictedDset):
+    def multiCrossEntropy(goldDset,predictedDset,perExample=True):
         result = 0.0
         for mode in goldDset.modesToLearn():
             assert predictedDset.hasMode(mode)
             Y = goldDset.getY(mode)
             P = predictedDset.getY(mode)
-            result += Learner.crossEntropy(Y,P)
+            divisor = mutil.numRows(Y) if perExample else 1.0
+            result += Learner.crossEntropy(Y,P)/divisor
         return result
 
 class MultiPredFixedRateGDLearner(MultiPredLearner):
 
-    def __init__(self,prog,epochs=10,rate=0.1):
+    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None):
         super(MultiPredFixedRateGDLearner,self).__init__(prog)
+        self.regularizer = regularizer or NullRegularizer()
         self.epochs=epochs
         self.rate=rate
     
@@ -212,14 +209,55 @@ class MultiPredFixedRateGDLearner(MultiPredLearner):
         startTime = time.time()
         for i in range(self.epochs):
             for mode in dset.modesToLearn():
+                n = mutil.numRows(dset.getX(mode))
                 def myTraceFun(thisLearner,Y,P):
                     print 'epoch %d of %d: target mode %s' % (i+1,self.epochs,str(mode)),
                     print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
+                    print ' reg cost %.3f' % thisLearner.regularizer.regularizationCost(thisLearner.prog),
                     print ' acc %.3f' % thisLearner.accuracy(Y,P),            
                     print ' cumSecs %.3f' % (time.time()-startTime)
                 paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),traceFun=myTraceFun)
-                self.applyMeanUpdate(paramGrads,self.rate)
+                self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
+                self.applyMeanUpdate(paramGrads,self.rate,n)
             
+class Regularizer(object):
+
+    def addRegularizationGrad(self,paramGrads,prog,n):
+        assert False, 'abstract method called'
+
+    def regularizationCost(self,prog):
+        assert False, 'abstract method called'
+
+class NullRegularizer(object):
+
+    def addRegularizationGrad(self,paramGrads,prog,n):
+        pass
+
+    def regularizationCost(self,prog):
+        return 0.0
+
+class L2Regularizer(Regularizer):
+
+    def __init__(self,regularizationConstant=0.01):
+        self.regularizationConstant = regularizationConstant
+    
+    def addRegularizationGrad(self,paramGrads,prog,n):
+        for functor,arity in prog.db.params:
+            m = prog.db.getParameter(functor,arity)
+            # want to do this update, from m->m1, but addititively
+            # m1 = m*(1 - regularizationConstant)^n = m*d
+            # so use [ m1 = m + delta = m*d] and solve for delta
+            delta0 = m * math.pow((1.0 - self.regularizationConstant), n) - m
+            delta = mutil.repeat(delta0,n) if arity==1 else delta0
+            paramGrads.accum((functor,arity), delta)
+
+    def regularizationCost(self,prog):
+        result = 0
+        for functor,arity in prog.db.params:
+            m = prog.db.getParameter(functor,arity)
+            result += (m.data * m.data).sum()
+        return result*self.regularizationConstant
+
 if __name__ == "__main__":
     pass
 

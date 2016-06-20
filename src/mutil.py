@@ -1,30 +1,36 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
-#TODO refactor
-#  - generic broadcast
-#  - np.tile(array, k) 
-#  - generic row-by-row processing for weightByRowSum and softmax
-
 import scipy.sparse as SS
 import scipy.io
-import numpy as np
+import numpy as NP
 import math
 
 import config
 
 conf = config.Config()
 conf.optimize_softmax = True;   conf.help.optimize_softmax = 'use optimized version of softmax code'
-#np.seterr(invalid='raise',divide='raise',over='raise')
-np.seterr(all='raise')
 
 def summary(mat):
     """Helpful string describing a matrix for debugging.""" 
     checkCSR(mat)
     return 'nnz %d rows %d cols %d' % (mat.nnz,numRows(mat),numCols(mat))
 
-def checkCSR(mat,context='unknwon'):
+def checkCSR(mat,context='unknown'):
     """Raise error if mat is not a scipy.sparse.csr_matrix."""
     assert isinstance(mat,SS.csr_matrix),'bad type [context %s] for %r' % (context,mat)
+
+def checkNoNANs(mat,context='unknown'):
+    """Raise error if mat has nan's in it"""
+    checkCSR(mat)
+    for j in range(0,mat.indptr[-1]):
+        assert not math.isnan(mat.data[j]),'nan\'s found: %s' % context
+
+def maxValue(mat):
+    try:
+        return NP.max(mat.data)
+    except ValueError:
+        #zero-size array
+        return -1
 
 def mean(mat):
     """Return the average of the rows."""
@@ -54,11 +60,11 @@ def nzCols(m,i):
 def repeat(row,n):
     """Construct an n-row matrix where each row is a copy of the given one."""
     checkCSR(row)
-    d = np.tile(row.data,n)
-    inds = np.tile(row.indices,n)
+    d = NP.tile(row.data,n)
+    inds = NP.tile(row.indices,n)
     assert numRows(row)==1
     numNZCols = row.indptr[1]
-    ptrs = np.array(range(0,numNZCols*n+1,numNZCols))
+    ptrs = NP.array(range(0,numNZCols*n+1,numNZCols))
     return SS.csr_matrix((d,inds,ptrs),shape=(n,numCols(row)), dtype='float64')
 
 def alterMatrixRows(mat,alterationFun):
@@ -74,11 +80,16 @@ def softmax(db,mat):
     result = repeat(db.nullMatrix(1)*nullEpsilon, numRows(mat)) + mat
     def softMaxAlteration(data,lo,hi,unused):
         rowMax = max(data[lo:hi])
+        assert not math.isnan(rowMax)
         for j in range(lo,hi):
             data[j] = math.exp(data[j] - rowMax)
         rowNorm = sum(data[lo:hi])
+        assert not math.isnan(rowNorm)
         for j in range(lo,hi):
             data[j] = data[j]/rowNorm
+            assert not math.isnan(data[j])
+            if data[j]==0:
+                data[j] = math.exp(nullEpsilon)
     alterMatrixRows(result,softMaxAlteration)
     return result
 
@@ -129,9 +140,9 @@ def broadcastAndWeightByRowSum(m1,m2):
         nnz1 = m1.data.shape[0]
         #allocate space for the broadcast version of m1,
         #with one copy of m1 for every row of m2
-        data = np.zeros(shape=(nnz1*r2,))
-        indices = np.zeros(shape=(nnz1*r2,),dtype='int')
-        indptr = np.zeros(shape=(r2+1,),dtype='int')
+        data = NP.zeros(shape=(nnz1*r2,))
+        indices = NP.zeros(shape=(nnz1*r2,),dtype='int')
+        indptr = NP.zeros(shape=(r2+1,),dtype='int')
         ptr = 0
         indptr[0] = 0 
         for i in xrange(r2):

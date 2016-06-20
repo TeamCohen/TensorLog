@@ -31,7 +31,8 @@ class Expt(object):
 
     def _run(self,
              initProgram=None,trainData=None, testData=None, targetPred=None, epochs=5,
-             savedTestPreds=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None):
+             savedTestPreds=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None,
+             regularizer=None):
 
         """ Run an experiment, given a whole bunch of parameters.
         savedTestPreds, savedTestExamples, savedTrainExamples: if not None, then
@@ -54,7 +55,7 @@ class Expt(object):
             TX,TY = trainData.getX(mode),trainData.getY(mode)
             UX,UY = testData.getX(mode),testData.getY(mode)
             
-            learner = learn.FixedRateGDLearner(ti.prog,epochs=epochs)
+            learner = learn.FixedRateGDLearner(ti.prog,epochs=epochs,regularizer=regularizer)
 
             TP0 = Expt.timeAction(
                 'running untrained theory on train data',
@@ -84,7 +85,7 @@ class Expt(object):
             testAcc,testXent = Expt.printStats('..trained theory','test',UY,UP1)
 
         else:
-            learner = learn.MultiPredFixedRateGDLearner(ti.prog,epochs=epochs)
+            learner = learn.MultiPredFixedRateGDLearner(ti.prog,epochs=epochs,regularizer=regularizer)
             print 'multipred learner',type(learner)
 
             TP0 = Expt.timeAction(
@@ -174,16 +175,16 @@ class Expt(object):
     def printStats(modelMsg,testSet,Y,P):
         """Print accuracy and crossEntropy for some named model on a named eval set."""
         acc = learn.Learner.accuracy(Y,P)
-        xent = learn.Learner.crossEntropy(Y,P)
-        print 'eval',modelMsg,'on',testSet,': acc',acc,'xent',xent
+        xent = learn.Learner.crossEntropy(Y,P,perExample=True)
+        print 'eval',modelMsg,'on',testSet,': acc',acc,'xent/ex',xent
         return (acc,xent)
 
     @staticmethod
     def printMultiPredStats(modelMsg,testSet,goldData,predictedData):
         """Print accuracy and crossEntropy for some named model on a named eval set."""
         acc = learn.MultiPredLearner.multiAccuracy(goldData,predictedData)
-        xent = learn.MultiPredLearner.multiCrossEntropy(goldData,predictedData)
-        print 'eval',modelMsg,'on',testSet,': acc',acc,'xent',xent
+        xent = learn.MultiPredLearner.multiCrossEntropy(goldData,predictedData,perExample=True)
+        print 'eval',modelMsg,'on',testSet,': acc',acc,'xent/ex',xent
         return (acc,xent)
 
 # a sample main
@@ -200,5 +201,7 @@ if __name__=="__main__":
               'savedModel':'toy-trained.db',
               'savedTestPreds':'tlog-cache/toy-test.solutions.txt',
               'savedTrainExamples':'tlog-cache/toy-train.examples',
-              'savedTestExamples':'tlog-cache/toy-test.examples'}
+              'savedTestExamples':'tlog-cache/toy-test.examples',
+              'epochs':5,
+              }
     Expt(params).run()

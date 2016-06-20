@@ -2,12 +2,20 @@ TUTORIAL/DOCS
 
   see docs/README.txt
 
+Trip work:
+ - spent time stabilizing the learner on grid task.  progress but learning
+ rate still needs to be tuned by grid size....
+ - no regularizer arguments for expt yet
+ - problems mostly were lack of regularization and exploding gradients  
+ - learner now has regularizer and clips gradients and parameters correctlu
+ - major cleanup of mutil
+ - regularization seems slow for wnet task compared to previously....
+ - explored using Log before SoftMax to make it more stable but experiments were disappointing, learning
+ seemed much much slower.....
+
 BUGS: 
 
  - weights should work with a sparse parameter vector
- - cora fails with optimize_component_multiply turned on
- - csc_matrixes seem to cause unpredictable behavior, should
- double check these in optimized sections 
  - head p(X,X) doesn't work
 
 CLEANUPS:
@@ -79,3 +87,38 @@ phase2_rq(PX,Y) :-
 	  f2(PX,X),q(X,Z),r(Z,Y)
 	  f1(PX,P),weight_chain1_rq(P).
 
+
+
+-------------------- better trace output --------------------
+
+Build and/or examine the tree?
+ - show function tree (which has results) with line numbers
+ - expand/close line k with +k/-k -- also shows some outputs
+ - view attributes of output: +k r1,...,rm : for row r, +k : c1,..,cm for columns c
+
+What about backprop values? can I also see deltas at each function
+node?  A function might be called multiple times with different inputs
+of course... should I consider this? what happens with that now?  does
+the self.result bit for recursive calls work properly? 
+
+self.result should probably be self.output
+
+-------------------- grids -------------------- 
+
+what the heck does the visualization show?
+
+	      
+SoftmaxFunction: path(i,o) = ...
+  SumFunction: path(i,o)/1 = ...
+    OpSeqFunction(['X']): path(X,Y) :- edge(X,Y). = ... /1
+      eval VecMatMulOp('f_1_Y','X',edge(i,o),False)
+  OpSeqFunction(['X']):	  path(X,Y) :- edge(X,Z), path(Z,Y). = ... /1
+      eval VecMatMulOp('f_1_Z','X',edge(i,o),False)
+      eval DefinedPredOp('f_2_Y','f_1_Z',path(i,o),1) 
+         SumFunction: path(i,o)/2
+            OpSeqFunction(['X']):  path(X,Y) :- edge(X,Y). /2
+               eval VecMatMulOp('f_1_Y','X',edge(i,o),False) max 2.25
+            OpSeqFunction(['X']):  path(X,Y) :- edge(X,Z), path(Z,Y). /2
+               eval VecMatMulOp('f_1_Z','X',edge(i,o),False) max 2.25
+               eval DefinedPredOp('f_2_Y','f_1_Z',path(i,o),2)
+                  NullFunction()

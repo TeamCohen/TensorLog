@@ -2,14 +2,18 @@
 
 import numpy
 import logging
+#TODO make util smart about csc/csr
 import scipy.sparse
+import math
 
 import mutil
 import config
 
 conf = config.Config()
-conf.trace = False;      conf.help.trace =      "Print debug info during op execution"
-conf.long_trace = False; conf.help.long_trace = "Print output of functions after op - only for small tasks"
+conf.trace = False;      conf.help.trace =           "Print debug info during op execution"
+conf.long_trace = False; conf.help.long_trace =      "Print output of functions after op - only for small tasks"
+conf.max_trace = False;  conf.help.max_trace =       "Print max value of functions after op"
+conf.check_nan = True;   conf.help.check_overflow =  "Check if output of each op is nan."
 
 ##############################################################################
 #
@@ -64,15 +68,20 @@ class Op(object):
         operation."""
         self.msgFrom = msgFrom
         self.msgTo = msgTo
-    #TODO docstrings
     def eval(self,env):
+        """Evaluate the operator"""
         if conf.trace:
             print 'eval',self,
         self._doEval(env)
         if conf.trace:
-            if conf.long_trace: print 'stores',env.db.matrixAsSymbolDict(env[self.dst])
-            else: print
+            if conf.long_trace: print 'stores',env.db.matrixAsSymbolDict(env[self.dst]),
+            if conf.max_trace: print 'max',mutil.maxValue(env[self.dst]),
+            print
+        if conf.check_nan:
+            mutil.checkNoNANs(env[self.dst], context='saving %s' % self.dst)
+
     def backprop(self,env,gradAccum):
+        """Backprop thru this operator - should always call eval first"""
         #these should all call eval first
         if conf.trace:
             print 'call bp',self,'delta[',self.dst,'] shape',env.delta[self.dst].get_shape(),
@@ -162,10 +171,8 @@ class AssignZeroToVar(Op):
     def _ppLHS(self):
         return "0"
     def _doEval(self,env):
-        #TODO - zeros(n)? or is this used now?
         env[self.dst] = env.db.zeros()
     def _doBackprop(self,env,gradAccum):
-        #TODO check
         pass
 
 class AssignOnehotToVar(Op):

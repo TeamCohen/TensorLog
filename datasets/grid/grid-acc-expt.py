@@ -1,8 +1,9 @@
 import sys
 import networkx
 import matplotlib.pyplot as plt
-import numpy
+import numpy as NP
 import random
+import math
 
 import matrixdb
 import dataset
@@ -10,6 +11,7 @@ import tensorlog
 import funs
 import ops
 import exptv2
+import mutil
  
 def visualizeLearned(db,n):
     m = db.getParameter('edge',2)
@@ -42,7 +44,7 @@ def visualizeLearned(db,n):
     for i in range(n+1):
         for j in range(n+1):
             src = 'n_%d_%d' % (i,j)
-            pos[src] = numpy.array([i/(n+1.0),j/(n+1.0)])
+            pos[src] = NP.array([i/(n+1.0),j/(n+1.0)])
 
     edgeList = g.edges()
 
@@ -50,7 +52,7 @@ def visualizeLearned(db,n):
     networkx.draw(g,pos,node_color='#A0CBE2',width=4,edge_color=edgeColors,edge_cmap=plt.cm.cool,
                   with_labels=False,arrows=False)
     plt.savefig("visualize.png") # save as png
-    plt.show() # display                        
+    #plt.show() # display                        
 
 def generateGrid(n,outf):
     fp = open(outf,'w')
@@ -77,9 +79,19 @@ def generateData(n,trainFile,testFile):
 
 if __name__=="__main__":
 
-    n = int(sys.argv[1])
-    stem = 'g%d' % n
+    n = 6
+    if len(sys.argv)>1:
+        n = int(sys.argv[1])
+    epochs = 20
+    if len(sys.argv)>2:
+        epochs = int(sys.argv[2])
     maxD = round(n/2.0)
+    if len(sys.argv)>3:    
+        maxD = int(sys.argv[2])
+
+    print 'grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (n,n,epochs,maxD)
+
+    stem = 'g%d' % n
 
     factFile = stem+'.cfacts'
     trainFile = stem+'-train.exam'
@@ -97,14 +109,17 @@ if __name__=="__main__":
               'trainData':trainData, 'testData':testData,
               'savedTestPreds':'tmp-cache/test.solutions.txt',
               'savedTestExamples':'tmp-cache/test.examples',
-              'epochs':20,
+              'epochs':epochs,
               }
     prog.maxDepth = maxD
+    NP.seterr(divide='raise')
+
     #prog.normalize = 'log+softmax'
-    #funs.conf.trace = True
-    #ops.conf.trace = True
+    funs.conf.trace = True
+    ops.conf.trace = True
     #ops.conf.long_trace = True
+    ops.conf.max_trace = True
     exptv2.Expt(params).run()
-    
+    print 'max edge weight',mutil.maxValue(db.getParameter('edge',2))
     visualizeLearned(db,n)
 
