@@ -73,6 +73,7 @@ class Op(object):
         if conf.trace:
             print 'eval',self,
         self._doEval(env)
+        self.output = env[self.dst]
         if conf.trace:
             if conf.long_trace: print 'stores',env.db.matrixAsSymbolDict(env[self.dst]),
             if conf.max_trace: print 'max',mutil.maxValue(env[self.dst]),
@@ -94,14 +95,20 @@ class Op(object):
         print 'shape of env.delta[%s]' % key,env.delta[key].get_shape()
     def showShape(self,env,key):
         print 'shape of env[%s]' % key,env[key].get_shape()
+    #needed for visualization
     def pprint(self):
-        buf = '%s = %s' % (self.dst,self._ppLHS())
-        if self.msgFrom and self.msgTo:
-            return '%-45s // %s -> %s' % (buf,self.msgFrom,self.msgTo)
-        else:
-            return buf
+        description = self.pprintSummary()
+        comment = self.pprintComment()
+        if comment: return [description + ' # ' + comment]
+        else: return [description]
+    def pprintSummary(self):
+        return '%s = %s' % (self.dst,self._ppLHS())
+    def pprintComment(self):
+        return '%s -> %s' % (self.msgFrom,self.msgTo) if (self.msgFrom and self.msgTo) else ''
+    def children(self):
+        return []
     def _ppLHS(self):
-        #override
+        #override in subclasses
         return repr(self)
 
 class DefinedPredOp(Op):
