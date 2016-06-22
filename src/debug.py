@@ -97,10 +97,16 @@ class Debugger(object):
 
 if __name__ == "__main__":
     
-    db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
+    UNTRAINED_MODEL = False
+
+    if UNTRAINED_MODEL:
+        db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
+    else:
+        db = matrixdb.MatrixDB.deserialize('toy-trained.db')
     trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
     prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr"],db=db)
-    prog.setWeights(db.ones())
+    if UNTRAINED_MODEL:
+        prog.setWeights(db.ones())
     fun,P = Debugger.evaluatedFunction(initProgram=prog,trainData=trainData,targetPred="predict/io")
     print "\n".join(fun.pprint())
     d = Debugger()

@@ -13,44 +13,53 @@ import ops
 import exptv2
 import mutil
  
+def nodeName(i,j): 
+    return '%d,%d' % (i,j)
+
 def visualizeLearned(db,n):
     m = db.getParameter('edge',2)
-    g = networkx.Graph()
+    g = networkx.DiGraph()
     weight = {}
     #look at all edges downward
     for i in range(1,n+1):
         for j in range(1,n+1):
-            src = 'n_%d_%d' % (i,j)
+            src = nodeName(i,j)
             for di in [-1,0,+1]:
                 for dj in [-1,0,+1]:
                     if (1 <= i+di <= n) and (1 <= j+dj <= n):
-                        src = 'n_%d_%d' % (i,j)
-                        dst = 'n_%d_%d' % (i+di,j+dj)
-                        wDown = m[db.stab.getId(src),db.stab.getId(dst)]
-                        wUp = m[db.stab.getId(dst),db.stab.getId(src)]
-                        weight[(src,dst)] = wDown-wUp
-                        #print "weight %s -> %s" % (src,dst),m[db.stab.getId(src),db.stab.getId(dst)]
-                        g.add_edge(src,dst,weight=weight[(src,dst)])
+                        dst = nodeName(i+di,j+dj)
+                        wTo = m[db.stab.getId(src),db.stab.getId(dst)]
+                        wFrom = m[db.stab.getId(dst),db.stab.getId(src)]
+                        if wTo>wFrom:
+                            weight[(src,dst)] = wTo-wFrom
+                            g.add_edge(src,dst,weight=weight[(src,dst)])
+                        else:
+                            weight[(dst,src)] = wFrom-wTo
+                            g.add_edge(dst,src,weight=weight[(dst,src)])
+                            
+                            #print "weight %s -> %s" % (src,dst),m[db.stab.getId(src),db.stab.getId(dst)]
 
     #color the edges with 10 different int values
-    maxw = max(weight.values())
-    minw = min(weight.values())
+#    maxw = max(weight.values())
+#    minw = min(weight.values())
+#    def colorCode(w):
+#        return round(10 * (w-minw) / (maxw-minw))
+    weightList = sorted(weight.values())
     def colorCode(w):
-        return round(10 * (w-minw) / (maxw-minw))
+        return round(10*float(weightList.index(w))/len(weightList))
     edgeColors = map(lambda e:colorCode(weight.get(e,0)), g.edges())
         
     pos = {}
     #position the nodes
     for i in range(n+1):
         for j in range(n+1):
-            src = 'n_%d_%d' % (i,j)
+            src = nodeName(i,j)
             pos[src] = NP.array([i/(n+1.0),j/(n+1.0)])
-
     edgeList = g.edges()
 
     #networkx.draw(g,pos,node_color='#A0CBE2',edge_color=colors,width=4,edge_cmap=plt.cm.Blues,with_labels=False)
     networkx.draw(g,pos,node_color='#A0CBE2',width=4,edge_color=edgeColors,edge_cmap=plt.cm.cool,
-                  with_labels=False,arrows=False)
+                  with_labels=True,node_size=400)
     plt.savefig("visualize.png") # save as png
     #plt.show() # display                        
 
@@ -61,7 +70,7 @@ def generateGrid(n,outf):
             for di in [-1,0,+1]:
                 for dj in [-1,0,+1]:
                     if (1 <= i+di <= n) and (1 <= j+dj <= n):
-                        fp.write('edge\tn_%d_%d\tn_%d_%d\t0.5\n' % (i,j,i+di,j+dj))
+                        fp.write('edge\t%s\t%s\t0.5\n' % (nodeName(i,j),nodeName(i+di,j+dj)))
 
 def generateData(n,trainFile,testFile):
     fpTrain = open(trainFile,'w')
@@ -72,8 +81,8 @@ def generateData(n,trainFile,testFile):
             #target
             ti = 1 if i<n/2 else n
             tj = 1 if j<n/2 else n
-            x = 'n_%d_%d' % (i,j)
-            y = 'n_%d_%d' % (ti,tj)
+            x = nodeName(i,j)
+            y = nodeName(ti,tj)
             fp = fpTrain if r.random()<0.67 else fpTest
             fp.write('\t'.join(['path',x,y]) + '\n')
 
@@ -115,8 +124,8 @@ if __name__=="__main__":
     NP.seterr(divide='raise')
 
     #prog.normalize = 'log+softmax'
-    funs.conf.trace = True
-    ops.conf.trace = True
+    #funs.conf.trace = True
+    #ops.conf.trace = True
     #ops.conf.long_trace = True
     ops.conf.max_trace = True
     exptv2.Expt(params).run()

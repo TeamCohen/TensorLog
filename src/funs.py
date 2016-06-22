@@ -91,7 +91,7 @@ class OpSeqFunction(Function):
     def children(self):
         return self.ops
 
-class NullFunction(OpSeqFunction):
+class NullFunction(Function):
     """Returns an all-zeros vector."""
     def __init__(self,lhsMode):
         self.opInputs = [('X%d' % i)  for i in range(lhsMode.arity) if lhsMode.isInput(i)]
