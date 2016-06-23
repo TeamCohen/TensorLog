@@ -63,6 +63,7 @@ class Op(object):
     def __init__(self,dst):
         self.dst = dst
         self.msgFrom = self.msgTo = None
+        self.delta = None
     def setMessage(self,msgFrom,msgTo):
         """For debugging/tracing, record the BP message associated with this
         operation."""
@@ -89,6 +90,7 @@ class Op(object):
             if conf.long_trace: print env.db.matrixAsSymbolDict(env.delta[self.dst])
             else: print
         self._doBackprop(env,gradAccum)
+        self.delta = env.delta[self.dst]
         if conf.trace: 
             print 'end bp',self
     def showDeltaShape(self,env,key):

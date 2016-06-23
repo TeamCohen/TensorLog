@@ -20,21 +20,21 @@ class Function(object):
     def eval(self,db,values):
         if conf.trace:
             print "Invoking:\n%s" % "\n. . ".join(self.pprint())
-        result = self._doEval(db,values)
+        self.output = self._doEval(db,values)
         if conf.trace:
             print "Function completed:\n%s" % "\n. . ".join(self.pprint())
             if conf.long_trace:
                 for k,v in enumerate(values):
                     print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
                 print '. result :',db.matrixAsSymbolDict(result)
-        return result
+        return self.output
     def backprop(self,delta,gradAccum):
         if conf.trace:
             print "Backprop:\n%s" % "\n. . ".join(self.pprint())
-        result = self._doBackprop(delta,gradAccum)
+        self.delta = self._doBackprop(delta,gradAccum)
         if conf.trace:
             print "Backprop completed:\n%s" % "\n. . ".join(self.pprint())
-        return result
+        return self.delta
     # these are used in pprint, and also in the debugging
     # visualization
     def pprint(self):
@@ -63,6 +63,7 @@ class OpSeqFunction(Function):
         self.opOutput = opOutput  #finding bindings which indicate the output
         self.ops = ops
         self.output = None
+        self.delta = None
         self.rule = rule #recorded for debug/trace
         self.opEnv = None #caches environment to evaluate the ops
     def __repr__(self):
@@ -78,8 +79,7 @@ class OpSeqFunction(Function):
         self.opEnv.bindList(self.opInputs,values)
         for op in self.ops:
             op.eval(self.opEnv)
-        self.output = self.opEnv[self.opOutput]
-        return self.output
+        return self.opEnv[self.opOutput]
     def _doBackprop(self,delta,gradAccum):
         self.opEnv.delta[self.opOutput] = delta
         n = len(self.ops)
@@ -97,13 +97,14 @@ class NullFunction(Function):
         self.opInputs = [('X%d' % i)  for i in range(lhsMode.arity) if lhsMode.isInput(i)]
         self.opOutput = 'Y'
         self.ops = [ops.AssignZeroToVar(self.opOutput)]
+        self.output = None
+        self.delta = None
     def __repr__(self):
         return 'NullFunction()'
     def pprintSummary(self):
         return 'NullFunction'
     def _doEval(self,db,values):
-        self.output = db.zeros(mutil.numRows(values[0]))
-        return self.output
+        return db.zeros(mutil.numRows(values[0]))
     def _doBackprop(self,delta,gradAccum):
         return self.output
     def children(self):
@@ -114,15 +115,14 @@ class LogFunction(Function):
     def __init__(self,fun):
         self.fun = fun
         self.output = None
+        self.delta = None
     def __repr__(self):
         return 'LogFunction(%r)' % self.fun
     def pprintSummary(self):
         return 'LogFunction'
     def _doEval(self,db,values):
         self.inner = self.fun.eval(db,values)
-        self.output = mutil.mapData(lambda d:numpy.log1p(d.clip(0,d)), self.inner)
-        #self.output = self.inner
-        return self.output
+        return mutil.mapData(lambda d:numpy.log1p(d.clip(0,d)), self.inner)
     def _doBackprop(self,delta,gradAccum):
         newDelta = mutil.mapData(lambda d:numpy.reciprocal(d+1), self.inner).multiply(delta)
         return self.fun.backprop(newDelta,gradAccum)
@@ -134,6 +134,7 @@ class SumFunction(Function):
     def __init__(self,funs):
         self.funs = funs
         self.output = None
+        self.delta = None
     def __repr__(self):
         return 'SumFunction(%r)' % self.funs
     def pprintSummary(self):
@@ -143,8 +144,7 @@ class SumFunction(Function):
         accum = addends[0]
         for i in range(1,len(addends)):
             accum = accum + addends[i]
-        self.output = accum
-        return self.output
+        return accum
     def _doBackprop(self,delta,gradAccum):
         addends = map(lambda f:f.backprop(delta,gradAccum), self.funs)
         accum = addends[0]
@@ -159,14 +159,14 @@ class SoftmaxFunction(Function):
     def __init__(self,fun):
         self.fun = fun
         self.output = None
+        self.delta = None
     def __repr__(self):
         return 'SoftmaxFunction(%r)' % self.fun
     def pprintSummary(self):
         return 'SoftmaxFunction'
     def _doEval(self,db,values):
         unnorm = self.fun.eval(db,values)
-        self.output = mutil.softmax(db,unnorm)
-        return self.output
+        return mutil.softmax(db,unnorm)
     def _doBackprop(self,delta):
         # see comments for learner.crossEntropyGrad
         assert False, 'should not call this directly'

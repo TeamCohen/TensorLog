@@ -165,4 +165,7 @@ def broadcastAndWeightByRowSum(m1,m2):
             result.data[result.indptr[i]:result.indptr[i+1]] *= w
         return result
 
-
+if __name__=="__main__":
+    db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
+    m = prog.db.matEncoding[('posPair',2)]
+    

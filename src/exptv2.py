@@ -195,7 +195,13 @@ if __name__=="__main__":
     trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
     testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
     prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr"],db=db)
-    prog.setWeights(db.ones())
+    #TODO should collect the things that are weighted
+    initWeights = \
+        (prog.db.matrixPreimage(declare.asMode("posPair(o,i)")) + \
+         prog.db.matrixPreimage(declare.asMode("negPair(o,i)"))) * 0.5
+    print 'initWeights:'
+    for (k,v) in prog.db.rowAsSymbolDict(initWeights).items(): print '=>',k,v
+    prog.setWeights(initWeights)
     params = {'initProgram':prog,
               'trainData':trainData, 'testData':testData,
               'savedModel':'toy-trained.db',

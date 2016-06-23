@@ -130,21 +130,8 @@ class MatrixDB(object):
         return a row vector equivalent to 1 * M_p^T.  Also returns a row vector
         for a unary predicate."""
         assert mode.arity==2
-        #TODO mode is o,i vs i,o
-        assert mode.isInput(0) and mode.isOutput(1), 'preimages only implemented for mode p(i,o)'
-        coo = self.matrix(mode).tocoo()
-        rowsum = collections.defaultdict(float)
-        for i in range(len(coo.data)):
-            r = coo.row[i]
-            d = coo.data[i]
-            rowsum[r] += d
-        items = rowsum.items()
-        data = [d for (r,d) in items]
-        rowids = [0 for (r,d) in items]
-        colids = [r for (r,d) in items]
-        n = self.dim()
-        return scipy.sparse.csr_matrix((data,(rowids,colids)),shape=(1,n))
-
+        #TODO feels like this could be done more efficiently
+        return self.ones() * self.matrix(mode,transpose=True)
 
     #
     # handling parameters
