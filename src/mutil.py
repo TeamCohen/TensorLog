@@ -25,6 +25,13 @@ def summary(mat):
     checkCSR(mat)
     return 'nnz %d rows %d cols %d' % (mat.nnz,numRows(mat),numCols(mat))
 
+def pprintSummary(mat):
+    if mat!=None:
+        checkCSR(mat)
+        return '%3d x %3d [%d nz]' % (numRows(mat),numCols(mat),mat.nnz)
+    else:
+        return '___'
+
 def checkCSR(mat,context='unknown'):
     """Raise error if mat is not a scipy.sparse.csr_matrix."""
     assert isinstance(mat,SS.csr_matrix),'bad type [context %s] for %r' % (context,mat)
