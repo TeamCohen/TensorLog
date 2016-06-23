@@ -115,9 +115,12 @@ class MatrixDB(object):
         assert mode.arity==2,'arity of '+str(mode) + ' is wrong: ' + str(mode.arity)
         assert (mode.functor,mode.arity) in self.matEncoding,"can't find matrix for %s" % str(mode)
         if not self.transposeNeeded(mode,transpose):
-            return self.matEncoding[(mode.functor,mode.arity)]
+            result = self.matEncoding[(mode.functor,mode.arity)]
         else:
-            return self.matEncoding[(mode.functor,mode.arity)].transpose()            
+            result = self.matEncoding[(mode.functor,mode.arity)].transpose()            
+            result = scipy.sparse.csr_matrix(result)
+        mutil.checkCSR(result,'db.matrix mode %s transpose %s' % (str(mode),str(transpose)))
+        return result
 
     def vector(self,mode):
         """Returns a row vector for a unary predicate."""
@@ -130,21 +133,8 @@ class MatrixDB(object):
         return a row vector equivalent to 1 * M_p^T.  Also returns a row vector
         for a unary predicate."""
         assert mode.arity==2
-        #TODO mode is o,i vs i,o
-        assert mode.isInput(0) and mode.isOutput(1), 'preimages only implemented for mode p(i,o)'
-        coo = self.matrix(mode).tocoo()
-        rowsum = collections.defaultdict(float)
-        for i in range(len(coo.data)):
-            r = coo.row[i]
-            d = coo.data[i]
-            rowsum[r] += d
-        items = rowsum.items()
-        data = [d for (r,d) in items]
-        rowids = [0 for (r,d) in items]
-        colids = [r for (r,d) in items]
-        n = self.dim()
-        return scipy.sparse.csr_matrix((data,(rowids,colids)),shape=(1,n))
-
+        #TODO feels like this could be done more efficiently
+        return self.ones() * self.matrix(mode,transpose=True)
 
     #
     # handling parameters
@@ -266,7 +256,7 @@ class MatrixDB(object):
             x = m.row[i]            
             xrows.append(scipy.sparse.csr_matrix( ([1.0],([0],[x])), shape=(1,n) ))
             rx = m.getrow(x)
-            yrows.append(rx.multiply(1.0/rx.sum()))
+            yrows.append(rx * (1.0/rx.sum()) )
         return mutil.stack(xrows),mutil.stack(yrows)
 
     #
@@ -328,7 +318,6 @@ class MatrixDB(object):
                 return 0.0
 
         parts = line.split("\t")
-        #TODO add ability to read in weights
         if conf.allow_weighted_tuples and len(parts)==4:
             f,a1,a2,wstr = parts[0],parts[1],parts[2],parts[3]
             arity = 2
@@ -404,6 +393,7 @@ class MatrixDB(object):
             del self.buf[(f,arity)]
             self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m)
             self.matEncoding[(f,arity)].sort_indices()
+        mutil.checkCSR(self.matEncoding[(f,arity)], 'flushBuffer %s/%d' % (f,arity))
 
     def rebufferMatrices(self):
         """Re-encode previously frozen matrices after a symbol table update"""

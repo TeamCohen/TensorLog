@@ -7,6 +7,7 @@ g64:
 	python grid-expt.py g64.cfacts n_1_1
 
 clean:
-	rm -f *.pyc *.cfacts *~
+	rm -f *.pyc *.cfacts *.exam *~ visualize.png
+
 
 

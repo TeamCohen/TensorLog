@@ -26,7 +26,7 @@ if __name__=="__main__":
     prog.db.markAsParam('ktw',1)
     prog.db.markAsParam('kvw',1)
     prog.maxDepth = 1
-    ops.conf.optimize_component_multiply = False
+    ops.conf.optimize_component_multiply = True
     params = {'initProgram':prog,
               'trainData':trainData, 'testData':testData,
               'targetPred':'samebib/io',

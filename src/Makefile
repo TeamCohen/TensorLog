@@ -1,17 +1,16 @@
-
 short-tests:
 	python testtensorlog.py
 
-long-tests: short-tests benchmark-test wnet-test cora-test cora-test-v2
+long-tests: short-tests benchmark-test wnet-test cora-test-v2
 
 benchmark-test:
 	python benchmark.py
 
-fb15k-valid.db: matrixdb.py
-	python $< --serialize test/fb15k-valid.cfacts:test/fb15k.tensorLog.cfacts $@
+#fb15k-valid.db: matrixdb.py
+#	python $< --serialize test/fb15k-valid.cfacts:test/fb15k.tensorLog.cfacts $@
 
-#fb15k-valid.db:
-#	python matrixdb.py --serialize test/fb15k-valid.cfacts  fb15k-valid.db
+fb15k-valid.db:
+	python matrixdb.py --serialize test/fb15k-valid.cfacts  fb15k-valid.db
 
 wnet-test:
 	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet/; python wnet-expt.py; \

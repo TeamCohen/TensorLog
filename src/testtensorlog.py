@@ -360,6 +360,17 @@ class TestGrad(unittest.TestCase):
                        [('william',['lottie'])], 
                        {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
 
+    def testIf2(self):
+        rules = ['p(X,Y):-sister(X,Y).']
+        mode = 'p(i,o)'  
+        params = [('sister',2)] 
+        self.gradCheck(rules, mode, params,
+                       [('william',['rachel','sarah']), ('william',['rachel','sarah'])], 
+                       {'sister(william,rachel)': +1,'sister(william,sarah)': +1,'sister(william,lottie)': -1})
+        self.gradCheck(rules, mode, params, 
+                       [('william',['lottie']), ('william',['lottie'])], 
+                       {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
+
     def testRevIf(self):
         rules = ['p(X,Y):-parent(Y,X).']
         mode = 'p(i,o)'  
@@ -797,6 +808,22 @@ class TestDataset(unittest.TestCase):
         self.assertEqual(len(actual.keys()), len(expected.keys()))
         for k in actual.keys():
             self.assertEqual(actual[k], expected[k])
+
+class TestMatrixUtils(unittest.TestCase):
+
+    def setUp(self):
+        self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
+        self.row1 = self.db.onehot('william')+self.db.onehot('poppy')
+        
+    def testRepeat(self):
+        mat = mutil.repeat(self.row1,3)
+        self.assertEqual(mutil.numRows(mat), 3)
+        dm = self.db.matrixAsSymbolDict(mat)
+        for i in range(3):
+            di = dm[i]
+            self.assertTrue('william' in di)
+            self.assertTrue('poppy' in di)
+            self.assertEqual(len(di.keys()), 2)
 
 if __name__=="__main__":
     if len(sys.argv)==1:

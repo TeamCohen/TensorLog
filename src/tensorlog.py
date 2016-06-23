@@ -17,7 +17,8 @@ import learn
 import mutil
 
 DEFAULT_MAXDEPTH=10
-DEFAULT_NORMALIZE=True
+DEFAULT_NORMALIZE='softmax'
+#DEFAULT_NORMALIZE='log+softmax'
 
 ##############################################################################
 ## a program
@@ -60,8 +61,13 @@ class Program(object):
                 #clauses
                 ruleFuns = map(lambda r:bpcompiler.BPCompiler(mode,self,depth,r).getFunction(), predDef)
                 self.function[(mode,depth)] = funs.SumFunction(ruleFuns)
-            if depth==0 and self.normalize:
-                self.function[(mode,0)] = funs.SoftmaxFunction(self.function[(mode,0)])
+            if depth==0:
+                if self.normalize=='softmax':
+                    self.function[(mode,0)] = funs.SoftmaxFunction(self.function[(mode,0)])
+                elif self.normalize=='log+softmax':
+                    self.function[(mode,0)] = funs.SoftmaxFunction(funs.LogFunction(self.function[(mode,0)]))
+                else:
+                    assert not self.normalize, 'bad value of self.normalize: %r' % self.normalize
         return self.function[(mode,depth)]
 
     def getPredictFunction(self,mode):

@@ -6,15 +6,18 @@
 
 import numpy
 import logging
+#TODO make util smart about csc/csr
+import scipy.sparse
+import math
 
 import mutil
 import config
 
 conf = config.Config()
-conf.trace = False;                     conf.help.trace =                       "Print debug info during op execution"
-conf.long_trace = False;                conf.help.long_trace =                  "Print output of functions after op - only for small tasks"
-conf.optimize_weighted_vec=True;        conf.help.optimize_weighted_vec =       "Use optimized version of WeightedVec op"
-conf.optimize_component_multiply=True;  conf.help.optimize_component_multiply = "Use optimized version of ComponentwiseVecMulOp"
+conf.trace = False;      conf.help.trace =           "Print debug info during op execution"
+conf.long_trace = False; conf.help.long_trace =      "Print output of functions after op - only for small tasks"
+conf.max_trace = False;  conf.help.max_trace =       "Print max value of functions after op"
+conf.check_nan = True;   conf.help.check_overflow =  "Check if output of each op is nan."
 
 MAXDEPTH=0
 
@@ -66,21 +69,25 @@ class Op(object):
     def __init__(self,dst):
         self.dst = dst
         self.msgFrom = self.msgTo = None
-        self.src = "n/a"
+        self.delta = None
     def setMessage(self,msgFrom,msgTo):
         """For debugging/tracing, record the BP message associated with this
         operation."""
         self.msgFrom = msgFrom
         self.msgTo = msgTo
-    #TODO docstrings
     def eval(self,env):
         """Evaluate an operator inside an environment."""
         if conf.trace:
             print 'op eval',self,
         self._doEval(env)
+        self.output = env[self.dst]
         if conf.trace:
-            if conf.long_trace: print 'stores',env.db.matrixAsSymbolDict(env[self.dst])
-            else: print
+            if conf.long_trace: print 'stores',env.db.matrixAsSymbolDict(env[self.dst]),
+            if conf.max_trace: print 'max',mutil.maxValue(env[self.dst]),
+            print
+        if conf.check_nan:
+            mutil.checkNoNANs(env[self.dst], context='saving %s' % self.dst)
+
     def backprop(self,env,gradAccum):
         """Backpropagate errors - stored in the env.delta[...] from outputs of
         the operator to the inputs.  Assumes that 'eval' has been
@@ -91,21 +98,27 @@ class Op(object):
             if conf.long_trace: print env.db.matrixAsSymbolDict(env.delta[self.dst])
             else: print
         self._doBackprop(env,gradAccum)
+        self.delta = env.delta[self.dst]
         if conf.trace: 
             print 'end op bp',self
     def showDeltaShape(self,env,key):
         print 'shape of env.delta[%s]' % key,env.delta[key].get_shape()
     def showShape(self,env,key):
         print 'shape of env[%s]' % key,env[key].get_shape()
-    def pprint(self,depth=-1):
-        buf = '%s = %s' % (self.dst,self._ppLHS())
-        if self.msgFrom and self.msgTo:
-            buf = "%-45s // %s -> %s" % (buf,self.msgFrom,self.msgTo)
-            return ["%s%-94s [%s]" % (('| '*depth),buf,self.__class__.__name__)]
-        else:
-            return ["%s%s" % (('| '*depth),buf)]
+    #needed for visualization
+    def pprint(self):
+        description = self.pprintSummary()
+        comment = self.pprintComment()
+        if comment: return [description + ' # ' + comment]
+        else: return [description]
+    def pprintSummary(self):
+        return '%s = %s' % (self.dst,self._ppLHS())
+    def pprintComment(self):
+        return '%s -> %s' % (self.msgFrom,self.msgTo) if (self.msgFrom and self.msgTo) else ''
+    def children(self):
+        return []
     def _ppLHS(self):
-        #override
+        #override in subclasses
         return repr(self)
 
 class DefinedPredOp(Op):
@@ -180,10 +193,8 @@ class AssignZeroToVar(Op):
     def _ppLHS(self):
         return "0"
     def _doEval(self,env):
-        #TODO - zeros(n)? or is this used now?
         env[self.dst] = env.db.zeros()
     def _doBackprop(self,env,gradAccum):
-        #TODO check
         pass
 
 class AssignOnehotToVar(Op):
@@ -199,7 +210,6 @@ class AssignOnehotToVar(Op):
     def _doEval(self,env):
         env[self.dst] = env.db.onehot(self.onehotConst)
     def _doBackprop(self,env,gradAccum):
-        #TODO check
         pass
 
 class VecMatMulOp(Op):
@@ -217,22 +227,14 @@ class VecMatMulOp(Op):
         if self.transpose: buf += ".T"
         return buf
     def _doEval(self,env):
-#        print 'xpose',self.transpose,\
-#              'src',env[self.src].get_shape(),'mat',env.db.matrix(self.matMode,self.transpose).get_shape()
         env[self.dst] = env[self.src] * env.db.matrix(self.matMode,self.transpose)
     def _doBackprop(self,env,gradAccum):
         # dst = f(src,mat)
-        try:
-            env.delta[self.src] = env.delta[self.dst] * env.db.matrix(self.matMode,(not self.transpose))
-            #if TRACE: print("%s delta[%s] set to %s" % (self.__class__.__name__,self.src,mutil.summary(env.delta[self.src])))
-        except Exception as e:
-            def showmat(msg,m): print msg,type(m),m.get_shape(),m.nnz
-            showmat(self.dst+' delta',env.delta[self.dst])
-            showmat(str(self.matMode) + ' transpose=%r' % (not self.transpose ), env.db.matrix(self.matMode,(not self.transpose)))
-            print e
-
+        env.delta[self.src] = env.delta[self.dst] * env.db.matrix(self.matMode,(not self.transpose))
+        mutil.checkCSR(env.delta[self.src],'delta[%s]' % self.src)
         if env.db.isParameter(self.matMode):
             update = env[self.src].transpose() * (env.delta[self.dst])
+            update = scipy.sparse.csr_matrix(update)
             # The transpose flag is set in BP when sending a message
             # 'backward' from a goal output to variable, an indicates
             # if the operation needs to transpose the matrix.  Since
@@ -243,9 +245,12 @@ class VecMatMulOp(Op):
             # exactly one of these transpositions happen, not two or
             # zero
             transposeUpdate = env.db.transposeNeeded(self.matMode,self.transpose)
-            if transposeUpdate: update=update.transpose()
+            if transposeUpdate: 
+                update = update.transpose()
+                update = scipy.sparse.csr_matrix(update)
             # finally save the update
             key = (self.matMode.functor,self.matMode.arity)
+            mutil.checkCSR(update,'update for %s mode %s transpose %s' % (str(key),str(self.matMode),transposeUpdate))
             gradAccum.accum(key,update)
 
 class BuiltInIOOp(Op):
@@ -288,33 +293,10 @@ class ComponentwiseVecMulOp(Op):
     def _ppLHS(self):
         return "%s o %s" % (self.src,self.src2)
     def _doEval(self,env):
-        if conf.optimize_component_multiply:
-            env[self.dst] = mutil.broadcastAndComponentwiseMultiply(env[self.src],env[self.src2])
-        else:
-            m1,m2 = mutil.broadcastBinding(env,self.src,self.src2)
-            env[self.dst] = m1.multiply(m2)
+        env[self.dst] = mutil.broadcastAndComponentwiseMultiply(env[self.src],env[self.src2])
     def _doBackprop(self,env,gradAccum):
-        if conf.optimize_component_multiply:
-            env.delta[self.src] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src2])
-            env.delta[self.src2] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src])
-        else:
-            #m1,m2 = mutil.broadcastBinding(env,self.src,self.src2)            
-            #print 'shapes 1/2/delta[',self.dst,']',m1.get_shape(),m2.get_shape(),env.delta[self.dst].get_shape()
-            d1,m1 = mutil.broadcast2(env.delta[self.dst],env[self.src])
-            d2,m2 = mutil.broadcast2(env.delta[self.dst],env[self.src2])
-            assert d1.get_shape()==d2.get_shape()
-            env.delta[self.src] = d2.multiply(m2)
-            #if TRACE: 
-            #    print("%s d2 %s" % (self.__class__.__name__,mutil.summary(d2)))
-            #    print("%s m2 %s" % (self.__class__.__name__,mutil.summary(m2)))
-            #    print("%s delta[%s] set to %s" % (self.__class__.__name__,self.src,mutil.summary(env.delta[self.src])))
-            env.delta[self.src2] = d1.multiply(m1)
-            #if TRACE: 
-            #    print("%s d1 %s" % (self.__class__.__name__,mutil.summary(d1)))
-            #    print("%s m1 %s" % (self.__class__.__name__,mutil.summary(m1)))
-            #    print("%s delta[%s] set to %s" % (self.__class__.__name__,self.src2,mutil.summary(env.delta[self.src2])))
-#            env.delta[self.src] = env.delta[self.dst].multiply(m2)
-#            env.delta[self.src2] = env.delta[self.dst].multiply(m1)
+        env.delta[self.src] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src2])
+        env.delta[self.src2] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src])
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
@@ -330,16 +312,7 @@ class WeightedVec(Op):
     def _ppLHS(self):
         return "%s * %s.sum()" % (self.vec,self.weighter)
     def _doEval(self,env):
-        if conf.optimize_weighted_vec:
-            try:
-                env[self.dst] = mutil.broadcastAndWeightByRowSum(env[self.vec],env[self.weighter])
-            except FloatingPointError:
-                print "problem at %s" % str(self)
-                print "self.weighter max %g min %s sum %g" % (env[self.weighter].max(),env[self.weighter].min(),env[self.weighter].sum())
-                raise
-        else:
-            m1,m2 = mutil.broadcastBinding(env, self.vec, self.weighter)
-            env[self.dst] = mutil.weightByRowSum(m1,m2)
+        env[self.dst] = mutil.broadcastAndWeightByRowSum(env[self.vec],env[self.weighter])
     def _doBackprop(self,env,gradAccum):
         # This is written as a single operation
         #    dst = vec * weighter.sum()
@@ -349,31 +322,13 @@ class WeightedVec(Op):
         # and then backprop through step 2, then step 1
         # step 2a: bp from delta[dst] to delta[vec]
         #   delta[vec] = delta[dst]*weighterSum
-        if conf.optimize_weighted_vec:
-            env.delta[self.vec] = mutil.broadcastAndWeightByRowSum(env.delta[self.dst],env[self.weighter]) 
-        else:
-            deltaDst,mWeighter = mutil.broadcast2(env.delta[self.dst], env[self.weighter])
-            env.delta[self.vec] = mutil.weightByRowSum(deltaDst,mWeighter)
-        #if TRACE: print("%s delta[%s] set to %s" % (self.__class__.__name__,self.vec,mutil.summary(env.delta[self.vec])))
+        env.delta[self.vec] = mutil.broadcastAndWeightByRowSum(env.delta[self.dst],env[self.weighter]) 
         # step 2b: bp from delta[dst] to delta[weighterSum]
         #   would be: delta[weighterSum] = (delta[dst].multiply(vec)).sum
         # followed by 
         # step 1: bp from delta[weighterSum] to weighter
         #   delta[weighter] = delta[weighterSum]*weighter
         # but we can combine 2b and 1 as follows (optimized):
-        if conf.optimize_weighted_vec:
-            if conf.optimize_component_multiply:
-                tmp = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.vec])
-            else:
-                m1,m2 = mutil.broadcast2(env.delta[self.dst],env[self.vec])
-                tmp = m1.multiply(m2)
-            env.delta[self.weighter] = \
-                mutil.broadcastAndWeightByRowSum(env[self.weighter], tmp)
-            #if TRACE: print("WeightedVec tmp %s" % (mutil.summary(tmp)))
-        else:
-            #not clear if this still works
-            m1,m2 = mutil.broadcast2(env.delta[self.dst],env[self.vec])
-            tmp = m1.multiply(m2)
-            mWeighter,mTmp = mutil.broadcast2(env[self.weighter],tmp)
-            env.delta[self.weighter] = mutil.weightByRowSum(mWeighter,mTmp)
-        #if TRACE: print("%s delta[%s] set to %s" % (self.__class__.__name__,self.weighter,mutil.summary(env.delta[self.weighter])))
+        tmp = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.vec])
+        env.delta[self.weighter] = mutil.broadcastAndWeightByRowSum(env[self.weighter], tmp)
+

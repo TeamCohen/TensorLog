@@ -124,7 +124,7 @@ class Dataset(object):
             x = m.row[i]            
             xrows.append(SS.csr_matrix( ([1.0],([0],[x])), shape=(1,n) ))
             rx = m.getrow(x)
-            yrows.append(rx.multiply(1.0/rx.sum()))
+            yrows.append(rx * (1.0/rx.sum()))
         return Dataset({functorToLearn:mutil.stack(xrows)},{functorToLearn:mutil.stack(yrows)})
 
     @staticmethod 
