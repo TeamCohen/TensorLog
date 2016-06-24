@@ -1,6 +1,11 @@
 import sys
-import networkx
-import matplotlib.pyplot as plt
+try:
+    import networkx
+    import matplotlib.pyplot as plt
+    NETWORKX = True
+except Exception:
+    print 'no networkx'
+    NETWORKX = False
 import numpy as NP
 import random
 import math
@@ -129,6 +134,6 @@ if __name__=="__main__":
     #ops.conf.long_trace = True
     ops.conf.max_trace = True
     exptv2.Expt(params).run()
-    print 'max edge weight',mutil.maxValue(db.getParameter('edge',2))
-    visualizeLearned(db,n)
+    if NETWORKX:
+        visualizeLearned(db,n)
 
