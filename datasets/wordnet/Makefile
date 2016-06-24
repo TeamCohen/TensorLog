@@ -18,5 +18,6 @@ wnet-learned.ppr wnet-ruleids.cfacts:
 
 clean:
 	rm -f *.pyc *.prof *~
-	rm hypernym-train.examples hypernym-test.examples hypernym-test.solutions.txt
-	rm -rf hypernym-trained.db	
+	rm -f wnet-*-train.examples wnet-*-test.examples wnet-*-test.solutions.txt wnet-*-train.cfacts wnet-*-valid.cfacts
+	rm -rf *-trained.db	
+
