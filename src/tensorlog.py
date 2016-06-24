@@ -13,8 +13,10 @@ import ops
 import parser
 import matrixdb
 import bpcompiler
+import dataset
 import learn
 import mutil
+import debug
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
@@ -201,6 +203,7 @@ class Interp(object):
             self.prog = Program.load(initFiles)
         self.db = self.prog.db
         self.learner = None
+        self.trainData = self.testData = None
 
     def help(self):
         print "ti.list(\"functor/arity\"): list predicate definition, eg ti.list(\"foo/2\")"
@@ -208,6 +211,7 @@ class Interp(object):
         print "ti.listRules(): list all predicate definitions"
         print "ti.listFacts(): summary info on all database predicates"
         print "ti.eval(\"functor/mode\",\"c\"): evaluate a function on a database constant c"
+        print "ti.debug(\"functor/mode\",\"c\"): debug the corresponding eval command"
 
     def list(self,str):
         assert str.find("/")>=0, 'supported formats are functor/arity, function/io, function/oi, function/o, function/i'
@@ -238,16 +242,6 @@ class Interp(object):
     def listAllFacts(self):
         self.db.listing()
 
-    # @staticmethod
-    # def _asMode(spec):
-    #     if type(spec)==type("") and spec.find("/")>=0:
-    #         functor,rest = spec.split("/")            
-    #         return declare.ModeDeclaration(parser.Goal(functor,list(rest)))
-    #     elif type(spec)==type(""):
-    #         return declare.ModeDeclaration(spec)
-    #     else:
-    #         return spec
-
     def listFunction(self,modeSpec):
         mode = declare.asMode(modeSpec)
         key = (mode,0)
@@ -256,10 +250,17 @@ class Interp(object):
         fun = self.prog.function[key]
         print "\n".join(fun.pprint())
 
-    def eval(self,modeSpec,x):
+    def eval(self,modeSpec,sym):
         mode = declare.asMode(modeSpec)        
-        result = self.prog.evalSymbols(mode,[x])
+        result = self.prog.evalSymbols(mode,[sym])
         return self.prog.db.rowAsSymbolDict(result)
+    
+    #TODO default sym to self.trainData
+    def debug(self,modeSpec,sym):
+        mode = declare.asMode(modeSpec)        
+        X = self.db.onehot(sym)
+        dset = dataset.Dataset({mode:X},{mode:self.db.zeros()})
+        debug.Debugger(self.prog,mode,dset,gradient=False).mainloop()
     
     def train(self,trainingDataFile,modeSpec):
         mode = declare.asMode(modeSpec)
@@ -299,7 +300,7 @@ class Interp(object):
 
 if __name__ == "__main__":
     
-    argspec = ["programFiles=","debug", "proppr","help"]
+    argspec = ["programFiles=","debug", "proppr","help","trainData="]
     try:
         optlist,args = getopt.getopt(sys.argv[1:], 'x', argspec)
     except getopt.GetoptError:
@@ -307,13 +308,22 @@ if __name__ == "__main__":
         sys.exit(-1)
     optdict = dict(optlist)
     if "--help" in optdict:
-        print "python tensorlog.py --programFiles a.ppr:b.cfacts:... [p(i,o) x1 x2 ....]"
+        print "python tensorlog.py --programFiles a.ppr:b.cfacts:... --trainData foo.dset|foo.exam [p(i,o) x1 x2 ....]"
     if "--debug" in optdict:
         logging.basicConfig(level=logging.DEBUG)        
     
 
     assert '--programFiles' in optdict, '--programFiles f1:f2:... is a required option'
     ti = Interp(initFiles=optdict['--programFiles'].split(":"), proppr=('--proppr' in optdict))
+    
+    if '--trainData' in optdict:
+        filename = optdict['--trainData']
+        if filename.endswith(".exam"):
+            ti.trainData = dataset.Dataset.loadExamples(ti.prog.db,filename)
+        elif filename.endswith(".examples"):
+            ti.trainData = dataset.Dataset.loadExamples(ti.prog.db,filename,proppr=True)
+        elif filename.endswith(".dset"):
+            ti.trainData = dataset.Dataset.deserialize(filename)
 
     if args:
         modeSpec = args[0]

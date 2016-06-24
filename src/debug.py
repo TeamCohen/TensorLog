@@ -21,7 +21,8 @@ import config
 
 class Debugger(object):
 
-    def __init__(self,initProgram,targetPred,trainData):
+    def __init__(self,initProgram,targetPred,trainData,gradient=False):
+        self.rendered = False
         self.prog = initProgram
         self.trainData = trainData
         self.targetPred = targetPred
@@ -40,8 +41,9 @@ class Debugger(object):
         self.xSymbols = [d.keys()[0] for d in dd.values()]
 
         # evaluate the gradient so that's cached
-        self.learner = learn.Learner(prog)
-        self.grad = self.learner.crossEntropyGrad(self.mode,self.X,self.Y)
+        if gradient:
+            self.learner = learn.Learner(prog)
+            self.grad = self.learner.crossEntropyGrad(self.mode,self.X,self.Y)
     
     def render(self):
         #set up a window
@@ -104,24 +106,28 @@ class Debugger(object):
         tag = self.tree.item(key,option='text')
         if colNum>=3:
             m = self.treeDeltas[key]
-            self.msgLabel.config(text='Delta for %s' % tag)
+            if m==None:
+                self.msgLabel.config(text='Delta for %s unavailable' % tag)
+            else:
+                self.msgLabel.config(text='Delta for %s' % tag)
         else:
             self.msgLabel.config(text='Output for %s' % tag)
             m = self.treeOutputs[key]
         for it in self.msgItems:
             self.msg.delete(it)
         self.msgItems = set()
-        dOfD = self.prog.db.matrixAsSymbolDict(m)
-        rowVector = len(dOfD.keys())==1
-        for r in sorted(dOfD.keys()):
-            rowName = "Row Vector:" if rowVector else self.xSymbols[r]
-            rowChild = self.msg.insert("",r,text=rowName,open=True)
-            self.msgItems.add(rowChild)
-            for offset,sym in enumerate(sorted(dOfD[r].keys())):
-                #TODO why are None keys in these?
-                if sym!=None:
-                    w = dOfD[r][sym]
-                    child = self.msg.insert(rowChild,offset,text=sym,values=("%.5f" % w),open=True)
+        if m!=None:
+            dOfD = self.prog.db.matrixAsSymbolDict(m)
+            rowVector = len(dOfD.keys())==1
+            for r in sorted(dOfD.keys()):
+                rowName = "Row Vector:" if rowVector else self.xSymbols[r]
+                rowChild = self.msg.insert("",r,text=rowName,open=True)
+                self.msgItems.add(rowChild)
+                for offset,sym in enumerate(sorted(dOfD[r].keys())):
+                    #TODO why are None keys in these?
+                    if sym!=None:
+                        w = dOfD[r][sym]
+                        child = self.msg.insert(rowChild,offset,text=sym,values=("%.5f" % w),open=True)
 
 
     def populateTree(self,funs,parent):
@@ -137,6 +143,8 @@ class Debugger(object):
             self.populateTree(fun.children(), child)
 
     def mainloop(self):
+        if not self.rendered:
+            self.render()
         self.root.mainloop()
 
 if __name__ == "__main__":
@@ -152,10 +160,9 @@ if __name__ == "__main__":
     if not TRAINED:
         prog.setWeights(db.ones())
 
-    db = Debugger(prog,"predict/io",trainData)
+    db = Debugger(prog,"predict/io",trainData,gradient=False)
 #    default_font = tkFont.nametofont("TkDefaultFont")
 #    default_font.configure(size=14)
-    db.render()
     #ttk.Style().theme_use('clam')
     db.root.mainloop()
 

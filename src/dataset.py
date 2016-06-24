@@ -1,5 +1,6 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
+import sys
 import re
 import os.path
 import collections
@@ -219,12 +220,19 @@ class Dataset(object):
                     fp.write('\t+%s(%s,%s)' % (theoryPred,x,y))
                 fp.write('\n')
 
-if __name__=="__main__":
-    db = matrixdb.MatrixDB.uncache('tlog-cache/mtoy.db','test/matchtoy.cfacts')
-    dset = Dataset.uncacheExamples('tlog-cache/mtoy.dset',db,'test/matchtoy-train.examples')
-    for m in dset.modesToLearn():
-        print 'type',type(m)
-        print m,'X',db.matrixAsSymbolDict(dset.getX(m))
-        print m,'Y',db.matrixAsSymbolDict(dset.getY(m))        
-
-    
+if __name__ == "__main__":
+    usage = 'usage: python -m dataset.py --serialize foo.cfacts|foo.db bar.exam|bar.examples glob.dset'
+    if sys.argv[1]=='--serialize':
+        assert len(sys.argv)==5,usage
+        dbFile = sys.argv[2]
+        examFile = sys.argv[3]
+        dsetFile = sys.argv[4]
+        if dbFile.endswith(".cfacts"):
+            db = matrixdb.MatrixDB.loadFile(dbFile)
+        elif dbFile.endswith(".db"):
+            db = matrixdb.MatrixDB.deserialize(dbFile)
+        else:
+            assert False,usage
+        assert examFile.endswith(".examples") or examFile.endswith(".exam"),usage
+        dset = Dataset.loadExamples(db,examFile,proppr=examFile.endswith(".examples"))
+        dset.serialize(dsetFile)
