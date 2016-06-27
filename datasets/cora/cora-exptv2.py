@@ -13,6 +13,7 @@ import matrixdb
 import funs
 import ops
 import mutil
+import learn
 
 if __name__=="__main__":
     db = matrixdb.MatrixDB.uncache('tmp-cache/cora.db','inputs/cora.cfacts')
@@ -25,7 +26,7 @@ if __name__=="__main__":
     prog.db.markAsParam('kaw',1)
     prog.db.markAsParam('ktw',1)
     prog.db.markAsParam('kvw',1)
-    prog.maxDepth = 1
+    prog.maxDepth = 2
     ops.conf.optimize_component_multiply = True
     params = {'initProgram':prog,
               'trainData':trainData, 'testData':testData,
@@ -34,6 +35,7 @@ if __name__=="__main__":
               'savedTestPreds':'tmp-cache/cora-test.solutions.txt',
               'savedTrainExamples':'tmp-cache/cora-train.examples',
               'savedTestExamples':'tmp-cache/cora-test.examples',
+              'regularizer':learn.L2Regularizer(0.1),
     }
     print 'maxdepth',prog.maxDepth
     exptv2.Expt(params).run()

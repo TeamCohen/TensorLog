@@ -216,6 +216,10 @@ class TestSmallProofs(unittest.TestCase):
         self.propprInferenceCheck(w,['p(X,Y):-spouse(Y,X) {r2}.'],'p(i,o)',
                                   'susan', {'william': 3.0})
 
+    def testReuse1(self):
+        self.inferenceCheck(['p(X,Y) :- r(X,Z),r(Z,Y).', 'r(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', 
+                            {'william':1.0})
+
     # support routines
     # 
 
@@ -236,6 +240,7 @@ class TestSmallProofs(unittest.TestCase):
         prog = tensorlog.Program(db=self.db,rules=rules)
         mode = declare.ModeDeclaration(modeString)
         fun = prog.compile(mode)
+        print "\n".join(fun.pprint())
         y1 = prog.evalSymbols(mode,[inputSymbol]) 
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
 

@@ -4,8 +4,6 @@
 # support for debugging/visualization
 #
 
-#TODO next: try double-clicking to see the deltas by swapping from treeOutputs to treeDeltas
-
 import Tkinter as TK
 import ttk
 import tkFont
@@ -23,6 +21,7 @@ class Debugger(object):
 
     def __init__(self,initProgram,targetPred,trainData,gradient=False):
         self.rendered = False
+        self.sortByValue = True
         self.prog = initProgram
         self.trainData = trainData
         self.targetPred = targetPred
@@ -57,7 +56,7 @@ class Debugger(object):
         self.msgLabel = ttk.Label(self.root,text="Details")
         self.msgLabel.grid(row=0,column=2,sticky=TK.EW)
         #put a scrollbars on the left and right
-        #these don't work now?
+        #these don't work now? maybe they worked with pack?
 #        self.scrollbarL = ttk.Scrollbar(self.root)
 #        self.scrollbarL.grid(row=1,column=0)
 #        self.scrollbarR = ttk.Scrollbar(self.root)
@@ -91,7 +90,7 @@ class Debugger(object):
         self.msg.grid(row=1,column=2)
         self.msgItems = set()
         #tree will fill the msg window on doubleclick
-        self.tree.bind("<Double-1>", self.DisplayMsg)
+        self.tree.bind("<Button-1>", self.DisplayMsg)
         # tie it to the right scrollbar
 #        self.tree.config(yscrollcommand=self.scrollbarR.set)
 #        self.scrollbarR.config(command=self.msg.yview)
@@ -99,7 +98,7 @@ class Debugger(object):
     def DisplayMsg(self,event):
         """display the message sent by with an op
         or the output for a function."""
-        key = self.tree.selection()[0]
+        key = self.tree.identify_row(event.y)
         # figure out where we clicked - returns #0, #1, ... 
         colStr = self.tree.identify_column(event.x)
         colNum = int(colStr[1:])
@@ -123,11 +122,16 @@ class Debugger(object):
                 rowName = "Row Vector:" if rowVector else self.xSymbols[r]
                 rowChild = self.msg.insert("",r,text=rowName,open=True)
                 self.msgItems.add(rowChild)
-                for offset,sym in enumerate(sorted(dOfD[r].keys())):
-                    #TODO why are None keys in these?
+                def sortKey(k): 
+                    if self.sortByValue==True:
+                        return dOfD[r][k]
+                    else:
+                        return -k
+                for offset,sym in enumerate(sorted(dOfD[r].keys(), key=sortKey)):
+                    #why are some of these None?
                     if sym!=None:
                         w = dOfD[r][sym]
-                        child = self.msg.insert(rowChild,offset,text=sym,values=("%.5f" % w),open=True)
+                    child = self.msg.insert(rowChild,offset,text=sym,values=("%.5f" % w),open=True)
 
 
     def populateTree(self,funs,parent):
@@ -164,5 +168,5 @@ if __name__ == "__main__":
 #    default_font = tkFont.nametofont("TkDefaultFont")
 #    default_font.configure(size=14)
     #ttk.Style().theme_use('clam')
-    db.root.mainloop()
+    db.mainloop()
 

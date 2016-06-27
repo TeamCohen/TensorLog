@@ -2,7 +2,6 @@ samebib(BC1,BC2) :- author(BC1,A1),sameauthor(A1,A2),authorinverse(A2,BC2) {auth
 samebib(BC1,BC2) :- title(BC1,A1),sametitle(A1,A2),titleinverse(A2,BC2) {title}.
 samebib(BC1,BC2) :- venue(BC1,A1),samevenue(A1,A2),venueinverse(A2,BC2) {venue}.
 
-#removing transitive closure stuff for now...
 samebib(BC1,BC3) :- samebib(BC1,BC2),samebib(BC2,BC3) {tcbib}.
 
 sameauthor(A1,A2) :- haswordauthor(A1,W),haswordauthorinverse(W,A2),kaw(W) {authorword}.

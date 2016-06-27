@@ -293,6 +293,7 @@ class BPCompiler(object):
                         #this variable now is connected to the main chain
                         self.varDict[only(gin.outputs)].connected = True
                         assert not ops.isBuiltinIOOp(mode), 'can only use built in io operators where inputs and outputs are used'
+                        assert not gin.definedPred, 'subpredicates must generate an output which is used downstream'
                         addOp(ops.AssignPreimageToVar(msgName,mode), traceDepth,j,v)
                     else:
                         addOp(ops.AssignVectorToVar(msgName,mode), traceDepth,j,v)

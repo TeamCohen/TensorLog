@@ -40,14 +40,14 @@ class Function(object):
         return self.delta
     # these are used in pprint, and also in the debugging
     # visualization
-    def pprint(self):
+    def pprint(self,depth=0):
         """Return list of lines in a pretty-print of the function.
         """
         top = self.pprintSummary()
         comment = self.pprintComment()
         result = [top + ' # ' + comment] if comment else [top]
         for c in self.children():
-            for s in c.pprint():
+            for s in c.pprint(depth):
                 result.append('| ' + s)
         return result
     def pprintSummary(self):

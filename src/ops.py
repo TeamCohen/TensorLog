@@ -106,7 +106,7 @@ class Op(object):
     def showShape(self,env,key):
         print 'shape of env[%s]' % key,env[key].get_shape()
     #needed for visualization
-    def pprint(self):
+    def pprint(self,depth=0):
         description = self.pprintSummary()
         comment = self.pprintComment()
         if comment: return [description + ' # ' + comment]

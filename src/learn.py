@@ -19,8 +19,8 @@ logging = L.getLogger()
 
 # clip to avoid exploding gradients
 
-MIN_GRADIENT = -1000.0
-MAX_GRADIENT = +1000.0
+MIN_GRADIENT = -100.0
+MAX_GRADIENT = +100.0
 
 class GradAccumulator(object):
     """ Accumulate the sum gradients for perhaps many parameters, indexing
