@@ -6,10 +6,12 @@
 import scipy.sparse as SS
 import scipy.io
 import numpy as NP
+import numpy.random as NR
 import math
 import logging
 
 import config
+import matrixdb
 
 conf = config.Config()
 conf.optimize_softmax = True;   conf.help.optimize_softmax = 'use optimized version of softmax code'
@@ -79,10 +81,21 @@ def mapData(dataFun,mat,selector=None,default=0):
     assert newdata.shape==mat.data.shape,'shape mismatch %r vs %r' % (newdata.shape,mat.data.shape)
     return SS.csr_matrix((newdata,mat.indices,mat.indptr), shape=mat.shape, dtype='float64')
 
+#TODO get rid of this, it's expensive
 def stack(mats):
     """Vertically stack matrices and return a sparse csr matrix."""
     for m in mats: checkCSR(m)
     return SS.csr_matrix(SS.vstack(mats, dtype='float64'))
+
+def numRows(m): 
+    """Number of rows in matrix"""
+    checkCSR(m)
+    return m.get_shape()[0]
+
+def numCols(m): 
+    """Number of colunms in matrix"""
+    checkCSR(m)
+    return m.get_shape()[1]
 
 def nzCols(m,i):
     """Enumerate the non-zero columns in row i."""
@@ -149,16 +162,6 @@ def broadcastAndComponentwiseMultiply(m1,m2):
         assert False, 'mismatched matrix sizes: #rows %d,%d' % (r1,r2)
     return result
 
-def numRows(m): 
-    """Number of rows in matrix"""
-    checkCSR(m)
-    return m.get_shape()[0]
-
-def numCols(m): 
-    """Number of colunms in matrix"""
-    checkCSR(m)
-    return m.get_shape()[1]
-
 def broadcastAndWeightByRowSum(m1,m2):
     checkCSR(m1); checkCSR(m2)
     """ Optimized combination of broadcast2 and weightByRowSum operations
@@ -202,7 +205,61 @@ def broadcastAndWeightByRowSum(m1,m2):
             result.data[result.indptr[i]:result.indptr[i+1]] *= w
         return result
 
+def shuffleRows(m):
+    """Create a copy of m with the rows permuted."""
+    checkCSR(m)
+    indptr = NP.array(m.indptr)
+    shuffledRowNums = NP.arange(m.indptr.size-1)
+    NR.shuffle(shuffledRowNums)
+    print shuffledRowNums
+    data = NP.array(m.data)
+    indices = NP.array(m.indices)
+    indptr = NP.array(m.indptr)
+    lo = 0
+    for i in range(m.indptr.size-1 ):
+        r = shuffledRowNums[i]
+        rowLen = m.indptr[r+1] - m.indptr[r]
+        indptr[i] = lo
+        indptr[i+1] = lo + rowLen
+        lo += rowLen
+        for j in range(rowLen):
+            data[indptr[i]+j] = m.data[m.indptr[r]+j]
+            indices[indptr[i]+j] = m.indices[m.indptr[r]+j]
+    result = SS.csr_matrix((data,indices,indptr), shape=m.shape, dtype='float64')
+    result.sort_indices()
+    return result    
+
+def selectRows(m,lo,hi):
+    """Return a sparse matrix that copies rows lo...hi-1 of m.  If hi is
+    too large it will be adjusted. """
+    checkCSR(m)
+    if hi>numRows(m): hi=numRows(m)
+    #data for rows [lo, hi) are in cells [jLo...jHi)
+    jLo = m.indptr[lo]
+    jHi = m.indptr[hi]  
+    #allocate space
+    data = NP.zeros(jHi - jLo)
+    indices = NP.zeros(jHi - jLo, dtype='int')
+    indptr = NP.zeros(hi - lo + 1, dtype='int')
+    for i in range(hi - lo): 
+        rowLen = m.indptr[lo+i+1] - m.indptr[lo+i]
+        #translate the index pointers
+        indptr[i] = m.indptr[lo+i] - jLo
+        for j in range(rowLen):
+            k = m.indptr[lo+i]+j
+            data[indptr[i] + j] = m.data[k]
+            indices[indptr[i] + j] = m.indices[k]
+    indptr[hi-lo] = m.indptr[hi] - jLo
+    result = SS.csr_matrix((data,indices,indptr), shape=(hi-lo,numCols(m)), dtype='float64')
+    return result
+
 if __name__=="__main__":
-    db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
-    m = prog.db.matEncoding[('posPair',2)]
-    
+    tmp = []
+    for i in range(1,11):
+        tmp.append([i] + [0]*3 + [5*i])
+    m = SS.csr_matrix(tmp)
+    print m.todense()
+    m2 = shuffleRows(m)
+    #print m2.todense()
+    for i in range(0,10,4):
+        print selectRows(m2,i,i+4).todense()
