@@ -205,13 +205,12 @@ def broadcastAndWeightByRowSum(m1,m2):
             result.data[result.indptr[i]:result.indptr[i+1]] *= w
         return result
 
-def shuffleRows(m):
+def shuffleRows(m,shuffledRowNums=None):
     """Create a copy of m with the rows permuted."""
     checkCSR(m)
-    indptr = NP.array(m.indptr)
-    shuffledRowNums = NP.arange(m.indptr.size-1)
-    NR.shuffle(shuffledRowNums)
-    print shuffledRowNums
+    if shuffledRowNums==None:
+        shuffledRowNums = NP.arange(numRows(m))
+        NR.shuffle(shuffledRowNums)
     data = NP.array(m.data)
     indices = NP.array(m.indices)
     indptr = NP.array(m.indptr)

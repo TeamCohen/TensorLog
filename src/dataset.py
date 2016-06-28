@@ -2,10 +2,13 @@
 
 import sys
 import re
+import math
 import os.path
 import collections
 import scipy.sparse as SS
 import scipy.io as SIO
+import numpy as NP
+import numpy.random as NR
 
 import mutil
 import matrixdb
@@ -25,7 +28,7 @@ class Dataset(object):
         self.yDict = yDict
 
     def isSinglePredicate(self):
-        """Return list of modes associated with the data."""
+        """Returns true if all the examples are for a single predicate."""
         return len(self.xDict.keys())==1
 
     def modesToLearn(self):
@@ -33,13 +36,47 @@ class Dataset(object):
         return self.xDict.keys()
 
     def hasMode(self,mode):
+        """True if there are examples of the mode in the dataset."""
         return (mode in self.yDict and mode in self.xDict)
 
     def getX(self,mode):
+        """Get a matrix of all inputs for the mode."""
         return self.xDict[mode]
 
     def getY(self,mode):
+        """Get a matrix of all desired outputs for the mode."""
         return self.yDict[mode]
+
+    def shuffle(self):
+        for mode in self.xDict:
+            shuffledRowNums = NP.arange(mutil.numRows(self.xDict[mode]))
+            NR.shuffle(shuffledRowNums)
+            self.xDict[mode] = mutil.shuffleRows(self.xDict[mode],shuffledRowNums)
+            self.yDict[mode] = mutil.shuffleRows(self.yDict[mode],shuffledRowNums)
+
+    def minibatchIterator(self,batchSize=100,shuffleFirst=True):
+        """Iterate over triples (mode,X',Y') where X' and Y' are sets of
+        batchSize rows from the full data for mode, randomly selected
+        (without replacement) from the dataset."""
+        # randomize the order of the examples
+        if shuffleFirst: self.shuffle()
+        # then sample an ordering of the modes
+        modeList =  self.modesToLearn()
+        modeSampleDict = {}
+        for modeIndex,mode in enumerate(modeList):
+            numBatches = int(math.ceil( mutil.numRows(self.getX(mode)) / float(batchSize) ))
+            modeSampleDict[mode] = NP.ones(numBatches,dtype='int')*modeIndex
+        modeSamples = NP.concatenate(modeSampleDict.values())
+        NR.shuffle(modeSamples)
+        # finally produce the minibatches
+        currentOffset = [0] * len(modeList)
+        for modeIndex in modeSamples:
+            mode = modeList[modeIndex]
+            lo = currentOffset[modeIndex]
+            bX = mutil.selectRows(self.getX(mode),lo,lo+batchSize)
+            bY = mutil.selectRows(self.getY(mode),lo,lo+batchSize)
+            currentOffset[modeIndex] += batchSize
+            yield mode,bX,bY
 
     def pprint(self):
         return ['%s: X %s Y %s' % (str(mode),mutil.summary(self.xDict[mode]),mutil.summary(self.yDict[mode])) for mode in self.xDict]
@@ -49,18 +86,17 @@ class Dataset(object):
     # 
 
     def serialize(self,dir):
+        """Save the dataset on disk."""
         if not os.path.exists(dir):
             os.mkdir(dir)
-        #print 'serialized keys',self.xDict.keys(),self.yDict.keys()
         dx = dict(map(lambda (k,v):(str(k),v), self.xDict.items()))
         dy = dict(map(lambda (k,v):(str(k),v), self.yDict.items()))
-        #print 'dx',self.xDict
-        #print 'dy',self.yDict
         SIO.savemat(os.path.join(dir,"xDict"),dx,do_compression=True)
         SIO.savemat(os.path.join(dir,"yDict"),dy,do_compression=True)
         
     @staticmethod
     def deserialize(dir):
+        """Recover a saved dataset."""
         xDict = {}
         yDict = {}
         SIO.loadmat(os.path.join(dir,"xDict"),xDict)
