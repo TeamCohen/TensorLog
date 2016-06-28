@@ -2,7 +2,7 @@ import os
 import scipy.sparse as SS
 import scipy.io
 
-import exptv2 as expt
+import expt
 import dataset
 import tensorlog
 import matrixdb

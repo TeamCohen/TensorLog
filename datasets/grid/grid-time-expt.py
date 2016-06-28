@@ -2,7 +2,6 @@ import sys
 import time
 
 import tensorlog
-import exptv1
 import declare
 import matrixdb
 

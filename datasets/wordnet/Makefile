@@ -6,7 +6,7 @@ default:
 setup: wnet.db wnet-learned.ppr
 
 wnet.db: wnet.cfacts
-	time python $(TLOG)/matrixdb.py --serialize wnet.cfacts wnet.db
+	time python -m matrixdb --serialize wnet.cfacts wnet.db
 
 wnet.cfacts: wnet-ruleids.cfacts
 	cut -f2- raw/train.cfacts raw/valid.cfacts | perl -nae 'print join("\t",$$F[0],"s".$$F[1],"s".$$F[2]),"\n"' > wnet-core.cfacts

@@ -11,6 +11,10 @@ def cvtRules(fIn,fOut,rIdOut):
         m = regex.match(lit)        
         return '%s(%s' % (m.group(2),m.group(3))
 
+    for rel in ['hypernym','hyponym','derivationally_related_form','member_meronym','member_holonym']:
+        fp.write('i_%s(X,Y) :- %s(X,Y) {i_%s}.\n' % (rel,rel,rel)) 
+        fp2.write('rule\ti_%s\n' % rel)
+
     for line in open(fIn):
         rn += 1
         if not line.startswith("#") and not line.startswith("interp(P") and not line.startswith("learnedPred(P") and line.strip():

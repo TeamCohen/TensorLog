@@ -15,7 +15,7 @@ import dataset
 import tensorlog
 import funs
 import ops
-import exptv2
+import expt
 import mutil
  
 def nodeName(i,j): 
@@ -133,7 +133,7 @@ if __name__=="__main__":
     #ops.conf.trace = True
     #ops.conf.long_trace = True
     ops.conf.max_trace = True
-    exptv2.Expt(params).run()
+    expt.Expt(params).run()
     if NETWORKX:
         visualizeLearned(db,n)
 

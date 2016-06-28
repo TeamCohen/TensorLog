@@ -1,45 +1,12 @@
 import sys
 
-import exptv1
 import os.path
-import scipy.sparse as SS
-import scipy.io
 import matrixdb
-
-def uncacheDB(dbFile):
-    if not os.path.exists(dbFile):
-        print 'creating',dbFile,'...'
-        #synset id's are integers, and we don't want these interpreted as weights....
-        matrixdb.conf.allow_weighted_tuples = False
-        db = matrixdb.MatrixDB.loadFile('wnet.cfacts')
-        db.serialize(dbFile)
-        print 'created',dbFile
-        return db
-    else:
-        return matrixdb.MatrixDB.deserialize(dbFile)
-
-def uncacheMatPairs(cacheFile,dbFile,trainPred,testPred):
-    if True: # not os.path.exists(cacheFile):
-        db = uncacheDB(dbFile)
-        print 'creating matrix pairs from %s and %s...' % (trainPred,testPred)
-        TX,TY = db.matrixAsTrainingData(trainPred,2)
-        UX,UY = db.matrixAsTrainingData(testPred,2)
-        print 'type(TX)',type(TX)
-        print 'created and saving in',cacheFile,'...'
-        d = {'tx':TX,'ty':TY,'ux':UX,'uy':UY}
-        scipy.io.savemat(cacheFile,d, do_compression=True)
-        print 'saved in',cacheFile
-        return d
-    else: #sort of broken
-        d = {}
-        scipy.io.loadmat("wnet-%s-XY.mat" % trainPred,d)
-        # bleeping scipy.io utils convert from csr_matrix to csc_matrix
-        # when you serialize/deserialize, like they think it doesn't
-        # make a difference or somethin'
-        for k in d.keys():
-            if not k.startswith("__"):
-                d[k] = d[k].tocsr()
-        return d
+import expt
+import dataset
+import declare
+import tensorlog
+import ops
         
 if __name__=="__main__":
     if len(sys.argv)<=1:
@@ -47,15 +14,19 @@ if __name__=="__main__":
     else:
         pred = sys.argv[1]
     print '== pred',pred
-    d = uncacheMatPairs('wnet-%s-XY.mat' % pred,'wnet.db','train_i_%s' % pred,'valid_i_%s' % pred)
-    params = {'initFiles':["wnet.db","wnet-learned.ppr"],
-              'theoryPred':'i_%s' % pred,
-              'trainMatPair':(d['tx'],d['ty']),
-              'testMatPair':(d['ux'],d['uy']),
-              'savedModel':'%s-trained.db' % pred,
+    db = matrixdb.MatrixDB.uncache('wnet.db','wnet.cfacts')
+    trainData = dataset.Dataset.uncacheExamples('%s-train.dset' % pred,db,'%s-train.examples' % pred,proppr=True)
+    testData = dataset.Dataset.uncacheExamples('%s-test.dset' % pred,db,'%s-test.examples' % pred,proppr=True)
+    prog = tensorlog.ProPPRProgram.load(["wnet-learned.ppr"],db=db)
+    prog.setWeights(db.vector(declare.asMode("rule(i)")))
+
+    #ops.conf.trace = True
+    params = {'initProgram':prog,
+              'trainData':trainData, 'testData':testData,
+              'targetPred':'i_%s/io' % pred,
               'savedTestPreds':'%s-test.solutions.txt' % pred,
               'savedTrainExamples':'%s-train.examples' % pred,
               'savedTestExamples':'%s-test.examples' % pred,
               'epochs':30,
     }
-    exptv1.Expt(params).run()
+    expt.Expt(params).run()

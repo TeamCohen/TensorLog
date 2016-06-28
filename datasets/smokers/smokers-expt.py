@@ -2,7 +2,7 @@ import sys
 import time
 
 import tensorlog
-import exptv1
+import expt
 import declare
 import mutil
 
@@ -20,7 +20,7 @@ if __name__=="__main__":
     for modeString in ["t_stress/io", "t_influences/io","t_cancer_spont/io", "t_cancer_smoke/io"]:
         print 'eval',modeString,
         start = time.time()
-        ti.prog.eval(ti._asMode(modeString), [X])
+        ti.prog.eval(declare.asMode(modeString), [X])
         print 'time',time.time() - start,'sec'
     print 'total time', time.time() - start0,'sec'
 #    ti.list("t_influences/io")

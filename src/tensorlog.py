@@ -18,6 +18,8 @@ import learn
 import mutil
 import debug
 
+VERSION = "0.9"
+
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
 #DEFAULT_NORMALIZE='log+softmax'
@@ -208,19 +210,23 @@ class Interp(object):
     def help(self):
         print "ti.list(\"functor/arity\"): list predicate definition, eg ti.list(\"foo/2\")"
         print "ti.list(\"functor/mode\"): list compiled function, eg ti.list(\"foo/io\")"
-        print "ti.listRules(): list all predicate definitions"
-        print "ti.listFacts(): summary info on all database predicates"
+        print "ti.listAllRules(): list all predicate definitions"
+        print "ti.listAllFacts(): summary info on all database predicates"
         print "ti.eval(\"functor/mode\",\"c\"): evaluate a function on a database constant c"
         print "ti.debug(\"functor/mode\",\"c\"): debug the corresponding eval command"
 
-    def list(self,str):
-        assert str.find("/")>=0, 'supported formats are functor/arity, function/io, function/oi, function/o, function/i'
-        functor,rest = str.split("/")
-        try:
-            arity = int(rest)
-            self.listRules(functor,arity) or self.listFacts(functor,arity)
-        except ValueError:
-            self.listFunction(str)
+    def list(self,str=None):
+        if str==None:
+            self.listAllRules()
+            self.listAllFacts()
+        else:
+            assert str.find("/")>=0, 'supported formats are functor/arity, function/io, function/oi, function/o, function/i'
+            functor,rest = str.split("/")
+            try:
+                arity = int(rest)
+                self.listRules(functor,arity) or self.listFacts(functor,arity)
+            except ValueError:
+                self.listFunction(str)
 
     def listRules(self,functor,arity):
         mode = declare.ModeDeclaration(parser.Goal(functor,['x']*arity),strict=False)
@@ -262,44 +268,14 @@ class Interp(object):
         dset = dataset.Dataset({mode:X},{mode:self.db.zeros()})
         debug.Debugger(self.prog,mode,dset,gradient=False).mainloop()
     
-    def train(self,trainingDataFile,modeSpec):
-        mode = declare.asMode(modeSpec)
-        trainingData = self.db.createPartner()
-        trainingData.addFile(trainingDataFile)
-        trainSpec = (mode.functor,mode.arity)
-        X,Y = trainingData.matrixAsTrainingData(*trainSpec)
-        self.learner = learn.FixedRateGDLearner(self.prog,X,Y,epochs=5)
-        P0 = self.learner.predict(mode,X)
-        acc0 = self.learner.accuracy(Y,P0)
-        xent0 = self.learner.crossEntropy(Y,P0)
-        print 'untrained: acc0',acc0,'xent0',xent0
-
-        self.learner.train(mode)
-        P1 = self.learner.predict(mode)
-        acc1 = self.learner.accuracy(Y,P1)
-        xent1 = self.learner.crossEntropy(Y,P1)
-        
-        print "acc0<acc1?   ",acc0<acc1
-        print "xent0>xent1? ",xent0>xent1
-        print 'trained: acc1',acc1,'xent1',xent1
-    
-    def predict(self,trainingDataFile,modeSpec):
-        mode = declare.asMode(modeSpec)
-        trainingData = self.db.createPartner()
-        trainingData.addFile(trainingDataFile)
-        trainSpec = (mode.functor,mode.arity)
-        X,Y = trainingData.matrixAsTrainingData(*trainSpec)
-        self.learner = learn.FixedRateGDLearner(self.prog,X,Y,epochs=5)
-        print "predicting %s for %s" % (str(mode),mutil.summary(X))
-        return self.learner.predict(mode,X)
-        
-
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william
 #
 
 if __name__ == "__main__":
     
+    print "Tensorlog v%s (C) William W. Cohen and Carnegie Mellon University, 2016" % VERSION
+
     argspec = ["programFiles=","debug", "proppr","help","trainData="]
     try:
         optlist,args = getopt.getopt(sys.argv[1:], 'x', argspec)
@@ -330,4 +306,13 @@ if __name__ == "__main__":
         for a in args[1:]:
             print ("f_%s[%s] =" % (modeSpec,a)),ti.eval(modeSpec,a)
     else:
-        print "interpreter variable 'ti' set, type ti.help() for help"
+        try:
+            if sys.ps1: interactiveMode = True
+        except AttributeError:
+            interactiveMode = False
+            if sys.flags.interactive: interactiveMode = True
+        if interactiveMode:
+            print "Interpreter variable 'ti' set, type ti.help() for help"
+        else:
+            print "Usage: python -i -m tensorlog --programFiles ... --trainData ..."
+            print "(And really only useful with the -i option)"

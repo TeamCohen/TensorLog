@@ -1,7 +1,9 @@
-nimport os.path
+import os.path
 import scipy.sparse as SS
 import scipy.io
 
+# this is progress forward but not good yet
+#
 # trying to get cora to work on recursive theories
 #  - main problem: old theory leads to huge proof counts,
 #    fixed by refactoring theory to be linear.
@@ -9,7 +11,7 @@ import scipy.io
 
 import declare
 import bpcompiler
-import exptv2
+import expt
 import dataset
 import tensorlog
 import matrixdb
@@ -42,4 +44,4 @@ if __name__=="__main__":
               #'regularizer':learn.L2Regularizer(0.1),
     }
     print 'maxdepth',prog.maxDepth
-    exptv2.Expt(params).run()
+    expt.Expt(params).run()
