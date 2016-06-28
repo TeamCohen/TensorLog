@@ -24,8 +24,7 @@ import funs
 import learn
 import mutil
 import dataset
-import exptv2
-import exptv1
+import expt
 
 
 def maybeNormalize(expectedResultDict):
@@ -720,19 +719,6 @@ class TestExpt(unittest.TestCase):
                 os.remove(p)
 
 
-    def testExptV1(self):
-        params = {'initFiles':["test/textcattoy.cfacts","test/textcat.ppr"],
-                  'theoryPred':'predict',
-                  'trainPred':'train',
-                  'testPred':'test',
-                  'savedModel':'tlog-cache/toy-trained.db',
-                  'savedTestPreds':'tlog-cache/toy-test.solutions.txt',
-                  'savedTrainExamples':'tlog-cache/toy-train.examples',
-                  'savedTestExamples':'tlog-cache/toy-test.examples',
-              }
-        exptv1.Expt(params).run()
-        
-
     def testMToyExpt(self):
         acc2,xent1 = self.runMToyExpt()
 
@@ -760,7 +746,7 @@ class TestExpt(unittest.TestCase):
                   'savedTestPreds':'tlog-cache/toy-test.solutions.txt',
                   'savedTrainExamples':'tlog-cache/toy-train.examples',
                   'savedTestExamples':'tlog-cache/toy-test.examples'}
-        return exptv2.Expt(params).run()
+        return expt.Expt(params).run()
 
     def runMToyExpt(self):
         db = matrixdb.MatrixDB.uncache('tlog-cache/matchtoy.db','test/matchtoy.cfacts')
@@ -771,7 +757,7 @@ class TestExpt(unittest.TestCase):
         prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
         prog.setWeights(db.ones())
         params = {'initProgram':prog,'trainData':trainData, 'testData':testData}
-        return exptv2.Expt(params).run()
+        return expt.Expt(params).run()
 
 class TestDataset(unittest.TestCase):
 

@@ -1,7 +1,7 @@
 short-tests:
 	python testtensorlog.py
 
-long-tests: short-tests benchmark-test wnet-test cora-test-v2
+long-tests: short-tests benchmark-test wnet-test cora-test
 
 benchmark-test:
 	python benchmark.py
@@ -19,11 +19,6 @@ wnet-test:
 
 cora-test:
 	(export PYTHONPATH=`pwd`; cd ../datasets/cora/; python cora-expt.py; \
-	 proppr eval cora-test.examples cora-test.solutions.txt --metric auc --defaultNeg)
-	echo expected . micro: 0.975902362875
-
-cora-test-v2:
-	(export PYTHONPATH=`pwd`; cd ../datasets/cora/; python cora-exptv2.py; \
 	 proppr eval tmp-cache/cora-test.examples tmp-cache/cora-test.solutions.txt --metric auc --defaultNeg)
 	echo expected . micro: 0.975902362875
 
