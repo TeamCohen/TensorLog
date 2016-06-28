@@ -16,7 +16,7 @@ fb-learned.preds: fb-learned.ppr
 	sed 's/[(].*//' $< | sort -k 1b,1 | uniq > $@
 
 init:
-	mkdir inputs
+	mkdir -p inputs
 
 TAB=$(shell echo "\t")
 inputs/%.examples: raw/%.examples fb-learned.preds
