@@ -47,8 +47,8 @@ class GradAccumulator(object):
             mutil.checkCSR(self.runningSum[paramName],('runningSum for %s' % str(paramName)))
         
 
-#TODO is data part of learner?
 class Learner(object):
+    """Abstract class with some utility functions.."""
 
     # prog pts to db, rules
     def __init__(self,prog):
@@ -142,7 +142,7 @@ class Learner(object):
             self.prog.db.setParameter(functor,arity,m)
 
 class FixedRateGDLearner(Learner):
-    """ Very simple one-predicate learner
+    """ Simple one-predicate learner.
     """  
 
     def __init__(self,prog,epochs=10,rate=0.1,regularizer=None):
@@ -167,6 +167,7 @@ class FixedRateGDLearner(Learner):
             self.applyMeanUpdate(paramGrads,self.rate,n)
         
 class MultiPredLearner(Learner):
+    """Abstract class for learners which can handle multiple predicates."""
 
     def multiPredict(self,dset,copyXs=True):
         """ Return predictions as a dataset. """
@@ -215,6 +216,7 @@ class MultiPredFixedRateGDLearner(MultiPredLearner):
         self.epochs=epochs
         self.rate=rate
     
+    #TODO whinget?
     def multiTrain(self,dset,whinget=5):
         startTime = time.time()
         last = startTime - whinget
@@ -233,15 +235,47 @@ class MultiPredFixedRateGDLearner(MultiPredLearner):
                 self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
                 self.applyMeanUpdate(paramGrads,self.rate,n)
             
+
+class MultiPredFixedRateSGDLearner(MultiPredFixedRateGDLearner):
+
+    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None,miniBatchSize=100):
+        super(MultiPredFixedRateSGDLearner,self).__init__(prog,epochs=epochs,rate=rate,regularizer=regularizer)
+        self.miniBatchSize = miniBatchSize
+    
+    def multiTrain(self,dset,whinget=5):
+        startTime = time.time()
+        last = startTime - whinget
+        modes = dset.modesToLearn()
+        n = len(modes)
+        for i in range(self.epochs):
+            k = 0
+            for (mode,X,Y) in dset.minibatchIterator(batchSize=self.miniBatchSize):
+                n = mutil.numRows(X)
+                k = k+1
+                def myTraceFun(thisLearner,Y,P):
+                    print 'epoch %d of %d miniBatch %d: target mode %s' % (i+1,k+1,self.epochs,str(mode)),
+                    print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
+                    print ' reg cost %.3f' % thisLearner.regularizer.regularizationCost(thisLearner.prog),
+                    print ' acc %.3f' % thisLearner.accuracy(Y,P),            
+                    print ' cumSecs %.3f' % (time.time()-startTime)
+                paramGrads = self.crossEntropyGrad(mode,X,Y,traceFun=myTraceFun)
+                self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
+                self.applyMeanUpdate(paramGrads,self.rate,n)
+
+
 class Regularizer(object):
+    """Abstract class for regularizers."""
 
     def addRegularizationGrad(self,paramGrads,prog,n):
+        """Introduce the regularization gradient to a GradAccumulator."""
         assert False, 'abstract method called'
 
     def regularizationCost(self,prog):
+        """Report the current regularization cost."""
         assert False, 'abstract method called'
 
 class NullRegularizer(object):
+    """ Default case which does no regularization"""
 
     def addRegularizationGrad(self,paramGrads,prog,n):
         pass
@@ -250,6 +284,7 @@ class NullRegularizer(object):
         return 0.0
 
 class L2Regularizer(Regularizer):
+    """ L2 regularization toward 0."""
 
     def __init__(self,regularizationConstant=0.01):
         self.regularizationConstant = regularizationConstant
@@ -270,7 +305,4 @@ class L2Regularizer(Regularizer):
             m = prog.db.getParameter(functor,arity)
             result += (m.data * m.data).sum()
         return result*self.regularizationConstant
-
-if __name__ == "__main__":
-    pass
 

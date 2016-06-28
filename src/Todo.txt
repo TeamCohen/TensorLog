@@ -1,7 +1,7 @@
 TODO: 
  - version number
- - integrate debug with interp?
  - generic option parser for programFiles, train, test, ...?
+ - clean up expt nonsense
 
 TUTORIAL/DOCS
 

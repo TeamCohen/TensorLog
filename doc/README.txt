@@ -21,7 +21,7 @@ HOW TO DEBUG A TENSORLOG PROGRAM:
 
 Start up an interpreter with the command
 
-  % python -i tensorlog.py --programFiles foo.db:foo.ppr
+  % python -i -m tensorlog --programFiles foo.db:foo.ppr:foo.cfacts:...
 
 You can then evaluate functions with commands like:
 

@@ -31,6 +31,11 @@ class Dataset(object):
         """Returns true if all the examples are for a single predicate."""
         return len(self.xDict.keys())==1
 
+    def extractMode(self,mode):
+        """Return a new Dataset that just contains this mode."""
+        assert mode in self.xDict, 'dataset does not contain mode %s' % str(mode)
+        return Dataset({mode:self.xDict[mode]}, {mode:self.yDict[mode]})
+
     def modesToLearn(self):
         """Return list of modes associated with the data."""
         return self.xDict.keys()

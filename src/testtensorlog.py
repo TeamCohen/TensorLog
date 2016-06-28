@@ -589,7 +589,6 @@ class TestProPPR(unittest.TestCase):
             uniform = {'pos':0.5,'neg':0.5,}
             self.checkDicts(d,uniform)
 
-    #seg fault on mac
     def testGradMatrix(self):
         data = DataBuffer(self.prog.db)
         X,Y = self.labeledData.matrixAsTrainingData('train',2)
@@ -617,11 +616,9 @@ class TestProPPR(unittest.TestCase):
         self.assertFalse(self.prog.db.inDB('train',2))
         self.assertFalse(self.prog.db.inDB('test',2))
 
-    def testMultiLearn(self):
+    def testMultiLearn1(self):
         mode = declare.ModeDeclaration('predict(i,o)')
-        
         dset = dataset.Dataset.loadExamples(self.prog.db,"test/toytrain.examples",proppr=True)
-        
         for mode in dset.modesToLearn():
             X = dset.getX(mode)
             Y = dset.getY(mode)
@@ -659,8 +656,6 @@ class TestProPPR(unittest.TestCase):
         self.assertTrue(acc2==1)
         ##
 
-        
-    #seg fault on mac
     def testLearn(self):
         mode = declare.ModeDeclaration('predict(i,o)')
         X,Y = self.labeledData.matrixAsTrainingData('train',2)
