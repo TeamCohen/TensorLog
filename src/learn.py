@@ -54,11 +54,52 @@ class Learner(object):
     # using and measuring performance
     #
 
+
     def predict(self,mode,X):
         """Make predictions on a data matrix associated with the given mode."""
         predictFun = self.prog.getPredictFunction(mode)
         result = predictFun.eval(self.prog.db, [X])
         return result
+
+    def datasetPredict(self,dset,copyXs=True):
+        """ Return predictions as a dataset. """
+        xDict = {}
+        yDict = {}
+        for mode in dset.modesToLearn():
+            X = dset.getX(mode)
+            xDict[mode] = X if copyXs else None
+            try:
+                yDict[mode] = self.prog.getPredictFunction(mode).eval(self.prog.db, [X])
+            except FloatingPointError:
+                print "Trouble with mode %s" % str(mode)
+                raise
+        return dataset.Dataset(xDict,yDict)
+
+    @staticmethod
+    def datasetAccuracy(goldDset,predictedDset):
+        weightedSum = 0.0
+        totalWeight = 0.0
+        for mode in goldDset.modesToLearn():
+            assert predictedDset.hasMode(mode)
+            Y = goldDset.getY(mode)
+            P = predictedDset.getY(mode)
+            weight = mutil.numRows(Y)
+            weightedSum += weight * Learner.accuracy(Y,P)
+            totalWeight += weight
+        if totalWeight == 0: return 0
+        return weightedSum/totalWeight
+
+    @staticmethod
+    def datasetCrossEntropy(goldDset,predictedDset,perExample=True):
+        result = 0.0
+        for mode in goldDset.modesToLearn():
+            assert predictedDset.hasMode(mode)
+            Y = goldDset.getY(mode)
+            P = predictedDset.getY(mode)
+            divisor = mutil.numRows(Y) if perExample else 1.0
+            result += Learner.crossEntropy(Y,P)/divisor
+        return result
+
 
     @staticmethod
     def accuracy(Y,P):
@@ -113,6 +154,7 @@ class Learner(object):
         predictFun.fun.backprop(Y-P,paramGrads)
         return paramGrads
 
+
     #
     # parameter update
     #
@@ -162,47 +204,6 @@ class OnePredFixedRateGDLearner(Learner):
             self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
             self.applyMeanUpdate(paramGrads,self.rate,n)
         
-class Learner(Learner):
-    """Abstract class for learners which can handle multiple predicates."""
-
-    def multiPredict(self,dset,copyXs=True):
-        """ Return predictions as a dataset. """
-        xDict = {}
-        yDict = {}
-        for mode in dset.modesToLearn():
-            X = dset.getX(mode)
-            xDict[mode] = X if copyXs else None
-            try:
-                yDict[mode] = self.prog.getPredictFunction(mode).eval(self.prog.db, [X])
-            except FloatingPointError:
-                print "Trouble with mode %s" % str(mode)
-                raise
-        return dataset.Dataset(xDict,yDict)
-
-    @staticmethod
-    def multiAccuracy(goldDset,predictedDset):
-        weightedSum = 0.0
-        totalWeight = 0.0
-        for mode in goldDset.modesToLearn():
-            assert predictedDset.hasMode(mode)
-            Y = goldDset.getY(mode)
-            P = predictedDset.getY(mode)
-            weight = mutil.numRows(Y)
-            weightedSum += weight * Learner.accuracy(Y,P)
-            totalWeight += weight
-        if totalWeight == 0: return 0
-        return weightedSum/totalWeight
-
-    @staticmethod
-    def multiCrossEntropy(goldDset,predictedDset,perExample=True):
-        result = 0.0
-        for mode in goldDset.modesToLearn():
-            assert predictedDset.hasMode(mode)
-            Y = goldDset.getY(mode)
-            P = predictedDset.getY(mode)
-            divisor = mutil.numRows(Y) if perExample else 1.0
-            result += Learner.crossEntropy(Y,P)/divisor
-        return result
 
 class FixedRateGDLearner(Learner):
 
@@ -212,7 +213,7 @@ class FixedRateGDLearner(Learner):
         self.epochs=epochs
         self.rate=rate
     
-    def multiTrain(self,dset):
+    def train(self,dset):
         startTime = time.time()
         modes = dset.modesToLearn()
         n = len(modes)
@@ -236,7 +237,7 @@ class FixedRateSGDLearner(FixedRateGDLearner):
         super(FixedRateSGDLearner,self).__init__(prog,epochs=epochs,rate=rate,regularizer=regularizer)
         self.miniBatchSize = miniBatchSize
     
-    def multiTrain(self,dset):
+    def train(self,dset):
         startTime = time.time()
         modes = dset.modesToLearn()
         n = len(modes)

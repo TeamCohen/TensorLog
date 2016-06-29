@@ -84,7 +84,7 @@ class Dataset(object):
             yield mode,bX,bY
 
     def pprint(self):
-        return ['%s: X %s Y %s' % (str(mode),mutil.summary(self.xDict[mode]),mutil.summary(self.yDict[mode])) for mode in self.xDict]
+        return ['%s: X %s Y %s' % (str(mode),mutil.pprintSummary(self.xDict[mode]),mutil.pprintSummary(self.yDict[mode])) for mode in self.xDict]
 
     #
     # i/o and conversions

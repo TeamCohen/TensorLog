@@ -16,7 +16,6 @@ import matrixdb
 conf = config.Config()
 conf.careful = True;       conf.help.careful = 'execute checks for matrix type and NANs'
 
-# miscellaneous broadcast utilities used my ops.py and funs.py
 
 NP.seterr(all='raise',under='ignore') 
 # stop execution & print traceback for various floating-point issues

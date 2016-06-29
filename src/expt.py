@@ -55,21 +55,21 @@ class Expt(object):
 
         TP0 = Expt.timeAction(
             'running untrained theory on train data',
-            lambda:learner.multiPredict(trainData))
+            lambda:learner.datasetPredict(trainData))
         if conf.num_train_predictions_shown>0:
             logging.warn('sample predictions not implemented')
         UP0 = Expt.timeAction(
             'running untrained theory on test data',
-            lambda:learner.multiPredict(testData))
+            lambda:learner.datasetPredict(testData))
 
-        Expt.timeAction('training', lambda:learner.multiTrain(trainData))
+        Expt.timeAction('training', lambda:learner.train(trainData))
 
         TP1 = Expt.timeAction(
             'running trained theory on train data',
-            lambda:learner.multiPredict(trainData))
+            lambda:learner.datasetPredict(trainData))
         UP1 = Expt.timeAction(
             'running trained theory on test data',
-            lambda:learner.multiPredict(testData))
+            lambda:learner.datasetPredict(testData))
 
         Expt.printStats('untrained theory','train',trainData,TP0)
         Expt.printStats('..trained theory','train',trainData,TP1)
@@ -133,8 +133,8 @@ class Expt(object):
     @staticmethod
     def printStats(modelMsg,testSet,goldData,predictedData):
         """Print accuracy and crossEntropy for some named model on a named eval set."""
-        acc = learn.Learner.multiAccuracy(goldData,predictedData)
-        xent = learn.Learner.multiCrossEntropy(goldData,predictedData,perExample=True)
+        acc = learn.Learner.datasetAccuracy(goldData,predictedData)
+        xent = learn.Learner.datasetCrossEntropy(goldData,predictedData,perExample=True)
         print 'eval',modelMsg,'on',testSet,': acc',acc,'xent/ex',xent
         return (acc,xent)
 

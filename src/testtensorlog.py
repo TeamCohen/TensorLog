@@ -616,23 +616,20 @@ class TestProPPR(unittest.TestCase):
             X = dset.getX(mode)
             Y = dset.getY(mode)
             print mode
-            print "\tX "+mutil.summary(X)
-            print "\tY "+mutil.summary(Y)
-        #X,Y = self.labeledData.matrixAsTrainingData('train',2)
-        #print mutil.summary(X)
-        #print mutil.summary(Y)
+            print "\tX "+mutil.pprintSummary(X)
+            print "\tY "+mutil.pprintSummary(Y)
         
         learner = learn.FixedRateGDLearner(self.prog,epochs=5)
-        P0 = learner.multiPredict(dset)
-        acc0 = learner.multiAccuracy(dset,P0)
-        xent0 = learner.multiCrossEntropy(dset,P0)
+        P0 = learner.datasetPredict(dset)
+        acc0 = learner.datasetAccuracy(dset,P0)
+        xent0 = learner.datasetCrossEntropy(dset,P0)
         print 'toy train: acc0',acc0,'xent1',xent0
 
-        learner.multiTrain(dset)
+        learner.train(dset)
         
-        P1 = learner.multiPredict(dset)
-        acc1 = learner.multiAccuracy(dset,P1)
-        xent1 = learner.multiCrossEntropy(dset,P1)
+        P1 = learner.datasetPredict(dset)
+        acc1 = learner.datasetAccuracy(dset,P1)
+        xent1 = learner.datasetCrossEntropy(dset,P1)
         print 'toy train: acc1',acc1,'xent1',xent1
         
         self.assertTrue(acc0<acc1)
@@ -641,9 +638,9 @@ class TestProPPR(unittest.TestCase):
 
         Udset = dataset.Dataset.loadExamples(self.prog.db,"test/toytest.examples",proppr=True)
         
-        P2 = learner.multiPredict(Udset)
-        acc2 = learner.multiAccuracy(Udset,P2)
-        xent2 = learner.multiCrossEntropy(Udset,P2)
+        P2 = learner.datasetPredict(Udset)
+        acc2 = learner.datasetAccuracy(Udset,P2)
+        xent2 = learner.datasetCrossEntropy(Udset,P2)
         print 'toy test: acc2',acc2,'xent2',xent2
         
         self.assertTrue(acc2==1)

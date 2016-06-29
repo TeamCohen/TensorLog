@@ -207,7 +207,7 @@ class MatrixDB(object):
 
     def summary(self,functor,arity):
         m = self.matEncoding[(functor,arity)]
-        return 'in DB: %s' % mutil.summary(m)
+        return 'in DB: %s' % mutil.pprintSummary(m)
 
     def listing(self):
         for (functor,arity),m in sorted(self.matEncoding.items()):

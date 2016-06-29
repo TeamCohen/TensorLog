@@ -142,7 +142,6 @@ class DefinedPredOp(Op):
         subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
         newDelta = subfun.backprop(env.delta[self.dst],gradAccum)
         env.delta[self.src] = newDelta
-        #if TRACE: print("%s(%s,%s) delta[%s] set to %s" % (self.__class__.__name__,self.dst,self.src,self.src,mutil.summary(newDelta) if newDelta.nnz else str(newDelta)))
     def pprint(self,depth=-1):
         top = super(DefinedPredOp,self).pprint(depth)
         if depth>MAXDEPTH: return top + ["%s..." % ('| '*(depth+1))]
