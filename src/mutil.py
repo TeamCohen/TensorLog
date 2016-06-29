@@ -14,7 +14,7 @@ import config
 import matrixdb
 
 conf = config.Config()
-conf.optimize_softmax = True;   conf.help.optimize_softmax = 'use optimized version of softmax code'
+conf.careful = True;       conf.help.careful = 'execute checks for matrix type and NANs'
 
 # miscellaneous broadcast utilities used my ops.py and funs.py
 
@@ -36,13 +36,14 @@ def pprintSummary(mat):
 
 def checkCSR(mat,context='unknown'):
     """Raise error if mat is not a scipy.sparse.csr_matrix."""
-    assert isinstance(mat,SS.csr_matrix),'bad type [context %s] for %r' % (context,mat)
+    if conf.careful:
+        assert isinstance(mat,SS.csr_matrix),'bad type [context %s] for %r' % (context,mat)
 
 def checkNoNANs(mat,context='unknown'):
     """Raise error if mat has nan's in it"""
-    checkCSR(mat)
-    for j in range(0,mat.indptr[-1]):
-        assert not math.isnan(mat.data[j]),'nan\'s found: %s' % context
+    if conf.careful:
+        checkCSR(mat)
+        assert not NP.any(NP.isnan(mat.data)), 'nan\'s found: %s' % context
 
 def maxValue(mat):
     try:
@@ -50,6 +51,33 @@ def maxValue(mat):
     except ValueError:
         #zero-size array
         return -1
+
+def densify(mat,maxExpansion=3):
+    """Create a smallish dense version of a sparse matrix, which slices
+    out the range of columns which have non-zero values, and return a pair
+    D,I where D is the dense matrix, and I is information needed to
+    invert the process for a matrix with the same dimensions.  Returns
+    None if the dense matrix would be too much larger.
+    """
+    hiIndex = NP.max(mat.indices)
+    loIndex = NP.min(mat.indices)
+    denseSize = (hiIndex-loIndex) * numRows(mat)
+    sparseSize = numRows(mat)+1 + 2*mat.nnz
+    if denseSize>sparseSize*maxExpansion:
+        logging.warn('densifying would produce a much larger matrix: %d -> %d floats' % (sparseSize,denseSize))
+        return None,None
+    else:
+        newShape = (numRows(mat),hiIndex-loIndex+1)
+        D = SS.csr_matrix((mat.data,mat.indices-loIndex,mat.indptr),shape=newShape,dtype='float64').todense()
+        return D,(loIndex,numCols(mat))
+
+def undensify(denseMat, info):
+    (loIndex,numCols) = info
+    (numRows,_) = denseMat.shape
+    tmp = SS.csr_matrix(denseMat)
+    result = SS.csr_matrix((tmp.data,tmp.indices+loIndex,tmp.indptr),shape=(numRows,numCols),dtype='float64')
+    result.eliminate_zeros()
+    return result
 
 def mean(mat):
     """Return the average of the rows."""
@@ -90,12 +118,12 @@ def stack(mats):
 def numRows(m): 
     """Number of rows in matrix"""
     checkCSR(m)
-    return m.get_shape()[0]
+    return m.shape[0]
 
 def numCols(m): 
     """Number of colunms in matrix"""
     checkCSR(m)
-    return m.get_shape()[1]
+    return m.shape[1]
 
 def nzCols(m,i):
     """Enumerate the non-zero columns in row i."""
@@ -135,8 +163,18 @@ def softmax(db,mat):
             assert not math.isnan(data[j])
             if data[j]==0:
                 data[j] = math.exp(nullEpsilon)
-    alterMatrixRows(result,softMaxAlteration)
-    return result
+    denseResult,undensifier = densify(result)
+    if denseResult!=None:
+        return undensify(denseSoftmax(denseResult), undensifier)
+    else:
+        alterMatrixRows(result,softMaxAlteration)
+        return result
+
+def denseSoftmax(m):
+    #we want to make sure we keep the zero entries as zero
+    mask = m!=0
+    e_m = NP.multiply(NP.exp(m - m.max(axis=1)), mask)
+    return e_m / e_m.sum(axis=1)
 
 def broadcastAndComponentwiseMultiply(m1,m2):
     """ compute m1.multiply(m2), but broadcast m1 or m2 if necessary
@@ -154,12 +192,14 @@ def broadcastAndComponentwiseMultiply(m1,m2):
     r1 = numRows(m1); r2 = numRows(m2)
     if r1==r2:
         return  m1.multiply(m2)
-    elif r1==1:
+    else:
+        assert r1==1 or r2==1, 'mismatched matrix sizes: #rows %d,%d' % (r1,r2)
+
+    if r1==1:
         return multiplyByBroadcastRowVec(m1,m2)        
     elif r2==1:
         return multiplyByBroadcastRowVec(m1,m2)        
-    else:
-        assert False, 'mismatched matrix sizes: #rows %d,%d' % (r1,r2)
+        
     return result
 
 def broadcastAndWeightByRowSum(m1,m2):
@@ -169,6 +209,7 @@ def broadcastAndWeightByRowSum(m1,m2):
     r1 = numRows(m1)
     r2 = numRows(m2)
     if r2==1:
+        #DEBUG 
         try:
             return  m1 * m2.sum()
         except FloatingPointError:
