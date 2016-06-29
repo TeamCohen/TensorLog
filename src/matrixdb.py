@@ -305,7 +305,7 @@ class MatrixDB(object):
             db.serialize(dbFile)
             return db
         else:
-            print 'de-serializing dbFile',dbFile,'...'
+            #print 'de-serializing dbFile',dbFile,'...'
             return MatrixDB.deserialize(dbFile)
 
 

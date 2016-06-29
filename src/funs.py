@@ -10,11 +10,17 @@ import traceback
 import ops
 import config
 import mutil
+import putil
 import numpy
+
+#experimentally the parallel_sum option doesn't seem to help
+#time-wise: CPU usage rarely gets over 150% it also causes errors in
+#cora-linear-expt.
 
 conf = config.Config()
 conf.trace = False;         conf.help.trace =         "Print debug info during function eval"
 conf.long_trace = False;    conf.help.long_trace =    "Print output of functions during eval - only for small tasks"
+conf.parallel_sum = False;   conf.help.parallel_sum =  "Evaluate sum operations in a parallel, one thread per addend."
 
 class Function(object):
     """The tensorlog representation of a function. This supports eval and
@@ -147,13 +153,15 @@ class SumFunction(Function):
     def pprintSummary(self):
         return 'SumFunction'
     def _doEval(self,db,values):
-        addends = map(lambda f:f.eval(db,values), self.funs)
+        mapfun = putil.multithreaded_map if conf.parallel_sum else map
+        addends = mapfun(lambda f:f.eval(db,values), self.funs)
         accum = addends[0]
         for i in range(1,len(addends)):
             accum = accum + addends[i]
         return accum
     def _doBackprop(self,delta,gradAccum):
-        addends = map(lambda f:f.backprop(delta,gradAccum), self.funs)
+        mapfun = putil.multithreaded_map if conf.parallel_sum else map
+        addends = mapfun(lambda f:f.backprop(delta,gradAccum), self.funs)
         accum = addends[0]
         for i in range(1,len(addends)):
             accum = accum + addends[i]
