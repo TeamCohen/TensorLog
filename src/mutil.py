@@ -64,7 +64,6 @@ def densify(mat,maxExpansion=3):
     denseSize = (hiIndex-loIndex) * numRows(mat)
     sparseSize = numRows(mat)+1 + 2*mat.nnz
     if denseSize>sparseSize*maxExpansion:
-        logging.warn('densifying would produce a much larger matrix: %d -> %d floats' % (sparseSize,denseSize))
         return None,None
     else:
         newShape = (numRows(mat),hiIndex-loIndex+1)
