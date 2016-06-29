@@ -1,7 +1,5 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 #
-# learning
-#
 
 import funs
 import time
@@ -14,8 +12,6 @@ import tensorlog
 import dataset
 import mutil
 import declare
-import logging as L
-logging = L.getLogger()
 
 # clip to avoid exploding gradients
 
@@ -141,12 +137,12 @@ class Learner(object):
             m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
             self.prog.db.setParameter(functor,arity,m)
 
-class FixedRateGDLearner(Learner):
+class OnePredFixedRateGDLearner(Learner):
     """ Simple one-predicate learner.
     """  
 
     def __init__(self,prog,epochs=10,rate=0.1,regularizer=None):
-        super(FixedRateGDLearner,self).__init__(prog)
+        super(OnePredFixedRateGDLearner,self).__init__(prog)
         self.regularizer = regularizer or NullRegularizer()
         self.epochs=epochs
         self.rate=rate
@@ -166,7 +162,7 @@ class FixedRateGDLearner(Learner):
             self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
             self.applyMeanUpdate(paramGrads,self.rate,n)
         
-class MultiPredLearner(Learner):
+class Learner(Learner):
     """Abstract class for learners which can handle multiple predicates."""
 
     def multiPredict(self,dset,copyXs=True):
@@ -208,18 +204,16 @@ class MultiPredLearner(Learner):
             result += Learner.crossEntropy(Y,P)/divisor
         return result
 
-class MultiPredFixedRateGDLearner(MultiPredLearner):
+class FixedRateGDLearner(Learner):
 
     def __init__(self,prog,epochs=10,rate=0.1,regularizer=None):
-        super(MultiPredFixedRateGDLearner,self).__init__(prog)
+        super(FixedRateGDLearner,self).__init__(prog)
         self.regularizer = regularizer or NullRegularizer()
         self.epochs=epochs
         self.rate=rate
     
-    #TODO whinget?
-    def multiTrain(self,dset,whinget=5):
+    def multiTrain(self,dset):
         startTime = time.time()
-        last = startTime - whinget
         modes = dset.modesToLearn()
         n = len(modes)
         for i in range(self.epochs):
@@ -236,15 +230,14 @@ class MultiPredFixedRateGDLearner(MultiPredLearner):
                 self.applyMeanUpdate(paramGrads,self.rate,n)
             
 
-class MultiPredFixedRateSGDLearner(MultiPredFixedRateGDLearner):
+class FixedRateSGDLearner(FixedRateGDLearner):
 
     def __init__(self,prog,epochs=10,rate=0.1,regularizer=None,miniBatchSize=100):
-        super(MultiPredFixedRateSGDLearner,self).__init__(prog,epochs=epochs,rate=rate,regularizer=regularizer)
+        super(FixedRateSGDLearner,self).__init__(prog,epochs=epochs,rate=rate,regularizer=regularizer)
         self.miniBatchSize = miniBatchSize
     
-    def multiTrain(self,dset,whinget=5):
+    def multiTrain(self,dset):
         startTime = time.time()
-        last = startTime - whinget
         modes = dset.modesToLearn()
         n = len(modes)
         for i in range(self.epochs):

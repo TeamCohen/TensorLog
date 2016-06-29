@@ -295,6 +295,7 @@ class TestMultiRowOps(unittest.TestCase):
             d[matrixdb.NULL_ENTITY_NAME] = 0
         self.inferenceCheck(ruleStrings,modeString,inputSymbols,expectedResultDicts)
         self.predictCheck(ruleStrings,modeString,inputSymbols,expectedResultDicts)
+
     def inferenceCheck(self,ruleStrings,modeString,inputSymbols,expectedResultDicts):
         print '\n\ntesting inference for mode',modeString,'on input',inputSymbols,'with rules:'
         for r in ruleStrings:
@@ -304,13 +305,6 @@ class TestMultiRowOps(unittest.TestCase):
             rules.add(parser.Parser.parseRule(r))
         prog = tensorlog.Program(db=self.db,rules=rules)
         mode = declare.ModeDeclaration(modeString)
-        
-        #trainingData = self.db.createPartner()
-        #trainingData.addFile(trainingDataFile)
-        #trainSpec = (mode.functor,mode.arity)
-        #X,Y = trainingData.matrixAsTrainingData(*trainSpec)
-        #self.learner = learn.FixedRateGDLearner(self.prog,X,Y,epochs=5)
-        #P0 = self.learner.predict(mode,X)
         
         fun = prog.compile(mode)
         for i in range(len(inputSymbols)):
@@ -337,7 +331,7 @@ class TestMultiRowOps(unittest.TestCase):
         trainingData.addLines(td)
         trainSpec = (mode.functor,mode.arity)
         X,Y = trainingData.matrixAsTrainingData(*trainSpec)
-        learner = learn.FixedRateGDLearner(prog,epochs=5)
+        learner = learn.OnePredFixedRateGDLearner(prog,epochs=5)
         P0 = learner.predict(mode,X)
         
     def checkDicts(self,actual, expected):
@@ -628,7 +622,7 @@ class TestProPPR(unittest.TestCase):
         #print mutil.summary(X)
         #print mutil.summary(Y)
         
-        learner = learn.MultiPredFixedRateGDLearner(self.prog,epochs=5)
+        learner = learn.FixedRateGDLearner(self.prog,epochs=5)
         P0 = learner.multiPredict(dset)
         acc0 = learner.multiAccuracy(dset,P0)
         xent0 = learner.multiCrossEntropy(dset,P0)
@@ -658,7 +652,7 @@ class TestProPPR(unittest.TestCase):
     def testLearn(self):
         mode = declare.ModeDeclaration('predict(i,o)')
         X,Y = self.labeledData.matrixAsTrainingData('train',2)
-        learner = learn.FixedRateGDLearner(self.prog,epochs=5)
+        learner = learn.OnePredFixedRateGDLearner(self.prog,epochs=5)
         P0 = learner.predict(mode,X)
         acc0 = learner.accuracy(Y,P0)
         xent0 = learner.crossEntropy(Y,P0)

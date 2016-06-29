@@ -50,7 +50,7 @@ class Expt(object):
             testData = testData.extractMode(targetPred)
 
         if not learnerFactory:
-            learnerFactory = learn.MultiPredFixedRateGDLearner
+            learnerFactory = learn.FixedRateGDLearner
         learner = learnerFactory(ti.prog,epochs=epochs,regularizer=regularizer)
 
         TP0 = Expt.timeAction(
@@ -71,10 +71,10 @@ class Expt(object):
             'running trained theory on test data',
             lambda:learner.multiPredict(testData))
 
-        Expt.printMultiPredStats('untrained theory','train',trainData,TP0)
-        Expt.printMultiPredStats('..trained theory','train',trainData,TP1)
-        Expt.printMultiPredStats('untrained theory','test',testData,UP0)
-        testAcc,testXent = Expt.printMultiPredStats('..trained theory','test',testData,UP1)
+        Expt.printStats('untrained theory','train',trainData,TP0)
+        Expt.printStats('..trained theory','train',trainData,TP1)
+        Expt.printStats('untrained theory','test',testData,UP0)
+        testAcc,testXent = Expt.printStats('..trained theory','test',testData,UP1)
 
         if savedModel:
             Expt.timeAction('saving trained model', lambda:ti.db.serialize(savedModel))
@@ -131,18 +131,10 @@ class Expt(object):
         return result
 
     @staticmethod
-    def printStats(modelMsg,testSet,Y,P):
+    def printStats(modelMsg,testSet,goldData,predictedData):
         """Print accuracy and crossEntropy for some named model on a named eval set."""
-        acc = learn.Learner.accuracy(Y,P)
-        xent = learn.Learner.crossEntropy(Y,P,perExample=True)
-        print 'eval',modelMsg,'on',testSet,': acc',acc,'xent/ex',xent
-        return (acc,xent)
-
-    @staticmethod
-    def printMultiPredStats(modelMsg,testSet,goldData,predictedData):
-        """Print accuracy and crossEntropy for some named model on a named eval set."""
-        acc = learn.MultiPredLearner.multiAccuracy(goldData,predictedData)
-        xent = learn.MultiPredLearner.multiCrossEntropy(goldData,predictedData,perExample=True)
+        acc = learn.Learner.multiAccuracy(goldData,predictedData)
+        xent = learn.Learner.multiCrossEntropy(goldData,predictedData,perExample=True)
         print 'eval',modelMsg,'on',testSet,': acc',acc,'xent/ex',xent
         return (acc,xent)
 
@@ -169,7 +161,7 @@ if __name__=="__main__":
         
     prog.setWeights(initWeights)
     def myLearner(prog,**opts):
-        return learn.MultiPredFixedRateSGDLearner(prog,miniBatchSize=1,**opts)
+        return learn.FixedRateSGDLearner(prog,miniBatchSize=1,**opts)
 
     params = {'initProgram':prog,
               'trainData':trainData, 'testData':testData,
