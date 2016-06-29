@@ -17,11 +17,16 @@ import learn
 import mutil
 import config
 
+conf = config.Config()
+conf.sortByValue = True;   conf.help.sortByValue = "In displaying message values, sort entries by weight if true, by name if false."
+conf.fontsize = None;      conf.help.fontsize = "Size of font, eg 14"
+conf.fontweight = None;    conf.help.fontsize = "Weight of font, eg 'bold'"
+
 class Debugger(object):
 
     def __init__(self,initProgram,targetPred,trainData,gradient=False):
         self.rendered = False
-        self.sortByValue = True
+        self.sortByValue = conf.sortByValue
         self.prog = initProgram
         self.trainData = trainData
         self.targetPred = targetPred
@@ -48,7 +53,10 @@ class Debugger(object):
         #set up a window
         self.root = TK.Tk()
         default_font = tkFont.nametofont("TkDefaultFont")
-        default_font.configure(size=16,weight='bold')
+        if conf.fontsize:
+            default_font.configure(size=conf.fontsize)
+        if conf.fontweight:
+            default_font.configure(weight=conf.fontweight)
         self.root.option_add("*Font", default_font)
         #labels on the top
         self.treeLabel = ttk.Label(self.root,text="Listing of %s" % str(self.mode))
@@ -124,9 +132,9 @@ class Debugger(object):
                 self.msgItems.add(rowChild)
                 def sortKey(k): 
                     if self.sortByValue==True:
-                        return dOfD[r][k]
+                        return -dOfD[r][k]
                     else:
-                        return -k
+                        return k
                 for offset,sym in enumerate(sorted(dOfD[r].keys(), key=sortKey)):
                     #why are some of these None?
                     if sym!=None:
