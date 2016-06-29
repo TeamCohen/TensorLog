@@ -1,7 +1,12 @@
 TODO: 
- - version number
  - generic option parser for programFiles, train, test, ...?
- - clean up expt nonsense
+
+ - optimization
+ -- printing accuracy in myTraceFun is now about 25% of the time
+ -- broadcastAndWeightByRowSum is also about 25%
+ -- broadcastAndComponentwiseMultiply is 30%
+ -- rather than types, I could just read in all constants in order so that
+ you can group similar-typed ones together
 
 TUTORIAL/DOCS
 
