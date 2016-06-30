@@ -14,8 +14,11 @@ import config
 import matrixdb
 
 conf = config.Config()
-conf.careful = True;                  conf.help.careful = 'execute checks for matrix type and NANs'
-conf.densifyWeightByRowSum = False;   conf.help.densifyWeightByRowSum = 'use dense matrices here - did not speed up test cases'
+conf.careful = True;                 conf.help.careful = 'execute checks for matrix type and NANs'
+conf.densifyWeightByRowSum = True;   conf.help.densifyWeightByRowSum = 'use dense matrices here - did not speed up test cases'
+conf.maxExpandFactor = 3;            conf.help.maxExpand = 'K, where you can can use B + KM the sparse-matrix memory M when densifying matrices'
+conf.maxExpandIntercept = 10000;     conf.help.maxExpand = 'B, where you can can use B + KM the sparse-matrix memory M when densifying matrices'
+conf.warnAboutDensity = False;       conf.help.warnAboutDensity = 'warn when you fail to densify a matrix'
 
 NP.seterr(all='raise',under='ignore') 
 # stop execution & print traceback for various floating-point issues
@@ -51,16 +54,22 @@ def maxValue(mat):
         #zero-size array
         return -1
 
-def densify(mat,maxExpansion=3):
+def densify(mat,maxExpandFactor=-1,maxExpandIntercept=-1):
     """Create a smallish dense version of a sparse matrix, which slices
     out the range of columns which have non-zero values, and return a pair
     D,I where D is the dense matrix, and I is information needed to
     invert the process for a matrix with the same dimensions.  Returns
     None if the dense matrix would be too much larger.
     """
+    if maxExpandFactor<0: maxExpandFactor = conf.maxExpandFactor
+    if maxExpandIntercept<0: maxExpandIntercept = conf.maxExpandIntercept
+
     hiIndex = NP.max(mat.indices)
     loIndex = NP.min(mat.indices)
-    if denseSize(mat,loIndex,hiIndex) > sparseSize(mat,loIndex,hiIndex)*maxExpansion:
+    ds = denseSize(mat,loIndex,hiIndex)
+    ss = sparseSize(mat,loIndex,hiIndex)
+    if  ds > ss*maxExpandFactor + maxExpandIntercept:
+        if conf.warnAboutDensity: logging.warn('no expansion: sparse size only %d dense size is %d' % (ss,ds))
         return None,None
     else:
         newShape = (numRows(mat),hiIndex-loIndex+1)
@@ -73,15 +82,20 @@ def denseSize(m,loIndex,hiIndex):
 def sparseSize(m,loIndex,hiIndex):
     return numRows(m)+1 + 2*m.nnz
 
-def codensify(m1,m2,maxExpansion=3):
+def codensify(m1,m2,maxExpandFactor=-1,maxExpandIntercept=-1):
     """ Similar to densify but returns a triple with two dense matrices and an 'info' object.
     """
     assert numCols(m1)==numCols(m2),"Cannot codensify matrices with different number of columns"
     if m1.nnz==0 or m2.nnz==0:
         return None,None,None
+    if maxExpandFactor<0: maxExpandFactor = conf.maxExpandFactor
+    if maxExpandIntercept<0: maxExpandIntercept = conf.maxExpandIntercept
     loIndex = min(NP.min(m1.indices),NP.min(m2.indices))
     hiIndex = max(NP.max(m1.indices),NP.max(m2.indices))
-    if (denseSize(m1,loIndex,hiIndex)+denseSize(m2,loIndex,hiIndex)) > (sparseSize(m1,loIndex,hiIndex)+sparseSize(m2,loIndex,hiIndex))*maxExpansion:
+    ds = denseSize(m1,loIndex,hiIndex)+denseSize(m2,loIndex,hiIndex)
+    ss = sparseSize(m1,loIndex,hiIndex)+sparseSize(m2,loIndex,hiIndex)
+    if ds > (ss * maxExpandFactor + maxExpandIntercept):
+        if conf.warnAboutDensity: logging.warn('no expansion: sparse size only %d dense size is %d' % (ss,ds))
         return None,None,None
     newShape1 = (numRows(m1),hiIndex-loIndex+1)
     newShape2 = (numRows(m2),hiIndex-loIndex+1)
@@ -169,22 +183,19 @@ def softmax(db,mat):
     """
     nullEpsilon = -10  # scores for null entity will be exp(nullMatrix)
     result = repeat(db.nullMatrix(1)*nullEpsilon, numRows(mat)) + mat
-    def softMaxAlteration(data,lo,hi,unused):
-        rowMax = max(data[lo:hi])
-        assert not math.isnan(rowMax)
-        for j in range(lo,hi):
-            data[j] = math.exp(data[j] - rowMax)
-        rowNorm = sum(data[lo:hi])
-        assert not math.isnan(rowNorm)
-        for j in range(lo,hi):
-            data[j] = data[j]/rowNorm
-            assert not math.isnan(data[j])
-            if data[j]==0:
-                data[j] = math.exp(nullEpsilon)
     denseResult,undensifier = densify(result)
     if denseResult!=None:
         return undensify(denseSoftmax(denseResult), undensifier)
     else:
+        def softMaxAlteration(data,lo,hi,unused):
+            rowMax = max(data[lo:hi])
+            assert not math.isnan(rowMax)
+            data[lo:hi] = NP.exp(data[lo:hi] - rowMax)
+            rowNorm = sum(data[lo:hi])
+            assert not math.isnan(rowNorm)
+            data[lo:hi] /= rowNorm
+            minValue = math.exp(nullEpsilon)
+            data[lo:hi] = NP.min(data[lo:hi], minValue)
         alterMatrixRows(result,softMaxAlteration)
         return result
 
@@ -214,16 +225,10 @@ def multiplyByBroadcastRowVec(m,v):
         dp = NP.multiply(dm,dv)
         return undensify(dp, i)
     else:
-        #convert v to a dictionary
-        vd = dict( (v.indices[j],v.data[j]) for j in range(v.indptr[0],v.indptr[1]) )
-        def multiplyByVAlteration(data,lo,hi,indices):
-            for j in range(lo,hi):
-                data[j] *= vd.get(indices[j],0.0)
-        result = m.copy()
-        alterMatrixRows(result,multiplyByVAlteration)
-        return result
+        bv = repeat(v, numRows(m))
+        return m.multiply(bv)
 
-#TODO: try densification for this also
+#TODO: this is slow - about 2/3 of learning time
 def broadcastAndWeightByRowSum(m1,m2):
     checkCSR(m1); checkCSR(m2)
     """ Optimized combination of broadcast2 and weightByRowSum operations
@@ -239,28 +244,11 @@ def broadcastAndWeightByRowSum(m1,m2):
     if r2==1:
         return  m1 * m2.sum()
     elif r1==1 and r2>1:
-        n = numCols(m1)
-        nnz1 = m1.data.shape[0]
-        #allocate space for the broadcast version of m1,
-        #with one copy of m1 for every row of m2
-        data = NP.zeros(shape=(nnz1*r2,))
-        indices = NP.zeros(shape=(nnz1*r2,),dtype='int')
-        indptr = NP.zeros(shape=(r2+1,),dtype='int')
-        ptr = 0
-        indptr[0] = 0 
+        bm1 = repeat(m1, r2)
         for i in xrange(r2):
             w = m2.data[m2.indptr[i]:m2.indptr[i+1]].sum()
-            #TODO use ranges
-            #multiply the non-zero datapoints by w and copy them into the right places
-            for j in xrange(nnz1):
-                data[ptr+j] = m1.data[j]*w
-                indices[ptr+j] = m1.indices[j]
-            # increment the indptr so indptr[i]:indptr[i+1] tells
-            # where to find the data, indices for row i
-            indptr[i+1]= indptr[i]+nnz1
-            ptr += nnz1
-        result = SS.csr_matrix((data,indices,indptr),shape=(m2.shape[0],m2.shape[1]), dtype='float64')
-        return result
+            bm1.data[bm1.indptr[i]:bm1.indptr[i+1]] = m1.data * w
+        return bm1
     else:
         assert r1==r2
         result = m1.copy()
