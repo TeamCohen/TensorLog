@@ -32,9 +32,9 @@ class Expt(object):
 
     #TODO targetPred->targetMode
     def _run(self,
-             initProgram=None,trainData=None, testData=None, targetPred=None, epochs=5,
+             initProgram=None,trainData=None, testData=None, targetPred=None, epochs=None,
              savedTestPreds=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None,
-             learnerFactory=None,regularizer=None):
+             learnerFactory=None, regularizer=None):
 
         """ Run an experiment, given a whole bunch of parameters.
         savedTestPreds, savedTestExamples, savedTrainExamples: if not None, then
@@ -51,7 +51,10 @@ class Expt(object):
 
         if not learnerFactory:
             learnerFactory = learn.FixedRateGDLearner
-        learner = learnerFactory(ti.prog,epochs=epochs,regularizer=regularizer)
+        learnArgs = {}
+        if epochs: learnArgs['epochs']=epochs
+        if regularizer: learnArgs['regularizer']=regularizer
+        learner = learnerFactory(ti.prog,**learnArgs)
 
         TP0 = Expt.timeAction(
             'running untrained theory on train data',
@@ -80,6 +83,7 @@ class Expt(object):
             Expt.timeAction('saving trained model', lambda:ti.db.serialize(savedModel))
 
         if savedTestPreds:
+            #todo move this logic to a dataset subroutine
             open(savedTestPreds,"w").close() # wipe file first
             def doit():
                 qid=0

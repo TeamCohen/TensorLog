@@ -529,7 +529,7 @@ class TestGrad(unittest.TestCase):
         for functor,arity in params:
             prog.db.markAsParam(functor,arity)
         #compute gradient
-        learner = learn.Learner(prog)
+        learner = learn.OnePredFixedRateGDLearner(prog)
         updates = learner.crossEntropyGrad(mode,data.getX(),data.getY())
         return prog,updates
     
@@ -585,7 +585,7 @@ class TestProPPR(unittest.TestCase):
     def testGradMatrix(self):
         data = DataBuffer(self.prog.db)
         X,Y = self.labeledData.matrixAsTrainingData('train',2)
-        learner = learn.Learner(self.prog)
+        learner = learn.OnePredFixedRateGDLearner(self.prog)
         updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X,Y)
         w = updates[('weighted',1)]
         def checkGrad(i,x,psign,nsign):

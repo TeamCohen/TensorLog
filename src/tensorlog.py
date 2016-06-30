@@ -18,7 +18,7 @@ import learn
 import mutil
 import debug
 
-VERSION = "0.9"
+VERSION = "0.9.1"
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'

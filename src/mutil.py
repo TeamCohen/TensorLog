@@ -14,8 +14,8 @@ import config
 import matrixdb
 
 conf = config.Config()
-conf.careful = True;       conf.help.careful = 'execute checks for matrix type and NANs'
-
+conf.careful = True;                  conf.help.careful = 'execute checks for matrix type and NANs'
+conf.densifyWeightByRowSum = False;   conf.help.densifyWeightByRowSum = 'use dense matrices here - did not speed up test cases'
 
 NP.seterr(all='raise',under='ignore') 
 # stop execution & print traceback for various floating-point issues
@@ -73,21 +73,21 @@ def denseSize(m,loIndex,hiIndex):
 def sparseSize(m,loIndex,hiIndex):
     return numRows(m)+1 + 2*m.nnz
 
-#TODO: test and use in broadcastAndWeightByRowSum, broadcastAndComponentwiseMultiply
 def codensify(m1,m2,maxExpansion=3):
     """ Similar to densify but returns a triple with two dense matrices and an 'info' object.
     """
     assert numCols(m1)==numCols(m2),"Cannot codensify matrices with different number of columns"
+    if m1.nnz==0 or m2.nnz==0:
+        return None,None,None
     loIndex = min(NP.min(m1.indices),NP.min(m2.indices))
     hiIndex = max(NP.max(m1.indices),NP.max(m2.indices))
     if (denseSize(m1,loIndex,hiIndex)+denseSize(m2,loIndex,hiIndex)) > (sparseSize(m1,loIndex,hiIndex)+sparseSize(m2,loIndex,hiIndex))*maxExpansion:
         return None,None,None
-    else:
-        newShape1 = (numRows(m1),hiIndex-loIndex+1)
-        newShape2 = (numRows(m2),hiIndex-loIndex+1)
-        D1 = SS.csr_matrix((m1.data,m1.indices-loIndex,m1.indptr),shape=newShape1,dtype='float64').todense()
-        D2 = SS.csr_matrix((m2.data,m2.indices-loIndex,m2.indptr),shape=newShape2,dtype='float64').todense()
-        return D1,D2,(loIndex,numCols(m1))
+    newShape1 = (numRows(m1),hiIndex-loIndex+1)
+    newShape2 = (numRows(m2),hiIndex-loIndex+1)
+    D1 = SS.csr_matrix((m1.data,m1.indices-loIndex,m1.indptr),shape=newShape1,dtype='float64').todense()
+    D2 = SS.csr_matrix((m2.data,m2.indices-loIndex,m2.indptr),shape=newShape2,dtype='float64').todense()
+    return D1,D2,(loIndex,numCols(m1))
 
 def undensify(denseMat, info):
     loIndex,numCols = info
@@ -223,20 +223,21 @@ def multiplyByBroadcastRowVec(m,v):
         alterMatrixRows(result,multiplyByVAlteration)
         return result
 
+#TODO: try densification for this also
 def broadcastAndWeightByRowSum(m1,m2):
     checkCSR(m1); checkCSR(m2)
     """ Optimized combination of broadcast2 and weightByRowSum operations
     """ 
+    if conf.densifyWeightByRowSum:
+        (d1,d2,i) = codensify(m1, m2)
+        if d1!=None:
+            dr = NP.multiply(d1, d2.sum(axis=1))
+            return undensify(dr, i)
+
     r1 = numRows(m1)
     r2 = numRows(m2)
     if r2==1:
-        #DEBUG 
-        try:
-            return  m1 * m2.sum()
-        except FloatingPointError:
-            print "broadcastAndWeightByRowSum m1: %s" % summary(m1)
-            print "broadcastAndWeightByRowSum m2.sum(): %s" % m2.sum()
-            raise
+        return  m1 * m2.sum()
     elif r1==1 and r2>1:
         n = numCols(m1)
         nnz1 = m1.data.shape[0]
@@ -249,6 +250,7 @@ def broadcastAndWeightByRowSum(m1,m2):
         indptr[0] = 0 
         for i in xrange(r2):
             w = m2.data[m2.indptr[i]:m2.indptr[i+1]].sum()
+            #TODO use ranges
             #multiply the non-zero datapoints by w and copy them into the right places
             for j in xrange(nnz1):
                 data[ptr+j] = m1.data[j]*w

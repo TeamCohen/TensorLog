@@ -47,8 +47,10 @@ class Learner(object):
     """Abstract class with some utility functions.."""
 
     # prog pts to db, rules
-    def __init__(self,prog):
+    def __init__(self,prog,regularizer,traceFun):
         self.prog = prog
+        self.traceFun = traceFun or Learner.defaultTraceFun
+        self.regularizer = regularizer or NullRegularizer()
 
     #
     # using and measuring performance
@@ -125,8 +127,25 @@ class Learner(object):
         result = -(Y.multiply(logP).sum())
         return result/mutil.numRows(Y) if perExample else result
 
+    @staticmethod
+    def nullTraceFun(thisLearner, Y, P, i = -1, startTime = 0.0):
+        pass
 
-    def crossEntropyGrad(self,mode,X,Y,traceFun=None):
+    @staticmethod
+    def cheapTraceFun(thisLearner, Y, P, i = -1, startTime = 0.0):
+        print 'epoch %2d of %d' % (i+1,thisLearner.epochs),
+        print ' cumSecs %.3f' % (time.time()-startTime)
+
+    @staticmethod
+    def defaultTraceFun(thisLearner, Y, P, i = -1, startTime = 0.0):
+        xe = thisLearner.crossEntropy(Y,P)
+        reg = thisLearner.regularizer.regularizationCost(thisLearner.prog)
+        print 'epoch %2d of %d' % (i+1,thisLearner.epochs),
+        print ' : loss %.3f = crossEnt %.3f + reg %.3f' % (xe+reg,xe,reg),
+        print ' ; acc %.3f' % thisLearner.accuracy(Y,P),
+        print ' ; cumSecs %.3f' % (time.time()-startTime)
+
+    def crossEntropyGrad(self,mode,X,Y,traceFunArgs={}):
         """Compute the parameter gradient associated with softmax
         normalization followed by a cross-entropy cost function.
         """
@@ -147,7 +166,7 @@ class Learner(object):
 
         P = self.predict(mode,X)
         
-        if traceFun: traceFun(self,Y,P)
+        if self.traceFun: self.traceFun(self,Y,P,**traceFunArgs)
         paramGrads = GradAccumulator()
         #TODO assert rowSum(Y) = all ones - that's assumed here in
         #initial delta of Y-P
@@ -183,9 +202,8 @@ class OnePredFixedRateGDLearner(Learner):
     """ Simple one-predicate learner.
     """  
 
-    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None):
-        super(OnePredFixedRateGDLearner,self).__init__(prog)
-        self.regularizer = regularizer or NullRegularizer()
+    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None,traceFun=None):
+        super(OnePredFixedRateGDLearner,self).__init__(prog,regularizer=regularizer,traceFun=traceFun)
         self.epochs=epochs
         self.rate=rate
     
@@ -193,23 +211,16 @@ class OnePredFixedRateGDLearner(Learner):
         startTime = time.time()
         for i in range(self.epochs):
             n = mutil.numRows(X)
-            def traceFunForEpoch(thisLearner,Y,P):
-                xe = thisLearner.crossEntropy(Y,P)
-                reg = thisLearner.regularizer.regularizationCost(thisLearner.prog)
-                print 'epoch %2d of %d' % (i+1,self.epochs),
-                print ' : loss %.3f = crossEnt %.3f + reg %.3f' % (xe+reg,xe,reg),
-                print ' ; acc %.3f' % thisLearner.accuracy(Y,P),
-                print ' ; cumSecs %.3f' % (time.time()-startTime)
-            paramGrads = self.crossEntropyGrad(mode,X,Y,traceFun=traceFunForEpoch)
+            args = {'i':i,'startTime':startTime}
+            paramGrads = self.crossEntropyGrad(mode,X,Y,traceFunArgs=args)
             self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
             self.applyMeanUpdate(paramGrads,self.rate,n)
         
 
 class FixedRateGDLearner(Learner):
 
-    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None):
-        super(FixedRateGDLearner,self).__init__(prog)
-        self.regularizer = regularizer or NullRegularizer()
+    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None,traceFun=None):
+        super(FixedRateGDLearner,self).__init__(prog,regularizer=regularizer,traceFun=traceFun)
         self.epochs=epochs
         self.rate=rate
     
@@ -220,23 +231,26 @@ class FixedRateGDLearner(Learner):
         for i in range(self.epochs):
             for mode in dset.modesToLearn():
                 n = mutil.numRows(dset.getX(mode))
-                def myTraceFun(thisLearner,Y,P):
-                    print 'epoch %d of %d: target mode %s' % (i+1,self.epochs,str(mode)),
-                    print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
-                    print ' reg cost %.3f' % thisLearner.regularizer.regularizationCost(thisLearner.prog),
-                    print ' acc %.3f' % thisLearner.accuracy(Y,P),            
-                    print ' cumSecs %.3f' % (time.time()-startTime)
-                paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),traceFun=myTraceFun)
+                args = {'i':i,'startTime':startTime}
+                paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),traceFunArgs=args)
                 self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
                 self.applyMeanUpdate(paramGrads,self.rate,n)
             
 
 class FixedRateSGDLearner(FixedRateGDLearner):
 
-    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None,miniBatchSize=100):
-        super(FixedRateSGDLearner,self).__init__(prog,epochs=epochs,rate=rate,regularizer=regularizer)
+    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None,traceFun=None,miniBatchSize=100):
+        super(FixedRateSGDLearner,self).__init__(prog,epochs=epochs,rate=rate,regularizer=regularizer,traceFun=traceFun)
         self.miniBatchSize = miniBatchSize
     
+    @staticmethod
+    def defaultTraceFun(thisLearner, Y, P, i = -1, k = -1, startTime = 0.0, mode = 'unknown'):
+        print 'epoch %d of %d miniBatch %d: target mode %s' % (i+1,k+1,thisLearner.epochs,str(mode)),
+        print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
+        print ' reg cost %.3f' % thisLearner.regularizer.regularizationCost(thisLearner.prog),
+        print ' acc %.3f' % thisLearner.accuracy(Y,P),            
+        print ' cumSecs %.3f' % (time.time()-startTime)
+
     def train(self,dset):
         startTime = time.time()
         modes = dset.modesToLearn()
@@ -246,13 +260,8 @@ class FixedRateSGDLearner(FixedRateGDLearner):
             for (mode,X,Y) in dset.minibatchIterator(batchSize=self.miniBatchSize):
                 n = mutil.numRows(X)
                 k = k+1
-                def myTraceFun(thisLearner,Y,P):
-                    print 'epoch %d of %d miniBatch %d: target mode %s' % (i+1,k+1,self.epochs,str(mode)),
-                    print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
-                    print ' reg cost %.3f' % thisLearner.regularizer.regularizationCost(thisLearner.prog),
-                    print ' acc %.3f' % thisLearner.accuracy(Y,P),            
-                    print ' cumSecs %.3f' % (time.time()-startTime)
-                paramGrads = self.crossEntropyGrad(mode,X,Y,traceFun=myTraceFun)
+                args = {'i':i,'k':k,'startTime':startTime,mode:'mode'}
+                paramGrads = self.crossEntropyGrad(mode,X,Y,traceFunArgs=args)
                 self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
                 self.applyMeanUpdate(paramGrads,self.rate,n)
 
