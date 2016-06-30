@@ -20,13 +20,14 @@ import numpy
 conf = config.Config()
 conf.trace = False;         conf.help.trace =         "Print debug info during function eval"
 conf.long_trace = False;    conf.help.long_trace =    "Print output of functions during eval - only for small tasks"
-conf.parallel_sum = False;  conf.help.parallel_sum =  "Evaluate sum operations in a parallel, one thread per addend."
+conf.parallel_sum = True;   conf.help.parallel_sum =  "Evaluate sum operations in a parallel, one thread per addend."
 
 class Function(object):
     """The tensorlog representation of a function. This supports eval and
     evalGrad operations, and take a list of input values as the inputs.
     """
     def eval(self,db,values):
+        self._checkDuplications()
         if conf.trace:
             print "Invoking:\n%s" % "\n. . ".join(self.pprint())
         self.output = self._doEval(db,values)
@@ -44,6 +45,14 @@ class Function(object):
         if conf.trace:
             print "Backprop completed:\n%s" % "\n. . ".join(self.pprint())
         return self.delta
+    def _checkDuplications(self):
+        kids = self.children()
+        for i in range(len(kids)):
+            for j in range(i+1,len(kids)):
+                assert not kids[i] is kids[j]
+        for f in kids:
+            if isinstance(f,Function):
+                f._checkDuplications()
     # these are used in pprint, and also in the debugging
     # visualization
     def pprint(self,depth=0):
@@ -86,10 +95,7 @@ class OpSeqFunction(Function):
         #eval expression
         self.opEnv = ops.Envir(db)
         self.opEnv.bindList(self.opInputs,values)
-        i=0
         for op in self.ops:
-            i+=1
-            #if TRACE: logging.debug("calling %d of %d %s from %s" % (i,len(self.ops),str(op),str(self)))
             op.eval(self.opEnv)
         return self.opEnv[self.opOutput]
     def _doBackprop(self,delta,gradAccum):

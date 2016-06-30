@@ -26,6 +26,9 @@ if __name__=="__main__":
     prog.db.markAsParam('kaw',1)
     prog.db.markAsParam('ktw',1)
     prog.db.markAsParam('kvw',1)
+    def learnerFactory(prog):
+        return learn.FixedRateGDLearner(prog,regularizer=learn.L2Regularizer(),traceFun=learn.Learner.cheapTraceFun,epochs=5)
+
     prog.maxDepth = 1
     ops.conf.optimize_component_multiply = True
     params = {'initProgram':prog,
@@ -35,7 +38,7 @@ if __name__=="__main__":
               'savedTestPreds':'tmp-cache/cora-test.solutions.txt',
               'savedTrainExamples':'tmp-cache/cora-train.examples',
               'savedTestExamples':'tmp-cache/cora-test.examples',
-              'regularizer':learn.L2Regularizer(0.1),
+              'learnerFactory':learnerFactory
     }
     print 'maxdepth',prog.maxDepth
     expt.Expt(params).run()
