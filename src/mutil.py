@@ -60,17 +60,37 @@ def densify(mat,maxExpansion=3):
     """
     hiIndex = NP.max(mat.indices)
     loIndex = NP.min(mat.indices)
-    denseSize = (hiIndex-loIndex) * numRows(mat)
-    sparseSize = numRows(mat)+1 + 2*mat.nnz
-    if denseSize>sparseSize*maxExpansion:
+    if denseSize(mat,loIndex,hiIndex) > sparseSize(mat,loIndex,hiIndex)*maxExpansion:
         return None,None
     else:
         newShape = (numRows(mat),hiIndex-loIndex+1)
         D = SS.csr_matrix((mat.data,mat.indices-loIndex,mat.indptr),shape=newShape,dtype='float64').todense()
         return D,(loIndex,numCols(mat))
 
+def denseSize(m,loIndex,hiIndex):
+    return (hiIndex-loIndex) * numRows(m)
+
+def sparseSize(m,loIndex,hiIndex):
+    return numRows(m)+1 + 2*m.nnz
+
+#TODO: test and use in broadcastAndWeightByRowSum, broadcastAndComponentwiseMultiply
+def codensify(m1,m2,maxExpansion=3):
+    """ Similar to densify but returns a triple with two dense matrices and an 'info' object.
+    """
+    assert numCols(m1)==numCols(m2),"Cannot codensify matrices with different number of columns"
+    loIndex = min(NP.min(m1.indices),NP.min(m2.indices))
+    hiIndex = max(NP.max(m1.indices),NP.max(m2.indices))
+    if (denseSize(m1,loIndex,hiIndex)+denseSize(m2,loIndex,hiIndex)) > (sparseSize(m1,loIndex,hiIndex)+sparseSize(m2,loIndex,hiIndex))*maxExpansion:
+        return None,None,None
+    else:
+        newShape1 = (numRows(m1),hiIndex-loIndex+1)
+        newShape2 = (numRows(m2),hiIndex-loIndex+1)
+        D1 = SS.csr_matrix((m1.data,m1.indices-loIndex,m1.indptr),shape=newShape1,dtype='float64').todense()
+        D2 = SS.csr_matrix((m2.data,m2.indices-loIndex,m2.indptr),shape=newShape2,dtype='float64').todense()
+        return D1,D2,(loIndex,numCols(m1))
+
 def undensify(denseMat, info):
-    (loIndex,numCols) = info
+    loIndex,numCols = info
     (numRows,_) = denseMat.shape
     tmp = SS.csr_matrix(denseMat)
     result = SS.csr_matrix((tmp.data,tmp.indices+loIndex,tmp.indptr),shape=(numRows,numCols),dtype='float64')
@@ -178,7 +198,22 @@ def broadcastAndComponentwiseMultiply(m1,m2):
     """ compute m1.multiply(m2), but broadcast m1 or m2 if necessary
     """
     checkCSR(m1); checkCSR(m2)
-    def multiplyByBroadcastRowVec(m,v):
+    r1 = numRows(m1); r2 = numRows(m2)
+    if r1==r2:
+        return  m1.multiply(m2)
+    else:
+        assert r1==1 or r2==1, 'mismatched matrix sizes: #rows %d,%d' % (r1,r2)
+    if r1==1:
+        return multiplyByBroadcastRowVec(m1,m2)        
+    else:
+        return multiplyByBroadcastRowVec(m1,m2)        
+
+def multiplyByBroadcastRowVec(m,v):
+    (dm,dv,i) = codensify(m,v)
+    if dm!=None:
+        dp = NP.multiply(dm,dv)
+        return undensify(dp, i)
+    else:
         #convert v to a dictionary
         vd = dict( (v.indices[j],v.data[j]) for j in range(v.indptr[0],v.indptr[1]) )
         def multiplyByVAlteration(data,lo,hi,indices):
@@ -187,18 +222,6 @@ def broadcastAndComponentwiseMultiply(m1,m2):
         result = m.copy()
         alterMatrixRows(result,multiplyByVAlteration)
         return result
-    r1 = numRows(m1); r2 = numRows(m2)
-    if r1==r2:
-        return  m1.multiply(m2)
-    else:
-        assert r1==1 or r2==1, 'mismatched matrix sizes: #rows %d,%d' % (r1,r2)
-
-    if r1==1:
-        return multiplyByBroadcastRowVec(m1,m2)        
-    elif r2==1:
-        return multiplyByBroadcastRowVec(m1,m2)        
-        
-    return result
 
 def broadcastAndWeightByRowSum(m1,m2):
     checkCSR(m1); checkCSR(m2)

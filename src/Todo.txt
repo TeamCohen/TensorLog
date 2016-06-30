@@ -1,4 +1,5 @@
 TODO: 
+
  - generic option parser for programFiles, train, test, ...?
 
  - optimization
@@ -6,7 +7,9 @@ TODO:
  -- broadcastAndWeightByRowSum is also about 25%
  -- broadcastAndComponentwiseMultiply is 30%
  -- rather than types, I could just read in all constants in order so that
- you can group similar-typed ones together
+ you can group similar-typed ones together (eg, have 'foo.order' be 
+ an extra input in programFiles and add a bit to the matrixdb to 
+ loadConstants)
 
 TUTORIAL/DOCS
 
