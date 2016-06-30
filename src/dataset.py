@@ -125,13 +125,10 @@ class Dataset(object):
         just deserialize it.
         """
         if not os.path.exists(dsetFile) or os.path.getmtime(exampleFile)>os.path.getmtime(dsetFile):
-            print 'loading exampleFile',exampleFile,'...'
             dset = Dataset.loadExamples(db,exampleFile,proppr=proppr)
-            print 'serializing dsetFile',dsetFile,'...'
             dset.serialize(dsetFile)
             return dset
         else:
-            print 'de-serializing dsetFile',dsetFile,'...'
             return Dataset.deserialize(dsetFile)
 
     @staticmethod

@@ -42,7 +42,7 @@ class Expt(object):
         savedModel: save result of training somewhere
         """
 
-        ti = tensorlog.Interp(initProgram=initProgram)
+        ti = tensorlog.Interp(initProgram)
 
         if targetPred: 
             targetPred = declare.asMode(targetPred)
@@ -165,7 +165,8 @@ if __name__=="__main__":
         
     prog.setWeights(initWeights)
     def myLearner(prog,**opts):
-        return learn.FixedRateSGDLearner(prog,miniBatchSize=1,**opts)
+        #return learn.FixedRateSGDLearner(prog,miniBatchSize=1,**opts)
+        return learn.FixedRateGDLearner(prog,**opts)
 
     params = {'initProgram':prog,
               'trainData':trainData, 'testData':testData,

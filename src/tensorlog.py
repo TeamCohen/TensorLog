@@ -134,10 +134,23 @@ class Program(object):
         return (db,rules)
 
     @staticmethod
+    #TODO: deprecate
     def load(fileNames,db=None):
         if not db: (db,rules) = Program._load(fileNames)
         else: (dummy,rules) = Program._load(fileNames,db=db)
-        return Program(db,rules)
+        return Program(db=db,rules=rules)
+
+    @staticmethod
+    def _loadRules(fileNames):
+        ruleFiles = fileNames.split(":")
+        rules = parser.Parser.parseFile(ruleFiles[0])
+        for f in ruleFiles[1:]:
+            rules = parser.Parser.parseFile(f,rules)
+        return rules
+
+    @staticmethod
+    def loadRules(fileNames,db):
+        return Program(db,Program._loadRules(rules))
 
 
 #
@@ -146,7 +159,7 @@ class Program(object):
 
 class ProPPRProgram(Program):
 
-    def __init__(self, db=None, rules=parser.RuleCollection(),weights=None):
+    def __init__(self, db=None, rules=parser.RuleCollection(), weights=None):
         super(ProPPRProgram,self).__init__(db=db, rules=rules)
         #expand the syntactic sugar used by ProPPR
         self.rules.mapRules(ProPPRProgram._moveFeaturesToRHS)
@@ -183,52 +196,45 @@ class ProPPRProgram(Program):
             rule.rhs.append( parser.Goal('weighted',[outputVar]) )
         return rule
 
+    #TODO: deprecate
     @staticmethod
     def load(fileNames,db=None):
         if not db: (db,rules) = Program._load(fileNames)
         else: (dummy,rules) = Program._load(fileNames,db=db)
         return ProPPRProgram(db=db,rules=rules)
 
+    @staticmethod
+    def loadRules(fileNames,db):
+        return ProPPRProgram(db=db,rules=Program._loadRules(fileNames))
+
 class Interp(object):
     """High-level interface to tensor log."""
 
-    def __init__(self,initFiles=[],initProgram=None,proppr=True,weights=None):
-        if initProgram:
-            assert not initFiles, 'cannot initialize an interpreter with both initFiles and initProgram'
-            self.prog = initProgram
-        elif proppr: 
-            self.prog = ProPPRProgram.load(initFiles)
-            if weights==None:
-                weights = self.prog.db.ones()
-            self.prog.setWeights(weights)
-        else: 
-            self.prog = Program.load(initFiles)
+    def __init__(self,prog):
+        self.prog = prog
         self.db = self.prog.db
-        self.learner = None
-        self.trainData = self.testData = None
 
     def help(self):
-        print "ti.list(\"functor/arity\"): list predicate definition, eg ti.list(\"foo/2\")"
-        print "ti.list(\"functor/mode\"): list compiled function, eg ti.list(\"foo/io\")"
-        print "ti.listAllRules(): list all predicate definitions"
-        print "ti.listAllFacts(): summary info on all database predicates"
+        print "ti.list(foo): foo can be a compiled function, eg \"foo/io\", a predicate definition, eg"
+        print "              \"foo/2\", or a database predicate, also specified as \"foo/2\"."
+        print "ti.list():    list everything."
         print "ti.eval(\"functor/mode\",\"c\"): evaluate a function on a database constant c"
         print "ti.debug(\"functor/mode\",\"c\"): debug the corresponding eval command"
 
     def list(self,str=None):
         if str==None:
-            self.listAllRules()
-            self.listAllFacts()
+            self._listAllRules()
+            self._listAllFacts()
         else:
             assert str.find("/")>=0, 'supported formats are functor/arity, function/io, function/oi, function/o, function/i'
             functor,rest = str.split("/")
             try:
                 arity = int(rest)
-                self.listRules(functor,arity) or self.listFacts(functor,arity)
+                self._listRules(functor,arity) or self._listFacts(functor,arity)
             except ValueError:
-                self.listFunction(str)
+                self._listFunction(str)
 
-    def listRules(self,functor,arity):
+    def _listRules(self,functor,arity):
         mode = declare.ModeDeclaration(parser.Goal(functor,['x']*arity),strict=False)
         rules = self.prog.rules.rulesFor(mode)
         if rules:
@@ -236,19 +242,19 @@ class Interp(object):
             return True
         return False
 
-    def listAllRules(self):
+    def _listAllRules(self):
         self.prog.rules.listing()
 
-    def listFacts(self,functor,arity):
+    def _listFacts(self,functor,arity):
         if self.db.inDB(functor,arity):
             print self.db.summary(functor,arity)
             return True
         return False
 
-    def listAllFacts(self):
+    def _listAllFacts(self):
         self.db.listing()
 
-    def listFunction(self,modeSpec):
+    def _listFunction(self,modeSpec):
         mode = declare.asMode(modeSpec)
         key = (mode,0)
         if key not in self.prog.function:
@@ -261,13 +267,91 @@ class Interp(object):
         result = self.prog.evalSymbols(mode,[sym])
         return self.prog.db.rowAsSymbolDict(result)
     
-    #TODO default sym to self.trainData
     def debug(self,modeSpec,sym):
         mode = declare.asMode(modeSpec)        
         X = self.db.onehot(sym)
         dset = dataset.Dataset({mode:X},{mode:self.db.zeros()})
         debug.Debugger(self.prog,mode,dset,gradient=False).mainloop()
     
+#
+# utilities for reading command lines
+#
+
+def parseCommandLine(argv):
+    """
+    See the usage() subfunction for the options that are parsed().
+    Returns a dictionary mapping option names to Python objects,
+    eg Datasets, Programs, ...
+    """
+
+    argspec = ["db=", "proppr", "prog=", "train=", "test=", "help"]
+    try:
+        optlist,args = getopt.getopt(argv, 'x', argspec)
+    except getopt.GetoptError:
+        print 'bad option: use "--help" to get help'
+        raise
+    optdict = dict(optlist)
+
+    def usage():
+        print 'options:'
+        print ' --db file.db              - file contains a serialized MatrixDB'
+        print ' --db file1.cfacts1:...    - files are parsable with MatrixDB.loadFile()'
+        print ' --prog file.ppr           - file is parsable as tensorlog rules'
+        print ' --train file.exam         - optional: file is parsable with Dataset.loadExamples'
+        print ' --train file.dset         - optional: file is a serialized Dataset'
+        print ' --test file.exam          - optional:'
+        print ' --proppr                  - if present, assume the file has proppr features by each rule: {ruleid}, or {all(F): p(X,...),q(...,F)}' 
+        print ''
+        print 'Note: for --db, --train, and --test, you are allowed to specify either a serialized, cached object (like \'foo.db\')' 
+        print 'or a human-readable object that can serialized (like \'foo.cfacts\'). In this case you can also write \'foo.db|foo.cfacts\''
+        print 'and the appropriate uncache routine will be used.'
+
+    if '--help' in optdict: 
+        usage()
+        sys.exit(0)
+    if (not '--db' in optdict) or (not '--prog' in optdict):
+        usage()
+        sys.exit(-1)
+
+    def isUncachefromSrc(s): return s.find("|")>=0
+    def getCacheSrcPair(s): return s.split("|")
+    
+    val = optdict['--db']
+    if isUncachefromSrc(val):
+        cache,src = getCacheSrcPair(val)
+        optdict['--db'] = matrixdb.uncache(cache,src)
+    elif val.endswith(".db"):
+        optdict['--db'] = matrixdb.MatrixDB.deserialize(val)
+    elif val.endswith(".cfacts"):
+        optdict['--db'] = matrixdb.MatrixDB.loadFile(val)
+    else:
+        assert False,'illegal --db file'
+    db = optdict['--db']
+
+    
+    val = optdict['--prog']
+    if '--proppr' in optdict:
+        optdict['--prog'] = ProPPRProgram.loadRules(val,db)
+    else:
+        optdict['--prog'] = Program.loadRules(val,db)
+
+    for key in ('--train','--test'):
+        if key in optdict:
+            val = optdict[key]
+            if isUncachefromSrc(val):
+                cache,src = getCacheSrcPair(val)
+                assert src.endswith(".examples") or src.endswith(".exam"), 'illegal --train or --test file'
+                optdict[key] = dataset.Dataset.uncacheExamples(cache,db,src,proppr=src.endswith(".examples"))
+            else:
+                assert val.endswith(".examples") or val.endswith(".exam"), 'illegal --train or --test file'
+                optdict[key] = dataset.Dataset.loadExamples(cache,db,src,proppr=src.endswith(".examples"))
+
+    # let these be also indexed by 'train', 'prog', etc
+    for key,val in optdict.items():
+        optdict[key[2:]] = val
+
+    return optdict,args
+
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william
 #
@@ -276,43 +360,18 @@ if __name__ == "__main__":
     
     print "Tensorlog v%s (C) William W. Cohen and Carnegie Mellon University, 2016" % VERSION
 
-    argspec = ["programFiles=","debug", "proppr","help","trainData="]
+    optdict,args = parseCommandLine(sys.argv[1:])
+    ti = Interp(optdict['prog'])
+
     try:
-        optlist,args = getopt.getopt(sys.argv[1:], 'x', argspec)
-    except getopt.GetoptError:
-        logging.fatal('bad option: use "--help" to get help')
-        sys.exit(-1)
-    optdict = dict(optlist)
-    if "--help" in optdict:
-        print "python tensorlog.py --programFiles a.ppr:b.cfacts:... --trainData foo.dset|foo.exam [p(i,o) x1 x2 ....]"
-    if "--debug" in optdict:
-        logging.basicConfig(level=logging.DEBUG)        
-    
-
-    assert '--programFiles' in optdict, '--programFiles f1:f2:... is a required option'
-    ti = Interp(initFiles=optdict['--programFiles'].split(":"), proppr=('--proppr' in optdict))
-    
-    if '--trainData' in optdict:
-        filename = optdict['--trainData']
-        if filename.endswith(".exam"):
-            ti.trainData = dataset.Dataset.loadExamples(ti.prog.db,filename)
-        elif filename.endswith(".examples"):
-            ti.trainData = dataset.Dataset.loadExamples(ti.prog.db,filename,proppr=True)
-        elif filename.endswith(".dset"):
-            ti.trainData = dataset.Dataset.deserialize(filename)
-
-    if args:
-        modeSpec = args[0]
-        for a in args[1:]:
-            print ("f_%s[%s] =" % (modeSpec,a)),ti.eval(modeSpec,a)
+        if sys.ps1: interactiveMode = True
+    except AttributeError:
+        interactiveMode = False
+        if sys.flags.interactive: interactiveMode = True
+    if interactiveMode:
+        print "Interpreter variable 'ti' set, type ti.help() for help"
     else:
-        try:
-            if sys.ps1: interactiveMode = True
-        except AttributeError:
-            interactiveMode = False
-            if sys.flags.interactive: interactiveMode = True
-        if interactiveMode:
-            print "Interpreter variable 'ti' set, type ti.help() for help"
-        else:
-            print "Usage: python -i -m tensorlog --programFiles ... --trainData ..."
-            print "(And really only useful with the -i option)"
+        print "Usage: python -i -m tensorlog --programFiles ... --trainData ..."
+        print "       And it is really only useful with the -i option."
+
+

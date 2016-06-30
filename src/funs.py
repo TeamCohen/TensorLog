@@ -20,7 +20,7 @@ import numpy
 conf = config.Config()
 conf.trace = False;         conf.help.trace =         "Print debug info during function eval"
 conf.long_trace = False;    conf.help.long_trace =    "Print output of functions during eval - only for small tasks"
-conf.parallel_sum = True;   conf.help.parallel_sum =  "Evaluate sum operations in a parallel, one thread per addend."
+conf.parallel_sum = False;  conf.help.parallel_sum =  "Evaluate sum operations in a parallel, one thread per addend."
 
 class Function(object):
     """The tensorlog representation of a function. This supports eval and

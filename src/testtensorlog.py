@@ -80,14 +80,15 @@ class TestModeDeclaration(unittest.TestCase):
 class TestInterp(unittest.TestCase):
 
     def setUp(self):
-        self.ti = tensorlog.Interp('test/textcattoy.cfacts:test/textcat.ppr'.split(':'),proppr=True)
+        optdict,args = tensorlog.parseCommandLine("--db test/textcattoy.cfacts --prog test/textcat.ppr --proppr".split())
+        self.ti = tensorlog.Interp(optdict['prog'])
+        self.ti.prog.setWeights(self.ti.db.ones())
 
     def testList(self):
         self.ti.list("predict/2")
         self.ti.list("predict/io")
         self.ti.list("hasWord/2")
-        self.ti.listAllRules()
-        self.ti.listAllFacts()
+        self.ti.list()
         print self.ti.eval("predict/io", "pb")
 
 class TestMatrixRecursion(unittest.TestCase):
