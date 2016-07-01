@@ -1,12 +1,7 @@
-expt: inputs/cora.cfacts
-	python cora-exptv2.py
-
+expt: setup
+	python cora-expt.py
 
 setup: inputs/cora.cfacts
-
-#cora.db: cora.cfacts
-#	time python $(TLOG)/matrixdb.py --serialize cora.cfacts cora.db
-#
 
 inputs/cora.cfacts: 
 	cat raw/cora-*.cfacts > $@

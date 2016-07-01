@@ -1,47 +1,27 @@
-import os.path
-import scipy.sparse as SS
-import scipy.io
-
-# this is progress forward but not good yet
-#
-# trying to get cora to work on recursive theories
-#  - main problem: old theory leads to huge proof counts,
-#    fixed by refactoring theory to be linear.
-#  - also messed with gradient clipping and regularizer
-
-import declare
-import bpcompiler
-import expt
-import dataset
 import tensorlog
-import matrixdb
-import funs
-import ops
-import mutil
+import expt
 import learn
 
 if __name__=="__main__":
-    db = matrixdb.MatrixDB.uncache('tmp-cache/cora-linear.db','inputs/cora-linear.cfacts')
-    trainData = dataset.Dataset.uncacheExamples('tmp-cache/cora-linear-train.dset',db,'inputs/train.examples')
-    testData = dataset.Dataset.uncacheExamples('tmp-cache/cora-linear-test.dset',db,'inputs/test.examples')
-    print 'train:','\n  '.join(trainData.pprint())
-    print 'test: ','\n  '.join(testData.pprint())
-    prog = tensorlog.ProPPRProgram.load(["cora-linear.ppr"],db=db)
-    initWeights = prog.db.vector(declare.asMode("rule(o)"))
-    prog.setWeights(initWeights)
+
+    db = tensorlog.parseDBSpec('tmp-cache/cora-linear.db|inputs/cora.cfacts')
+    trainData = tensorlog.parseDatasetSpec('tmp-cache/cora-linear-train.dset|inputs/train.examples', db)
+    testData = tensorlog.parseDatasetSpec('tmp-cache/cora-linear-test.dset|inputs/test.examples', db)
+    prog = tensorlog.parseProgSpec("cora-linear.ppr",db,proppr=True)
+    prog.setWeights(db.ones())
     prog.db.markAsParam('kaw',1)
     prog.db.markAsParam('ktw',1)
     prog.db.markAsParam('kvw',1)
+    learner = learn.FixedRateGDLearner(prog,regularizer=learn.L2Regularizer(),traceFun=learn.Learner.cheapTraceFun,epochs=5)
     prog.maxDepth = 3
-    ops.conf.optimize_component_multiply = True
-    params = {'initProgram':prog,
+    params = {'prog':prog,
               'trainData':trainData, 'testData':testData,
-              'targetPred':'samebib/io',
-              'savedModel':'tmp-cache/cora-linear-trained.db',
-              'savedTestPreds':'tmp-cache/cora-test.solutions.txt',
-              'savedTrainExamples':'tmp-cache/cora-linear-train.examples',
-              'savedTestExamples':'tmp-cache/cora-linear-test.examples',
-              #'regularizer':learn.L2Regularizer(0.1),
+              'targetMode':'samebib/io',
+              'savedModel':'tmp-cache/cora-trained.db',
+              'savedTestPredictions':'tmp-cache/cora-test.solutions.txt',
+              'savedTrainExamples':'tmp-cache/cora-train.examples',
+              'savedTestExamples':'tmp-cache/cora-test.examples',
+              'learner':learner
     }
     print 'maxdepth',prog.maxDepth
     expt.Expt(params).run()
