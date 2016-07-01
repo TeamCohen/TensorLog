@@ -1,3 +1,6 @@
+
+Needs to be converted to exptv2
+--------------------
 HYPERNYM (46 rules):
 
 training ... done in 27.924 sec
