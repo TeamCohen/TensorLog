@@ -194,8 +194,11 @@ def softmax(db,mat):
             rowNorm = sum(data[lo:hi])
             assert not math.isnan(rowNorm)
             data[lo:hi] /= rowNorm
+            #replace the zeros in data, which are underflow, with something small
             minValue = math.exp(nullEpsilon)
-            data[lo:hi] = NP.min(data[lo:hi], minValue)
+            segment = data[lo:hi]
+            segment[segment==0] = minValue
+            data[lo:hi] = segment
         alterMatrixRows(result,softMaxAlteration)
         return result
 
