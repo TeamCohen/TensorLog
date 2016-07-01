@@ -9,7 +9,9 @@ except Exception:
 import numpy as NP
 import random
 import math
+import time
 
+import declare
 import matrixdb
 import dataset
 import tensorlog
@@ -17,6 +19,7 @@ import funs
 import ops
 import expt
 import mutil
+import learn
  
 def nodeName(i,j): 
     return '%d,%d' % (i,j)
@@ -93,18 +96,23 @@ def generateData(n,trainFile,testFile):
 
 if __name__=="__main__":
 
-    n = 6
+    # usage: acc [grid-size] [maxDepth] [epochs]"
+    #        time [grid-size] [maxDepth] "
+
+    goal = 'acc'
     if len(sys.argv)>1:
-        n = int(sys.argv[1])
-    epochs = 20
+        goal = sys.argv[1]
+    n = 6
     if len(sys.argv)>2:
-        epochs = int(sys.argv[2])
+        n = int(sys.argv[2])
     maxD = round(n/2.0)
     if len(sys.argv)>3:    
-        maxD = int(sys.argv[2])
+        maxD = int(sys.argv[3])
+    epochs = 20
+    if len(sys.argv)>4:
+        epochs = int(sys.argv[4])
 
-    print 'grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (n,n,epochs,maxD)
-
+    #generate grid
     stem = 'g%d' % n
 
     factFile = stem+'.cfacts'
@@ -115,25 +123,41 @@ if __name__=="__main__":
     generateData(n,trainFile,testFile)
 
     db = matrixdb.MatrixDB.loadFile(factFile)
-    trainData = dataset.Dataset.loadExamples(db,trainFile)
-    testData = dataset.Dataset.loadExamples(db,testFile)
-    prog = tensorlog.Program.load(["grid.ppr"],db=db)
-    prog.db.markAsParam('edge',2)
-    params = {'initProgram':prog,
-              'trainData':trainData, 'testData':testData,
-              'savedTestPreds':'tmp-cache/test.solutions.txt',
-              'savedTestExamples':'tmp-cache/test.examples',
-              'epochs':epochs,
-              }
-    prog.maxDepth = maxD
-    NP.seterr(divide='raise')
+    prog = tensorlog.Program.loadRules("grid.ppr",db)
 
-    #prog.normalize = 'log+softmax'
-    #funs.conf.trace = True
-    #ops.conf.trace = True
-    #ops.conf.long_trace = True
-    ops.conf.max_trace = True
-    expt.Expt(params).run()
-    if NETWORKX:
-        visualizeLearned(db,n)
+    startNode = nodeName(1,1)
+    if goal=='time':
+        for d in [4,8,16,32,64,99]:
+            print 'depth',d,
+            ti = tensorlog.Interp(prog)
+            ti.prog.maxDepth = d
+            start = time.time()
+            ti.prog.evalSymbols(declare.asMode("path/io"), [startNode])
+            print 'time',time.time() - start,'sec'
+
+
+    elif goal=='acc':
+        print 'grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (n,n,epochs,maxD)
+
+        trainData = dataset.Dataset.loadExamples(db,trainFile)
+        testData = dataset.Dataset.loadExamples(db,testFile)
+        prog.db.markAsParam('edge',2)
+
+        params = {'prog':prog,
+                  'trainData':trainData, 'testData':testData,
+                  'savedTestPredictions':'tmp-cache/test.solutions.txt',
+                  'savedTestExamples':'tmp-cache/test.examples',
+                  'learner':learn.FixedRateGDLearner(prog,epochs=epochs)
+                  }
+        prog.maxDepth = maxD
+        NP.seterr(divide='raise')
+
+        #prog.normalize = 'log+softmax'
+        #funs.conf.trace = True
+        #ops.conf.trace = True
+        #ops.conf.long_trace = True
+        ops.conf.max_trace = True
+        expt.Expt(params).run()
+        if NETWORKX:
+            visualizeLearned(db,n)
 
