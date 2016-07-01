@@ -18,7 +18,7 @@ import learn
 import mutil
 import debug
 
-VERSION = "0.9.1"
+VERSION = "1.0"
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
@@ -150,7 +150,7 @@ class Program(object):
 
     @staticmethod
     def loadRules(fileNames,db):
-        return Program(db,Program._loadRules(rules))
+        return Program(db,Program._loadRules(fileNames))
 
 
 #
@@ -284,7 +284,7 @@ def parseCommandLine(argv):
     eg Datasets, Programs, ...
     """
 
-    argspec = ["db=", "proppr", "prog=", "train=", "test=", "help"]
+    argspec = ["db=", "proppr", "prog=", "trainData=", "testData=", "help"]
     try:
         optlist,args = getopt.getopt(argv, 'x', argspec)
     except getopt.GetoptError:
@@ -297,13 +297,15 @@ def parseCommandLine(argv):
         print ' --db file.db              - file contains a serialized MatrixDB'
         print ' --db file1.cfacts1:...    - files are parsable with MatrixDB.loadFile()'
         print ' --prog file.ppr           - file is parsable as tensorlog rules'
-        print ' --train file.exam         - optional: file is parsable with Dataset.loadExamples'
-        print ' --train file.dset         - optional: file is a serialized Dataset'
-        print ' --test file.exam          - optional:'
-        print ' --proppr                  - if present, assume the file has proppr features by each rule: {ruleid}, or {all(F): p(X,...),q(...,F)}' 
+        print ' --trainData file.exam     - optional: file is parsable with Dataset.loadExamples'
+        print ' --trainData file.dset     - optional: file is a serialized Dataset'
+        print ' --testData file.exam      - optional:'
+        print ' --proppr                  - if present, assume the file has proppr features with'
+        print '                             every rule: {ruleid}, or {all(F): p(X,...),q(...,F)}' 
         print ''
-        print 'Note: for --db, --train, and --test, you are allowed to specify either a serialized, cached object (like \'foo.db\')' 
-        print 'or a human-readable object that can serialized (like \'foo.cfacts\'). In this case you can also write \'foo.db|foo.cfacts\''
+        print 'Notes: for --db, --trainData, and --testData, you are allowed to specify either a' 
+        print 'serialized, cached object (like \'foo.db\') or a human-readable object that can be'
+        print 'serialized (like \'foo.cfacts\'). In this case you can also write \'foo.db|foo.cfacts\''
         print 'and the appropriate uncache routine will be used.'
 
     if '--help' in optdict: 
@@ -313,44 +315,48 @@ def parseCommandLine(argv):
         usage()
         sys.exit(-1)
 
-    def isUncachefromSrc(s): return s.find("|")>=0
-    def getCacheSrcPair(s): return s.split("|")
-    
-    val = optdict['--db']
-    if isUncachefromSrc(val):
-        cache,src = getCacheSrcPair(val)
-        optdict['--db'] = matrixdb.uncache(cache,src)
-    elif val.endswith(".db"):
-        optdict['--db'] = matrixdb.MatrixDB.deserialize(val)
-    elif val.endswith(".cfacts"):
-        optdict['--db'] = matrixdb.MatrixDB.loadFile(val)
-    else:
-        assert False,'illegal --db file'
-    db = optdict['--db']
+    db = parseDBSpec(optdict['--db'])
+    optdict['--db'] = db
+    optdict['--prog'] = parseProgSpec(optdict['--prog'],db,proppr=('--proppr' in optdict))
 
-    
-    val = optdict['--prog']
-    if '--proppr' in optdict:
-        optdict['--prog'] = ProPPRProgram.loadRules(val,db)
-    else:
-        optdict['--prog'] = Program.loadRules(val,db)
-
-    for key in ('--train','--test'):
+    for key in ('--trainData','--testData'):
         if key in optdict:
-            val = optdict[key]
-            if isUncachefromSrc(val):
-                cache,src = getCacheSrcPair(val)
-                assert src.endswith(".examples") or src.endswith(".exam"), 'illegal --train or --test file'
-                optdict[key] = dataset.Dataset.uncacheExamples(cache,db,src,proppr=src.endswith(".examples"))
-            else:
-                assert val.endswith(".examples") or val.endswith(".exam"), 'illegal --train or --test file'
-                optdict[key] = dataset.Dataset.loadExamples(cache,db,src,proppr=src.endswith(".examples"))
+            optdict[key] = parseDatasetSpec(optdict[key],db)
 
     # let these be also indexed by 'train', 'prog', etc
     for key,val in optdict.items():
         optdict[key[2:]] = val
 
     return optdict,args
+
+def isUncachefromSrc(s): return s.find("|")>=0
+def getCacheSrcPair(s): return s.split("|")
+
+def parseDatasetSpec(spec,db):
+    """Parse a specification for a dataset, see usage() for parseCommandLine"""
+    if isUncachefromSrc(spec):
+        cache,src = getCacheSrcPair(spec)
+        assert src.endswith(".examples") or src.endswith(".exam"), 'illegal --train or --test file'
+        return dataset.Dataset.uncacheExamples(cache,db,src,proppr=src.endswith(".examples"))
+    else:
+        assert spec.endswith(".examples") or spec.endswith(".exam"), 'illegal --train or --test file'
+        return dataset.Dataset.loadExamples(cache,db,src,proppr=src.endswith(".examples"))
+
+def parseDBSpec(spec):
+    """Parse a specification for a database, see usage() for parseCommandLine"""
+    if isUncachefromSrc(spec):
+        cache,src = getCacheSrcPair(spec)
+        return matrixdb.MatrixDB.uncache(cache,src)
+    elif spec.endswith(".db"):
+        return matrixdb.MatrixDB.deserialize(spec)
+    elif spec.endswith(".cfacts"):
+        return matrixdb.MatrixDB.loadFile(spec)
+    else:
+        assert False,'illegal --db spec %s' %spec
+    
+def parseProgSpec(spec,db,proppr=False):
+    """Parse a specification for a Tensorlog program,, see usage() for parseCommandLine"""
+    return ProPPRProgram.loadRules(spec,db) if proppr else Program.loadRules(spec,db)
 
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william
@@ -371,7 +377,8 @@ if __name__ == "__main__":
     if interactiveMode:
         print "Interpreter variable 'ti' set, type ti.help() for help"
     else:
-        print "Usage: python -i -m tensorlog --programFiles ... --trainData ..."
-        print "       And it is really only useful with the -i option."
+        print "Usage: python -i -m tensorlog [opts]"
+        print "- For option help: 'python -m tensorlog --help'"
+        print "- The interpreter it is really only useful with the -i option."
 
 

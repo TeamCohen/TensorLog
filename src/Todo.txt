@@ -3,8 +3,6 @@ TODO:
  - think about typed predicates and dense matrices
  - try multithreading for minibatches
 
- - generic option parser for programFiles, train, test, ...?
-
  - optimization for cora-expt:
  -- train is 8.7s, mostly gradient
  -- matrix init is 3.7s
@@ -12,7 +10,6 @@ TODO:
  -- broadcastAndWeightByRowSum is 2s (can densify)
  -- broadcastAndComponentwiseMultiply is 2.2s (densified)
  -- softmax is 1.9s (can densify)
-
  -- broadcastAndWeightByRowSum is also about 25%
  -- broadcastAndComponentwiseMultiply is 30%
  -- rather than types, I could just read in all constants in order so that

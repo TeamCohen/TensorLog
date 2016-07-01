@@ -733,10 +733,10 @@ class TestExpt(unittest.TestCase):
         print 'testData"\n','\n'.join(testData.pprint())
         prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr"],db=db)
         prog.setWeights(db.ones())
-        params = {'initProgram':prog,
+        params = {'prog':prog,
                   'trainData':trainData, 'testData':testData,
                   'savedModel':'toy-trained.db',
-                  'savedTestPreds':'tlog-cache/toy-test.solutions.txt',
+                  'savedTestPredictions':'tlog-cache/toy-test.solutions.txt',
                   'savedTrainExamples':'tlog-cache/toy-train.examples',
                   'savedTestExamples':'tlog-cache/toy-test.examples'}
         return expt.Expt(params).run()
@@ -749,7 +749,7 @@ class TestExpt(unittest.TestCase):
         print 'trainData:\n','\n'.join(trainData.pprint())
         prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
         prog.setWeights(db.ones())
-        params = {'initProgram':prog,'trainData':trainData, 'testData':testData}
+        params = {'prog':prog,'trainData':trainData, 'testData':testData}
         return expt.Expt(params).run()
 
     def runMToyExpt2(self):
@@ -760,9 +760,7 @@ class TestExpt(unittest.TestCase):
         print 'trainData:\n','\n'.join(trainData.pprint())
         prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
         prog.setWeights(db.ones())
-        def learnerFactory(prog): 
-            return learn.FixedRateSGDLearner(prog)
-        params = {'initProgram':prog,'trainData':trainData, 'testData':testData, 'learnerFactory':learnerFactory}
+        params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':learn.FixedRateSGDLearner(prog)}
         return expt.Expt(params).run()
 
 class TestDataset(unittest.TestCase):

@@ -19,9 +19,6 @@ import config
 
 conf = config.Config()
 
-conf.help.num_train_predictions_shown = 'Number of training-data predictions to display'
-conf.num_train_predictions_shown = 0
-
 class Expt(object):
 
     def __init__(self,configDict):
@@ -32,38 +29,37 @@ class Expt(object):
 
     #TODO targetPred->targetMode
     def _run(self,
-             initProgram=None,trainData=None, testData=None, targetPred=None, epochs=None,
-             savedTestPreds=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None,
-             learnerFactory=None, regularizer=None):
+             prog=None, trainData=None, testData=None, targetMode=None, 
+             savedTestPredictions=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None,
+             learner=None):
 
-        """ Run an experiment, given a whole bunch of parameters.
-        savedTestPreds, savedTestExamples, savedTrainExamples: if not None, then
-        serialize predictions and examples for later eval with ProPPR tools.
-        savedModel: save result of training somewhere
+        """ Run an experiment.  
+
+        The stages are
+        - if targetMode is specified, extract just the examples from that mode from trainData and testData
+        - evaluate the untrained program on the train and test data and print results
+        - train on the trainData
+        - if savedModel is given, write the learned database, including the trained parameters,
+          to that directory.
+        - if savedTestPredictions is given, write the test-data predictions in ProPPR format
+        - if savedTestExamples (savedTrainExamples) is given, save the training/test examples in ProPPR format
         """
 
-        ti = tensorlog.Interp(initProgram)
+        if targetMode: 
+            targetMode = declare.asMode(targetMode)
+            trainData = trainData.extractMode(targetMode)
+            testData = testData.extractMode(targetMode)
 
-        if targetPred: 
-            targetPred = declare.asMode(targetPred)
-            trainData = trainData.extractMode(targetPred)
-            testData = testData.extractMode(targetPred)
-
-        if not learnerFactory:
-            learnerFactory = learn.FixedRateGDLearner
-        learnArgs = {}
-        if epochs: learnArgs['epochs']=epochs
-        if regularizer: learnArgs['regularizer']=regularizer
-        learner = learnerFactory(ti.prog,**learnArgs)
+        if not learner: learner = learn.FixedRateGDLearner(prog)
 
         TP0 = Expt.timeAction(
             'running untrained theory on train data',
             lambda:learner.datasetPredict(trainData))
-        if conf.num_train_predictions_shown>0:
-            logging.warn('sample predictions not implemented')
         UP0 = Expt.timeAction(
             'running untrained theory on test data',
             lambda:learner.datasetPredict(testData))
+        Expt.printStats('untrained theory','train',trainData,TP0)
+        Expt.printStats('untrained theory','test',testData,UP0)
 
         Expt.timeAction('training', lambda:learner.train(trainData))
 
@@ -74,34 +70,32 @@ class Expt(object):
             'running trained theory on test data',
             lambda:learner.datasetPredict(testData))
 
-        Expt.printStats('untrained theory','train',trainData,TP0)
         Expt.printStats('..trained theory','train',trainData,TP1)
-        Expt.printStats('untrained theory','test',testData,UP0)
         testAcc,testXent = Expt.printStats('..trained theory','test',testData,UP1)
 
         if savedModel:
-            Expt.timeAction('saving trained model', lambda:ti.db.serialize(savedModel))
+            Expt.timeAction('saving trained model', lambda:prog.db.serialize(savedModel))
 
-        if savedTestPreds:
+        if savedTestPredictions:
             #todo move this logic to a dataset subroutine
-            open(savedTestPreds,"w").close() # wipe file first
+            open(savedTestPredictions,"w").close() # wipe file first
             def doit():
                 qid=0
                 for mode in testData.modesToLearn():
-                    qid+=Expt.predictionAsProPPRSolutions(savedTestPreds,mode.functor,ti.db,UP1.getX(mode),UP1.getY(mode),True,qid) 
+                    qid+=Expt.predictionAsProPPRSolutions(savedTestPredictions,mode.functor,prog.db,UP1.getX(mode),UP1.getY(mode),True,qid) 
             Expt.timeAction('saving test predictions', doit)
 
         if savedTestExamples:
             Expt.timeAction('saving test examples', 
-                            lambda:testData.saveProPPRExamples(savedTestExamples,ti.db))
+                            lambda:testData.saveProPPRExamples(savedTestExamples,prog.db))
 
         if savedTrainExamples:
             Expt.timeAction('saving train examples', 
-                            lambda:trainData.saveProPPRExamples(savedTrainExamples,ti.db))
+                            lambda:trainData.saveProPPRExamples(savedTrainExamples,prog.db))
                 
-        if savedTestPreds and savedTestExamples:
+        if savedTestPredictions and savedTestExamples:
             print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' \
-                % (savedTestExamples,savedTestPreds)
+                % (savedTestExamples,savedTestPredictions)
 
         return testAcc,testXent
 
@@ -164,16 +158,16 @@ if __name__=="__main__":
         assert False,'usage: python expt.py [textcattoy|matchtoy]'
         
     prog.setWeights(initWeights)
-    def myLearner(prog,**opts):
-        #return learn.FixedRateSGDLearner(prog,miniBatchSize=1,**opts)
-        return learn.FixedRateGDLearner(prog,**opts)
+    
+    myLearner = learn.FixedRateGDLearner(prog)
+    #myLearner = learn.FixedRateSGDLearner(prog)
 
-    params = {'initProgram':prog,
+    params = {'prog':prog,
               'trainData':trainData, 'testData':testData,
               'savedModel':'toy-trained.db',
-              'savedTestPreds':'tlog-cache/toy-test.solutions.txt',
+              'savedTestPredictions':'tlog-cache/toy-test.solutions.txt',
               'savedTrainExamples':'tlog-cache/toy-train.examples',
               'savedTestExamples':'tlog-cache/toy-test.examples',
-              'learnerFactory':myLearner, 'epochs':5,
+              'learner':myLearner
               }
     Expt(params).run()
