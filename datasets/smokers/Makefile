@@ -2,4 +2,4 @@ expt:
 	python smokers-expt.py 
 
 clean:
-	rm *~ *.pyc
+	rm -f *~ *.pyc

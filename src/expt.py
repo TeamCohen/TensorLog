@@ -9,6 +9,7 @@ import time
 import logging
 import collections
 
+import tensorlog
 import dataset
 import matrixdb
 import tensorlog
@@ -140,34 +141,49 @@ class Expt(object):
 
 if __name__=="__main__":
 
-    if len(sys.argv)<=1 or sys.argv[1]=='textcattoy':
-        db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
-        trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
-        testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
-        prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr"],db=db)
-        initWeights = \
-            (prog.db.matrixPreimage(declare.asMode("posPair(o,i)")) + \
-                 prog.db.matrixPreimage(declare.asMode("negPair(o,i)"))) * 0.5
-    elif len(sys.argv)>1 and sys.argv=='matchtoy':
-        db = matrixdb.MatrixDB.loadFile('test/matchtoy.cfacts')
-        trainData = dataset.Dataset.loadExamples(db,'test/matchtoy-train.exam')
-        testData = trainData
-        prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
-        initWeights = prof.db.ones()
-    else:
-        assert False,'usage: python expt.py [textcattoy|matchtoy]'
-        
-    prog.setWeights(initWeights)
-    
-    myLearner = learn.FixedRateGDLearner(prog)
-    #myLearner = learn.FixedRateSGDLearner(prog)
+    try: 
+        optdict,args = tensorlog.parseCommandLine(sys.argv[1:])
+        optdict['prog'].setWeights(optdict['prog'].db.ones())
+        params = {'prog':optdict['prog'],
+                  'trainData':optdict['trainData'],
+                  'testData':optdict['testData'],
+                  'savedModel':'expt-model.db'}
+        Expt(params).run()
+        print 'saved in expt-model.db'
 
-    params = {'prog':prog,
-              'trainData':trainData, 'testData':testData,
-              'savedModel':'toy-trained.db',
-              'savedTestPredictions':'tlog-cache/toy-test.solutions.txt',
-              'savedTrainExamples':'tlog-cache/toy-train.examples',
-              'savedTestExamples':'tlog-cache/toy-test.examples',
-              'learner':myLearner
-              }
-    Expt(params).run()
+    except Exception:
+
+        def usage():
+            print 'usage: python expt.py --prog a --db b --trainData c --testData d'
+            print 'usage: python expt.py [textcattoy|matchtoy]'
+
+        if len(sys.argv)<2:
+            usage()
+        elif sys.argv[1]=='textcattoy':
+            db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
+            trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
+            testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
+            prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr"],db=db)
+            initWeights = \
+                (prog.db.matrixPreimage(declare.asMode("posPair(o,i)")) + \
+                     prog.db.matrixPreimage(declare.asMode("negPair(o,i)"))) * 0.5
+        elif sys.argv[1]=='matchtoy':
+            db = matrixdb.MatrixDB.loadFile('test/matchtoy.cfacts')
+            trainData = dataset.Dataset.loadExamples(db,'test/matchtoy-train.exam')
+            testData = trainData
+            prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
+            initWeights = prog.db.ones()
+        else:
+            usage()
+
+        prog.setWeights(initWeights)
+
+        myLearner = learn.FixedRateGDLearner(prog)
+        #myLearner = learn.FixedRateSGDLearner(prog)
+
+        params = {'prog':prog,
+                  'trainData':trainData, 'testData':testData,
+                  'savedModel':'toy-trained.db',
+                  'learner':myLearner
+                  }
+        Expt(params).run()

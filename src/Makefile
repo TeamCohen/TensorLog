@@ -9,6 +9,9 @@ benchmark-test:
 #fb15k-valid.db: matrixdb.py
 #	python $< --serialize test/fb15k-valid.cfacts:test/fb15k.tensorLog.cfacts $@
 
+textcattoy-expt:
+	python expt.py --prog test/textcat.ppr --db test/textcattoy.cfacts --train
+
 fb15k-valid.db:
 	python matrixdb.py --serialize test/fb15k-valid.cfacts  fb15k-valid.db
 

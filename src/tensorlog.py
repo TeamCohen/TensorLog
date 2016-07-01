@@ -310,10 +310,10 @@ def parseCommandLine(argv):
 
     if '--help' in optdict: 
         usage()
-        sys.exit(0)
+        exit(0)
     if (not '--db' in optdict) or (not '--prog' in optdict):
         usage()
-        sys.exit(-1)
+        assert False,'--db and --prog are required options'
 
     db = parseDBSpec(optdict['--db'])
     optdict['--db'] = db
@@ -340,7 +340,7 @@ def parseDatasetSpec(spec,db):
         return dataset.Dataset.uncacheExamples(cache,db,src,proppr=src.endswith(".examples"))
     else:
         assert spec.endswith(".examples") or spec.endswith(".exam"), 'illegal --train or --test file'
-        return dataset.Dataset.loadExamples(cache,db,src,proppr=src.endswith(".examples"))
+        return dataset.Dataset.loadExamples(db,spec,proppr=spec.endswith(".examples"))
 
 def parseDBSpec(spec):
     """Parse a specification for a database, see usage() for parseCommandLine"""

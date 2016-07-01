@@ -161,6 +161,8 @@ class Debugger(object):
 
 if __name__ == "__main__":
     
+    #TODO more useful main?
+
     TRAINED = True
 
     if not TRAINED:
