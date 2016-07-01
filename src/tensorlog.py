@@ -18,7 +18,7 @@ import learn
 import mutil
 import debug
 
-VERSION = "1.0"
+VERSION = "1.0.01"
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
@@ -210,9 +210,11 @@ class ProPPRProgram(Program):
 class Interp(object):
     """High-level interface to tensor log."""
 
-    def __init__(self,prog):
+    def __init__(self,prog,trainData=None,testData=None):
         self.prog = prog
         self.db = self.prog.db
+        self.trainData = trainData
+        self.testData = testData
 
     def help(self):
         print "ti.list(foo): foo can be a compiled function, eg \"foo/io\", a predicate definition, eg"
@@ -220,6 +222,7 @@ class Interp(object):
         print "ti.list():    list everything."
         print "ti.eval(\"functor/mode\",\"c\"): evaluate a function on a database constant c"
         print "ti.debug(\"functor/mode\",\"c\"): debug the corresponding eval command"
+        print "ti.debugDset(\"functor/mode\"[,test=True]): run debugger on a dataset"
 
     def list(self,str=None):
         if str==None:
@@ -273,6 +276,15 @@ class Interp(object):
         dset = dataset.Dataset({mode:X},{mode:self.db.zeros()})
         debug.Debugger(self.prog,mode,dset,gradient=False).mainloop()
     
+    def debugDset(self,modeSpec,test=False):
+        fullDataset = self.testData if test else self.trainData
+        if fullDataset==None:
+            print 'train/test dataset is not specified on command line?'
+        else:
+            mode = declare.asMode(modeSpec)        
+            dset = fullDataset.extractMode(mode)
+            debug.Debugger(self.prog,mode,dset,gradient=True).mainloop()
+
 #
 # utilities for reading command lines
 #
@@ -367,7 +379,7 @@ if __name__ == "__main__":
     print "Tensorlog v%s (C) William W. Cohen and Carnegie Mellon University, 2016" % VERSION
 
     optdict,args = parseCommandLine(sys.argv[1:])
-    ti = Interp(optdict['prog'])
+    ti = Interp(optdict['prog'],trainData=optdict.get('trainData'),testData=optdict.get('testData'))
 
     try:
         if sys.ps1: interactiveMode = True

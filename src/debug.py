@@ -4,11 +4,13 @@
 # support for debugging/visualization
 #
 
+import sys
 import Tkinter as TK
 import ttk
 import tkFont
 import time
 
+import tensorlog
 import dataset
 import matrixdb
 import tensorlog
@@ -46,7 +48,7 @@ class Debugger(object):
 
         # evaluate the gradient so that's cached
         if gradient:
-            self.learner = learn.Learner(prog)
+            self.learner = learn.OnePredFixedRateGDLearner(self.prog)
             self.grad = self.learner.crossEntropyGrad(self.mode,self.X,self.Y)
     
     def render(self):
@@ -161,22 +163,24 @@ class Debugger(object):
 
 if __name__ == "__main__":
     
-    #TODO more useful main?
+    def usage():
+        print 'debug.py [usual tensorlog options] mode [inputs]'
 
-    TRAINED = True
-
-    if not TRAINED:
-        db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
+    optdict,args = tensorlog.parseCommandLine(sys.argv[1:])
+    dset = optdict.get('trainData') or optdict.get('testData')
+    if dset==None and len(args)<2:
+        usage()
+        print 'debug on what input? specify --trainData or give a function input'
+    elif len(args)<1:
+        usage()
+    elif dset and len(args)>2:
+        print 'using --trainData not the function input given'
+    elif dset:
+        mode = declare.asMode(args[0])
+        Debugger(optdict['prog'],mode,dset,gradient=True).mainloop()
     else:
-        db = matrixdb.MatrixDB.deserialize('toy-trained.db')
-    trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
-    prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr"],db=db)
-    if not TRAINED:
-        prog.setWeights(db.ones())
-
-    db = Debugger(prog,"predict/io",trainData,gradient=False)
-#    default_font = tkFont.nametofont("TkDefaultFont")
-#    default_font.configure(size=14)
-    #ttk.Style().theme_use('clam')
-    db.mainloop()
+        mode = declare.asMode(args[0])
+        X = optdict['prog'].db.onehot(args[1])
+        dset = dataset.Dataset({mode:X},{mode:optdict['prog'].db.zeros()})
+        Debugger(optdict['prog'],mode,dset,gradient=False).mainloop()
 
