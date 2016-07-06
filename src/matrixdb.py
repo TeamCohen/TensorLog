@@ -300,9 +300,10 @@ class MatrixDB(object):
         if not os.path.exists(dbFile) or any([os.path.getmtime(factFile)>os.path.getmtime(dbFile) for f in factFile.split(":")]):
             db = MatrixDB.loadFile(factFile)
             db.serialize(dbFile)
+            os.utime(dbFile,None) #update the modification time for the directory
             return db
         else:
-            #print 'de-serializing dbFile',dbFile,'...'
+            logging.info('deserializing db file '+ dbFile)
             return MatrixDB.deserialize(dbFile)
 
 
@@ -372,7 +373,8 @@ class MatrixDB(object):
     def flushBuffer(self,f,arity):
         """Flush the triples defining predicate p from the buffer and define
         p's matrix encoding"""
-        logging.info('flushing buffers for predicate %s' % f)
+        logging.info('flushing %d buffered facts for predicate %s' % (len(self.buf[(f,arity)]),f))
+
         n = self.stab.getMaxId() + 1
         if arity==2:
             m = scipy.sparse.lil_matrix((n,n))
@@ -429,6 +431,7 @@ class MatrixDB(object):
         
     
     def addFile(self,filename):
+        logging.info('adding cfacts file '+ filename)
         self.startBuffers()
         self.bufferFile(filename)
         self.rebufferMatrices()
@@ -463,7 +466,7 @@ class MatrixDB(object):
 
 if __name__ == "__main__":
     if sys.argv[1]=='--serialize':
-        print 'loading cfacts from ',sys.argv[2]
+        print 'loading cfacts from',sys.argv[2]
         if sys.argv[2].find(":")>=0:
             db = MatrixDB()
             for f in sys.argv[2].split(":"):

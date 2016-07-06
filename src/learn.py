@@ -12,6 +12,7 @@ import tensorlog
 import dataset
 import mutil
 import declare
+import traceback
 
 # clip to avoid exploding gradients
 
@@ -144,13 +145,14 @@ class Learner(object):
         print ' cumSecs %.3f' % (time.time()-startTime)
 
     @staticmethod
-    def defaultTraceFun(thisLearner, Y, P, i = -1, startTime = 0.0):
+    def defaultTraceFun(thisLearner, Y, P, i = -1, startTime = 0.0, mode=None):
         """To be passed in as a traceFun option to a Learner.  In each epoch,
         this is called, and prints some possibly useful statistics.
         """
         xe = thisLearner.crossEntropy(Y,P)
         reg = thisLearner.regularizer.regularizationCost(thisLearner.prog)
         print 'epoch %2d of %d' % (i+1,thisLearner.epochs),
+        if mode: print ' for %s' % mode,
         print ' : loss %.3f = crossEnt %.3f + reg %.3f' % (xe+reg,xe,reg),
         print ' ; acc %.3f' % thisLearner.accuracy(Y,P),
         print ' ; cumSecs %.3f' % (time.time()-startTime)
@@ -238,7 +240,7 @@ class FixedRateGDLearner(Learner):
         for i in range(self.epochs):
             for mode in dset.modesToLearn():
                 n = mutil.numRows(dset.getX(mode))
-                args = {'i':i,'startTime':startTime}
+                args = {'i':i,'startTime':startTime,'mode':str(mode)}
                 paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),traceFunArgs=args)
                 self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
                 self.applyMeanUpdate(paramGrads,self.rate,n)
@@ -269,12 +271,18 @@ class FixedRateSGDLearner(FixedRateGDLearner):
         for i in range(self.epochs):
             k = 0
             for (mode,X,Y) in dset.minibatchIterator(batchSize=self.miniBatchSize):
-                n = mutil.numRows(X)
-                k = k+1
-                args = {'i':i,'k':k,'startTime':startTime,'mode':mode}
-                paramGrads = self.crossEntropyGrad(mode,X,Y,traceFunArgs=args)
-                self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
-                self.applyMeanUpdate(paramGrads,self.rate,n)
+                try:
+                    n = mutil.numRows(X)
+                    k = k+1
+                    args = {'i':i,'k':k,'startTime':startTime,'mode':mode}
+                    paramGrads = self.crossEntropyGrad(mode,X,Y,traceFunArgs=args)
+                    self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
+                    self.applyMeanUpdate(paramGrads,self.rate,n)
+                except:
+                    print 'error encountered learning on mode %s' % mode
+                    print '-' * 60
+                    traceback.print_exc()
+                    print '-' * 60
 
 class Regularizer(object):
     """Abstract class for regularizers."""

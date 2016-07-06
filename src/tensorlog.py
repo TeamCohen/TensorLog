@@ -18,7 +18,7 @@ import learn
 import mutil
 import debug
 
-VERSION = "1.0.01"
+VERSION = "1.0.02"
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
@@ -296,7 +296,7 @@ def parseCommandLine(argv):
     eg Datasets, Programs, ...
     """
 
-    argspec = ["db=", "proppr", "prog=", "trainData=", "testData=", "help"]
+    argspec = ["db=", "proppr", "prog=", "trainData=", "testData=", "help", "logging="]
     try:
         optlist,args = getopt.getopt(argv, 'x', argspec)
     except getopt.GetoptError:
@@ -314,11 +314,23 @@ def parseCommandLine(argv):
         print ' --testData file.exam      - optional:'
         print ' --proppr                  - if present, assume the file has proppr features with'
         print '                             every rule: {ruleid}, or {all(F): p(X,...),q(...,F)}' 
+        print ' --logging level'
         print ''
         print 'Notes: for --db, --trainData, and --testData, you are allowed to specify either a' 
         print 'serialized, cached object (like \'foo.db\') or a human-readable object that can be'
         print 'serialized (like \'foo.cfacts\'). In this case you can also write \'foo.db|foo.cfacts\''
         print 'and the appropriate uncache routine will be used.'
+
+    if '--logging' in optdict:
+        level = optdict['--logging']
+        if level=='debug':
+            logging.basicConfig(level=logging.DEBUG)
+        elif level=='warn':
+            logging.basicConfig(level=logging.WARN)
+        elif level=='error':
+            logging.basicConfig(level=logging.ERROR)
+        else:
+            logging.basicConfig(level=logging.INFO)
 
     if '--help' in optdict: 
         usage()

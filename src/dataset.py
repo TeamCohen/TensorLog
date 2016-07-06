@@ -102,6 +102,7 @@ class Dataset(object):
     @staticmethod
     def deserialize(dir):
         """Recover a saved dataset."""
+        logging.info('deserializing dataset file '+ dir)
         xDict = {}
         yDict = {}
         SIO.loadmat(os.path.join(dir,"xDict"),xDict)
@@ -113,9 +114,6 @@ class Dataset(object):
                 del d[stringKey]
                 if not stringKey.startswith('__'):
                     d[declare.asMode(stringKey)] = SS.csr_matrix(mat)
-        #print 'dx',xDict
-        #print 'dy',yDict
-        #print 'deserialized keys',xDict.keys(),yDict.keys()
         return Dataset(xDict,yDict)
 
     @staticmethod
@@ -127,6 +125,7 @@ class Dataset(object):
         if not os.path.exists(dsetFile) or os.path.getmtime(exampleFile)>os.path.getmtime(dsetFile):
             dset = Dataset.loadExamples(db,exampleFile,proppr=proppr)
             dset.serialize(dsetFile)
+            os.utime(dsetFile,None) #update the modification time for the directory
             return dset
         else:
             return Dataset.deserialize(dsetFile)
@@ -211,6 +210,8 @@ class Dataset(object):
         one for the Ys.
 
         """
+        logging.info('loading examples file '+ fileName)
+
         xsTmp = collections.defaultdict(list)
         ysTmp = collections.defaultdict(list)
         regex = re.compile('(\w+)\((\w+),(\w+)\)')
@@ -222,7 +223,7 @@ class Dataset(object):
                 if pred:
                     xsTmp[pred].append(x)
                     ysTmp[pred].append(pos)
-            logging.info("Loading %d predicates from %s..." % (len(xsTmp),fileName))
+            logging.info("loading %d predicates from %s..." % (len(xsTmp),fileName))
             for pred in xsTmp.keys():
                 xRows = map(lambda x:db.onehot(x), xsTmp[pred])
                 xsResult[pred] = mutil.stack(xRows)
