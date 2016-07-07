@@ -17,8 +17,8 @@ fb15k-valid.db:
 
 wnet-test:
 	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet/; python wnet-expt.py; \
-	 proppr eval hypernym-test.examples hypernym-test.solutions.txt --metric auc --defaultNeg)
-	echo expected . micro: 0.93437229711
+	 proppr eval tmp-cache/hypernym-test.examples tmp-cache/hypernym-test.solutions.txt --metric auc --defaultNeg)
+	 echo expected . micro: 0.93437229711
 
 cora-test:
 	(export PYTHONPATH=`pwd`; cd ../datasets/cora/; python cora-expt.py; \

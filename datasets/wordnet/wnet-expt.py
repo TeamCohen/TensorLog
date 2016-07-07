@@ -27,7 +27,8 @@ if __name__=="__main__":
 
     # use a non-default learner, overriding the tracing function,
     # number of epochs, and regularizer
-    learner = learn.FixedRateGDLearner(prog,regularizer=learn.L2Regularizer(),traceFun=learn.Learner.cheapTraceFun,epochs=epochs)
+#    learner = learn.FixedRateGDLearner(prog,regularizer=learn.L2Regularizer(),traceFun=learn.Learner.cheapTraceFun,epochs=epochs)
+    learner = learn.FixedRateGDLearner(prog,epochs=epochs)
 
     # configute the experiment
     params = {'prog':prog,
