@@ -237,14 +237,21 @@ class FixedRateGDLearner(Learner):
     def train(self,dset):
         startTime = time.time()
         modes = dset.modesToLearn()
-        n = len(modes)
+        numModes = len(modes)
         for i in range(self.epochs):
-            for mode in dset.modesToLearn():
-                n = mutil.numRows(dset.getX(mode))
-                args = {'i':i,'startTime':startTime,'mode':str(mode)}
-                paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),traceFunArgs=args)
-                self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
-                self.applyMeanUpdate(paramGrads,self.rate,n)
+            for j,mode in enumerate(dset.modesToLearn()):
+                try:
+                    n = mutil.numRows(dset.getX(mode))
+                    modeDescription = '%s (%d/%d)' % (str(mode),j+1,numModes)
+                    args = {'i':i,'startTime':startTime,'mode':modeDescription}
+                    paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),traceFunArgs=args)
+                    self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
+                    self.applyMeanUpdate(paramGrads,self.rate,n)
+                except:
+                    print 'error encountered learning on mode %s epoch %d' % (mode,i)
+                    print '-' * 60
+                    traceback.print_exc()
+                    print '-' * 60
             
 
 class FixedRateSGDLearner(FixedRateGDLearner):

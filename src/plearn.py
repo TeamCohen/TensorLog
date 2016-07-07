@@ -30,3 +30,27 @@ class ModeParallelFixedRateGDLearner(learn.FixedRateGDLearner):
                 self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
                 self.applyMeanUpdate(paramGrads,self.rate,n)
 
+
+class MinibatchParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
+
+    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None,traceFun=None,miniBatchSize=100,parallel=10):
+        super(MinibatchParallelFixedRateGDLearner,self).__init__(
+            prog,epochs=epochs,rate=rate,regularizer=regularizer,miniBatchSize=miniBatchSize)
+        self.traceFun = traceFun or learn.FixedRateSGDLearner.defaultTraceFun
+        self.pool = multiprocessing.dummy.Pool(parallel)
+    
+    def train(self,dset):
+        startTime = time.time()
+        modes = dset.modesToLearn()
+        for i in range(self.epochs):
+            miniBatches = list(dset.minibatchIterator(batchSize=self.miniBatchSize))
+            def miniBatchToTask(k):
+                (mode,X,Y) = miniBatches[k]
+                args = {'i':i,'k':k,'startTime':startTime,'mode':mode}
+                return (self,mode,X,Y,args)
+            bpInputs = map(miniBatchToTask, range(len(miniBatches)))
+            bpOutputs = self.pool.map(_doBackpropTask, bpInputs)
+            for (n,paramGrads) in bpOutputs:
+                self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
+                self.applyMeanUpdate(paramGrads,self.rate,n)
+                
