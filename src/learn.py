@@ -130,18 +130,19 @@ class Learner(object):
         return result/mutil.numRows(Y) if perExample else result
 
     @staticmethod
-    def nullTraceFun(thisLearner, Y, P, i = -1, startTime = 0.0):
+    def nullTraceFun(thisLearner, Y, P, i = -1, startTime = 0.0, mode = None):
         """To be passed in as a traceFun option to a Learner.  In each epoch,
         this is called, and does nothing at all.
         """
         pass
 
     @staticmethod
-    def cheapTraceFun(thisLearner, Y, P, i = -1, startTime = 0.0):
+    def cheapTraceFun(thisLearner, Y, P, i = -1, startTime = 0.0, mode = None):
         """To be passed in as a traceFun option to a Learner.  In each epoch,
         this is called, and prints some inexpensively-computed statistics.
         """
         print 'epoch %2d of %d' % (i+1,thisLearner.epochs),
+        if mode: print ' for %s' % mode,
         print ' cumSecs %.3f' % (time.time()-startTime)
 
     @staticmethod
