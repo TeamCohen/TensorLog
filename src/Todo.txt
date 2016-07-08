@@ -1,7 +1,12 @@
 TODO: 
 
+ - add to database loader code to handle ruleids
  - think about typed predicates and dense matrices
+ -- maybe extend env so that env.matrixType[v] indicates type: sparse or dense+offset
+ -- have ops dispatch to the correct operator as appropriate
+
  - try multithreading for minibatches
+ -- maybe will need to recode broadcastAndWeightByRowSum,broadcastAndComponentwiseMultiply,softmax in pyrex/c?
 
  - optimization for cora-expt:
  -- train is 8.7s, mostly gradient
@@ -19,7 +24,7 @@ TODO:
 
 TUTORIAL/DOCS
 
-  see docs/README.txt
+  see wiki
 
 Trip work:
 
@@ -27,7 +32,7 @@ Trip work:
  learning rate still needs to be tuned by grid size....problems mostly
  were lack of regularization and exploding gradients
   - no regularizer arguments for expt yet TODO
- - learner now has regularizer and clips gradients and parameters correctlu
+ - learner now has regularizer and clips gradients and parameters correctly
  - major cleanup of mutil
  - regularization seems slow for wnet task compared to previously....should try with sparse params
  - explored using Log before SoftMax to make it more stable but experiments were disappointing, learning
@@ -49,9 +54,6 @@ BUGS:
 
  - head p(X,X) doesn't work
 
-CLEANUPS:
- - clean up experiments to use expv2 and clean out the dead code
-
 DESIGN FLAWS: 1 fails but 2 is ok even tho both are polytrees.
 
  1 p(X,Y) :- q(X,X1),r(Y,Y1),s(X1,Y1)
@@ -69,52 +71,9 @@ learning:
  - serializable multi-task datasets
   propprExamplesAsData(db,fileName): convert to provide (xdict,ydict) outputs
  - adagrad & holdout set for convergence
- - multithreading
 
 MORE EXPERIMENTS:
 
  - Rose's representation learning/recommendation
  - SSL
-
-Structure learning notes:
- - se is "superedge", ise is inverse superedge
-
-phase 1, get last arguments of if(Q,R), ifinv(Q,R), chain(P,Q,R).
-phase1 is used as edge in transitive closure/rwr type rules with
-positive examples of any relation.
-
-phase1(X,Y) :- 
-	  se(X,RY),f2(RY,Y),
-	  f1(RY,Y), weight_if2(R).
-phase1(X,Y) :- 
-	  ise(X,RY),f2(RY,Y),
-	  f1(RY,Y), weight_ifinv2(R).
-phase1(X,Y) :-
-	  se(X,QZ),f2(QZ,Z),se(Z,RY),f2(RY,Y)
-	  f1(RY,R),weight_chain3(R).
-
-phase2, get penultinate arguments. We will specialize this theory for
-the r's with high weights from phase1, and then use phase2 as initial
-step in transitive closure rules for facts Q,X,Y [work this out...]
-
-phase2(QX,Y) :- phase2_r1(QX,Y).
-phase2(QX,Y) :- phase2_r2(QX,Y).
-...
-phase2_r(QX,Y) :- 
-	  f2(QX,X),r(X,Y),
-	  f1(QX,Q),weight_if1(Q).
-...
-phase2_r(QX,Y) :- 
-	  f2(QX,X),r(Y,X),
-	  f1(QX,Q),weight_ifinv1(Q).
-...
-phase2_r(X,Y) :-
-	  se(X,QZ),f2(QZ,Z),r(Z,Y),
-	  f1(QZ,Q),weight_chain2_r(Q).
-
-phase3 for chains only:
-
-phase2_rq(PX,Y) :-
-	  f2(PX,X),q(X,Z),r(Z,Y)
-	  f1(PX,P),weight_chain1_rq(P).
 
