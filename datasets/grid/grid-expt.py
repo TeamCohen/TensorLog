@@ -147,8 +147,12 @@ if __name__=="__main__":
                   'trainData':trainData, 'testData':testData,
                   'savedTestPredictions':'tmp-cache/test.solutions.txt',
                   'savedTestExamples':'tmp-cache/test.examples',
-                  'learner':learn.FixedRateGDLearner(prog,epochs=epochs)
-                  }
+                  'learner':learn.FixedRateGDLearner(
+                      prog,
+                      regularizer=learn.L2Regularizer(0.1),
+                      epochs=epochs,
+                      rate=0.01,
+                      )}
         prog.maxDepth = maxD
         NP.seterr(divide='raise')
 

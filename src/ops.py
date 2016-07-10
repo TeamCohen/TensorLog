@@ -129,6 +129,9 @@ class DefinedPredOp(Op):
         self.src = src
         self.funMode = mode
         self.depth = depth
+        self.subfun = self.tensorlogProg.function[(self.funMode,self.depth)].shallowCopy()
+    def shallowCopy(self):
+        return DefinedPredOp(self.tensorlogProg,self.dst,self.src,self.funMode,self.depth)
     def __repr__(self):
         return "DefinedPredOp(%r,%r,%s,%d)" % (self.dst,self.src,str(self.funMode),self.depth)
     def _ppLHS(self):
@@ -155,6 +158,8 @@ class AssignPreimageToVar(Op):
     def __init__(self,dst,matMode):
         super(AssignPreimageToVar,self).__init__(dst)
         self.matMode = matMode
+    def shallowCopy(self):
+        return AssignPreimageToVar(self.dst,self.matMode)
     def __repr__(self):
         return "AssignPreimageToVar(%s,%s)" % (self.dst,self.matMode)
     def _ppLHS(self):
@@ -171,6 +176,8 @@ class AssignVectorToVar(Op):
     def __init__(self,dst,matMode):
         super(AssignVectorToVar,self).__init__(dst)
         self.matMode = matMode
+    def shallowCopy(self):
+        return AssignVectorToVar(self.dst,self.matMode)
     def __repr__(self):
         return "AssignVectorToVar(%s,%s)" % (self.dst,self.matMode)
     def _ppLHS(self):
@@ -187,6 +194,8 @@ class AssignZeroToVar(Op):
     """Set the dst variable to an all-zeros row."""
     def __init__(self,dst):
         super(AssignZeroToVar,self).__init__(dst)
+    def shallowCopy(self):
+        return AssignZeroToVar(self.dst)
     def __repr__(self):
         return "ClearVar(%r)" % (self.dst)
     def _ppLHS(self):
@@ -201,7 +210,10 @@ class AssignOnehotToVar(Op):
     """
     def __init__(self,dst,mode):
         super(AssignOnehotToVar,self).__init__(dst)
+        self.mode = mode
         self.onehotConst = mode.arg(1)
+    def shallowCopy(self):
+        return AssignOnehotToVar(self.dst,self.mode)
     def __repr__(self):
         return "AssignOnehotToVar(%s,%s)" % (self.dst,self.onehotConst)
     def _ppLHS(self):
@@ -219,6 +231,8 @@ class VecMatMulOp(Op):
         self.src = src
         self.matMode = matMode
         self.transpose = transpose
+    def shallowCopy(self):
+        return VecMatMulOp(self.dst,self.src,self.matMode,transpose=self.transpose)
     def __repr__(self):
         return "VecMatMulOp(%r,%r,%s,%r)" % (self.dst,self.src,self.matMode,self.transpose)
     def _ppLHS(self):
@@ -287,6 +301,8 @@ class ComponentwiseVecMulOp(Op):
         super(ComponentwiseVecMulOp,self).__init__(dst)
         self.src = src
         self.src2 = src2
+    def shallowCopy(self):    
+        return ComponentwiseVecMulOp(self.dst,self.src,self.src2)
     def __repr__(self):
         return "ComponentwiseVecMulOp(%r,%r,%s)" % (self.dst,self.src,self.src2)
     def _ppLHS(self):
@@ -305,7 +321,9 @@ class WeightedVec(Op):
         super(WeightedVec,self).__init__(dst)
         self.weighter = weighter
         self.vec = vec
-        self.src = "[%s,%s]" % (weighter,vec)
+        self.src = "[%s,%s]" % (weighter,vec)  #TODO: where is this used?
+    def shallowCopy(self):    
+        return WeightedVec(self.dst,self.weighter,self.vec)
     def __repr__(self):
         return "WeightedVec(%s,%s.sum(),%s)" % (self.dst,self.weighter,self.vec)
     def _ppLHS(self):

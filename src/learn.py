@@ -59,7 +59,7 @@ class Learner(object):
 
     def predict(self,mode,X):
         """Make predictions on a data matrix associated with the given mode."""
-        predictFun = self.prog.getPredictFunction(mode)
+        predictFun = self.prog.getPredictFunction(mode).shallowCopy()
         result = predictFun.eval(self.prog.db, [X])
         return result
 
@@ -71,7 +71,8 @@ class Learner(object):
             X = dset.getX(mode)
             xDict[mode] = X if copyXs else None
             try:
-                yDict[mode] = self.prog.getPredictFunction(mode).eval(self.prog.db, [X])
+                #yDict[mode] = self.prog.getPredictFunction(mode).eval(self.prog.db, [X])
+                yDict[mode] = self.predict(mode,X)
             except FloatingPointError:
                 print "Trouble with mode %s" % str(mode)
                 raise
@@ -266,7 +267,7 @@ class FixedRateSGDLearner(FixedRateGDLearner):
     
     @staticmethod
     def defaultTraceFun(thisLearner, Y, P, i = -1, k = -1, startTime = 0.0, mode = 'unknown'):
-        print 'epoch %d of %d miniBatch %d: target mode %s' % (i+1,k+1,thisLearner.epochs,str(mode)),
+        print 'epoch %d of %d miniBatch %d: target mode %s' % (i+1,thisLearner.epochs,k+1,str(mode)),
         print ' crossEnt %.3f' % thisLearner.crossEntropy(Y,P),
         print ' reg cost %.3f' % thisLearner.regularizer.regularizationCost(thisLearner.prog),
         print ' acc %.3f' % thisLearner.accuracy(Y,P),            

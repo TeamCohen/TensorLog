@@ -26,6 +26,7 @@ class Function(object):
     """The tensorlog representation of a function. This supports eval and
     evalGrad operations, and take a list of input values as the inputs.
     """
+    #TODO: called by benchmark, debug, learn, tensorlog; debug uses .output
     def eval(self,db,values):
         self._checkDuplications()
         if conf.trace:
@@ -38,6 +39,7 @@ class Function(object):
                     print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
                 print '. result :',db.matrixAsSymbolDict(result)
         return self.output
+    #TODO: called by learn, ops 
     def backprop(self,delta,gradAccum):
         if conf.trace:
             print "Backprop:\n%s" % "\n. . ".join(self.pprint())
@@ -72,6 +74,8 @@ class Function(object):
     def children(self):
         """Return list of child functions, for visualization"""
         assert False, 'abstract method called'
+    def shallowCopy(self):
+        assert False, 'abstract method called'
 
 class OpSeqFunction(Function):
 
@@ -84,6 +88,9 @@ class OpSeqFunction(Function):
         self.delta = None
         self.rule = rule #recorded for debug/trace
         self.opEnv = None #caches environment to evaluate the ops
+    def shallowCopy(self):
+        opsCopy = map(lambda o:o.shallowCopy(), self.ops)
+        return OpSeqFunction(self.opInputs,self.opOutput,opsCopy,rule=self.rule)
     def __repr__(self):
         shortOps = '[%r,...,%r]' % (self.ops[0],self.ops[-1])
         return 'OpSeqFunction(%r,%r,%r)' % (self.opInputs,self.opOutput,shortOps)
@@ -112,11 +119,14 @@ class OpSeqFunction(Function):
 class NullFunction(Function):
     """Returns an all-zeros vector."""
     def __init__(self,lhsMode):
+        self.lhsMode = lhsMode
         self.opInputs = [('X%d' % i)  for i in range(lhsMode.arity) if lhsMode.isInput(i)]
         self.opOutput = 'Y'
         self.ops = [ops.AssignZeroToVar(self.opOutput)]
         self.output = None
         self.delta = None
+    def shallowCopy(self):
+        return NullFunction(lhsMode=self.lhsMode)
     def __repr__(self):
         return 'NullFunction()'
     def pprintSummary(self):
@@ -134,6 +144,8 @@ class LogFunction(Function):
         self.fun = fun
         self.output = None
         self.delta = None
+    def shallowCopy(self):
+        return LogFunction(self.fun.shallowCopy())
     def __repr__(self):
         return 'LogFunction(%r)' % self.fun
     def pprintSummary(self):
@@ -154,6 +166,8 @@ class SumFunction(Function):
         self.funs = funs
         self.output = None
         self.delta = None
+    def shallowCopy(self):
+        return SumFunction(map(lambda f:f.shallowCopy(), self.funs))
     def __repr__(self):
         return 'SumFunction(%r)' % self.funs
     def pprintSummary(self):
@@ -181,6 +195,8 @@ class SoftmaxFunction(Function):
         self.fun = fun
         self.output = None
         self.delta = None
+    def shallowCopy(self):
+        return SoftmaxFunction(self.fun.shallowCopy())
     def __repr__(self):
         return 'SoftmaxFunction(%r)' % self.fun
     def pprintSummary(self):

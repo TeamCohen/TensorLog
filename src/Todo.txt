@@ -7,6 +7,7 @@ TODO:
 
  - try multithreading for minibatches
  -- maybe will need to recode broadcastAndWeightByRowSum,broadcastAndComponentwiseMultiply,softmax in pyrex/c?
+ -- fun.backprop doesn't seem to be thread-safe: eg self.delta
 
  - optimization for cora-expt:
  -- train is 8.7s, mostly gradient
