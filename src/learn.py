@@ -1,5 +1,7 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 #
+# learning methods for Tensorlog
+# 
 
 import time
 import math
@@ -15,8 +17,10 @@ import mutil
 import declare
 import traceback
 
+
 # clip to avoid exploding gradients
 
+#TODO make conf
 MIN_GRADIENT = -100.0
 MAX_GRADIENT = +100.0
 
@@ -44,7 +48,6 @@ class GradAccumulator(object):
             self.runningSum[paramName] = self.runningSum[paramName] + deltaGradient
             mutil.checkCSR(self.runningSum[paramName],('runningSum for %s' % str(paramName)))
         
-
 class Learner(object):
     """Abstract class with some utility functions.."""
 
@@ -82,7 +85,7 @@ class Learner(object):
 
     @staticmethod
     def datasetAccuracy(goldDset,predictedDset):
-        """ Return accuracy on a dataset. """
+        """ Return accuracy on a dataset relative to gold labels. """
         weightedSum = 0.0
         totalWeight = 0.0
         for mode in goldDset.modesToLearn():
@@ -132,6 +135,8 @@ class Learner(object):
         result = -(Y.multiply(logP).sum())
         return result/mutil.numRows(Y) if perExample else result
 
+    # trace functions are called by gradient computation in crossEntropyGrad 
+
     @staticmethod
     def nullTraceFun(thisLearner, Y, P, i = -1, startTime = 0.0, mode = None):
         """To be passed in as a traceFun option to a Learner.  In each epoch,
@@ -163,7 +168,9 @@ class Learner(object):
 
     def crossEntropyGrad(self,mode,X,Y,traceFunArgs={},pad=None):
         """Compute the parameter gradient associated with softmax
-        normalization followed by a cross-entropy cost function.
+        normalization followed by a cross-entropy cost function.  If a
+        scratchpad is passed in, then intermediate results of the
+        gradient computation will be saved on that scratchpad.
         """
 
         if not pad: pad = opfunutil.Scratchpad()
@@ -178,15 +185,20 @@ class Learner(object):
         # function, and it pass that delta down to the inner function
         # for softMax
 
+        # do the prediction, saving intermediate outputs on the scratchpad
         predictFun = self.prog.getPredictFunction(mode)
         assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
         P = self.predict(mode,X,pad)
 
+        # output some trace information
         if self.traceFun: self.traceFun(self,Y,P,**traceFunArgs)
+
+        # compute gradient
         paramGrads = GradAccumulator()
         #TODO assert rowSum(Y) = all ones - that's assumed here in
         #initial delta of Y-P
         predictFun.fun.backprop(Y-P,paramGrads,pad)
+
         return paramGrads
 
 
@@ -213,6 +225,10 @@ class Learner(object):
             #clip negative entries of parameters to zero
             m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
             self.prog.db.setParameter(functor,arity,m)
+
+#
+# actual learner implementations
+#
 
 class OnePredFixedRateGDLearner(Learner):
     """ Simple one-predicate learner.
@@ -297,6 +313,11 @@ class FixedRateSGDLearner(FixedRateGDLearner):
                     print '-' * 60
                     traceback.print_exc()
                     print '-' * 60
+
+#
+# regularizers
+#
+
 
 class Regularizer(object):
     """Abstract class for regularizers."""
