@@ -128,7 +128,7 @@ class NullFunction(Function):
     def _doEval(self,db,values,pad):
         return db.zeros(mutil.numRows(values[0]))
     def _doBackprop(self,delta,gradAccum,pad):
-        return self.output
+        return pad[self.id].output
     def children(self):
         return []
 
