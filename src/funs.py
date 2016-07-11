@@ -7,6 +7,7 @@ import sys
 import logging
 import traceback
 
+import opfunutil
 import ops
 import config
 import mutil
@@ -26,6 +27,7 @@ class Function(object):
     """The tensorlog representation of a function. This supports eval and
     evalGrad operations, and take a list of input values as the inputs.
     """
+
     def eval(self,db,values,pad):
         self._checkDuplications()
         if conf.trace:
@@ -38,6 +40,7 @@ class Function(object):
                     print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
                 print '. result :',db.matrixAsSymbolDict(result)
         return pad[self.id].output
+
     def backprop(self,delta,gradAccum,pad):
         if conf.trace:
             print "Backprop:\n%s" % "\n. . ".join(self.pprint())
@@ -45,7 +48,10 @@ class Function(object):
         if conf.trace:
             print "Backprop completed:\n%s" % "\n. . ".join(self.pprint())
         return pad[self.id].delta
+
     def _checkDuplications(self):
+        """For debugging/testing - poke around for copies of the same function
+        somewhere in the tree."""
         kids = self.children()
         for i in range(len(kids)):
             for j in range(i+1,len(kids)):
@@ -53,8 +59,10 @@ class Function(object):
         for f in kids:
             if isinstance(f,Function):
                 f._checkDuplications()
+
     def install(self,nextId=1):
-        """ Give a numeric id to each function in this tree, and all the operations. """
+        """ Give a numeric id to each function in this tree, and all the
+        operations below it. """
         self.id = nextId
         nextId += 1
         for f in self.children():
@@ -63,6 +71,7 @@ class Function(object):
 
     # these are used in pprint, and also in the debugging
     # visualization
+
     def pprint(self,depth=0):
         """Return list of lines in a pretty-print of the function.
         """
@@ -73,17 +82,20 @@ class Function(object):
             for s in c.pprint(depth):
                 result.append('| ' + s)
         return result
+
     def pprintSummary(self):
         assert False, 'abstract method called'
+
     def pprintComment(self):
         return ''
+
     def children(self):
         """Return list of child functions, for visualization"""
         assert False, 'abstract method called'
 
 class OpSeqFunction(Function):
-
     """A function defined by executing a sequence of operators."""
+
     def __init__(self,opInputs,opOutput,ops,rule=None):
         self.opInputs = opInputs    #initial bindings to insert in Envir
         self.opOutput = opOutput  #finding bindings which indicate the output
@@ -98,7 +110,7 @@ class OpSeqFunction(Function):
         return str(self.rule) if self.rule else '' 
     def _doEval(self,db,values,pad):
         #eval expression
-        pad[self.id].opEnv = ops.Envir(db)
+        pad[self.id].opEnv = opfunutil.Envir(db)
         pad[self.id].opEnv.bindList(self.opInputs,values)
         for op in self.ops:
             op.eval(pad[self.id].opEnv,pad)
@@ -116,6 +128,7 @@ class OpSeqFunction(Function):
 
 class NullFunction(Function):
     """Returns an all-zeros vector."""
+
     def __init__(self,lhsMode):
         self.lhsMode = lhsMode
         self.opInputs = [('X%d' % i)  for i in range(lhsMode.arity) if lhsMode.isInput(i)]
@@ -133,7 +146,8 @@ class NullFunction(Function):
         return []
 
 class LogFunction(Function):
-    """Returns an all-zeros vector."""
+    """Returns element-wise log of the output of the inner function."""
+
     def __init__(self,fun):
         self.fun = fun
     def __repr__(self):
@@ -152,6 +166,7 @@ class LogFunction(Function):
 
 class SumFunction(Function):
     """A function which computes the sum of a bunch of other functions."""
+
     def __init__(self,funs):
         self.funs = funs
     def __repr__(self):
@@ -176,7 +191,8 @@ class SumFunction(Function):
         return self.funs
 
 class SoftmaxFunction(Function):
-    """A function which computes row-wise softmax."""
+    """A function which computes row-wise softmax of an inner function."""
+
     def __init__(self,fun):
         self.fun = fun
     def __repr__(self):
@@ -191,5 +207,3 @@ class SoftmaxFunction(Function):
         assert False, 'should not call this directly'
     def children(self):
         return [self.fun]
-
-

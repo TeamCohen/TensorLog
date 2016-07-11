@@ -7,7 +7,7 @@ import numpy as NP
 import scipy.sparse as SS
 import collections
 
-import ops
+import opfunutil
 import funs
 import tensorlog
 import dataset
@@ -60,7 +60,7 @@ class Learner(object):
 
     def predict(self,mode,X,pad=None):
         """Make predictions on a data matrix associated with the given mode."""
-        if not pad: pad = ops.Scratchpad() 
+        if not pad: pad = opfunutil.Scratchpad() 
         predictFun = self.prog.getPredictFunction(mode)
         result = predictFun.eval(self.prog.db, [X], pad)
         return result
@@ -166,7 +166,7 @@ class Learner(object):
         normalization followed by a cross-entropy cost function.
         """
 
-        if not pad: pad = ops.Scratchpad()
+        if not pad: pad = opfunutil.Scratchpad()
 
         # More detail: in learning we use a softmax normalization
         # followed immediately by a crossEntropy loss, which has a

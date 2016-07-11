@@ -9,7 +9,7 @@ import getopt
 
 import declare
 import funs
-import ops
+import opfunutil
 import parser
 import matrixdb
 import bpcompiler
@@ -95,7 +95,7 @@ class Program(object):
         """
         if (mode,0) not in self.function: self.compile(mode)
         fun = self.function[(mode,0)]
-        return fun.eval(self.db, inputs, ops.Scratchpad())
+        return fun.eval(self.db, inputs, opfunutil.Scratchpad())
 
     def evalGradSymbols(self,mode,symbols):
         """ After compilation, evaluate a function.  Input is a list of

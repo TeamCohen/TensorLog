@@ -18,7 +18,7 @@ import declare
 import learn
 import mutil
 import config
-import ops
+import opfunutil
 
 conf = config.Config()
 conf.sortByValue = True;   conf.help.sortByValue = "In displaying message values, sort entries by weight if true, by name if false."
@@ -41,7 +41,7 @@ class Debugger(object):
         self.X = self.trainData.getX(self.mode)
         self.Y = self.trainData.getY(self.mode)
         self.fun = self.prog.getPredictFunction(self.mode)
-        self.pad = ops.Scratchpad()
+        self.pad = opfunutil.Scratchpad()
         self.P = self.fun.eval(self.prog.db, [self.X], self.pad)
 
         # find the symbols that correspond to the inputs

@@ -4,12 +4,11 @@
 #             function evaluation
 #
 
-import numpy
 import logging
 #TODO make util smart about csc/csr
 import scipy.sparse
-import math
 
+import opfunutil
 import mutil
 import config
 
@@ -18,62 +17,15 @@ conf.trace = False;      conf.help.trace =           "Print debug info during op
 conf.long_trace = False; conf.help.long_trace =      "Print output of functions after op - only for small tasks"
 conf.max_trace = False;  conf.help.max_trace =       "Print max value of functions after op"
 conf.check_nan = True;   conf.help.check_overflow =  "Check if output of each op is nan."
+conf.pprintMaxdepth=0;   conf.help.pprintMaxdepth =  "Controls op.pprint() output"
 
-MAXDEPTH=0
 
-##############################################################################
-#
-# environment - holds either computed values, or subexpressions
-#
-##############################################################################
-
-class MutableObject(object):
-    pass
-
-class Scratchpad(object):
-    """ Space for computations. """
-    def __init__(self):
-        self.d = dict()
-    def __getitem__(self,key):
-        if key not in self.d:
-            self.d[key] = MutableObject()
-        return self.d[key]
-    def __setitem__(self,key,val):
-        if key not in self.d:
-            self.d[key] = MutableObject()
-        self.d[key] = val
-
-class Envir(object):
-    """Holds a MatrixDB object and a group of variable bindings.
-    Variables are used in message-passing.
-    """
-    def __init__(self,db):
-        self.register = {}
-        self.delta = {}
-        self.db = db
-    def bindList(self,vars,vals):
-        """Bind each variable in a list to the corresponding value."""
-        assert len(vars)==len(vals)
-        for i in range(len(vars)):
-            self[vars[i]] = vals[i]
-    def __repr__(self):
-        return 'Envir(%r)' % self.register
-    #override env[var] to access the binding array
-    def __getitem__(self,key):
-        return self.register[key]
-    def __setitem__(self,key,val):
-        self.register[key] = val
-
-##############################################################################
-#
-# operators
-#
-##############################################################################
+# identify built in i/o operators
 
 def isBuiltinIOOp(mode):
     return mode.functor=='printf'
 
-class Op(object):
+class Op(opfunutil.OperatorOrFunction):
     """Sort of like a function but side-effects an environment.  More
     specifically, this is the tensorlog encoding for matrix-db
     'operations' which can be 'eval'ed or differentiated. Operations
@@ -85,11 +37,13 @@ class Op(object):
     def __init__(self,dst):
         self.dst = dst
         self.msgFrom = self.msgTo = None
+
     def setMessage(self,msgFrom,msgTo):
         """For debugging/tracing, record the BP message associated with this
         operation."""
         self.msgFrom = msgFrom
         self.msgTo = msgTo
+
     def eval(self,env,pad):
         """Evaluate an operator inside an environment."""
         if conf.trace:
@@ -116,29 +70,32 @@ class Op(object):
         pad[self.id].delta = env.delta[self.dst]
         if conf.trace: 
             print 'end op bp',self
-    def showDeltaShape(self,env,key):
-        print 'shape of env.delta[%s]' % key,env.delta[key].get_shape()
-    def showShape(self,env,key):
-        print 'shape of env[%s]' % key,env[key].get_shape()
-    #needed for visualization
+
     def pprint(self,depth=0):
         description = ('%-2d ' % self.id) + self.pprintSummary()
         comment = self.pprintComment()
         if comment: return [description + ' # ' + comment]
         else: return [description]
+
     def pprintSummary(self):
         return '%s = %s' % (self.dst,self._ppLHS())
+
     def pprintComment(self):
         return '%s -> %s' % (self.msgFrom,self.msgTo) if (self.msgFrom and self.msgTo) else ''
-    def children(self):
-        return []
-    def install(self,nextId):
-        """ Give a numeric id to this operator """
-        self.id = nextId
-        return nextId+1
+
     def _ppLHS(self):
         #override in subclasses
         return repr(self)
+
+    #needed for traversal
+    def children(self):
+        #override in subclass
+        return []
+    
+    def install(self,nextId):
+        """ Give a numeric id to this operator/function """
+        self.id = nextId
+        return nextId+1
 
 class DefinedPredOp(Op):
     """Op that calls a defined predicate."""
@@ -164,7 +121,7 @@ class DefinedPredOp(Op):
         env.delta[self.src] = newDelta
     def pprint(self,depth=-1):
         top = super(DefinedPredOp,self).pprint(depth)
-        if depth>MAXDEPTH: return top + ["%s..." % ('| '*(depth+1))]
+        if depth>conf.pprintMaxdepth: return top + ["%s..." % ('| '*(depth+1))]
         return top + self.tensorlogProg.function[(self.funMode,self.depth)].pprint(depth=depth+1)
     def install(self,nextId):
         """ Give a numeric id to this operator """
