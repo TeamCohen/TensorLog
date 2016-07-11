@@ -18,6 +18,7 @@ import declare
 import learn
 import mutil
 import config
+import ops
 
 conf = config.Config()
 conf.sortByValue = True;   conf.help.sortByValue = "In displaying message values, sort entries by weight if true, by name if false."
@@ -40,7 +41,8 @@ class Debugger(object):
         self.X = self.trainData.getX(self.mode)
         self.Y = self.trainData.getY(self.mode)
         self.fun = self.prog.getPredictFunction(self.mode)
-        self.P = self.fun.eval(self.prog.db, [self.X])
+        self.pad = ops.Scratchpad()
+        self.P = self.fun.eval(self.prog.db, [self.X], self.pad)
 
         # find the symbols that correspond to the inputs
         dd = self.prog.db.matrixAsSymbolDict(self.X)
@@ -48,8 +50,10 @@ class Debugger(object):
 
         # evaluate the gradient so that's cached
         if gradient:
-            self.learner = learn.OnePredFixedRateGDLearner(self.prog)
-            self.grad = self.learner.crossEntropyGrad(self.mode,self.X,self.Y)
+            learner = learn.OnePredFixedRateGDLearner(self.prog, traceFun=learn.Learner.nullTraceFun)
+            self.grad = learner.crossEntropyGrad(self.mode, self.X, self.Y, pad=self.pad)
+        else:
+            self.grad = None
     
     def render(self):
         #set up a window
@@ -149,11 +153,13 @@ class Debugger(object):
             description = fun.pprintSummary()
             comment = fun.pprintComment()
             key = "iid%d" % len(self.treeOutputs.keys())
+            funOutput = self.pad[fun.id].output
+            funDelta = None if self.grad!=None else self.pad[fun.id].delta
             child = self.tree.insert(
                 parent,offset,iid=key,text=description,
-                values=(comment,mutil.pprintSummary(fun.output),mutil.pprintSummary(fun.delta)),open=True)
-            self.treeOutputs[key] = fun.output
-            self.treeDeltas[key] = fun.delta
+                values=(comment,mutil.pprintSummary(funOutput),mutil.pprintSummary(funDelta)),open=True)
+            self.treeOutputs[key] = funOutput
+            self.treeDeltas[key] = funDelta
             self.populateTree(fun.children(), child)
 
     def mainloop(self):

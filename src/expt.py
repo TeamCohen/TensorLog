@@ -151,11 +151,13 @@ if __name__=="__main__":
         Expt(params).run()
         print 'saved in expt-model.db'
 
-    except Exception:
+    except Exception as ex:
+        print 'error parsing standard command line options:',ex
+
 
         def usage():
             print 'usage: python expt.py --prog a --db b --trainData c --testData d'
-            print 'usage: python expt.py [textcattoy|matchtoy]'
+            print 'usage: python expt.py textcattoy|matchtoy mode'
 
         if len(sys.argv)<2:
             usage()
@@ -175,6 +177,7 @@ if __name__=="__main__":
             initWeights = prog.db.ones()
         else:
             usage()
+            sys.exit(-1)
 
         prog.setWeights(initWeights)
 

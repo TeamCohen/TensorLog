@@ -1,13 +1,14 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 #
 
-import funs
 import time
 import math
 import numpy as NP
 import scipy.sparse as SS
 import collections
 
+import ops
+import funs
 import tensorlog
 import dataset
 import mutil
@@ -57,10 +58,11 @@ class Learner(object):
     # using and measuring performance
     #
 
-    def predict(self,mode,X):
+    def predict(self,mode,X,pad=None):
         """Make predictions on a data matrix associated with the given mode."""
-        predictFun = self.prog.getPredictFunction(mode).shallowCopy()
-        result = predictFun.eval(self.prog.db, [X])
+        if not pad: pad = ops.Scratchpad() 
+        predictFun = self.prog.getPredictFunction(mode)
+        result = predictFun.eval(self.prog.db, [X], pad)
         return result
 
     def datasetPredict(self,dset,copyXs=True):
@@ -159,10 +161,12 @@ class Learner(object):
         print ' ; acc %.3f' % thisLearner.accuracy(Y,P),
         print ' ; cumSecs %.3f' % (time.time()-startTime)
 
-    def crossEntropyGrad(self,mode,X,Y,traceFunArgs={}):
+    def crossEntropyGrad(self,mode,X,Y,traceFunArgs={},pad=None):
         """Compute the parameter gradient associated with softmax
         normalization followed by a cross-entropy cost function.
         """
+
+        if not pad: pad = ops.Scratchpad()
 
         # More detail: in learning we use a softmax normalization
         # followed immediately by a crossEntropy loss, which has a
@@ -176,12 +180,13 @@ class Learner(object):
 
         predictFun = self.prog.getPredictFunction(mode)
         assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
-        P = self.predict(mode,X)
+        P = self.predict(mode,X,pad)
+
         if self.traceFun: self.traceFun(self,Y,P,**traceFunArgs)
         paramGrads = GradAccumulator()
         #TODO assert rowSum(Y) = all ones - that's assumed here in
         #initial delta of Y-P
-        predictFun.fun.backprop(Y-P,paramGrads)
+        predictFun.fun.backprop(Y-P,paramGrads,pad)
         return paramGrads
 
 

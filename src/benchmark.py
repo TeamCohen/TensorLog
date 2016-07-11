@@ -4,6 +4,7 @@ import sys
 import time
 import resource
 
+import ops
 import declare
 import matrixdb
 import mutil
@@ -87,7 +88,7 @@ def runBenchmark(com):
         k = 0
         for (m,vx) in queries:
             fun = prog.function[(m,0)]
-            fun.eval(db, [vx])
+            fun.eval(db, [vx], ops.Scratchpad())
             k += 1
             if not k%100: print 'answered',k,'queries'
         print 'answered',len(queries),'queries at',len(queries)/(time.time() - start),'qps'
@@ -105,7 +106,7 @@ def runBenchmark(com):
         qX = mutil.stack(Xs)
         start = time.time()
         fun = prog.function[(qMode,0)]
-        fun.eval(db, [qX])
+        fun.eval(db, [qX], ops.Scratchpad())
         print 'answered',len(queries),'queries at',len(queries)/(time.time() - start),'qps'
     else:
         assert False,'illegal benchmark task'

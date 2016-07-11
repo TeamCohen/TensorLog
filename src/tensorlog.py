@@ -72,6 +72,8 @@ class Program(object):
                     self.function[(mode,0)] = funs.SoftmaxFunction(funs.LogFunction(self.function[(mode,0)]))
                 else:
                     assert not self.normalize, 'bad value of self.normalize: %r' % self.normalize
+                # label internal nodes/ops of function with ids
+                self.function[(mode,0)].install()
         return self.function[(mode,depth)]
 
     def getPredictFunction(self,mode):
@@ -93,7 +95,7 @@ class Program(object):
         """
         if (mode,0) not in self.function: self.compile(mode)
         fun = self.function[(mode,0)]
-        return fun.eval(self.db, inputs)
+        return fun.eval(self.db, inputs, ops.Scratchpad())
 
     def evalGradSymbols(self,mode,symbols):
         """ After compilation, evaluate a function.  Input is a list of

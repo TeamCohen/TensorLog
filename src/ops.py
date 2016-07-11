@@ -27,6 +27,22 @@ MAXDEPTH=0
 #
 ##############################################################################
 
+class MutableObject(object):
+    pass
+
+class Scratchpad(object):
+    """ Space for computations. """
+    def __init__(self):
+        self.d = dict()
+    def __getitem__(self,key):
+        if key not in self.d:
+            self.d[key] = MutableObject()
+        return self.d[key]
+    def __setitem__(self,key,val):
+        if key not in self.d:
+            self.d[key] = MutableObject()
+        self.d[key] = val
+
 class Envir(object):
     """Holds a MatrixDB object and a group of variable bindings.
     Variables are used in message-passing.
@@ -69,18 +85,17 @@ class Op(object):
     def __init__(self,dst):
         self.dst = dst
         self.msgFrom = self.msgTo = None
-        self.delta = None
     def setMessage(self,msgFrom,msgTo):
         """For debugging/tracing, record the BP message associated with this
         operation."""
         self.msgFrom = msgFrom
         self.msgTo = msgTo
-    def eval(self,env):
+    def eval(self,env,pad):
         """Evaluate an operator inside an environment."""
         if conf.trace:
             print 'op eval',self,
-        self._doEval(env)
-        self.output = env[self.dst]
+        self._doEval(env,pad)
+        pad[self.id].output = env[self.dst]
         if conf.trace:
             if conf.long_trace: print 'stores',env.db.matrixAsSymbolDict(env[self.dst]),
             if conf.max_trace: print 'max',mutil.maxValue(env[self.dst]),
@@ -88,7 +103,7 @@ class Op(object):
         if conf.check_nan:
             mutil.checkNoNANs(env[self.dst], context='saving %s' % self.dst)
 
-    def backprop(self,env,gradAccum):
+    def backprop(self,env,gradAccum,pad):
         """Backpropagate errors - stored in the env.delta[...] from outputs of
         the operator to the inputs.  Assumes that 'eval' has been
         called first.
@@ -97,8 +112,8 @@ class Op(object):
             print 'call op bp',self,'delta[',self.dst,'] shape',env.delta[self.dst].get_shape(),
             if conf.long_trace: print env.db.matrixAsSymbolDict(env.delta[self.dst])
             else: print
-        self._doBackprop(env,gradAccum)
-        self.delta = env.delta[self.dst]
+        self._doBackprop(env,gradAccum,pad)
+        pad[self.id].delta = env.delta[self.dst]
         if conf.trace: 
             print 'end op bp',self
     def showDeltaShape(self,env,key):
@@ -107,7 +122,7 @@ class Op(object):
         print 'shape of env[%s]' % key,env[key].get_shape()
     #needed for visualization
     def pprint(self,depth=0):
-        description = self.pprintSummary()
+        description = ('%-2d ' % self.id) + self.pprintSummary()
         comment = self.pprintComment()
         if comment: return [description + ' # ' + comment]
         else: return [description]
@@ -117,6 +132,10 @@ class Op(object):
         return '%s -> %s' % (self.msgFrom,self.msgTo) if (self.msgFrom and self.msgTo) else ''
     def children(self):
         return []
+    def install(self,nextId):
+        """ Give a numeric id to this operator """
+        self.id = nextId
+        return nextId+1
     def _ppLHS(self):
         #override in subclasses
         return repr(self)
@@ -129,26 +148,29 @@ class DefinedPredOp(Op):
         self.src = src
         self.funMode = mode
         self.depth = depth
-        self.subfun = self.tensorlogProg.function[(self.funMode,self.depth)].shallowCopy()
-    def shallowCopy(self):
-        return DefinedPredOp(self.tensorlogProg,self.dst,self.src,self.funMode,self.depth)
+        self.subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
     def __repr__(self):
         return "DefinedPredOp(%r,%r,%s,%d)" % (self.dst,self.src,str(self.funMode),self.depth)
     def _ppLHS(self):
         return "f_[%s,%d](%s)" % (str(self.funMode),self.depth,self.src)
-    def _doEval(self,env):
+    def _doEval(self,env,pad):
         subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
         vals = [env[self.src]]
-        outputs = subfun.eval(self.tensorlogProg.db, vals)
+        outputs = subfun.eval(self.tensorlogProg.db, vals, pad)
         env[self.dst] = outputs
-    def _doBackprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum,pad):
         subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
-        newDelta = subfun.backprop(env.delta[self.dst],gradAccum)
+        newDelta = subfun.backprop(env.delta[self.dst],gradAccum,pad)
         env.delta[self.src] = newDelta
     def pprint(self,depth=-1):
         top = super(DefinedPredOp,self).pprint(depth)
         if depth>MAXDEPTH: return top + ["%s..." % ('| '*(depth+1))]
         return top + self.tensorlogProg.function[(self.funMode,self.depth)].pprint(depth=depth+1)
+    def install(self,nextId):
+        """ Give a numeric id to this operator """
+        self.id = nextId
+        return self.subfun.install(nextId+1)
+
 
 class AssignPreimageToVar(Op):
     """Mat is something like p(X,Y) where Y is not used 'downstream' or
@@ -158,15 +180,13 @@ class AssignPreimageToVar(Op):
     def __init__(self,dst,matMode):
         super(AssignPreimageToVar,self).__init__(dst)
         self.matMode = matMode
-    def shallowCopy(self):
-        return AssignPreimageToVar(self.dst,self.matMode)
     def __repr__(self):
         return "AssignPreimageToVar(%s,%s)" % (self.dst,self.matMode)
     def _ppLHS(self):
         return "M_[%s]" % str(self.matMode)
-    def _doEval(self,env):
+    def _doEval(self,env,pad):
         env[self.dst] = env.db.matrixPreimage(self.matMode)
-    def _doBackprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum,pad):
         #TODO implement preimages
         assert False,'backprop with preimages not implemented'
 
@@ -176,15 +196,13 @@ class AssignVectorToVar(Op):
     def __init__(self,dst,matMode):
         super(AssignVectorToVar,self).__init__(dst)
         self.matMode = matMode
-    def shallowCopy(self):
-        return AssignVectorToVar(self.dst,self.matMode)
     def __repr__(self):
         return "AssignVectorToVar(%s,%s)" % (self.dst,self.matMode)
     def _ppLHS(self):
         return "V_[%s]" % str(self.matMode)
-    def _doEval(self,env):
+    def _doEval(self,env,pad):
         env[self.dst] = env.db.vector(self.matMode)
-    def _doBackprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum,pad):
         if env.db.isParameter(self.matMode):        
             update = env.delta[self.dst]
             key = (self.matMode.functor,self.matMode.arity)
@@ -194,15 +212,13 @@ class AssignZeroToVar(Op):
     """Set the dst variable to an all-zeros row."""
     def __init__(self,dst):
         super(AssignZeroToVar,self).__init__(dst)
-    def shallowCopy(self):
-        return AssignZeroToVar(self.dst)
     def __repr__(self):
         return "ClearVar(%r)" % (self.dst)
     def _ppLHS(self):
         return "0"
-    def _doEval(self,env):
+    def _doEval(self,env,pad):
         env[self.dst] = env.db.zeros()
-    def _doBackprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum,pad):
         pass
 
 class AssignOnehotToVar(Op):
@@ -212,15 +228,13 @@ class AssignOnehotToVar(Op):
         super(AssignOnehotToVar,self).__init__(dst)
         self.mode = mode
         self.onehotConst = mode.arg(1)
-    def shallowCopy(self):
-        return AssignOnehotToVar(self.dst,self.mode)
     def __repr__(self):
         return "AssignOnehotToVar(%s,%s)" % (self.dst,self.onehotConst)
     def _ppLHS(self):
         return 'U_[%s]' % self.onehotConst
-    def _doEval(self,env):
+    def _doEval(self,env,pad):
         env[self.dst] = env.db.onehot(self.onehotConst)
-    def _doBackprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum,pad):
         pass
 
 class VecMatMulOp(Op):
@@ -231,17 +245,15 @@ class VecMatMulOp(Op):
         self.src = src
         self.matMode = matMode
         self.transpose = transpose
-    def shallowCopy(self):
-        return VecMatMulOp(self.dst,self.src,self.matMode,transpose=self.transpose)
     def __repr__(self):
         return "VecMatMulOp(%r,%r,%s,%r)" % (self.dst,self.src,self.matMode,self.transpose)
     def _ppLHS(self):
         buf = "%s * M_[%s]" % (self.src,self.matMode)
         if self.transpose: buf += ".T"
         return buf
-    def _doEval(self,env):
+    def _doEval(self,env,pad):
         env[self.dst] = env[self.src] * env.db.matrix(self.matMode,self.transpose)
-    def _doBackprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum,pad):
         # dst = f(src,mat)
         env.delta[self.src] = env.delta[self.dst] * env.db.matrix(self.matMode,(not self.transpose))
         mutil.checkCSR(env.delta[self.src],'delta[%s]' % self.src)
@@ -278,7 +290,7 @@ class BuiltInIOOp(Op):
         return "BuiltInIOOp(%r,%r,%s)" % (self.dst,self.src,self.matMode)
     def _ppLHS(self):
         return "buitin_%s(%s)" % (self.matMode.functor,self.src)
-    def _doEval(self,env):
+    def _doEval(self,env,pad):
         assert self.matMode.functor=='printf'
         d = env.db.matrixAsSymbolDict(env[self.src])
         print '= %s->%s' % (self.msgFrom,self.msgTo),
@@ -289,7 +301,7 @@ class BuiltInIOOp(Op):
             for k in d:
                 print '= row',k,'=>',d[k]
         env[self.dst] = env[self.src]
-    def _doBackprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum,pad):
         env.delta[self.src] = env.delta[self.dst]
 
 
@@ -301,15 +313,13 @@ class ComponentwiseVecMulOp(Op):
         super(ComponentwiseVecMulOp,self).__init__(dst)
         self.src = src
         self.src2 = src2
-    def shallowCopy(self):    
-        return ComponentwiseVecMulOp(self.dst,self.src,self.src2)
     def __repr__(self):
         return "ComponentwiseVecMulOp(%r,%r,%s)" % (self.dst,self.src,self.src2)
     def _ppLHS(self):
         return "%s o %s" % (self.src,self.src2)
-    def _doEval(self,env):
+    def _doEval(self,env,pad):
         env[self.dst] = mutil.broadcastAndComponentwiseMultiply(env[self.src],env[self.src2])
-    def _doBackprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum,pad):
         env.delta[self.src] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src2])
         env.delta[self.src2] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src])
 
@@ -322,15 +332,13 @@ class WeightedVec(Op):
         self.weighter = weighter
         self.vec = vec
         self.src = "[%s,%s]" % (weighter,vec)  #TODO: where is this used?
-    def shallowCopy(self):    
-        return WeightedVec(self.dst,self.weighter,self.vec)
     def __repr__(self):
         return "WeightedVec(%s,%s.sum(),%s)" % (self.dst,self.weighter,self.vec)
     def _ppLHS(self):
         return "%s * %s.sum()" % (self.vec,self.weighter)
-    def _doEval(self,env):
+    def _doEval(self,env,pad):
         env[self.dst] = mutil.broadcastAndWeightByRowSum(env[self.vec],env[self.weighter])
-    def _doBackprop(self,env,gradAccum):
+    def _doBackprop(self,env,gradAccum,pad):
         # This is written as a single operation
         #    dst = vec * weighter.sum()
         # but we will break into two steps conceptually

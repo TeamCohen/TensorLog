@@ -26,27 +26,25 @@ class Function(object):
     """The tensorlog representation of a function. This supports eval and
     evalGrad operations, and take a list of input values as the inputs.
     """
-    #TODO: called by benchmark, debug, learn, tensorlog; debug uses .output
-    def eval(self,db,values):
+    def eval(self,db,values,pad):
         self._checkDuplications()
         if conf.trace:
             print "Invoking:\n%s" % "\n. . ".join(self.pprint())
-        self.output = self._doEval(db,values)
+        pad[self.id].output = self._doEval(db,values,pad)
         if conf.trace:
             print "Function completed:\n%s" % "\n. . ".join(self.pprint())
             if conf.long_trace:
                 for k,v in enumerate(values):
                     print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
                 print '. result :',db.matrixAsSymbolDict(result)
-        return self.output
-    #TODO: called by learn, ops 
-    def backprop(self,delta,gradAccum):
+        return pad[self.id].output
+    def backprop(self,delta,gradAccum,pad):
         if conf.trace:
             print "Backprop:\n%s" % "\n. . ".join(self.pprint())
-        self.delta = self._doBackprop(delta,gradAccum)
+        pad[self.id].delta = self._doBackprop(delta,gradAccum,pad)
         if conf.trace:
             print "Backprop completed:\n%s" % "\n. . ".join(self.pprint())
-        return self.delta
+        return pad[self.id].delta
     def _checkDuplications(self):
         kids = self.children()
         for i in range(len(kids)):
@@ -55,12 +53,20 @@ class Function(object):
         for f in kids:
             if isinstance(f,Function):
                 f._checkDuplications()
+    def install(self,nextId=1):
+        """ Give a numeric id to each function in this tree, and all the operations. """
+        self.id = nextId
+        nextId += 1
+        for f in self.children():
+            nextId = f.install(nextId)
+        return nextId
+
     # these are used in pprint, and also in the debugging
     # visualization
     def pprint(self,depth=0):
         """Return list of lines in a pretty-print of the function.
         """
-        top = self.pprintSummary()
+        top = ('%-2d ' % self.id) + self.pprintSummary()
         comment = self.pprintComment()
         result = [top + ' # ' + comment] if comment else [top]
         for c in self.children():
@@ -74,8 +80,6 @@ class Function(object):
     def children(self):
         """Return list of child functions, for visualization"""
         assert False, 'abstract method called'
-    def shallowCopy(self):
-        assert False, 'abstract method called'
 
 class OpSeqFunction(Function):
 
@@ -84,13 +88,7 @@ class OpSeqFunction(Function):
         self.opInputs = opInputs    #initial bindings to insert in Envir
         self.opOutput = opOutput  #finding bindings which indicate the output
         self.ops = ops
-        self.output = None
-        self.delta = None
         self.rule = rule #recorded for debug/trace
-        self.opEnv = None #caches environment to evaluate the ops
-    def shallowCopy(self):
-        opsCopy = map(lambda o:o.shallowCopy(), self.ops)
-        return OpSeqFunction(self.opInputs,self.opOutput,opsCopy,rule=self.rule)
     def __repr__(self):
         shortOps = '[%r,...,%r]' % (self.ops[0],self.ops[-1])
         return 'OpSeqFunction(%r,%r,%r)' % (self.opInputs,self.opOutput,shortOps)
@@ -98,21 +96,21 @@ class OpSeqFunction(Function):
         return '%s = OpSeqFunction(%r)' % (self.opOutput,self.opInputs)
     def pprintComment(self):
         return str(self.rule) if self.rule else '' 
-    def _doEval(self,db,values):
+    def _doEval(self,db,values,pad):
         #eval expression
-        self.opEnv = ops.Envir(db)
-        self.opEnv.bindList(self.opInputs,values)
+        pad[self.id].opEnv = ops.Envir(db)
+        pad[self.id].opEnv.bindList(self.opInputs,values)
         for op in self.ops:
-            op.eval(self.opEnv)
-        return self.opEnv[self.opOutput]
-    def _doBackprop(self,delta,gradAccum):
-        self.opEnv.delta[self.opOutput] = delta
+            op.eval(pad[self.id].opEnv,pad)
+        return pad[self.id].opEnv[self.opOutput]
+    def _doBackprop(self,delta,gradAccum,pad):
+        pad[self.id].opEnv.delta[self.opOutput] = delta
         n = len(self.ops)
         for i in range(n):
             op = self.ops[n-i-1]
-            op.backprop(self.opEnv,gradAccum)
+            op.backprop(pad[self.id].opEnv,gradAccum,pad)
         assert len(self.opInputs)==1, 'bp for multiple input functions not implemented'
-        return self.opEnv.delta[self.opInputs[0]]
+        return pad[self.id].opEnv.delta[self.opInputs[0]]
     def children(self):
         return self.ops
 
@@ -123,17 +121,13 @@ class NullFunction(Function):
         self.opInputs = [('X%d' % i)  for i in range(lhsMode.arity) if lhsMode.isInput(i)]
         self.opOutput = 'Y'
         self.ops = [ops.AssignZeroToVar(self.opOutput)]
-        self.output = None
-        self.delta = None
-    def shallowCopy(self):
-        return NullFunction(lhsMode=self.lhsMode)
     def __repr__(self):
         return 'NullFunction()'
     def pprintSummary(self):
         return 'NullFunction'
-    def _doEval(self,db,values):
+    def _doEval(self,db,values,pad):
         return db.zeros(mutil.numRows(values[0]))
-    def _doBackprop(self,delta,gradAccum):
+    def _doBackprop(self,delta,gradAccum,pad):
         return self.output
     def children(self):
         return []
@@ -142,18 +136,14 @@ class LogFunction(Function):
     """Returns an all-zeros vector."""
     def __init__(self,fun):
         self.fun = fun
-        self.output = None
-        self.delta = None
-    def shallowCopy(self):
-        return LogFunction(self.fun.shallowCopy())
     def __repr__(self):
         return 'LogFunction(%r)' % self.fun
     def pprintSummary(self):
         return 'LogFunction'
-    def _doEval(self,db,values):
-        self.inner = self.fun.eval(db,values)
+    def _doEval(self,db,values,pad):
+        self.inner = self.fun.eval(db,values,pad)
         return mutil.mapData(lambda d:numpy.log1p(d.clip(0,d)), self.inner)
-    def _doBackprop(self,delta,gradAccum):
+    def _doBackprop(self,delta,gradAccum,pad):
         newDelta = mutil.mapData(lambda d:numpy.reciprocal(d+1), self.inner).multiply(delta)
         return self.fun.backprop(newDelta,gradAccum)
     def children(self):
@@ -164,24 +154,20 @@ class SumFunction(Function):
     """A function which computes the sum of a bunch of other functions."""
     def __init__(self,funs):
         self.funs = funs
-        self.output = None
-        self.delta = None
-    def shallowCopy(self):
-        return SumFunction(map(lambda f:f.shallowCopy(), self.funs))
     def __repr__(self):
         return 'SumFunction(%r)' % self.funs
     def pprintSummary(self):
         return 'SumFunction'
-    def _doEval(self,db,values):
+    def _doEval(self,db,values,pad):
         mapfun = putil.multithreaded_map if conf.parallel_sum else map
-        addends = mapfun(lambda f:f.eval(db,values), self.funs)
+        addends = mapfun(lambda f:f.eval(db,values,pad), self.funs)
         accum = addends[0]
         for i in range(1,len(addends)):
             accum = accum + addends[i]
         return accum
-    def _doBackprop(self,delta,gradAccum):
+    def _doBackprop(self,delta,gradAccum,pad):
         mapfun = putil.multithreaded_map if conf.parallel_sum else map
-        addends = mapfun(lambda f:f.backprop(delta,gradAccum), self.funs)
+        addends = mapfun(lambda f:f.backprop(delta,gradAccum,pad), self.funs)
         accum = addends[0]
         for i in range(1,len(addends)):
             accum = accum + addends[i]
@@ -193,18 +179,14 @@ class SoftmaxFunction(Function):
     """A function which computes row-wise softmax."""
     def __init__(self,fun):
         self.fun = fun
-        self.output = None
-        self.delta = None
-    def shallowCopy(self):
-        return SoftmaxFunction(self.fun.shallowCopy())
     def __repr__(self):
         return 'SoftmaxFunction(%r)' % self.fun
     def pprintSummary(self):
         return 'SoftmaxFunction'
-    def _doEval(self,db,values):
-        unnorm = self.fun.eval(db,values)
+    def _doEval(self,db,values,pad):
+        unnorm = self.fun.eval(db,values,pad)
         return mutil.softmax(db,unnorm)
-    def _doBackprop(self,delta):
+    def _doBackprop(self,delta,pad):
         # see comments for learner.crossEntropyGrad
         assert False, 'should not call this directly'
     def children(self):
