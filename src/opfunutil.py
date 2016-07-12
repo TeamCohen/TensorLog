@@ -5,6 +5,12 @@
 
 
 class OperatorOrFunction(object):
+    """TensorLog programs are composed of functions and operators.
+    Operators are lower-level things that side-effect an environment
+    (Envir) object.  Functions are higher-level.  Operators and Functions
+    have some common operations, mostly needed for visualization and
+    working with scratchpads.
+    """
 
     #needed for visualizations
 
@@ -23,18 +29,36 @@ class OperatorOrFunction(object):
         """A comment/provenance info for self.."""
         assert False, 'abstract method called'
 
-    def children(self):
-        """List of substructures."""
-        assert False, 'abstract method called'
-    
+    # A TensorLog program is compiled to a tree of functions and
+    # operators, which may need local memory.  For instance, when1 a
+    # function is evaluated the output needs to be recorded, because
+    # it's used in backpropagation.  When backpropagation is done the
+    # deltas need to be stored.  A function that is implemented by a
+    # sequence of operators also stores the environment in which the
+    # operators were evaluated, which also contains deltas.
+    #
+    # Storing this info is a bit messy because we also want
+    # functions/operators to be thread safe.  What's done it to assign
+    # every function/operator in a tree a unique numeric id, and store
+    # info in an auxiliary 'scratchpad' object.  Info in a scratchpad
+    # is always indexed by node id.  Before using a function/operator
+    # tree, you should call 'install' the root with the root of the
+    # tree.
+    #
+
     def install(self,nextId=1):
         """Traverse all substructures and assign numeric ids to then."""
         assert False, 'abstract method called'
 
+    def children(self):
+        """List of substructures."""
+        assert False, 'abstract method called'
+    
 
 class MutableObject(object):
-    """An object that one can attach properties to,
-    to stick into a Scratchpad.
+    """An object that one can attach properties to, to put into a
+    scratchpad dictionary.  Scratchpad's currently have only a few:
+    attributes .output, .delta, and sometimes .opEnv
     """
     pass
 
@@ -56,12 +80,18 @@ class Scratchpad(object):
             self.d[key] = MutableObject()
         self.d[key] = val
 
+# Arguably the environment and scratchpad should be combined, since
+# they perform similar tasks.  But the environment is indexed by
+# variable names and the scratchpad by function/op ids.
+
 class Envir(object):
-    """Holds a MatrixDB object, and a group of variable bindings for the
-    variables used in message-passing.  The value to which variable 'foo'
-    is bound is stored in env.register[foo], which is also written
-    env[foo].  The backprop-ed delta is stored in env.delta[foo].
+    """Holds a DB object, and a group of variable bindings for the
+    variables used in message-passing.  The value to which variable
+    'foo' is bound is stored in env.register[foo], which is also
+    written env[foo].  The backprop-ed delta is stored in
+    env.delta[foo].
     """
+
     def __init__(self,db):
         self.register = {}
         self.delta = {}
@@ -73,7 +103,9 @@ class Envir(object):
             self[vars[i]] = vals[i]
     def __repr__(self):
         return 'Envir(%r)' % self.register
-    #override env[var] to access 'register'
+    #
+    # override env[var] to access 'register'
+    #
     def __getitem__(self,key):
         return self.register[key]
     def __setitem__(self,key,val):

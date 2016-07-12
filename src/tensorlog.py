@@ -18,7 +18,10 @@ import learn
 import mutil
 import debug
 
-VERSION = "1.0.02"
+VERSION = "1.1.0"
+
+# version 1.0: refactored cleaned-up version of nips-submission codebase
+# version 1.1: thread-safe gradient and eval computation, and a parallel learner
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'

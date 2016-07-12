@@ -47,7 +47,7 @@ class GradAccumulator(object):
         else:
             self.runningSum[paramName] = self.runningSum[paramName] + deltaGradient
             mutil.checkCSR(self.runningSum[paramName],('runningSum for %s' % str(paramName)))
-        
+
 class Learner(object):
     """Abstract class with some utility functions.."""
 
@@ -213,7 +213,6 @@ class Learner(object):
         """ 
         for (functor,arity),delta0 in paramGrads.items():
             #clip the delta vector to avoid exploding gradients
-            #TODO have a clip function in mutil?
             delta = mutil.mapData(lambda d:NP.clip(d,MIN_GRADIENT,MAX_GRADIENT), delta0)
             m0 = self.prog.db.getParameter(functor,arity)
             if mutil.numRows(m0)==1:
