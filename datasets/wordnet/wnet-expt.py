@@ -4,6 +4,7 @@ import expt
 import declare
 import tensorlog
 import learn
+import plearn
 
 if __name__=="__main__":
     #usage: [targetPredicate] [epochs]
@@ -14,10 +15,11 @@ if __name__=="__main__":
 
     # use tensorlog.parseCommandLine to set up the program, etc
     optdict,args = tensorlog.parseCommandLine([
-            '--db', 'wnet.db|wnet.cfacts',
-            '--prog','wnet-learned.ppr', '--proppr',
-            '--train','%s-train.dset|%s-train.examples' % (pred,pred),
-            '--test', '%s-test.dset|%s-test.examples' % (pred,pred)])
+            '--logging', 'info',
+            '--db', 'inputs/wnet.db|inputs/wnet.cfacts',
+            '--prog','inputs/wnet-learned.ppr', '--proppr',
+            '--train','inputs/wnet-train.dset|inputs/wnet-train.exam',
+            '--test', 'inputs/wnet-test.dset|inputs/wnet-valid.exam'])
 
     # prog is shortcut to the output optdict, for convenience.
     prog = optdict['prog']
@@ -28,7 +30,7 @@ if __name__=="__main__":
     # use a non-default learner, overriding the tracing function,
     # number of epochs, and regularizer
 #    learner = learn.FixedRateGDLearner(prog,regularizer=learn.L2Regularizer(),traceFun=learn.Learner.cheapTraceFun,epochs=epochs)
-    learner = learn.FixedRateGDLearner(prog,epochs=epochs)
+    learner = plearn.ParallelFixedRateGDLearner(prog,epochs=epochs,parallel=40)
 
     # configute the experiment
     params = {'prog':prog,
@@ -36,8 +38,8 @@ if __name__=="__main__":
               'testData':optdict['testData'],
               'targetMode':'i_%s/io' % pred,
               'savedTestPredictions':'tmp-cache/%s-test.solutions.txt' % pred,
-              'savedTrainExamples':'tmp-cache/%s-train.examples' % pred,
-              'savedTestExamples':'tmp-cache/%s-test.examples' % pred,
+              'savedTrainExamples':'tmp-cache/wnet-train.examples',
+              'savedTestExamples':'tmp-cache/wnet-test.examples',
               'learner':learner
     }
 

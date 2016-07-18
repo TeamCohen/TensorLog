@@ -1,18 +1,39 @@
-test:	setup
-	python wnet-expt.py
+# default experiment and its output
 
-setup: wnet.cfacts wnet-learned.ppr
+expt: expt.log eval.log
 
-wnet.cfacts: wnet-ruleids.cfacts
-	cut -f2- raw/train.cfacts raw/valid.cfacts | perl -nae 'print join("\t",$$F[0],"s".$$F[1],"s".$$F[2]),"\n"' > wnet-core.cfacts
+expt.log: inputs/wnet.cfacts inputs/wnet-learned.ppr inputs/wnet-train.exam inputs/wnet-valid.exam
+	python wnet-expt.py > expt.log
+
+eval.log: expt.log
+	proppr eval tmp-cache/wnet-test.examples tmp-cache/hypernym-test.solutions.txt --metric auc --defaultNeg > eval.log
+
+# prepare for running expt
+
+setup: inputs/wnet.cfacts inputs/wnet-learned.ppr
+
+inputs/wnet-train.exam wnet-valid.exam:
 	python bin/convert-examples.py
-	cat wnet-*.cfacts > wnet.cfacts
 
-wnet-learned.ppr wnet-ruleids.cfacts:
+inputs/wnet.cfacts: inputs/wnet-ruleids.cfacts
+	cut -f2- raw/train.cfacts raw/valid.cfacts | perl -nae 'print join("\t",$$F[0],"s".$$F[1],"s".$$F[2]),"\n"' > inputs/wnet-core.cfacts
+	cat inputs/wnet-*.cfacts > inputs/wnet.cfacts
+
+inputs/wnet-learned.ppr inputs/wnet-ruleids.cfacts:
 	python bin/convert-rules.py
 
+# a quickly-viewable check on the default experiment (like a unit test)
+
+check: actual.txt
+	paste actual.txt expected.txt
+
+actual.txt: expt.log eval.log
+	echo \# actual output of expt on `date` > actual.txt
+	grep training.*done expt.log >> actual.txt
+	grep micro eval.log >> actual.txt 
+
+# clean up the directory
+
 clean:
-	rm -f *.pyc *.prof *~
-	rm -f wnet-*-train.examples wnet-*-test.examples wnet-*-test.solutions.txt wnet-*-train.cfacts wnet-*-valid.cfacts
-	rm -rf *-trained.db	
+	rm -f *.pyc *.prof *~ expt.log
 

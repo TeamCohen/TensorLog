@@ -18,9 +18,24 @@ import tensorlog
 import funs
 import ops
 import expt
-import mutil
 import learn
+import plearn
  
+# results july 14
+#
+# published experiments used 0.5 for EDGE_WEIGHT and learning;
+# dropping this down to 0.2 gives good results for size 16-24;
+# training is 100s at size 24 with 40 processes miniBatchSize=25
+#
+# optimization is still hard at 28 with edge weight 0.2
+# learning works for 28 in 225s with edge weight 0.15 (but not 0.1)
+#
+# learning is poor, and slow, at 32 with 0.2 (about 45min time, 50%
+# accurate)
+#
+
+EDGE_WEIGHT = 0.5
+
 def nodeName(i,j): 
     return '%d,%d' % (i,j)
 
@@ -78,7 +93,7 @@ def generateGrid(n,outf):
             for di in [-1,0,+1]:
                 for dj in [-1,0,+1]:
                     if (1 <= i+di <= n) and (1 <= j+dj <= n):
-                        fp.write('edge\t%s\t%s\t0.5\n' % (nodeName(i,j),nodeName(i+di,j+dj)))
+                        fp.write('edge\t%s\t%s\t%f\n' % (nodeName(i,j),nodeName(i+di,j+dj),EDGE_WEIGHT))
 
 def generateData(n,trainFile,testFile):
     fpTrain = open(trainFile,'w')
@@ -113,7 +128,7 @@ if __name__=="__main__":
         epochs = int(sys.argv[4])
 
     #generate grid
-    stem = 'g%d' % n
+    stem = 'inputs/g%d' % n
 
     factFile = stem+'.cfacts'
     trainFile = stem+'-train.exam'
@@ -142,18 +157,26 @@ if __name__=="__main__":
         trainData = dataset.Dataset.loadExamples(db,trainFile)
         testData = dataset.Dataset.loadExamples(db,testFile)
         prog.db.markAsParam('edge',2)
+        prog.maxDepth = maxD
+
+        # 20 epochs and rate=0.1 is ok for grid size up to about 10-12
+        # then it gets sort of chancy
+
+        learner = plearn.ParallelFixedRateGDLearner(
+            prog, 
+            epochs=epochs,
+            parallel=40,
+            miniBatchSize=25,
+            regularizer=learn.L2Regularizer(0.1),
+            epochTracer=learn.EpochTracer.cheap,
+            rate=0.01)
 
         params = {'prog':prog,
                   'trainData':trainData, 'testData':testData,
                   'savedTestPredictions':'tmp-cache/test.solutions.txt',
                   'savedTestExamples':'tmp-cache/test.examples',
-                  'learner':learn.FixedRateGDLearner(
-                      prog,
-                      regularizer=learn.L2Regularizer(0.1),
-                      epochs=epochs,
-                      rate=0.01,
-                      )}
-        prog.maxDepth = maxD
+                  'learner':learner,
+        }
         NP.seterr(divide='raise')
 
         #prog.normalize = 'log+softmax'
@@ -162,6 +185,6 @@ if __name__=="__main__":
         #ops.conf.long_trace = True
         ops.conf.max_trace = True
         expt.Expt(params).run()
-        if NETWORKX:
+        if False and NETWORKX:
             visualizeLearned(db,n)
 

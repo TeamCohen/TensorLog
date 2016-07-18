@@ -1,0 +1,6 @@
+# expected result from Mon Jul 18 18:01:49 EDT 2016
+eval t_stress/io time 0.00655293464661 sec
+eval t_influences/io time 0.00620603561401 sec
+eval t_cancer_spont/io time 0.00629305839539 sec
+eval t_cancer_smoke/io time 0.00623607635498 sec
+total time 0.0253541469574 sec

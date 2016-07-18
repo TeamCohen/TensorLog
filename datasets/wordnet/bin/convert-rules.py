@@ -28,6 +28,6 @@ def cvtRules(fIn,fOut,rIdOut):
             fp2.write('rule\tr%d\n' % rn)
 
 if __name__ == "__main__":
-    cvtRules('raw/train-learned.ppr','wnet-learned.ppr', 'wnet-ruleids.cfacts')
+    cvtRules('raw/train-learned.ppr','inputs/wnet-learned.ppr', 'inputs/wnet-ruleids.cfacts')
 
 

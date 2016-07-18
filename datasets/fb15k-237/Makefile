@@ -1,22 +1,37 @@
-test: setup
-	python fb-expt.py
+# 
+# 
 
-setup: fb.cfacts train.exam valid.exam
+expt.log: inputs/fb.cfacts inputs/train.exam inputs/valid.exam
+	python fb-expt.py 10 20 i_people_person_nationality > expt.log
 
-learned-rules.ppr ruleids.cfacts: train.cfacts
-	python bin/convert-rules.py train.cfacts inputs/learned-rules.ppr learned-rules.ppr ruleids.cfacts
+check: actual.txt
+	paste actual.txt expected.txt
 
-fb.cfacts: ruleids.cfacts train.cfacts
-	cat ruleids.cfacts train.cfacts > fb.cfacts
+actual.txt: expt.log
+	echo \# actual output of expt on `date` > actual.txt
+	grep training.*done expt.log >> actual.txt
+	grep eval.*\.trained.*train expt.log >> actual.txt 
 
-train.cfacts train.exam:
-	python bin/partition.py inputs/train.clean 80 tmp-cache/train4db.triples tmp-cache/train4exam.triples
-	python bin/triples2cfacts.py tmp-cache/train4db.triples > train.cfacts
-	python bin/triples2exam.py train.cfacts tmp-cache/train4exam.triples > train.exam 
+# prepare for an experiment
 
-valid.exam: train.cfacts
-	python bin/triples2exam.py train.cfacts inputs/valid.clean > valid.exam 
+setup: inputs/fb.cfacts inputs/train.exam inputs/valid.exam
+
+inputs/learned-rules.ppr inputs/ruleids.cfacts: inputs/train.cfacts
+	python bin/convert-rules.py inputs/train.cfacts raw/learned-rules.ppr inputs/learned-rules.ppr inputs/ruleids.cfacts
+
+inputs/fb.cfacts: inputs/ruleids.cfacts inputs/train.cfacts
+	cat inputs/ruleids.cfacts inputs/train.cfacts > inputs/fb.cfacts
+
+inputs/train.cfacts inputs/train.exam:
+	python bin/partition.py raw/train.clean 80 tmp-cache/train4db.triples tmp-cache/train4exam.triples
+	python bin/triples2cfacts.py tmp-cache/train4db.triples > inputs/train.cfacts
+	python bin/triples2exam.py inputs/train.cfacts tmp-cache/train4exam.triples > inputs/train.exam 
+
+inputs/valid.exam: inputs/train.cfacts
+	python bin/triples2exam.py inputs/train.cfacts raw/valid.clean > inputs/valid.exam 
+
+# clean up
 
 clean:
-	rm -f *~ train.cfacts train.exam valid.exam fb.cfacts learned-rules.ppr ruleids.cfacts 
-	rm -rf train.dset valid.dset fb.db
+	rm -f *~ actual.txt expt.log
+
