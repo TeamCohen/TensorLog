@@ -3,12 +3,16 @@
 # parallel learning implementation(s)
 #
 
+import os
 import time
+import multiprocessing
+import multiprocessing.pool    
+import logging
+
 import mutil
 import learn
-import multiprocessing.pool    
 
-#TODO should trace function report the worker pid?
+#TODO iterate don't make lists
 
 ##############################################################################
 # These functions are defined at the top-level of a module so that
@@ -31,8 +35,12 @@ def _doBackpropTask(task):
     """ Use the workerLearner
     """ 
     (mode,X,Y,args) = task
-    paramGrads = workerLearner.crossEntropyGrad(mode,X,Y,traceFunArgs=args)
+    paramGrads = workerLearner.crossEntropyGrad(mode,X,Y,tracerArgs=args)
     return (mutil.numRows(X),paramGrads)
+
+def _doAcceptNewParams(paramDict):
+    for (functor,arity),value in paramDict.items():
+        workerLearner.prog.db.setParameter(functor,arity,value)
 
 ##############################################################################
 # A parallel learner.
@@ -42,41 +50,66 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
     """Split task into fixed-size miniBatchs and compute gradients of
     these in parallel.  Parameter updates are done only at the end of
     an epoch so this is actually gradient descent, not SGD.
+    
+    At startup, a pool of workers which share COPIES of the program
+    are created, so changes to prog made after the learner is
+    initialized are NOT propagated out to the workers.
+
+    parallel is an integer number of workers or None, which will be
+    interpreted as the number of CPUs.
     """
 
-    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None,traceFun=None,miniBatchSize=100,parallel=10):
+    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None,tracer=None,miniBatchSize=100,parallel=10,epochTracer=None):
         super(ParallelFixedRateGDLearner,self).__init__(
-            prog,epochs=epochs,rate=rate,regularizer=regularizer,miniBatchSize=miniBatchSize)
-        self.traceFun = traceFun or learn.FixedRateSGDLearner.defaultTraceFun
-        print '= pool initialized with',parallel,'processes'
+            prog,epochs=epochs,rate=rate,regularizer=regularizer,miniBatchSize=miniBatchSize,tracer=tracer)
+        self.epochTracer = epochTracer or learn.EpochTracer.default
+        self.parallel = parallel or multiprocessing.cpu_count()
+        logging.info('pool initialized with %d processes' % self.parallel)
         #initargs are used to build a worker learner for the pool,
         #which just computes the gradients and does nothing else
         self.pool = multiprocessing.pool.Pool(
-            parallel, initializer=_initWorker, 
-            initargs=(learn.FixedRateSGDLearner,self.prog,self.epochs,self.rate,self.regularizer,self.traceFun,self.miniBatchSize))
+            self.parallel, 
+            initializer=_initWorker, 
+            #crucial to get the argument order right here!
+            initargs=(learn.FixedRateSGDLearner,self.prog,self.epochs,self.rate,self.regularizer,self.tracer,self.miniBatchSize))
+        logging.info('created pool of %d workers' % parallel)
     
     def train(self,dset):
         startTime = time.time()
         modes = dset.modesToLearn()
         for i in range(self.epochs):
+            logging.info('preparing minibatches')
             miniBatches = list(dset.minibatchIterator(batchSize=self.miniBatchSize))
             totalN = sum(mutil.numRows(X) for (mode,X,Y) in miniBatches)
             def miniBatchToTask(k):
                 (mode,X,Y) = miniBatches[k]
                 args = {'i':i,'k':k,'startTime':startTime,'mode':mode}
                 return (mode,X,Y,args)
+
             #generate the tasks
             bpInputs = map(miniBatchToTask, range(len(miniBatches)))
-            print '= built tasks:',time.time()-startTime,'cum sec'
+            logging.info('created %d minibatch tasks' % len(bpInputs))
+
             #generate gradients - in parallel
             bpOutputs = self.pool.map(_doBackpropTask, bpInputs)
-            print '= ran parallel bp :',time.time()-startTime,'cum sec'
+            logging.info('produced %d minibatch gradients' % len(bpOutputs))
+
             #apply the gradient
             for (n,paramGrads) in bpOutputs:
-                # self.regularizer.addRegularizationGrad(paramGrads,self.prog)
+                self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
                 # scale rate down to reflect the fraction of the data  
-                self.applyMeanUpdate(paramGrads, (self.rate*n)/totalN, totalN)
+                self.applyMeanUpdate(paramGrads, self.rate, n, totalN)
+            logging.info('performed param updates on master')
 
-            print '= applied gradient :',time.time()-startTime,'cum sec'
+            #broadcast the new parameters to the subprocesses 
+            paramDict = dict(
+                ((functor,arity),self.prog.db.getParameter(functor,arity))
+                for (functor,arity) in self.prog.db.params)
+            #send one _doAcceptNewParams task to each worker. warning:
+            # this is not guaranteed to work from the API 
+            self.pool.map(_doAcceptNewParams, [paramDict]*self.parallel, chunksize=1)
+            logging.info('broadcast param updates to workers')
+
+            self.epochTracer(self,dset,i=i,startTime=startTime)
 
 
