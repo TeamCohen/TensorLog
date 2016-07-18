@@ -18,14 +18,18 @@ import learn
 import mutil
 import debug
 
-VERSION = "1.1.0"
+VERSION = "1.1.2"
 
+# externally visible changes:
+#
 # version 1.0: refactored cleaned-up version of nips-submission codebase
 # version 1.1: thread-safe gradient and eval computation, and a parallel learner
+# version 1.1.1: cleaned up trace function api, bug fix in parallel learner
+# version 1.1.2: tracer output is not per example, no parallel option in funs
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
-#DEFAULT_NORMALIZE='log+softmax'
+#DEFAULT_NORMALIZE='log+softmax' # equiv to 'ordinary' normalization
 
 ##############################################################################
 ## a program
@@ -33,12 +37,18 @@ DEFAULT_NORMALIZE='softmax'
 
 class Program(object):
 
-    def __init__(self, db=None, rules=parser.RuleCollection()):
+    def __init__(self, db=None, rules=parser.RuleCollection(), calledFromProPPRProgram=False):
         self.db = db
         self.function = {}
         self.rules = rules
         self.maxDepth = DEFAULT_MAXDEPTH
         self.normalize = DEFAULT_NORMALIZE
+        # check the rules aren't proppr formatted
+        def checkRule(r):
+            assert not r.features, 'for rules with {} features, specify --proppr: %s' % str(r)
+            return r
+        if not calledFromProPPRProgram:
+            self.rules.mapRules(checkRule)
 
     def findPredDef(self,mode):
         """Find the set of rules with a lhs that match the given mode."""
@@ -165,7 +175,7 @@ class Program(object):
 class ProPPRProgram(Program):
 
     def __init__(self, db=None, rules=parser.RuleCollection(), weights=None):
-        super(ProPPRProgram,self).__init__(db=db, rules=rules)
+        super(ProPPRProgram,self).__init__(db=db, rules=rules, calledFromProPPRProgram=True)
         #expand the syntactic sugar used by ProPPR
         self.rules.mapRules(ProPPRProgram._moveFeaturesToRHS)
         if weights!=None: self.setWeights(weights)

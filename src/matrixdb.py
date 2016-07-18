@@ -37,6 +37,7 @@ class MatrixFileError(Exception):
         return "on line %d of %s: %s" % (self.line,self.filename,str(self.parseError))
 
 def assignGoal(var,const):
+    """ A goal of the form assign(Y,const). """
     return parser.Goal('assign',[var,const])
 
 def isAssignMode(mode):
@@ -213,6 +214,12 @@ class MatrixDB(object):
         for (functor,arity),m in sorted(self.matEncoding.items()):
             print '%s/%d: %s' % (functor,arity,self.summary(functor,arity))
 
+    def numMatrices(self):
+        return len(self.matEncoding.keys())
+
+    def size(self):
+        return sum(map(lambda m:m.nnz, self.matEncoding.values()))
+
     #
     # moving data between databases
     #
@@ -288,6 +295,7 @@ class MatrixDB(object):
             del db.matEncoding[stringKey]
             if not stringKey.startswith('__'):
                 db.matEncoding[eval(stringKey)] = scipy.sparse.csr_matrix(mat)
+        logging.info('deserialized database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
         return db
 
     @staticmethod
@@ -446,6 +454,7 @@ class MatrixDB(object):
         db = MatrixDB()
         for f in filenames.split(":"):
             db.addFile(f)
+        logging.info('loaded database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
         return db
 
     #

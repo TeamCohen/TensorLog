@@ -165,12 +165,19 @@ def nzCols(m,i):
 def repeat(row,n):
     """Construct an n-row matrix where each row is a copy of the given one."""
     checkCSR(row)
+    assert numRows(row)==1
+    #create the data and indices vector - which are just n copies of
+    #the row data
     d = NP.tile(row.data,n)
     inds = NP.tile(row.indices,n)
-    assert numRows(row)==1
+    #create the indptr
     numNZCols = row.indptr[1]
-    ptrs = NP.array(range(0,numNZCols*n+1,numNZCols))
+    if numNZCols>0:
+        ptrs = NP.array(range(0,numNZCols*n+1,numNZCols))
+    else:
+        ptrs = NP.zeros(n+1, dtype='int')
     return SS.csr_matrix((d,inds,ptrs),shape=(n,numCols(row)), dtype='float64')
+        
 
 def alterMatrixRows(mat,alterationFun):
     """ apply alterationFun(data,lo,hi) to each row.

@@ -9,11 +9,11 @@ import scipy.sparse as SS
 import scipy.io as SIO
 import numpy as NP
 import numpy.random as NR
+import logging
 
 import mutil
 import matrixdb
 import declare
-import logging
 
 #
 # dealing with labeled training data
@@ -51,6 +51,9 @@ class Dataset(object):
     def getY(self,mode):
         """Get a matrix of all desired outputs for the mode."""
         return self.yDict[mode]
+
+    def size(self):
+        return sum(map(lambda m:m.nnz,self.xDict.values())) + sum(map(lambda m:m.nnz,self.yDict.values()))
 
     def shuffle(self):
         for mode in self.xDict:
@@ -113,8 +116,11 @@ class Dataset(object):
             for stringKey,mat in d.items():
                 del d[stringKey]
                 if not stringKey.startswith('__'):
-                    d[declare.asMode(stringKey)] = SS.csr_matrix(mat)
-        return Dataset(xDict,yDict)
+                   d[declare.asMode(stringKey)] = SS.csr_matrix(mat)
+        dset = Dataset(xDict,yDict)
+        logging.info('deserialized dataset has %d modes and %d non-zeros' % (len(dset.modesToLearn()), dset.size()))
+        return dset           
+
 
     @staticmethod
     def uncacheExamples(dsetFile,db,exampleFile,proppr=True):
@@ -198,7 +204,7 @@ class Dataset(object):
     def loadProPPRExamples(db,fileName):
         """Convert a proppr-style foo.examples file to a two dictionaries of
         modename->matrix pairs, one for the Xs, one for the Ys"""
-        loadExamples(db,fileName,proppr=True)
+        return loadExamples(db,fileName,proppr=True)
 
     @staticmethod
     def loadExamples(db,fileName,proppr=False):
@@ -236,7 +242,10 @@ class Dataset(object):
                     return accum
                 yRows = map(yRow, ysTmp[pred])
                 ysResult[pred] = mutil.stack(yRows)
-        return Dataset(xsResult,ysResult)
+        dset = Dataset(xsResult,ysResult)
+        logging.info('loaded dataset has %d modes and %d non-zeros' % (len(dset.modesToLearn()), dset.size()))
+        return dset
+                   
 
     #TODO refactor to also save examples in form: 'functor X Y1
     #... Yk'

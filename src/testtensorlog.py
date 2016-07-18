@@ -280,12 +280,12 @@ class TestMultiRowOps(unittest.TestCase):
         self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
     def testThing(self):
         self.compareCheck([
-        "p(X,Y):-q(X,Y){r1}.",
-        "p(X,Y):-r(X,Y){r2}.",
-        "p(X,Y):-spouse(X,Y){r3}.",
-        "q(X,Y):-child(X,Y){rq}.", # DefinedPredOp should return multi-row results
-        "r(X,Y):-s(X,Y){rr}.",
-        "s(X,Y):-r(X,Y){rs}.", # NullFunction should return multi-row results
+        "p(X,Y):-q(X,Y).",
+        "p(X,Y):-r(X,Y).",
+        "p(X,Y):-spouse(X,Y).",
+        "q(X,Y):-child(X,Y).", # DefinedPredOp should return multi-row results
+        "r(X,Y):-s(X,Y).",
+        "s(X,Y):-r(X,Y).", # NullFunction should return multi-row results
         ],"p(i,o)",["william","rachel"],[
             {#'rachel':1.0,'sarah':1.0,'lottie':1.0,
             'susan':1.0,
@@ -655,12 +655,12 @@ class TestProPPR(unittest.TestCase):
         learner = learn.OnePredFixedRateGDLearner(self.prog,epochs=5)
         P0 = learner.predict(mode,X)
         acc0 = learner.accuracy(Y,P0)
-        xent0 = learner.crossEntropy(Y,P0)
+        xent0 = learner.crossEntropy(Y,P0,perExample=True)
 
         learner.train(mode,X,Y)
         P1 = learner.predict(mode,X)
         acc1 = learner.accuracy(Y,P1)
-        xent1 = learner.crossEntropy(Y,P1)
+        xent1 = learner.crossEntropy(Y,P1,perExample=True)
         
         self.assertTrue(acc0<acc1)
         self.assertTrue(xent0>xent1)
@@ -670,7 +670,7 @@ class TestProPPR(unittest.TestCase):
         TX,TY = self.labeledData.matrixAsTrainingData('test',2)
         P2 = learner.predict(mode,TX)
         acc2 = learner.accuracy(TY,P2)
-        xent2 = learner.crossEntropy(TY,P2)
+        xent2 = learner.crossEntropy(TY,P2,perExample=True)
         print 'toy test: acc2',acc2,'xent2',xent2
         self.assertTrue(acc2==1)
 
