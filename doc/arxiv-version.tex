@@ -716,26 +716,39 @@ training examples and moderate-sized databases.
 \begin{table}
 \caption{\small Comparison of TensorLog to ProbLog2 and ProPPR} \label{tab:results}
 \begin{center}
-\begin{tabular}{l|rr|rr}
+\begin{tabular}{l|rr}
 \hline
-          & \multicolumn{2}{c|}{Social Influence} & \multicolumn{2}{c}{Path-finding} \\
+          & \multicolumn{2}{c}{Social Influence Task} \\
 \hline
-ProbLog2  &   20 nodes & 40-50 sec & 16x16 grid, $d=10$ & 100-120 sec  \\
-TensorLog & 3327 nodes & 0.84 msec & 16x16 grid, $d=16$ & 0.061 msec      \\
-          &            &           & 64x64 grid, $d=64$ & 0.103 msec      \\
+ProbLog2  &   20 nodes & 40-50 sec \\
+TensorLog & 3327 nodes & 0.84 msec \\
 \hline
-\end{tabular}
-
+\end{tabular}\\
 ~\\
 ~\\
-
+\begin{tabular}[c]{l|rrr}
+\hline
+          & \multicolumn{3}{c}{Path-finding} \\
+          & \multicolumn{1}{c}{Size} & \multicolumn{1}{c}{Time} & \multicolumn{1}{c}{Acc} \\
+\hline
+ProbLog2  & 16x16 grid, $d=10$ & 100-120 sec & \\
+TensorLog & 16x16 grid, $d=10$ & 5.2 msec  &    \\
+(trained) & 16x16 grid, $d=10$ & 18.7 msec  &   96.5\% \\
+          & 64x64 grid, $d=64$ & 5.4 msec  &    \\
+%         &  \multicolumn{3}{c}{\textit{After training}} \\
+\hline
+\end{tabular}\begin{minipage}[c]{0.3\linewidth}
+\includegraphics[width=\linewidth]{./visualize-6x6.png}
+\end{minipage}\\
+~\\
+~\\
 \begin{tabular}{l|rr|rr} \hline
                       & \multicolumn{2}{c|}{ProPPR} & \multicolumn{2}{c}{TensorLog} \\
                       & \multicolumn{1}{c}{AUC} & \multicolumn{1}{c|}{sec} &
                                                   \multicolumn{1}{c}{AUC} & \multicolumn{1}{c}{sec} \\
 \hline
 Cora (13k facts,10 rules)
-                      & 97.6   & 97.9s      & 83.2   & 102.8s \\
+                      & 83.2     & 97.9s    & 97.6   & 102.8s \\
 \hline
 Wordnet (276k facts)  &          &          &        &          \\
 ~~Hypernym (46 rules) & 93.4     & 166.8s   & 93.3   & 154.9s   \\
@@ -779,13 +792,43 @@ small existing network dataset\footnote{The Citeseer dataset from
 preferential-attachment statistics.  The inference times we report are
 for the same inference tasks, for a subset of 120 randomly-selected
 entities.  In spite of querying six times as many entities, TensorLog
-is many times faster.  We also compare on a path-finding task, also
-described in \cite{fierens2016}, which is intended to test performance
-on deeply recursive tasks.  Again TensorLog shows much faster
-performance, and better scalability\footnote{Unlike ProbLog2, our
-  system performs recursion to a fixed maximum depth, which we set to
-  99 for these tasks.}; we note however that ProbLog2 implements a
-much more expressive logic than considered here.
+is many times faster.  
+
+We also compare on a path-finding task, also described in
+\cite{fierens2016}, which is intended to test performance on deeply
+recursive tasks.  The goal here is to compute fixed-depth transitive
+closure on a grid: in \cite{fierens2016} a 16-by-16 grid was used,
+with a maximum path length of 10.  Again TensorLog shows much faster
+performance, and better scalability\footnote{We set TensorLog's
+  maximum depth to 10 for the 16-by-16 grid, and to 99 for the larger
+  grid.}, as shown by run times on a larger 64-by-64 grid.
+
+These results demonstrate that TensorLog's approximation to ProbLog2's
+semantics is efficient, but not that it is useful.  To demonstrate
+that TensorLog can efficiently and usefully approximate deeply
+recursive concepts, we posed a learning task on the 16-by-16 grid, and
+trained TensorLog to approximate the distribution for this task.  The
+dataset consists of 256 grid cells connected by 2116 edges, so there
+are 256 example queries of the form \cd{path(a,X)} where $a$ is a
+particular grid cell.  We picked 1/3 of these queries as test, and the
+remainder as train, and trained so that that the single positive
+answer to the query \cd{path(a,X)} is the extreme corner closest to
+\cd{a}---i.e., one of the corners (1,1), (1,16), (16,1) or (16,16).
+Training for 20 epochs brings the accuracy from to 0\% to 96.5\% (for
+test), and learning takes approximately 3 sec/epoch.  After learning
+query times are still quite fast.  
+
+We note, however, that ProbLog2, in addition to implementing the full
+tuple-independence semantics, implements a much more expressive logic
+than considered here, including a large portion of full Prolog. In
+contrast TensorLog includes only a subset of Datalog.
+
+The table also includes a visualization of the learned weights for a
+small 6x6 grid.  For every pair of adjacent grid cells $u,v$, there
+are two weights to learn, one for the edge from $u$ to $v$ and one for
+its converse.  For each weight pair, we show a single directed edge
+(the heavy blue squares are the arrows) colored by the magnitude of
+the difference.
 
 We also compared experimentally with ProPPR on several tasks.  One was
 a citation-matching task (from \cite{wang2013programming}), in which
