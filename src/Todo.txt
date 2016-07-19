@@ -1,7 +1,6 @@
 TODO: 
 
- - make proppr the default?
-
+ - faster database loader/fact buffer flushing
  - add to database loader code to handle ruleids
  - think about typed predicates and dense matrices
  -- maybe extend env so that env.matrixType[v] indicates type: sparse or dense+offset
