@@ -1,5 +1,8 @@
 TODO: 
 
+ - refactor learn so that gradients can be added - need somehow to
+ pull the additive form of the update out of applyMeanUpdate
+
  - check correctness of wnet eval - is hypernym-test is all that's used?
  - diff -y in dataset checks
 

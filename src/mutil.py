@@ -118,28 +118,10 @@ def mean(mat):
     #TODO - does this need broadcasting?
     return SS.csr_matrix(mat.mean(axis=0))
 
-def mapData(dataFun,mat,selector=None,default=0):
+def mapData(dataFun,mat):
     """Apply some function to the mat.data array of the sparse matrix and return a new one."""
     checkCSR(mat)
-    def showMat(msg,m): print msg,type(m),m.shape
-    dat = mat.data
-
-    # TODO: whut?
-    # FIXME: indptr isn't the same shape as indices! indptr maps
-    # row->indices range, so if we mean to remove some of the things
-    # in indices, indptr is going to get allllll messed up
-
-    selected = None
-    if selector: 
-        selected = selector(mat.data)
-        dat = dat[selected]
-    newdata = dataFun(dat)
-    if selector:
-        buf = np.ones_like(mat.data) * default
-        buf[selected] = newdata
-        newdata = buf
-
-    assert newdata.shape==mat.data.shape,'shape mismatch %r vs %r' % (newdata.shape,mat.data.shape)
+    newdata = dataFun(mat.data)
     return SS.csr_matrix((newdata,mat.indices,mat.indptr), shape=mat.shape, dtype='float64')
 
 #TODO get rid of this, it's expensive

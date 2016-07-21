@@ -364,10 +364,23 @@ class Learner(object):
 
         return paramGrads
 
-
     #
     # parameter update
     #
+
+    def meanUpdate(self,functor,arity,delta,n,totalN=0):
+        #clip the delta vector to avoid exploding gradients
+        delta = mutil.mapData(lambda d:NP.clip(d,conf.minGradient,conf.maxGradient), delta)
+        if arity==1:
+            #for a parameter that is a row-vector, we have one
+            #gradient per example and we will take the mean
+            compensation = 1.0 if totalN==0 else float(n)/totalN
+            return mutil.mean(delta)*compensation
+        else:
+            #for a parameter that is a matrix, we have one gradient for the whole matrix
+            compensation = (1.0/n) if totalN==0 else (1.0/totalN)
+            return delta*compensation
+        
 
     def applyMeanUpdate(self,paramGrads,rate,n,totalN=0):
         """ Compute the mean of each parameter gradient, and add it to the
@@ -376,26 +389,31 @@ class Learner(object):
         """ 
 
         for (functor,arity),delta0 in paramGrads.items():
-            #clip the delta vector to avoid exploding gradients
-            delta = mutil.mapData(lambda d:NP.clip(d,conf.minGradient,conf.maxGradient), delta0)
-
-            #figure out how to do the update...
             m0 = self.prog.db.getParameter(functor,arity)
-            if mutil.numRows(m0)==1:
-                #for a parameter that is a row-vector, we have one
-                #gradient per example and we will take the mean
-                if totalN>0: 
-                    #adjust for a minibatch
-                    rate *= float(n)/totalN
-                m1 = m0 + mutil.mean(delta)*rate
-            else:
-                #for a parameter that is a matrix, we have one gradient for the whole matrix
-                rateCompensation = (1.0/n) if totalN==0 else (1.0/totalN)
-                m1 = m0 + delta*rate*rateCompensation
-            #clip negative entries of parameters to zero
+            m1 = m0 + rate * self.meanUpdate(functor,arity,delta0,n,totalN=totalN)
             m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
-            #update the parameter
             self.prog.db.setParameter(functor,arity,m)
+
+#
+#            #figure out how to do the update...
+#            m0 = self.prog.db.getParameter(functor,arity)
+#            if mutil.numRows(m0)==1:
+#                #for a parameter that is a row-vector, we have one
+#                #gradient per example and we will take the mean
+#                if totalN>0: 
+#                    #adjust for a minibatch
+#                    rate *= float(n)/totalN
+#                m1 = m0 + mutil.mean(delta)*rate
+#            else:
+#                #for a parameter that is a matrix, we have one gradient for the whole matrix
+#                rateCompensation = (1.0/n) if totalN==0 else (1.0/totalN)
+#                m1 = m0 + delta*rate*rateCompensation
+#
+#            #clip negative entries of parameters to zero
+#            m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
+#            #update the parameter
+#            self.prog.db.setParameter(functor,arity,m)
+
 
 #
 # actual learner implementations
