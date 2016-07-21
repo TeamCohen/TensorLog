@@ -74,48 +74,59 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
             self.parallel, 
             initializer=_initWorker, 
             #crucial to get the argument order right here!
-            initargs=(learn.FixedRateSGDLearner,self.prog,self.epochs,self.rate,self.regularizer,self.tracer,self.miniBatchSize))
+            initargs=(learn.FixedRateSGDLearner,self.prog,self.epochs,
+                      self.rate,self.regularizer,self.tracer,self.miniBatchSize))
         logging.info('created pool of %d workers' % parallel)
     
+    @staticmethod
+    def miniBatchToTask(batch,i,k,startTime):
+        """Convert a minibatch to a task to submit to _doBackpropTask"""
+        (mode,X,Y) = batch
+        args = {'i':i,'k':k,'startTime':startTime,'mode':mode}
+        return (mode,X,Y,args)
+        
+    def totalNumExamples(self,miniBatches):
+        """The total nummber of examples in all the miniBatches"""
+        return sum(mutil.numRows(X) for (mode,X,Y) in miniBatches)
+
+    def processGradients(self,bpOutputs,totalN):
+        """ Use the gradients to update parameters """
+        for (n,paramGrads) in bpOutputs:
+            self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
+            # scale rate down to reflect the fraction of the data  
+            self.applyMeanUpdate(paramGrads, self.rate, n, totalN)
+
+    def broadcastParameters(self):
+        """" Broadcast the new parameters to the subprocesses """
+        paramDict = dict(
+            ((functor,arity),self.prog.db.getParameter(functor,arity))
+            for (functor,arity) in self.prog.db.params)
+        #send one _doAcceptNewParams task to each worker. warning:
+        # this seems to work fine....but it is not guaranteed to
+        # work from the API, but
+        self.pool.map(_doAcceptNewParams, [paramDict]*self.parallel, chunksize=1)
+        
+    #
+    # basic learning routine
+    # 
+
     def train(self,dset):
-        trainStartTime = time.time()
         modes = dset.modesToLearn()
+        trainStartTime = time.time()
         for i in range(self.epochs):
+            logging.info("starting epoch %d" % i)
             startTime = time.time()
-            logging.info('preparing minibatches')
-            miniBatches = list(dset.minibatchIterator(batchSize=self.miniBatchSize))
-            totalN = sum(mutil.numRows(X) for (mode,X,Y) in miniBatches)
-            def miniBatchToTask(k):
-                (mode,X,Y) = miniBatches[k]
-                args = {'i':i,'k':k,'startTime':startTime,'mode':mode}
-                return (mode,X,Y,args)
-
             #generate the tasks
-            bpInputs = map(miniBatchToTask, range(len(miniBatches)))
-            logging.info('created %d minibatch tasks' % len(bpInputs))
-
+            miniBatches = list(dset.minibatchIterator(batchSize=self.miniBatchSize))
+            bpInputs = map(lambda (k,b):ParallelFixedRateGDLearner.miniBatchToTask(b,i,k,startTime), 
+                           enumerate(miniBatches))
+            totalN = self.totalNumExamples(miniBatches)
             #generate gradients - in parallel
             bpOutputs = self.pool.map(_doBackpropTask, bpInputs)
-            logging.info('produced %d minibatch gradients' % len(bpOutputs))
-
-            #apply the gradient
-            for (n,paramGrads) in bpOutputs:
-                self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
-                # scale rate down to reflect the fraction of the data  
-                self.applyMeanUpdate(paramGrads, self.rate, n, totalN)
-            logging.info('performed param updates on master')
-
-            #broadcast the new parameters to the subprocesses 
-            paramDict = dict(
-                ((functor,arity),self.prog.db.getParameter(functor,arity))
-                for (functor,arity) in self.prog.db.params)
-            #send one _doAcceptNewParams task to each worker. warning:
-            # this seems to work fine....but it is not guaranteed to
-            # work from the API, but
-            self.pool.map(_doAcceptNewParams, [paramDict]*self.parallel, chunksize=1)
-            logging.info('broadcast param updates to workers')
-
+            #update params using the gradients
+            self.processGradients(bpOutputs,totalN)
+            # send params to workers
+            self.broadcastParameters()
+            # status updates
             epochCounter = learn.GradAccumulator.mergeCounters( map(lambda (n,grads):grads, bpOutputs) )
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
-
-

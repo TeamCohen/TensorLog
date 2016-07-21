@@ -10,7 +10,7 @@ if __name__=="__main__":
     #usage: [targetPredicate] [epochs]
     
     #get the command-line options for this experiment
-    pred = 'ALL' if len(sys.argv)<=1 else sys.argv[1]
+    pred = 'hypernym' if len(sys.argv)<=1 else sys.argv[1]
     epochs = 30 if len(sys.argv)<=2 else int(sys.argv[2])
 
     # use tensorlog.parseCommandLine to set up the program, etc
