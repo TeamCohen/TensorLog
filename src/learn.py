@@ -112,6 +112,15 @@ class Tracer(object):
             + Tracer.timing(learner,kw))
 
     @staticmethod
+    def recordDefaults(learner,gradAccum,Y,P,**kw):
+        """A default status message."""
+        gradAccum.counter['n'] = mutil.numRows(Y)
+        Tracer._record(gradAccum,
+            Tracer.identification(learner,kw) 
+            + Tracer.loss(learner,Y,P,kw) 
+            + Tracer.timing(learner,kw))
+
+    @staticmethod
     def defaultPlusAcc(learner,gradAccum,Y,P,**kw):
         """A default status message."""
         gradAccum.counter['n'] = mutil.numRows(Y)
@@ -126,12 +135,22 @@ class Tracer(object):
         """ Print info in a list of key value pairs,
         and also store them in the gradAccum's counters.
         """
+        pairs = Tracer._record(gradAccum,keyValuePairList)
+        print ' '.join(pairs)
+
+    @staticmethod
+    def _record(gradAccum,keyValuePairList):
+        """Prepare a printable list of key value pairs, and also store them
+        in the gradAccum's counters.
+        """
         pairs = []
         for (k,v) in keyValuePairList:
             gradAccum.counter[k] = v
             pairs.append(k)
             pairs.append('%g' % v)
+        return pairs
         print ' '.join(pairs)
+
 
     #
     # return lists of key,value pairs that can be used in a status
@@ -420,7 +439,8 @@ class FixedRateSGDLearner(FixedRateGDLearner):
     """
 
     def __init__(self,prog,epochs=10,rate=0.1,regularizer=None,tracer=None,miniBatchSize=100):
-        super(FixedRateSGDLearner,self).__init__(prog,epochs=epochs,rate=rate,regularizer=regularizer)
+        super(FixedRateSGDLearner,self).__init__(
+            prog,epochs=epochs,rate=rate,regularizer=regularizer,tracer=tracer)
         self.miniBatchSize = miniBatchSize
     
     def train(self,dset):

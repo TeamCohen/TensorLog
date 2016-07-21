@@ -59,9 +59,12 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
     interpreted as the number of CPUs.
     """
 
-    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None,tracer=None,miniBatchSize=100,parallel=10,epochTracer=None):
+    def __init__(self,prog,epochs=10,rate=0.1,regularizer=None,tracer=None,
+                 miniBatchSize=100,parallel=10,epochTracer=None):
+        tracer = tracer or learn.Tracer.recordDefaults
         super(ParallelFixedRateGDLearner,self).__init__(
-            prog,epochs=epochs,rate=rate,regularizer=regularizer,miniBatchSize=miniBatchSize,tracer=tracer)
+            prog,epochs=epochs,rate=rate,regularizer=regularizer,
+            miniBatchSize=miniBatchSize,tracer=tracer)
         self.epochTracer = epochTracer or learn.EpochTracer.default
         self.parallel = parallel or multiprocessing.cpu_count()
         logging.info('pool initialized with %d processes' % self.parallel)

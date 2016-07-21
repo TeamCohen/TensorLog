@@ -10,9 +10,9 @@ eval.log: expt.log
 
 # prepare for running expt
 
-setup: inputs/wnet.cfacts inputs/wnet-learned.ppr
+setup: inputs/wnet.cfacts inputs/wnet-learned.ppr inputs/wnet-train.exam inputs/wnet-valid.exam
 
-inputs/wnet-train.exam wnet-valid.exam:
+inputs/wnet-train.exam inputs/wnet-valid.exam:
 	python bin/convert-examples.py
 
 inputs/wnet.cfacts: inputs/wnet-ruleids.cfacts
