@@ -8,6 +8,7 @@ import time
 import multiprocessing
 import multiprocessing.pool    
 import logging
+import numpy as NP
 
 import mutil
 import learn
@@ -127,6 +128,50 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
             self.processGradients(bpOutputs,totalN)
             # send params to workers
             self.broadcastParameters()
+            # status updates
+            epochCounter = learn.GradAccumulator.mergeCounters( map(lambda (n,grads):grads, bpOutputs) )
+            self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
+
+class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
+    
+    def train(self,dset):
+        modes = dset.modesToLearn()
+        trainStartTime = time.time()
+        sumSquareGrads = learn.GradAccumulator()
+        for i in range(self.epochs):
+
+            logging.info("starting epoch %d" % i)
+            startTime = time.time()
+            #generate the tasks
+            miniBatches = list(dset.minibatchIterator(batchSize=self.miniBatchSize))
+            bpInputs = map(lambda (k,b):ParallelFixedRateGDLearner.miniBatchToTask(b,i,k,startTime), 
+                           enumerate(miniBatches))
+            totalN = self.totalNumExamples(miniBatches)
+
+            #generate gradients - in parallel
+            bpOutputs = self.pool.map(_doBackpropTask, bpInputs)
+
+            # accumulate to sumSquareGrads
+            totalGradient = learn.GradAccumulator()
+            for (n,paramGrads) in bpOutputs:
+                for k,m in paramGrads.items():
+                    totalGradient.accum(k,m)
+            sumSquareGrads = sumSquareGrads.addedTo(totalGradient.mapData(NP.square))
+            #compute gradient-specific rate
+            rate = sumSquareGrads.mapData(NP.sqrt).mapData(NP.reciprocal)
+
+            # scale down gradients
+            def scaleDownBPOutput((n,unscaledGrads)):
+                scaledGrads = learn.GradAccumulator()
+                for k,m in unscaledGrads.items():
+                    scaledGrads[k] = m.multiply(rate[k]) # component-wise
+                return (n,scaledGrads)
+
+            #update params using the gradients
+            self.processGradients(map(scaleDownBPOutput,bpOutputs),totalN)
+            # send params to workers
+            self.broadcastParameters()
+
             # status updates
             epochCounter = learn.GradAccumulator.mergeCounters( map(lambda (n,grads):grads, bpOutputs) )
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)

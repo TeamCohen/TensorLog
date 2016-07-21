@@ -124,6 +124,7 @@ def mapData(dataFun,mat,selector=None,default=0):
     def showMat(msg,m): print msg,type(m),m.shape
     dat = mat.data
 
+    # TODO: whut?
     # FIXME: indptr isn't the same shape as indices! indptr maps
     # row->indices range, so if we mean to remove some of the things
     # in indices, indptr is going to get allllll messed up

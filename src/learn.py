@@ -55,6 +55,18 @@ class GradAccumulator(object):
     @staticmethod
     def counter():
         return collections.defaultdict(float)
+    def mapData(self,mapFun):
+        result = GradAccumulator()
+        for k,m in self.items():
+            result.accum(k, mutil.mapData(mapFun,m))
+        return result
+    def addedTo(self,other):
+        result = GradAccumulator()
+        for k,m in self.items():
+            result.accum(k, m)
+        for k,m in other.items():
+            result.accum(k, m)
+        return result
     @staticmethod
     def mergeCounters(gradAccums,initial=None):
         """Compute the min, max, total, avg, and weighted average of every

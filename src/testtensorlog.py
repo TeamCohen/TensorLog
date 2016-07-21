@@ -717,6 +717,7 @@ class TestExpt(unittest.TestCase):
     def testMToyExpt(self):
         acc,xent = self.runMToyExpt1()
         acc,xent = self.runMToyExpt2()
+        acc,xent = self.runMToyExpt3()
         #TODO check performance
 
     def testMToyParallel(self):
@@ -764,6 +765,15 @@ class TestExpt(unittest.TestCase):
         prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
         prog.setWeights(db.ones())
         params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':learn.FixedRateSGDLearner(prog)}
+        return expt.Expt(params).run()
+
+    def runMToyExpt3(self):
+        db = matrixdb.MatrixDB.uncache('tlog-cache/matchtoy.db','test/matchtoy.cfacts')
+        trainData = dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test/matchtoy-train.exam',proppr=False)
+        testData = trainData
+        prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
+        prog.setWeights(db.ones())
+        params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':plearn.ParallelAdaGradLearner(prog)}
         return expt.Expt(params).run()
 
     def runMToyParallel(self):
