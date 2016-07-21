@@ -134,6 +134,11 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
 
 class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
     
+    #override learning rate
+    def __init__(self,prog,**kw):
+        if not 'rate' in kw: kw['rate']=1.0
+        super(ParallelAdaGradLearner,self).__init__(prog,**kw)
+
     def train(self,dset):
         modes = dset.modesToLearn()
         trainStartTime = time.time()
@@ -154,21 +159,25 @@ class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
             # accumulate to sumSquareGrads
             totalGradient = learn.GradAccumulator()
             for (n,paramGrads) in bpOutputs:
-                for k,m in paramGrads.items():
-                    totalGradient.accum(k,m)
+                for (functor,arity),grad in paramGrads.items():
+                    totalGradient.accum((functor,arity), self.meanUpdate(functor,arity,grad,n,totalN))
             sumSquareGrads = sumSquareGrads.addedTo(totalGradient.mapData(NP.square))
             #compute gradient-specific rate
-            rate = sumSquareGrads.mapData(NP.sqrt).mapData(NP.reciprocal)
+            ratePerParam = sumSquareGrads.mapData(NP.sqrt).mapData(NP.reciprocal)
 
-            # scale down gradients
-            def scaleDownBPOutput((n,unscaledGrads)):
-                scaledGrads = learn.GradAccumulator()
-                for k,m in unscaledGrads.items():
-                    scaledGrads[k] = m.multiply(rate[k]) # component-wise
-                return (n,scaledGrads)
+            # scale down totalGradient by per-feature weight
+            for (functor,arity),grad in totalGradient.items():
+                totalGradient[(functor,arity)] = grad.multiply(ratePerParam[(functor,arity)])
 
-            #update params using the gradients
-            self.processGradients(map(scaleDownBPOutput,bpOutputs),totalN)
+            #cannot use process gradients because I've already scaled them down,
+            # need to just add and clip
+            self.regularizer.addRegularizationGrad(totalGradient,self.prog,totalN)
+            for (functor,arity),grad in totalGradient.items():
+                m0 = self.prog.db.getParameter(functor,arity)
+                m1 = m0 + self.rate * grad
+                m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
+                self.prog.db.setParameter(functor,arity,m)
+
             # send params to workers
             self.broadcastParameters()
 
