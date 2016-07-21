@@ -23,10 +23,10 @@ test:
 check:
 	(cd cora; make check)
 	(cd wordnet; make check)
-	(cd grid; make check)
 	(cd fb15k-237; make check)
 	(cd smokers; make check)
 #	(cd textcat-ssl; make check)
+#	(cd grid; make check)
 
 clean:
 	(cd cora; make clean)

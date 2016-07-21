@@ -5,7 +5,7 @@ actual.txt:
 	python smokers-expt.py >> actual.txt
 
 check:
-	paste actual.txt expected.txt
+	diff -y actual.txt expected.txt || true
 
 clean:
 	rm -f *~ *.pyc actual.txt

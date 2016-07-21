@@ -6,7 +6,7 @@ expt.log:
 	python supervised-expt.py pubmed >> expt.log
 
 check: actual.txt
-	paste actual.txt expected.txt
+	diff -y actual.txt expected.txt || true
 
 actual.txt: expt.log
 	echo actual results on `date`: cora, citeseer, pubmed > actual.txt
@@ -24,4 +24,4 @@ import:
 	python bin/import.py cora
 	python bin/import.py citeseer
 	python bin/import.py pubmed
-
+	python bin/import.py r8 ~/shared-home/data/proppr/r8-inputs/

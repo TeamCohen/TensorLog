@@ -5,7 +5,7 @@ expt.log: inputs/fb.cfacts inputs/train.exam inputs/valid.exam
 	python fb-expt.py 10 20 i_people_person_nationality > expt.log
 
 check: actual.txt
-	paste actual.txt expected.txt
+	diff -y actual.txt expected.txt || true
 
 actual.txt: expt.log
 	echo \# actual output of expt on `date` > actual.txt

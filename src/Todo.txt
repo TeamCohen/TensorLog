@@ -1,14 +1,13 @@
 TODO: 
 
+ - check correctness of wnet eval - is hypernym-test is all that's used?
+ - diff -y in dataset checks
+
  - faster database loader/fact buffer flushing
  - add to database loader code to handle ruleids
  - think about typed predicates and dense matrices
  -- maybe extend env so that env.matrixType[v] indicates type: sparse or dense+offset
  -- have ops dispatch to the correct operator as appropriate
-
- - try multithreading for minibatches
- -- maybe will need to recode broadcastAndWeightByRowSum,broadcastAndComponentwiseMultiply,softmax in pyrex/c?
- -- fun.backprop doesn't seem to be thread-safe: eg self.delta
 
  - optimization for cora-expt:
  -- train is 8.7s, mostly gradient

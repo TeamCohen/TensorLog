@@ -12,7 +12,7 @@ import logging
 import mutil
 import learn
 
-#TODO iterate don't make lists
+#TODO iterate, don't make lists
 
 ##############################################################################
 # These functions are defined at the top-level of a module so that
@@ -75,9 +75,10 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
         logging.info('created pool of %d workers' % parallel)
     
     def train(self,dset):
-        startTime = time.time()
+        trainStartTime = time.time()
         modes = dset.modesToLearn()
         for i in range(self.epochs):
+            startTime = time.time()
             logging.info('preparing minibatches')
             miniBatches = list(dset.minibatchIterator(batchSize=self.miniBatchSize))
             totalN = sum(mutil.numRows(X) for (mode,X,Y) in miniBatches)
@@ -106,10 +107,12 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
                 ((functor,arity),self.prog.db.getParameter(functor,arity))
                 for (functor,arity) in self.prog.db.params)
             #send one _doAcceptNewParams task to each worker. warning:
-            # this is not guaranteed to work from the API 
+            # this seems to work fine....but it is not guaranteed to
+            # work from the API, but
             self.pool.map(_doAcceptNewParams, [paramDict]*self.parallel, chunksize=1)
             logging.info('broadcast param updates to workers')
 
-            self.epochTracer(self,dset,i=i,startTime=startTime)
+            epochCounter = learn.GradAccumulator.mergeCounters( map(lambda (n,grads):grads, bpOutputs) )
+            self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
 
 

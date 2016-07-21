@@ -51,9 +51,11 @@ def genCorpusFacts(toFile,labels,tuples):
         fp.write('\t'.join(['label',y]) + '\n')
 
 if __name__ == "__main__":
-    # usage: python import.py stem
+    # usage: python import.py stem [srcdir]
     stem = sys.argv[1]
     srcdir = '/afs/cs.cmu.edu/user/wcohen/proppr-1/textcat/%s-inputs/' % stem
+    if len(sys.argv)>2:
+        srcdir = sys.argv[2]
     dstdir = 'inputs'
 
     print 'generate theory...'

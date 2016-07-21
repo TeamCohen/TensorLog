@@ -18,7 +18,7 @@ import learn
 import mutil
 import debug
 
-VERSION = "1.1.2"
+VERSION = "1.2.1"
 
 # externally visible changes:
 #
@@ -26,6 +26,8 @@ VERSION = "1.1.2"
 # version 1.1: thread-safe gradient and eval computation, and a parallel learner
 # version 1.1.1: cleaned up trace function api, bug fix in parallel learner
 # version 1.1.2: tracer output is not per example, no parallel option in funs
+# version 1.2.0: not sure, really.
+# version 1.2.1: replace epoch-level status monitoring with merged results
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'

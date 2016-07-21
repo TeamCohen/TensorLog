@@ -30,10 +30,11 @@ conf.maxGradient = +100;   conf.help.minGradient = "Clip gradients larger than t
 
 class GradAccumulator(object):
     """ Accumulate the sum gradients for perhaps many parameters, indexing
-    them by parameter name.
+    them by parameter name.  Also maintains 'counter' statistics
     """
     def __init__(self):
         self.runningSum = {}
+        self.counter = collections.defaultdict(float)
     def keys(self):
         return self.runningSum.keys()
     def items(self):
@@ -51,6 +52,33 @@ class GradAccumulator(object):
         else:
             self.runningSum[paramName] = self.runningSum[paramName] + deltaGradient
             mutil.checkCSR(self.runningSum[paramName],('runningSum for %s' % str(paramName)))
+    @staticmethod
+    def counter():
+        return collections.defaultdict(float)
+    @staticmethod
+    def mergeCounters(gradAccums,initial=None):
+        """Compute the min, max, total, avg, and weighted average of every
+        counter, and return in a new defaultdict
+        """ 
+        ctr = initial if initial!=None else GradAccumulator.counter()
+        keys = set()
+        weightedTotalPrefix = '_wtot'
+        #reduce with total,min,max, and weighted total
+        for accum in gradAccums:
+            for k,v in accum.counter.items():
+                keys.add(k)
+                ctr[(k,'tot')] += v
+                ctr[(k,weightedTotalPrefix)] += accum.counter['n']*v
+                kmin = (k,'min')
+                if kmin in ctr: ctr[kmin] = min(ctr[kmin],v)
+                kmax = (k,'max')
+                if kmin in ctr: ctr[kmin] = min(ctr[kmin],v)
+        # convert weighted total to weighted avg
+        totn = ctr[('n','tot')]
+        for k in keys:
+            ctr[(k,'avg')] += ctr[(k,weightedTotalPrefix)]/totn
+            del ctr[(k,weightedTotalPrefix)]
+        return ctr
 
 class Tracer(object):
 
@@ -61,37 +89,54 @@ class Tracer(object):
     """
 
     @staticmethod
-    def silent(learner,Y,P,**kw):
+    def silent(learner,gradAccum,Y,P,**kw):
         """No output."""
+        gradAccum.counter['n'] = mutil.numRows(Y)
         pass
 
     @staticmethod
-    def cheap(learner,Y,P,**kw):
+    def cheap(learner,gradAccum,Y,P,**kw):
         """Easy-to-compute status message."""
-        print ' '.join(
+        gradAccum.counter['n'] = mutil.numRows(Y)
+        Tracer._announce(gradAccum,
             Tracer.identification(learner,kw) 
             + Tracer.timing(learner,kw))
     
     @staticmethod
-    def default(learner,Y,P,**kw):
+    def default(learner,gradAccum,Y,P,**kw):
         """A default status message."""
-        print ' '.join(
+        gradAccum.counter['n'] = mutil.numRows(Y)
+        Tracer._announce(gradAccum,
             Tracer.identification(learner,kw) 
             + Tracer.loss(learner,Y,P,kw) 
             + Tracer.timing(learner,kw))
 
     @staticmethod
-    def defaultPlusAcc(learner,Y,P,**kw):
+    def defaultPlusAcc(learner,gradAccum,Y,P,**kw):
         """A default status message."""
-        print ' '.join(
+        gradAccum.counter['n'] = mutil.numRows(Y)
+        Tracer._announce(gradAccum,
             Tracer.identification(learner,kw) 
             + Tracer.loss(learner,Y,P,kw) 
             + Tracer.accuracy(learner,Y,P,kw) 
             + Tracer.timing(learner,kw))
 
+    @staticmethod
+    def _announce(gradAccum,keyValuePairList):
+        """ Print info in a list of key value pairs,
+        and also store them in the gradAccum's counters.
+        """
+        pairs = []
+        for (k,v) in keyValuePairList:
+            gradAccum.counter[k] = v
+            pairs.append(k)
+            pairs.append('%g' % v)
+        print ' '.join(pairs)
+
     #
-    # return lists of strings that can be used in a status message,
-    # possibly making use of information from the keywords
+    # return lists of key,value pairs that can be used in a status
+    # message or counters, possibly making use of information from the
+    # keywords
     # 
 
     @staticmethod
@@ -99,18 +144,18 @@ class Tracer(object):
         #perExample=False since we care about the sum xe+reg which is being optimized
         xe = learner.crossEntropy(Y,P,perExample=False)  
         reg = learner.regularizer.regularizationCost(learner.prog)
-        return ['loss %.3f' % (xe+reg), 'crossEnt %.3f' % xe, 'reg %.3f' % reg]
+        return [('loss', (xe+reg)), ('crossEnt', xe), ('reg',reg)]
 
     @staticmethod
     def accuracy(learner,Y,P,kw):
         acc = learner.accuracy(Y,P)        
-        return ['acc %.3f' % acc]
+        return [('acc',acc)]
 
     @staticmethod
     def timing(learner,kw):
         """Return list of timing properties using keyword 'starttime'
         """
-        return ['cumtime %.3f' % (time.time()-kw['startTime'])] if 'startTime' in kw else []
+        return [('time',(time.time()-kw['startTime']))] if 'startTime' in kw else []
 
     @staticmethod
     def identification(learner,kw):
@@ -121,58 +166,42 @@ class Tracer(object):
            mode = current mode
         """
         result = []
-        if 'k' in kw: result.append('minibatch %d' % kw['k'])
-        if 'i' in kw: result.append('epoch %d of %d' % (kw['i']+1,learner.epochs))
-        if 'mode' in kw: result.append('mode %s' % (str(kw['mode'])))
+        if 'k' in kw: result.append(('minibatch', kw['k']))
+        if 'i' in kw: result.append(('epoch', kw['i']+1))
+        if 'i' in kw: result.append(('maxEpoch',learner.epochs))
+        if 'mode' in kw: result.append((('mode=%s' % (str(kw['mode']))), 1.0))
         return result
+
+#TODO: rework to merge results
 
 class EpochTracer(Tracer):
 
     """Functions to called by a learner after gradient computation for all
     modes and parameter updates.
     """
+    defaultOutputs = [('crossEnt',['avg','tot']),('loss',['tot']),('reg',['avg']),
+                      ('time',['min','avg','max','tot']),
+                      ('n',['tot'])]
 
     @staticmethod
-    def silent(learner,dset,**kw):
+    def silent(learner,ctr,**kw):
         """No output."""
         pass
 
     @staticmethod
-    def cheap(learner,dset,**kw):
+    def cheap(learner,ctr,**kw):
         """Easy-to-compute status message."""
-        print ' '.join(
-            EpochTracer.identification(learner,kw) 
-            + EpochTracer.timing(learner,kw))
+        EpochTracer.default(learner,ctr,**kw)
     
     @staticmethod
-    def default(learner,dset,**kw):
+    def default(learner,ctr,**kw):
         """A default status message."""
-        P = learner.datasetPredict(dset)
-        print ' '.join(
-            Tracer.identification(learner,kw) 
-            + EpochTracer.epochLoss(learner,dset,P,kw) 
-            + Tracer.timing(learner,kw))
+        pairs  = Tracer.identification(learner,kw)
+        for k,prefs in EpochTracer.defaultOutputs:
+            for pref in prefs:
+                pairs.append( ((pref + '.' +k), ctr[(k,pref)]) )
 
-    @staticmethod
-    def defaultPlusAcc(learner,dset,**kw):
-        """A default status message."""
-        P = learner.datasetPredict(dset)
-        print ' '.join(
-            Tracer.identification(learner,kw) 
-            + EpochTracer.epochLoss(learner,dset,P,kw) 
-            + EpochTracer.epochAccuracy(learner,dset,P,kw) 
-            + Tracer.timing(learner,kw))
-
-    @staticmethod
-    def epochLoss(learner,dset,P,kw):
-        xe = learner.datasetCrossEntropy(dset,P,perExample=False)
-        reg = learner.regularizer.regularizationCost(learner.prog)
-        return ['loss %.3f' % (xe+reg), 'crossEnt %.3f' % xe, 'reg %.3f' % reg]
-
-    @staticmethod
-    def epochAccuracy(learner,dset,P,kw):
-        acc = learner.datasetAccuracy(dset,P)        
-        return ['acc %.3f' % acc]
+        print ' '.join(map(lambda (k,v):('%s=%g'%(k,v)), pairs))
 
 
 ##############################################################################
@@ -292,14 +321,15 @@ class Learner(object):
         assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
         P = self.predict(mode,X,pad)
 
-        # output some status information
-        self.tracer(self,Y,P,**tracerArgs)
-
         # compute gradient
         paramGrads = GradAccumulator()
         #TODO assert rowSum(Y) = all ones - that's assumed here in
         #initial delta of Y-P
         predictFun.fun.backprop(Y-P,paramGrads,pad)
+
+        # the tracer function may output status, and may also write
+        # information to the counters in paramGrads
+        self.tracer(self,paramGrads,Y,P,**tracerArgs)
 
         return paramGrads
 
@@ -349,8 +379,9 @@ class OnePredFixedRateGDLearner(Learner):
         self.rate=rate
     
     def train(self,mode,X,Y):
-        startTime = time.time()
+        trainStartTime = time.time()
         for i in range(self.epochs):
+            startTime = time.time()
             n = mutil.numRows(X)
             args = {'i':i,'startTime':startTime}
             paramGrads = self.crossEntropyGrad(mode,X,Y,tracerArgs=args)
@@ -367,19 +398,20 @@ class FixedRateGDLearner(Learner):
         self.rate=rate
     
     def train(self,dset):
-        startTime = time.time()
+        trainStartTime = time.time()
         modes = dset.modesToLearn()
         numModes = len(modes)
         for i in range(self.epochs):
+            startTime = time.time()
+            epochCounter = GradAccumulator.counter()
             for j,mode in enumerate(dset.modesToLearn()):
                 n = mutil.numRows(dset.getX(mode))
-                modeDescription = '%s (%d/%d)' % (str(mode),j+1,numModes)
-                args = {'i':i,'startTime':startTime,'mode':modeDescription}
+                args = {'i':i,'startTime':startTime,'mode':str(mode)}
                 paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),tracerArgs=args)
                 self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
                 self.applyMeanUpdate(paramGrads,self.rate,n)
-            if numModes>1:
-                self.epochTracer(self,dset,i=i,startTime=startTime)
+                epochCounter = GradAccumulator.mergeCounters([paramGrads],epochCounter)
+            self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
             
 
 class FixedRateSGDLearner(FixedRateGDLearner):
@@ -392,10 +424,12 @@ class FixedRateSGDLearner(FixedRateGDLearner):
         self.miniBatchSize = miniBatchSize
     
     def train(self,dset):
-        startTime = time.time()
+        trainStartTime = time.time()
         modes = dset.modesToLearn()
         n = len(modes)
         for i in range(self.epochs):
+            startTime = time.time()
+            epochCounter = GradAccumulator.counter()
             k = 0
             for (mode,X,Y) in dset.minibatchIterator(batchSize=self.miniBatchSize):
                 n = mutil.numRows(X)
@@ -404,8 +438,9 @@ class FixedRateSGDLearner(FixedRateGDLearner):
                 paramGrads = self.crossEntropyGrad(mode,X,Y,tracerArgs=args)
                 self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
                 self.applyMeanUpdate(paramGrads,self.rate,n)
+                epochCounter = GradAccumulator.mergeCounters([paramGrads],epochCounter)
 
-            self.epochTracer(self,dset,i=i,startTime=startTime)
+            self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
 
 ##############################################################################
 # regularizers

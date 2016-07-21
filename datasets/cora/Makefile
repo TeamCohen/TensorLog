@@ -11,7 +11,7 @@ eval.log: expt.log
 # a quickly-viewable check on the default experiment (like a unit test)
 
 check: actual.txt
-	paste actual.txt expected.txt
+	diff -y actual.txt expected.txt || true
 
 actual.txt: expt.log eval.log
 	echo \# actual output of expt on `date` > actual.txt
