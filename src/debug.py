@@ -50,7 +50,7 @@ class Debugger(object):
 
         # evaluate the gradient so that's cached
         if gradient:
-            learner = learn.OnePredFixedRateGDLearner(self.prog, traceFun=learn.Learner.nullTraceFun)
+            learner = learn.OnePredFixedRateGDLearner(self.prog, tracer=learn.Tracer.silent)
             self.grad = learner.crossEntropyGrad(self.mode, self.X, self.Y, pad=self.pad)
         else:
             self.grad = None
