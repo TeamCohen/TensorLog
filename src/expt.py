@@ -8,6 +8,7 @@ import sys
 import time
 import logging
 import collections
+import traceback
 
 import tensorlog
 import dataset
@@ -15,6 +16,7 @@ import matrixdb
 import tensorlog
 import declare
 import learn
+import plearn
 import mutil
 import config
 
@@ -62,7 +64,7 @@ class Expt(object):
         Expt.printStats('untrained theory','train',trainData,TP0)
         Expt.printStats('untrained theory','test',testData,UP0)
 
-        Expt.timeAction('training', lambda:learner.train(trainData))
+        Expt.timeAction('training %s' % type(learner).__name__, lambda:learner.train(trainData))
 
         TP1 = Expt.timeAction(
             'running trained theory on train data',
@@ -141,23 +143,48 @@ class Expt(object):
 
 if __name__=="__main__":
 
+    
+    usageLines = [
+        'expt-specific options, given after the argument +++:',
+        '    --savedModel e --learner f --learnerOpts g',
+        '    where e is a filename, f is the name of a learner class', 
+        '    and learnerOpts is a string that "evals" to a python dict',
+    ]
+    argSpec = ["learner=", "savedModel=", "learnerOpts="]
+
     try: 
-        optdict,args = tensorlog.parseCommandLine(sys.argv[1:])
+        optdict,args = tensorlog.parseCommandLine(
+            sys.argv[1:], 
+            extraArgConsumer="expt", extraArgSpec=argSpec, extraArgUsage=usageLines
+        ) 
+
         optdict['prog'].setWeights(optdict['prog'].db.ones())
+        learner = None
+        if 'learner' in optdict:
+            try:
+                optdict['learner'] = eval(optdict['learner'])
+                optdict['learnerOpts'] = eval(optdict.get('learnerOpts','{}'))
+                print "decoded learner spec to "+repr(optdict['learner'])+" args "+repr(optdict['learnerOpts'])
+                learner = optdict['learner'](optdict['prog'], **optdict['learnerOpts'])
+            except Exception as ex:
+                print 'exception evaluating learner specification "%s"' % optdict['--learner']
+                traceback.print_exc(file=sys.stdout)
+                raise ex
+
         params = {'prog':optdict['prog'],
                   'trainData':optdict['trainData'],
                   'testData':optdict['testData'],
-                  'savedModel':'expt-model.db'}
+                  'learner':learner,
+                  'savedModel':optdict.get('savedModel','expt-model.db')}
+
         Expt(params).run()
         print 'saved in expt-model.db'
 
     except Exception as ex:
         print 'error parsing standard command line options:',ex
 
-
         def usage():
-            print 'usage: python expt.py --prog a --db b --trainData c --testData d'
-            print 'usage: python expt.py textcattoy|matchtoy mode'
+            print '\n'.join(usageLines)
 
         if len(sys.argv)<2:
             usage()

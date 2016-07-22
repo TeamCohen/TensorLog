@@ -5,7 +5,6 @@
 
 import sys
 import logging
-import traceback
 
 import opfunutil
 import ops

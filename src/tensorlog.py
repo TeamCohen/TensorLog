@@ -15,10 +15,11 @@ import matrixdb
 import bpcompiler
 import dataset
 import learn
+import plearn
 import mutil
 import debug
 
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 
 # externally visible changes:
 #
@@ -27,7 +28,8 @@ VERSION = "1.2.1"
 # version 1.1.1: cleaned up trace function api, bug fix in parallel learner
 # version 1.1.2: tracer output is not per example, no parallel option in funs
 # version 1.2.0: not sure, really.
-# version 1.2.1: replace epoch-level status monitoring with merged results
+# version 1.2.1: plearn replaces epoch-level status monitoring with merged results minibatches
+# version 1.2.2: learner option
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
@@ -306,20 +308,38 @@ class Interp(object):
 # utilities for reading command lines
 #
 
-def parseCommandLine(argv):
-    """
-    See the usage() subfunction for the options that are parsed().
-    Returns a dictionary mapping option names to Python objects,
-    eg Datasets, Programs, ...
+def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]):
+
+    """To be used by mains other than tensorlog to process sys.argv.  See
+    the usage() subfunction for the options that are parsed.  Returns
+    a dictionary mapping option names to Python objects, eg Datasets,
+    Programs, ...
+
+    If extraArgConsumer, etc are present then extra args for the
+    calling program can be included after a '+' argument.
+    extraArgConsumer is a label for the calling main used in help and
+    error messages, and extraArgUsage is a list of strings, which will
+    be printed one per line.
     """
 
     argspec = ["db=", "proppr", "prog=", "trainData=", "testData=", "help", "logging="]
     try:
         optlist,args = getopt.getopt(argv, 'x', argspec)
+        if extraArgConsumer:
+            if args:
+                print 'args',args
+                if not args[0].startswith('+'): logging.warn("command-line options for %s should follow a +++ argument" % extraArgConsumer)
+                extraOptList,extraArgs = getopt.getopt(args[1:], 'x', extraArgSpec)
+                args = extraArgs
+            else:
+                extraOptList = {}
     except getopt.GetoptError:
         print 'bad option: use "--help" to get help'
         raise
     optdict = dict(optlist)
+    if extraArgConsumer: 
+        for k,v in extraOptList:
+            optdict[k] = v
 
     def usage():
         print 'options:'
@@ -331,12 +351,13 @@ def parseCommandLine(argv):
         print ' --testData file.exam      - optional:'
         print ' --proppr                  - if present, assume the file has proppr features with'
         print '                             every rule: {ruleid}, or {all(F): p(X,...),q(...,F)}' 
-        print ' --logging level'
+        print ' --logging level           - level is warn, debug, error, or info'
         print ''
         print 'Notes: for --db, --trainData, and --testData, you are allowed to specify either a' 
         print 'serialized, cached object (like \'foo.db\') or a human-readable object that can be'
         print 'serialized (like \'foo.cfacts\'). In this case you can also write \'foo.db|foo.cfacts\''
         print 'and the appropriate uncache routine will be used.'
+        print '\n'.join(extraArgUsage)
 
     if '--logging' in optdict:
         level = optdict['--logging']
@@ -359,12 +380,11 @@ def parseCommandLine(argv):
     db = parseDBSpec(optdict['--db'])
     optdict['--db'] = db
     optdict['--prog'] = parseProgSpec(optdict['--prog'],db,proppr=('--proppr' in optdict))
-
     for key in ('--trainData','--testData'):
         if key in optdict:
             optdict[key] = parseDatasetSpec(optdict[key],db)
 
-    # let these be also indexed by 'train', 'prog', etc
+    # let these be also indexed by 'train', 'prog', etc, not just '--train','--prog'
     for key,val in optdict.items():
         optdict[key[2:]] = val
 
