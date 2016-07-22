@@ -1,10 +1,8 @@
 TODO: 
 
- - refactor learn so that gradients can be added - need somehow to
- pull the additive form of the update out of applyMeanUpdate
-
+ - need to test Adagrad on real data
+   - update: regularization runs but it possibly broken
  - check correctness of wnet eval - is hypernym-test is all that's used?
- - diff -y in dataset checks
 
  - faster database loader/fact buffer flushing
  - add to database loader code to handle ruleids

@@ -122,21 +122,28 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
             bpInputs = map(lambda (k,b):ParallelFixedRateGDLearner.miniBatchToTask(b,i,k,startTime), 
                            enumerate(miniBatches))
             totalN = self.totalNumExamples(miniBatches)
+            logging.info("created %d minibatch tasks, total of %d examples" % (len(bpInputs),totalN))
             #generate gradients - in parallel
             bpOutputs = self.pool.map(_doBackpropTask, bpInputs)
             #update params using the gradients
+            logging.info("gradients for %d minibatch tasks computed" % len(bpInputs))
             self.processGradients(bpOutputs,totalN)
+            logging.info("gradients merged")
             # send params to workers
             self.broadcastParameters()
+            logging.info("parameters broadcast to workers")
             # status updates
             epochCounter = learn.GradAccumulator.mergeCounters( map(lambda (n,grads):grads, bpOutputs) )
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
 
 class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
+    """ Not debugged yet....
+    """
     
     #override learning rate
     def __init__(self,prog,**kw):
-        if not 'rate' in kw: kw['rate']=1.0
+        logging.warn("ParallelAdaGradLearner does not seem to perform well - it's probably still buggy")
+        if not 'rate' in kw: kw['rate']=0.5
         super(ParallelAdaGradLearner,self).__init__(prog,**kw)
 
     def train(self,dset):
@@ -163,15 +170,23 @@ class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
                     totalGradient.accum((functor,arity), self.meanUpdate(functor,arity,grad,n,totalN))
             sumSquareGrads = sumSquareGrads.addedTo(totalGradient.mapData(NP.square))
             #compute gradient-specific rate
-            ratePerParam = sumSquareGrads.mapData(NP.sqrt).mapData(NP.reciprocal)
+            ratePerParam = sumSquareGrads.mapData(lambda d:d+1e-1).mapData(NP.sqrt).mapData(NP.reciprocal)
 
             # scale down totalGradient by per-feature weight
             for (functor,arity),grad in totalGradient.items():
                 totalGradient[(functor,arity)] = grad.multiply(ratePerParam[(functor,arity)])
 
+            for (functor,arity) in self.prog.db.params:
+                m = self.prog.db.getParameter(functor,arity)
+                print 'reg',functor,'/',arity,'m shape',m.shape
+                if (functor,arity) in totalGradient.keys():
+                    print 'vs totalGradient shape',totalGradient[(functor,arity)].shape
+                else:
+                    print 'not in totalGradient'
+            self.regularizer.addRegularizationGrad(totalGradient,self.prog,totalN)
+
             #cannot use process gradients because I've already scaled them down,
             # need to just add and clip
-            self.regularizer.addRegularizationGrad(totalGradient,self.prog,totalN)
             for (functor,arity),grad in totalGradient.items():
                 m0 = self.prog.db.getParameter(functor,arity)
                 m1 = m0 + self.rate * grad

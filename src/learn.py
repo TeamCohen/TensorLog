@@ -15,7 +15,6 @@ import tensorlog
 import dataset
 import mutil
 import declare
-import traceback
 import config
 
 # clip to avoid exploding gradients
@@ -77,6 +76,7 @@ class GradAccumulator(object):
         weightedTotalPrefix = '_wtot'
         #reduce with total,min,max, and weighted total
         for accum in gradAccums:
+            ctr['counters'] += 1  # merged counters
             for k,v in accum.counter.items():
                 keys.add(k)
                 ctr[(k,'tot')] += v
@@ -231,6 +231,7 @@ class EpochTracer(Tracer):
         for k,prefs in EpochTracer.defaultOutputs:
             for pref in prefs:
                 pairs.append( ((pref + '.' +k), ctr[(k,pref)]) )
+        pairs.append(('minibatches',ctr['counters']))
 
         print ' '.join(map(lambda (k,v):('%s=%g'%(k,v)), pairs))
 
@@ -531,8 +532,13 @@ class L2Regularizer(Regularizer):
             # but it has to be done addititively so use 
             #     [ m1 = m + z = m*d] 
             # and solve for z which gives you this
-            z0 = m * math.pow((1.0 - self.regularizationConstant), n) - m
-            z = mutil.repeat(z0,n) if arity==1 else z0
+            z = m * math.pow((1.0 - self.regularizationConstant), n) - m
+            # broadcast z0 to the size of delta, if needed
+            if (functor,arity) in paramGrads.keys():
+                delta = paramGrads[(functor,arity)]
+                if mutil.numRows(delta)!=mutil.numRows(m):
+                    assert mutil.numRows(z)==1,'shape mismatch for addRegularizationGrad'
+                    z = mutil.repeat(z,mutil.numRows(delta))
             paramGrads.accum((functor,arity), z)
 
     def regularizationCost(self,prog):

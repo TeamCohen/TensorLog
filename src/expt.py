@@ -152,68 +152,30 @@ if __name__=="__main__":
     ]
     argSpec = ["learner=", "savedModel=", "learnerOpts="]
 
-    try: 
-        optdict,args = tensorlog.parseCommandLine(
-            sys.argv[1:], 
-            extraArgConsumer="expt", extraArgSpec=argSpec, extraArgUsage=usageLines
-        ) 
+    optdict,args = tensorlog.parseCommandLine(
+        sys.argv[1:], 
+        extraArgConsumer="expt", extraArgSpec=argSpec, extraArgUsage=usageLines
+    ) 
 
-        optdict['prog'].setWeights(optdict['prog'].db.ones())
-        learner = None
-        if 'learner' in optdict:
-            try:
-                optdict['learner'] = eval(optdict['learner'])
-                optdict['learnerOpts'] = eval(optdict.get('learnerOpts','{}'))
-                print "decoded learner spec to "+repr(optdict['learner'])+" args "+repr(optdict['learnerOpts'])
-                learner = optdict['learner'](optdict['prog'], **optdict['learnerOpts'])
-            except Exception as ex:
-                print 'exception evaluating learner specification "%s"' % optdict['--learner']
-                traceback.print_exc(file=sys.stdout)
-                raise ex
+    optdict['prog'].setWeights(optdict['prog'].db.ones())
+    learner = None
+    if 'learner' in optdict:
+        try:
+            optdict['learner'] = eval(optdict['learner'])
+            optdict['learnerOpts'] = eval(optdict.get('learnerOpts','{}'))
+            print "decoded learner spec to "+repr(optdict['learner'])+" args "+repr(optdict['learnerOpts'])
+            learner = optdict['learner'](optdict['prog'], **optdict['learnerOpts'])
+        except Exception as ex:
+            print 'exception evaluating learner specification "%s"' % optdict['--learner']
+            traceback.print_exc(file=sys.stdout)
+            raise ex
 
-        params = {'prog':optdict['prog'],
-                  'trainData':optdict['trainData'],
-                  'testData':optdict['testData'],
-                  'learner':learner,
-                  'savedModel':optdict.get('savedModel','expt-model.db')}
+    params = {'prog':optdict['prog'],
+              'trainData':optdict['trainData'],
+              'testData':optdict['testData'],
+              'learner':learner,
+              'savedModel':optdict.get('savedModel','expt-model.db')}
 
-        Expt(params).run()
-        print 'saved in expt-model.db'
+    Expt(params).run()
 
-    except Exception as ex:
-        print 'error parsing standard command line options:',ex
 
-        def usage():
-            print '\n'.join(usageLines)
-
-        if len(sys.argv)<2:
-            usage()
-        elif sys.argv[1]=='textcattoy':
-            db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
-            trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
-            testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
-            prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr"],db=db)
-            initWeights = \
-                (prog.db.matrixPreimage(declare.asMode("posPair(o,i)")) + \
-                     prog.db.matrixPreimage(declare.asMode("negPair(o,i)"))) * 0.5
-        elif sys.argv[1]=='matchtoy':
-            db = matrixdb.MatrixDB.loadFile('test/matchtoy.cfacts')
-            trainData = dataset.Dataset.loadExamples(db,'test/matchtoy-train.exam')
-            testData = trainData
-            prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
-            initWeights = prog.db.ones()
-        else:
-            usage()
-            sys.exit(-1)
-
-        prog.setWeights(initWeights)
-
-        myLearner = learn.FixedRateGDLearner(prog)
-        #myLearner = learn.FixedRateSGDLearner(prog)
-
-        params = {'prog':prog,
-                  'trainData':trainData, 'testData':testData,
-                  'savedModel':'toy-trained.db',
-                  'learner':myLearner
-                  }
-        Expt(params).run()

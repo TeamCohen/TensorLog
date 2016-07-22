@@ -27,6 +27,10 @@ wnet-test:
 cora-test:
 	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet/; make clean; make; make check)
 
+textcattoy-expt:
+	#python -m expt --db test/textcattoy.cfacts --prog test/textcat.ppr --trainData test/toytrain.exam --testData test/toytrain.exam --proppr +++ --learner plearn.ParallelAdaGradLearner --learnerOpts '{"regularizer":learn.L2Regularizer()}'
+	python -m expt --db test/textcattoy.cfacts --prog test/textcat.ppr --trainData test/toytrain.exam --testData test/toytrain.exam --proppr
+
 # debug-test needs to be interactive
 debug-test:
 	python expt.py --prog test/textcat.ppr --db test/textcattoy.cfacts --trainData test/toytrain.exam --testData test/toytest.exam --proppr
