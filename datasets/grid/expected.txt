@@ -1,0 +1,14 @@
+| experiment results from Tue Jul 26 13:27:34 EDT 2016 - 16x16, EDGE_WEIGHT = 0.2, rate=0.01, L2Regularizer
+| epoch=20 maxEpoch=20 avg.crossEnt=0.526599 tot.crossEnt=3.2426 tot.loss=8.93986 avg.reg=0.813893 min.time=0 avg.time=0.478221 max.time=0 tot.time=3.0782| 7 tot.n=153 minibatches=7
+| training ParallelFixedRateGDLearner ... done in 13.064 sec
+| running trained theory on train data ...
+| running trained theory on train data ... done in 0.692 sec
+| running trained theory on test data ...
+| running trained theory on test data ... done in 0.465 sec
+| eval ..trained theory on train : acc 1.0 xent/ex 0.0194269172601
+| eval ..trained theory on test : acc 1.0 xent/ex 0.0736157306738
+| saving test predictions ...
+| saving test predictions ... done in 0.443 sec
+| saving test examples ...
+| saving test examples ... done in 0.073 sec
+| ready for commands like: proppr eval tmp-cache/test.examples tmp-cache/test.solutions.txt --metric auc --defaultNeg

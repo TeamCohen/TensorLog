@@ -34,7 +34,7 @@ import plearn
 # accurate)
 #
 
-EDGE_WEIGHT = 0.5
+EDGE_WEIGHT = 0.2
 
 def nodeName(i,j): 
     return '%d,%d' % (i,j)
@@ -163,11 +163,12 @@ if __name__=="__main__":
         # then it gets sort of chancy
 
         learner = plearn.ParallelFixedRateGDLearner(
+#        learner = plearn.ParallelAdaGradLearner(
             prog, 
             epochs=epochs,
             parallel=40,
             miniBatchSize=25,
-            regularizer=learn.L2Regularizer(0.1),
+            regularizer=learn.L2Regularizer(),
             epochTracer=learn.EpochTracer.cheap,
             rate=0.01)
 

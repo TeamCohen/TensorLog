@@ -11,7 +11,7 @@ def loadTuples(fromFile):
 def genTextCatPPR(toFile,labels):
     fp = open(toFile,'w')
     for y in labels:
-        fp.write('predict(X,Y) :- assign(Y,%s) {all(F): hasWord(X,W),%sPair(W,F)}.\n' % (y,y))
+        fp.write('predict(X,Y) :- assign(Y,%s) {weighted_%s(W): hasWord(X,W)}.\n' % (y,y))
 
 def genExamples(toFile,examples):
     fp = open(toFile,'w')    
@@ -29,23 +29,9 @@ def genCorpusFacts(toFile,labels,tuples):
         for tup in tuples:
             docid = fixedToken(tup[1],'d')
             yield [tup[0],docid] + tup[2:]
-
     for tup in fixedTuples(tuples):    
         # write the hasWord fact
         fp.write('\t'.join(tup) + '\n')
-    for tup in fixedTuples(tuples):    
-        # write the yyyPair(www, www_yyy) facts
-        for y in labels:
-            word = tup[2]
-            rel = '%sPair' % y
-            pair = '%s_%s' % (word,y)
-            fp.write('\t'.join([rel,word,pair]) + '\n')
-    for tup in fixedTuples(tuples):    
-        # write the weighted(www_yyy) facts
-        for y in labels:
-            word = tup[2]
-            pair = '%s_%s' % (word,y)
-            fp.write('\t'.join(['weighted',pair]) + '\n')
     for y in labels:
         # write the label(yyy) facts
         fp.write('\t'.join(['label',y]) + '\n')

@@ -1,6 +1,8 @@
 # 
 # 
 
+expt: expt.log
+
 expt.log: inputs/fb.cfacts inputs/train.exam inputs/valid.exam
 	python fb-expt.py 10 20 i_people_person_nationality > expt.log
 
