@@ -10,7 +10,7 @@ if __name__=="__main__":
     
     optdict,args = tensorlog.parseCommandLine('--prog smokers.ppr --proppr --db smokers.cfacts'.split())
     ti = tensorlog.Interp(optdict['prog'])
-    ti.prog.setWeights(ti.db.ones())
+    ti.prog.setRuleWeights()
     ti.prog.maxDepth = 99
     rows = []
     for line in open('query-entities.txt'):

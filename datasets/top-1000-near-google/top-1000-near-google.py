@@ -36,7 +36,7 @@ if __name__=="__main__":
     dTrain = uncacheMatPairs('%s.db' % stem,'raw/%s.train.examples' % stem)
     dTest = uncacheMatPairs('%s.db' % stem,'raw/%s.test.examples' % stem)
     prog = tensorlog.ProPPRProgram.load(["%s.db" % stem,"%s-recursive.ppr" % stem])
-    prog.setWeights(prog.db.ones())
+    prog.setRuleWeights(prog.db.ones())
     prog.maxDepth=4
     params = {'initProgram':prog,
               #'theoryPred':'concept_atdate',

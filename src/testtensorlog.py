@@ -83,7 +83,7 @@ class TestInterp(unittest.TestCase):
     def setUp(self):
         optdict,args = tensorlog.parseCommandLine("--db test/textcattoy.cfacts --prog test/textcat.ppr --proppr".split())
         self.ti = tensorlog.Interp(optdict['prog'])
-        self.ti.prog.setWeights(self.ti.db.ones())
+        self.ti.prog.setFeatureWeights()
 
     def testList(self):
         self.ti.list("predict/2")
@@ -542,7 +542,7 @@ class TestProPPR(unittest.TestCase):
         self.labeledData = self.prog.db.createPartner()
         self.prog.db.moveToPartner(self.labeledData,'train',2)
         self.prog.db.moveToPartner(self.labeledData,'test',2)
-        self.prog.setWeights(self.prog.db.ones())
+        self.prog.setFeatureWeights()
         self.xsyms,self.X,self.Y = self.loadExamples("test/textcattoy-train.examples",self.prog.db)
         self.numExamples = self.X.get_shape()[0] 
         self.numFeatures = self.X.get_shape()[1] 
@@ -732,6 +732,12 @@ class TestExpt(unittest.TestCase):
         self.assertAlmostEqual(acc1,1.0)
         self.assertAlmostEqual(xent1,xent2)
 
+    def testTCToyExpt2(self):
+        #test serialization and uncaching by running the experiment 2x
+        acc1,xent1 = self.runTCToyExpt2()
+        print 'acc:',acc1,'xent',xent1
+        self.assertAlmostEqual(acc1,1.0)
+
     def runTCToyExpt(self):
         db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
         db.listing()
@@ -740,7 +746,7 @@ class TestExpt(unittest.TestCase):
         print 'trainData:\n','\n'.join(trainData.pprint())
         print 'testData"\n','\n'.join(testData.pprint())
         prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr"],db=db)
-        prog.setWeights(db.ones())
+        prog.setFeatureWeights()
         params = {'prog':prog,
                   'trainData':trainData, 'testData':testData,
                   'savedModel':'toy-trained.db',
@@ -749,12 +755,22 @@ class TestExpt(unittest.TestCase):
                   'savedTestExamples':'tlog-cache/toy-test.examples'}
         return expt.Expt(params).run()
 
+    def runTCToyExpt2(self):
+        db = matrixdb.MatrixDB.uncache('tlog-cache/textcat2.db','test/textcattoy2.cfacts')
+        trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
+        testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
+        prog = tensorlog.ProPPRProgram.load(["test/textcat2.ppr"],db=db)
+        prog.setFeatureWeights()
+        prog.db.listing()
+        params = {'prog':prog,'trainData':trainData, 'testData':testData }
+        return expt.Expt(params).run()
+
     def runMToyExpt1(self):
         db = matrixdb.MatrixDB.uncache('tlog-cache/matchtoy.db','test/matchtoy.cfacts')
         trainData = dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test/matchtoy-train.exam',proppr=False)
         testData = trainData
         prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
-        prog.setWeights(db.ones())
+        prog.setRuleWeights(db.ones())
         params = {'prog':prog,'trainData':trainData, 'testData':testData}
         return expt.Expt(params).run()
 
@@ -763,7 +779,7 @@ class TestExpt(unittest.TestCase):
         trainData = dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test/matchtoy-train.exam',proppr=False)
         testData = trainData
         prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
-        prog.setWeights(db.ones())
+        prog.setRuleWeights(db.ones())
         params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':learn.FixedRateSGDLearner(prog)}
         return expt.Expt(params).run()
 
@@ -772,7 +788,7 @@ class TestExpt(unittest.TestCase):
         trainData = dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test/matchtoy-train.exam',proppr=False)
         testData = trainData
         prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
-        prog.setWeights(db.ones())
+        prog.setRuleWeights(db.ones())
         params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':plearn.ParallelAdaGradLearner(prog)}
         return expt.Expt(params).run()
 
@@ -781,7 +797,7 @@ class TestExpt(unittest.TestCase):
         trainData = dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test/matchtoy-train.exam',proppr=False)
         testData = trainData
         prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
-        prog.setWeights(db.ones())
+        prog.setRuleWeights(db.ones())
         params = {'prog':prog,'trainData':trainData, 
                   'testData':testData, 
                   'learner':plearn.ParallelFixedRateGDLearner(prog)}

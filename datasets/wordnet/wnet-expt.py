@@ -25,12 +25,14 @@ if __name__=="__main__":
     prog = optdict['prog']
 
     # the weight vector is sparse - just the constants in the unary predicate rule
-    prog.setWeights(prog.db.vector(declare.asMode("rule(i)")))
+    prog.setRuleWeights(prog.db.vector(declare.asMode("rule(i)")))
 
     # use a non-default learner, overriding the tracing function,
     # number of epochs, and regularizer
     learner = plearn.ParallelFixedRateGDLearner(
         prog,epochs=epochs,parallel=40,regularizer=learn.L2Regularizer())
+#    learner = plearn.ParallelAdaGradLearner(
+#        prog,epochs=epochs,parallel=40,regularizer=learn.L2Regularizer())
     targetMode = 'i_%s/io' % pred if pred!='ALL' else None
 
     # configute the experiment

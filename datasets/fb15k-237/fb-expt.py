@@ -28,7 +28,7 @@ if __name__=="__main__":
         ]))
 
     prog = optdict['prog']
-    prog.setWeights(prog.db.vector(declare.asMode("ruleid(i)")))
+    prog.setRuleWeights(weights=prog.db.vector(declare.asMode("ruleid(i)")))
     if processes==0:
         learner = learn.FixedRateGDLearner(
             prog,

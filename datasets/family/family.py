@@ -25,7 +25,7 @@ if __name__=="__main__":
     #dTrain = uncacheMatPairs('%s.db' % stem,'raw/%s.train.examples' % stem)
     #dTest = uncacheMatPairs('%s.db' % stem,'raw/%s.test.examples' % stem)
     prog = tensorlog.ProPPRProgram.load(["%s-train-isg.ppr" % stem],db=db)
-    prog.setWeights(db.ones())
+    prog.setRuleWeights()
     prog.maxDepth=4
     params = {'initProgram':prog,
               #'theoryPred':'concept_atdate',

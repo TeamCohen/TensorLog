@@ -6,6 +6,7 @@
 import sys
 import logging
 import getopt
+import collections
 
 import declare
 import funs
@@ -19,7 +20,7 @@ import plearn
 import mutil
 import debug
 
-VERSION = "1.2.2"
+VERSION = "1.2.3"
 
 # externally visible changes:
 #
@@ -29,7 +30,8 @@ VERSION = "1.2.2"
 # version 1.1.2: tracer output is not per example, no parallel option in funs
 # version 1.2.0: not sure, really.
 # version 1.2.1: plearn replaces epoch-level status monitoring with merged results minibatches
-# version 1.2.2: learner option
+# version 1.2.2: add learner option to command-line
+# version 1.2.3: add p(X,Y) :- ... {foo(F): q(X,F)} templates, propprProg.setRuleWeights(), propprProg.setFeatureWeights()
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
@@ -180,22 +182,66 @@ class ProPPRProgram(Program):
 
     def __init__(self, db=None, rules=parser.RuleCollection(), weights=None):
         super(ProPPRProgram,self).__init__(db=db, rules=rules, calledFromProPPRProgram=True)
+        # dictionary mapping parameter name to list of modes that can
+        # be used to determine possible non-zero values for the
+        # parameters
+        self.paramDomains = collections.defaultdict(list)
+        # list of constants used as rule features
+        self.ruleIds = []
         #expand the syntactic sugar used by ProPPR
-        self.rules.mapRules(ProPPRProgram._moveFeaturesToRHS)
-        if weights!=None: self.setWeights(weights)
+        self.rules.mapRules(self._moveFeaturesToRHS)
+        if weights!=None: self.setRuleWeights(weights)
 
-    def setWeights(self,weights):
+    def setRuleWeights(self,weights=None):
+        """Set the db predicate 'weighted/1' as a parameter, and initialize it
+        to the given vector.  If no vector is given, default to a
+        sparse vector of all constant rule features. 'weighted/1' is
+        the default parameter used to weight rule-ids features, e.g.,
+        "r" in p(X,Y):-... {r}.
+        """
         self.db.markAsParam("weighted",1)
+        if weights==None:
+            assert len(self.ruleIds)>0, 'no rule features have been defined'
+            weights = self.db.onehot(self.ruleIds[0])
+            for rid in self.ruleIds[1:]:
+                weights = weights + self.db.onehot(rid)
         self.db.setParameter("weighted",1,weights)
 
-    def getWeights(self):  
+    def getRuleWeights(self):  
+        """ Return a vector of the weights for a rule """
         return self.db.matEncoding[('weighted',1)]
 
+    def setFeatureWeights(self):
+        """ Initialize each feature used in the feature part of a rule, i.e.,
+        for all rules annotated by "{foo(F):...}", declare 'foo/1' to
+        be a parameter, and initialize it to something plausible.  The
+        'something plausible' is based on looking at how the variables
+        defining foo are defined, eg for something like "p(X,Y):-
+        ... {posWeight(F):hasWord(X,F)}" the sparse vector of all
+        second arguments of hasWord will be used to initialize
+        posWeight.
+        """
+        for paramName,domainModes in self.paramDomains.items():
+            weights = self.db.matrixPreimage(domainModes[0])
+            for mode in domainModes[1:]:
+                weights = weights + self.db.matrixPreimage(mode)
+            weights = weights * 1.0/len(domainModes)
+            self.db.setParameter(paramName,1,weights)
+            logging.info('parameter %s/1 initialized to %s' % (paramName,"+".join(map(lambda dm:'preimage(%s)' % str(dm), domainModes))))
+        for (paramName,arity) in self.getParams():
+            if not self.db.parameterIsSet(paramName,arity):
+                logging.warn("Parameter %s could not be set automatically")
+
+    def setFeatureWeight(self,paramName,arity,weight):
+        """ Set a particular parameter weight. """
+        self.db.markAsParam(paramName,arity)
+        self.db.setParameter(paramName,arity,weight)
+
     def getParams(self):
+        """ Return a set of (functor,arity) pairs corresponding to the parameters """
         return self.db.params
 
-    @staticmethod
-    def _moveFeaturesToRHS(rule0):
+    def _moveFeaturesToRHS(self,rule0):
         rule = parser.Rule(rule0.lhs, rule0.rhs)
         if not rule0.findall:
             #parsed format is {f1,f2,...} but we only support {f1}
@@ -204,15 +250,27 @@ class ProPPRProgram(Program):
             constAsVar = constFeature.upper()
             rule.rhs.append( matrixdb.assignGoal(constAsVar,constFeature) )
             rule.rhs.append( parser.Goal('weighted',[constAsVar]) )
+            # record the rule name, ie the constant feature
+            self.ruleIds.append(constFeature)
         else:
-            #format is {all(F):-...}
+            #format is {foo(F):-...}
             assert len(rule0.features)==1,'feature generators of the form {a,b: ... } not supported'
             featureLHS = rule0.features[0]
-            assert featureLHS.arity==1 and featureLHS.functor=='all', 'non-constant features must be of the form {all(X):-...}'
+            assert featureLHS.arity==1, 'non-constant features must be of the form {foo(X):-...}'
             outputVar = featureLHS.args[0] 
+            paramName = featureLHS.functor
             for goal in rule0.findall:
                 rule.rhs.append(goal)
-            rule.rhs.append( parser.Goal('weighted',[outputVar]) )
+            rule.rhs.append( parser.Goal(paramName,[outputVar]) )
+            # record the feature predicate 'foo' as a parameter
+            self.db.markAsParam(paramName,1)
+            # record the domain of the predicate
+            for goal in rule0.findall:
+                if outputVar in goal.args:
+                    k = goal.args.index(outputVar)
+                    if goal.arity==2:
+                        paramMode = declare.asMode("%s/io" % goal.functor) if k==0 else declare.asMode("%s/oi" % goal.functor)
+                        self.paramDomains[paramName].append(paramMode)
         return rule
 
     #TODO: deprecate

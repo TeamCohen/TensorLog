@@ -25,12 +25,15 @@ if __name__=="__main__":
     prog = optdict['prog']
 
     # the weight vector is sparse - just the constants in the unary predicate rule
-    prog.setWeights(prog.db.vector(declare.asMode("weighted(i)")))
+    prog.setRuleWeights(weights=prog.db.vector(declare.asMode("weighted(i)")))
 
     # use a non-default learner, overriding the tracing function,
     # number of epochs, and regularizer
 #    learner = learn.FixedRateGDLearner(prog,regularizer=learn.L2Regularizer(),traceFun=learn.Learner.cheapTraceFun,epochs=epochs)
-    learner = plearn.ParallelFixedRateGDLearner(prog,epochs=epochs,parallel=40)
+    learner = plearn.ParallelFixedRateGDLearner(prog,epochs=epochs,parallel=40,regularizer=learn.L2Regularizer())
+#    learner = plearn.ParallelAdaGradLearner(prog,epochs=epochs,parallel=40,regularizer=learn.L2Regularizer())
+    learner = plearn.ParallelAdaGradLearner(prog,epochs=epochs,parallel=40)
+#    learner = plearn.ParallelFixedRateGDLearner(prog,epochs=epochs,parallel=40)
 
     # configute the experiment
     params = {'prog':prog,
@@ -39,6 +42,7 @@ if __name__=="__main__":
               'savedTestPredictions':'tmp-cache/%s-test.solutions.txt' % stem,
               'savedTrainExamples':'tmp-cache/%s-train.examples' % stem,
               'savedTestExamples':'tmp-cache/%s-test.examples' % stem,
+              'savedModel':'tmp-cache/%s-model.examples' % stem,
               'learner':learner
     }
 

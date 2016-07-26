@@ -260,7 +260,8 @@ class BPCompiler(object):
                 mode = self.toMode(j)
                 if not gin.inputs:
                     # special case - binding a variable to a constant with set(Var,const)
-                    assert matrixdb.isAssignMode(mode),'output variables without inputs are only allowed for assign/2'
+                    assert matrixdb.isAssignMode(mode),\
+                           'output variables without inputs are only allowed for assign/2: %s' % str(self.rule.rhs[gin.index-1])
                     addOp(ops.AssignOnehotToVar(msgName,mode), traceDepth,j,v)
                     return msgName
                 else:

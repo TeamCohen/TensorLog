@@ -18,7 +18,7 @@ if __name__=="__main__":
     trainData = tensorlog.parseDatasetSpec('tmp-cache/cora-linear-train.dset|inputs/train.examples', db)
     testData = tensorlog.parseDatasetSpec('tmp-cache/cora-linear-test.dset|inputs/test.examples', db)
     prog = tensorlog.parseProgSpec("cora-linear.ppr",db,proppr=True)
-    prog.setWeights(db.ones())
+    prog.setRuleWeights()
     prog.db.markAsParam('kaw',1)
     prog.db.markAsParam('ktw',1)
     prog.db.markAsParam('kvw',1)

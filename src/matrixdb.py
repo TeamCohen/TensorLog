@@ -156,6 +156,9 @@ class MatrixDB(object):
         assert (functor,arity) in self.params,'%s/%d not a parameter' % (functor,arity)
         return self.matEncoding[(functor,arity)]
         
+    def parameterIsSet(self,functor,arity):
+        return (functor,arity) in self.matEncoding
+
     def setParameter(self,functor,arity,replacement):
         assert (functor,arity) in self.params,'%s/%d not a parameter' % (functor,arity)
         self.matEncoding[(functor,arity)] = replacement
