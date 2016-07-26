@@ -231,6 +231,7 @@ class ProPPRProgram(Program):
         for (paramName,arity) in self.getParams():
             if not self.db.parameterIsSet(paramName,arity):
                 logging.warn("Parameter %s could not be set automatically")
+        logging.info('total parameter size: %d', self.db.parameterSize())
 
     def setFeatureWeight(self,paramName,arity,weight):
         """ Set a particular parameter weight. """

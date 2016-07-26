@@ -395,26 +395,6 @@ class Learner(object):
             m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
             self.prog.db.setParameter(functor,arity,m)
 
-#
-#            #figure out how to do the update...
-#            m0 = self.prog.db.getParameter(functor,arity)
-#            if mutil.numRows(m0)==1:
-#                #for a parameter that is a row-vector, we have one
-#                #gradient per example and we will take the mean
-#                if totalN>0: 
-#                    #adjust for a minibatch
-#                    rate *= float(n)/totalN
-#                m1 = m0 + mutil.mean(delta)*rate
-#            else:
-#                #for a parameter that is a matrix, we have one gradient for the whole matrix
-#                rateCompensation = (1.0/n) if totalN==0 else (1.0/totalN)
-#                m1 = m0 + delta*rate*rateCompensation
-#
-#            #clip negative entries of parameters to zero
-#            m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
-#            #update the parameter
-#            self.prog.db.setParameter(functor,arity,m)
-
 
 #
 # actual learner implementations

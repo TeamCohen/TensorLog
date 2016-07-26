@@ -15,7 +15,8 @@ import matrixdb
 
 conf = config.Config()
 conf.careful = True;                 conf.help.careful = 'execute checks for matrix type and NANs'
-conf.densifyWeightByRowSum = True;   conf.help.densifyWeightByRowSum = 'use dense matrices here - did not speed up test cases'
+conf.densifyWeightByRowSum = False;  conf.help.densifyWeightByRowSum = 'use dense matrices here - did not speed up test cases'
+conf.densifyMean = True;             conf.help.densifyMean = 'use dense matrices here'
 conf.maxExpandFactor = 3;            conf.help.maxExpand = 'K, where you can can use B + KM the sparse-matrix memory M when densifying matrices'
 conf.maxExpandIntercept = 10000;     conf.help.maxExpand = 'B, where you can can use B + KM the sparse-matrix memory M when densifying matrices'
 conf.warnAboutDensity = False;       conf.help.warnAboutDensity = 'warn when you fail to densify a matrix'
@@ -112,11 +113,38 @@ def undensify(denseMat, info):
     return result
 
 def mean(mat):
-    """Return the average of the rows."""
+    """Return the average of the rows in a matrix."""
     checkCSR(mat)
-    #TODO - mat.mean returns a dense matrix which mutil converts, can I avoid that?
-    #TODO - does this need broadcasting?
     return SS.csr_matrix(mat.mean(axis=0))
+#    r = numRows(mat)
+#    return rowsum(mat) * (1.0/r)
+
+def rowsum(mat):
+    """Return the sum of the rows in a matrix."""
+    checkCSR(mat)
+    # mat.sum(0) returns a dense matrix, and using these incantations will avoid that
+    # v1: squish everything into one row and sum duplicates - slower than csr_matrix(mat.mean)
+#    newIndptr = NP.array([0,mat.data.shape[0]])
+#    rowSum = SS.csr_matrix((mat.data, mat.indices, newIndptr),(1,numCols(mat)),dtype='float64')
+#    rowSum.sum_duplicates() # modifies in-place
+    # v2: use rowsum[k] = sum_{j:indices[j]==k} data[j] and turn it into a matrix dot product
+    # still 2x slower than dense mat.mean
+#    ndense = mat.data.shape[0]
+#    indptr2 = NP.arange(0,ndense+1)
+#    m2 = SS.csr_matrix((mat.data,mat.indices,indptr2),(ndense,numCols(mat)))
+#    sparseOnes = SS.csr_matrix((NP.ones(ndense),NP.arange(0,ndense),NP.array([0,ndense])), (1,ndense), dtype='float64')
+#    rowSum = sparseOnes.dot(m2)
+    # v3: like v2, but densify
+    denseMat,undensifier = densify(mat)
+    if denseMat!=None:
+        return undensify(denseMat.sum(0), undensifier)
+    else:
+        ndense = mat.data.shape[0]
+        indptr2 = NP.arange(0,ndense+1)
+        m2 = SS.csr_matrix((mat.data,mat.indices,indptr2),(ndense,numCols(mat)))
+        sparseOnes = SS.csr_matrix((NP.ones(ndense),NP.arange(0,ndense),NP.array([0,ndense])), (1,ndense), dtype='float64')
+        rowSum = sparseOnes.dot(m2)
+        return rowSum
 
 def mapData(dataFun,mat):
     """Apply some function to the mat.data array of the sparse matrix and return a new one."""

@@ -223,6 +223,9 @@ class MatrixDB(object):
     def size(self):
         return sum(map(lambda m:m.nnz, self.matEncoding.values()))
 
+    def parameterSize(self):
+        return sum([m.nnz for  ((fun,arity),m) in self.matEncoding.items() if (fun,arity) in self.params])
+
     #
     # moving data between databases
     #
