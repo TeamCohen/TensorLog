@@ -92,8 +92,8 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
 
     def processGradients(self,bpOutputs,totalN):
         """ Use the gradients to update parameters """
+        self.regularizer.regularizeParams(self.prog,totalN)
         for (n,paramGrads) in bpOutputs:
-            self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
             # scale rate down to reflect the fraction of the data  
             self.applyMeanUpdate(paramGrads, self.rate, n, totalN)
 
@@ -176,6 +176,7 @@ class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
             for (functor,arity),grad in totalGradient.items():
                 totalGradient[(functor,arity)] = grad.multiply(ratePerParam[(functor,arity)])
 
+            self.regularizer.regularizeParams(self.prog,totalN)
             for (functor,arity) in self.prog.db.params:
                 m = self.prog.db.getParameter(functor,arity)
                 print 'reg',functor,'/',arity,'m shape',m.shape
@@ -183,7 +184,6 @@ class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
                     print 'vs totalGradient shape',totalGradient[(functor,arity)].shape
                 else:
                     print 'not in totalGradient'
-            self.regularizer.addRegularizationGrad(totalGradient,self.prog,totalN)
 
             #cannot use process gradients because I've already scaled them down,
             # need to just add and clip

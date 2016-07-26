@@ -157,7 +157,7 @@ if __name__=="__main__":
         extraArgConsumer="expt", extraArgSpec=argSpec, extraArgUsage=usageLines
     ) 
 
-    optdict['prog'].setWeights(optdict['prog'].db.ones())
+    optdict['prog'].setFeatureWeights()
     learner = None
     if 'learner' in optdict:
         try:

@@ -415,7 +415,7 @@ class OnePredFixedRateGDLearner(Learner):
             n = mutil.numRows(X)
             args = {'i':i,'startTime':startTime}
             paramGrads = self.crossEntropyGrad(mode,X,Y,tracerArgs=args)
-            self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
+            self.regularizer.regularizeParams(self.prog,n)
             self.applyMeanUpdate(paramGrads,self.rate,n)
 
 class FixedRateGDLearner(Learner):
@@ -438,7 +438,7 @@ class FixedRateGDLearner(Learner):
                 n = mutil.numRows(dset.getX(mode))
                 args = {'i':i,'startTime':startTime,'mode':str(mode)}
                 paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),tracerArgs=args)
-                self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
+                self.regularizer.regularizeParams(self.prog,n)
                 self.applyMeanUpdate(paramGrads,self.rate,n)
                 epochCounter = GradAccumulator.mergeCounters([paramGrads],epochCounter)
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
@@ -467,7 +467,7 @@ class FixedRateSGDLearner(FixedRateGDLearner):
                 k = k+1
                 args = {'i':i,'k':k,'startTime':startTime,'mode':mode}
                 paramGrads = self.crossEntropyGrad(mode,X,Y,tracerArgs=args)
-                self.regularizer.addRegularizationGrad(paramGrads,self.prog,n)
+                self.regularizer.regularizeParams(self.prog,n)
                 self.applyMeanUpdate(paramGrads,self.rate,n)
                 epochCounter = GradAccumulator.mergeCounters([paramGrads],epochCounter)
 
@@ -481,7 +481,7 @@ class FixedRateSGDLearner(FixedRateGDLearner):
 class Regularizer(object):
     """Abstract class for regularizers."""
 
-    def addRegularizationGrad(self,paramGrads,prog,n):
+    def regularizeParams(self,prog,n):
         """Introduce the regularization gradient to a GradAccumulator."""
         assert False, 'abstract method called'
 
@@ -492,7 +492,7 @@ class Regularizer(object):
 class NullRegularizer(object):
     """ Default case which does no regularization"""
 
-    def addRegularizationGrad(self,paramGrads,prog,n):
+    def regularizeParams(self,prog,n):
         pass
 
     def regularizationCost(self,prog):
@@ -504,22 +504,11 @@ class L2Regularizer(Regularizer):
     def __init__(self,regularizationConstant=0.01):
         self.regularizationConstant = regularizationConstant
     
-    def addRegularizationGrad(self,paramGrads,prog,n):
+    def regularizeParams(self,prog,n):
         for functor,arity in prog.db.params:
-            m = prog.db.getParameter(functor,arity)
-            # want to do this update, from m->m1
-            # m1 = m*(1 - regularizationConstant)^n = m*d
-            # but it has to be done addititively so use 
-            #     [ m1 = m + z = m*d] 
-            # and solve for z which gives you this
-            z = m * math.pow((1.0 - self.regularizationConstant), n) - m
-            # broadcast z0 to the size of delta, if needed
-            if (functor,arity) in paramGrads.keys():
-                delta = paramGrads[(functor,arity)]
-                if mutil.numRows(delta)!=mutil.numRows(m):
-                    assert mutil.numRows(z)==1,'shape mismatch for addRegularizationGrad'
-                    z = mutil.repeat(z,mutil.numRows(delta))
-            paramGrads.accum((functor,arity), z)
+            m0 = prog.db.getParameter(functor,arity)
+            m1 = m0 * (1.0 - self.regularizationConstant)
+            prog.db.setParameter(functor,arity,m1)
 
     def regularizationCost(self,prog):
         result = 0
