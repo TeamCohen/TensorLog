@@ -5,6 +5,7 @@
 
 import os
 import time
+import collections
 import multiprocessing
 import multiprocessing.pool    
 import logging
@@ -12,6 +13,7 @@ import numpy as NP
 
 import mutil
 import learn
+import dataset
 
 #TODO iterate, don't make lists
 
@@ -42,6 +44,10 @@ def _doBackpropTask(task):
 def _doAcceptNewParams(paramDict):
     for (functor,arity),value in paramDict.items():
         workerLearner.prog.db.setParameter(functor,arity,value)
+
+def _doPredict(miniBatch):
+    (mode,X,Y) = miniBatch
+    return (mode,X,workerLearner.predict(mode,X))
 
 ##############################################################################
 # A parallel learner.
@@ -79,6 +85,30 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
                       self.rate,self.regularizer,self.tracer,self.miniBatchSize))
         logging.info('created pool of %d workers' % parallel)
     
+    #
+    # override the learner method with a parallel approach
+    #
+    def datasetPredict(self,dset,copyXs=True):
+        """ Return predictions on a dataset. """
+        xDictBuffer = collections.defaultdict(list)
+        yDictBuffer = collections.defaultdict(list)
+        miniBatches = list(dset.minibatchIterator(batchSize=self.miniBatchSize,shuffleFirst=False))
+        logging.info('predicting for %d miniBatches with the worker pool...' % len(miniBatches))
+        predictOutputs = self.pool.map(_doPredict, miniBatches, chunksize=1)
+        for (mode,X,P) in predictOutputs:
+            if copyXs: xDictBuffer[mode].append(X) 
+            yDictBuffer[mode].append(P)
+        logging.info('predictions for %d miniBatches done' % len(miniBatches))
+        xDict = {}
+        yDict = {}
+        if copyXs:
+            for mode in xDictBuffer: 
+                xDict[mode] = mutil.stack(xDictBuffer[mode])
+        for mode in yDictBuffer: 
+            yDict[mode] = mutil.stack(yDictBuffer[mode])
+        logging.info('predictions restacked')
+        return dataset.Dataset(xDict,yDict)
+
     @staticmethod
     def miniBatchToTask(batch,i,k,startTime):
         """Convert a minibatch to a task to submit to _doBackpropTask"""
@@ -95,7 +125,7 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
         self.regularizer.regularizeParams(self.prog,totalN)
         for (n,paramGrads) in bpOutputs:
             # scale rate down to reflect the fraction of the data  
-            self.applyMeanUpdate(paramGrads, self.rate, n, totalN)
+            self.applyUpdate(paramGrads, self.rate * (float(n)/totalN))
 
     def broadcastParameters(self):
         """" Broadcast the new parameters to the subprocesses """
@@ -133,7 +163,7 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
             self.broadcastParameters()
             logging.info("parameters broadcast to workers")
             # status updates
-            epochCounter = learn.GradAccumulator.mergeCounters( map(lambda (n,grads):grads, bpOutputs) )
+            epochCounter = learn.GradAccumulator.mergeCounters( map(lambda (n,grads):grads.counter, bpOutputs) )
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
 
 class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
@@ -197,5 +227,5 @@ class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
             self.broadcastParameters()
 
             # status updates
-            epochCounter = learn.GradAccumulator.mergeCounters( map(lambda (n,grads):grads, bpOutputs) )
+            epochCounter = learn.GradAccumulator.mergeCounters( map(lambda (n,grads):grads.counter, bpOutputs) )
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)

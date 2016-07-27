@@ -3,6 +3,7 @@
 # learning methods for Tensorlog
 # 
 
+import sys
 import time
 import math
 import numpy as NP
@@ -28,12 +29,17 @@ conf.maxGradient = +100;   conf.help.minGradient = "Clip gradients larger than t
 ##############################################################################
 
 class GradAccumulator(object):
-    """ Accumulate the sum gradients for perhaps many parameters, indexing
-    them by parameter name.  Also maintains 'counter' statistics
+    """Accumulate the sum gradients for perhaps many parameters, indexing
+    them by parameter name.  Also maintains 'counter' statistics,
+    which are simply floats indexed by a counter name.  Counters are
+    mostly updated by the Tracer functions.  The only required counter
+    is the counter 'n', which is the size of the minibatch the
+    gradient was computed on.
     """
     def __init__(self):
         self.runningSum = {}
         self.counter = collections.defaultdict(float)
+        self.reshaped = False
     def keys(self):
         return self.runningSum.keys()
     def items(self):
@@ -51,40 +57,89 @@ class GradAccumulator(object):
         else:
             self.runningSum[paramName] = self.runningSum[paramName] + deltaGradient
             mutil.checkCSR(self.runningSum[paramName],('runningSum for %s' % str(paramName)))
-    @staticmethod
-    def counter():
-        return collections.defaultdict(float)
+
+    #
+    # manipulate gradients
+    #
+
+    def fitParameterShapes(self):
+        """Fix up the running sums so that they are the same shapes as the
+        parameters they are gradients of (in-place).  This is
+        necessary because in a minibatch of size m row-vector
+        gradients are stored for each example, so they will have m
+        rows instead of just one.
+        """
+        if not self.reshaped:
+            for ((functor,arity),mat) in self.items():
+                if arity==1:
+                    #for a parameter that is a row-vector, we have one
+                    #gradient per example, so replace it with the mean
+                    self.runningSum[(functor,arity)] = mutil.mean(mat)
+                else:
+                    # for parameters that are matrices, we have one gradient
+                    # of the right shape, but it is the sum of the gradients
+                    # of the examples in the minibatch
+                    # TODO: check this math
+                    self.runningSum[(functor,arity)] = mat * (1.0/self.counter['n'])
+            self.reshaped = True
+
+    #TODO only used by adagrad, is this the right place?
     def mapData(self,mapFun):
+        """Apply some function to every gradient in the accumulator (in place)."""
         result = GradAccumulator()
         for k,m in self.items():
             result.accum(k, mutil.mapData(mapFun,m))
         return result
+
+    #TODO only used by adagrad, is this the right place?
     def addedTo(self,other):
+        """Return a new GradAccumulator with the sum of the gradient,
+        discarding counters.
+        """
         result = GradAccumulator()
         for k,m in self.items():
             result.accum(k, m)
         for k,m in other.items():
             result.accum(k, m)
         return result
+    
+
+    #
+    # helper routines for handling counters and such
+    #
+
     @staticmethod
-    def mergeCounters(gradAccums,initial=None):
+    def counter():
+        """ Return a new counter object. """
+        return collections.defaultdict(float)
+    @staticmethod
+    def mergeCounters(counters):
         """Compute the min, max, total, avg, and weighted average of every
         counter, and return in a new defaultdict
         """ 
-        ctr = initial if initial!=None else GradAccumulator.counter()
+        return GradAccumulator._mergeCountersWithInit(counters,None)
+    @staticmethod
+    def accumToCounter(counter,otherCounter):
+        """Update counter, which keeps a running run of the min, max, total,
+        avg, of all otherCounters that have been merged into it.
+        """
+        return GradAccumulator._mergeCountersWithInit([otherCounter],counter)
+    @staticmethod
+    def _mergeCountersWithInit(counters,init):
+        ctr = init if init!=None else GradAccumulator.counter()
         keys = set()
-        weightedTotalPrefix = '_wtot'
+        weightedTotalPrefix = '_wtot'  #temp storage for weighted averages
         #reduce with total,min,max, and weighted total
-        for accum in gradAccums:
+        for counter in counters:
             ctr['counters'] += 1  # merged counters
-            for k,v in accum.counter.items():
+            for k,v in counter.items():
                 keys.add(k)
                 ctr[(k,'tot')] += v
-                ctr[(k,weightedTotalPrefix)] += accum.counter['n']*v
+                ctr[(k,weightedTotalPrefix)] += counter['n']*v
                 kmin = (k,'min')
-                if kmin in ctr: ctr[kmin] = min(ctr[kmin],v)
+                ctr[kmin] = min(ctr.get(kmin,sys.float_info.max),v)
                 kmax = (k,'max')
-                if kmin in ctr: ctr[kmin] = min(ctr[kmin],v)
+                ctr[kmax] = max(ctr.get(kmax,sys.float_info.min),v)
         # convert weighted total to weighted avg
         totn = ctr[('n','tot')]
         for k in keys:
@@ -329,6 +384,10 @@ class Learner(object):
         result = -(Y.multiply(logP).sum())
         return result/mutil.numRows(Y) if perExample else result
 
+    #
+    # gradient computation
+    #
+
     def crossEntropyGrad(self,mode,X,Y,tracerArgs={},pad=None):
         """Compute the parameter gradient associated with softmax
         normalization followed by a cross-entropy cost function.  If a
@@ -366,9 +425,10 @@ class Learner(object):
         return paramGrads
 
     #
-    # parameter update
+    # parameter updates
     #
 
+    #TODO remove
     def meanUpdate(self,functor,arity,delta,n,totalN=0):
         #clip the delta vector to avoid exploding gradients
         delta = mutil.mapData(lambda d:NP.clip(d,conf.minGradient,conf.maxGradient), delta)
@@ -383,18 +443,16 @@ class Learner(object):
             return delta*compensation
         
 
-    def applyMeanUpdate(self,paramGrads,rate,n,totalN=0):
-        """ Compute the mean of each parameter gradient, and add it to the
-        appropriate param, after scaling by rate. If necessary clip
-        negative parameters to zero.
+    def applyUpdate(self,paramGrads,rate):
+        """Add each gradient to the appropriate param, after scaling by rate,
+        and clip negative parameters to zero.
         """ 
-
-        for (functor,arity),delta0 in paramGrads.items():
+        paramGrads.fitParameterShapes()
+        for (functor,arity),delta in paramGrads.items():
             m0 = self.prog.db.getParameter(functor,arity)
-            m1 = m0 + rate * self.meanUpdate(functor,arity,delta0,n,totalN=totalN)
-            m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
-            self.prog.db.setParameter(functor,arity,m)
-
+            m1 = m0 + rate * delta
+            m2 = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
+            self.prog.db.setParameter(functor,arity,m2)
 
 #
 # actual learner implementations
@@ -416,7 +474,7 @@ class OnePredFixedRateGDLearner(Learner):
             args = {'i':i,'startTime':startTime}
             paramGrads = self.crossEntropyGrad(mode,X,Y,tracerArgs=args)
             self.regularizer.regularizeParams(self.prog,n)
-            self.applyMeanUpdate(paramGrads,self.rate,n)
+            self.applyUpdate(paramGrads,self.rate)
 
 class FixedRateGDLearner(Learner):
     """ A batch gradient descent learner.
@@ -439,8 +497,8 @@ class FixedRateGDLearner(Learner):
                 args = {'i':i,'startTime':startTime,'mode':str(mode)}
                 paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),tracerArgs=args)
                 self.regularizer.regularizeParams(self.prog,n)
-                self.applyMeanUpdate(paramGrads,self.rate,n)
-                epochCounter = GradAccumulator.mergeCounters([paramGrads],epochCounter)
+                self.applyUpdate(paramGrads,self.rate)
+                GradAccumulator.accumToCounter(epochCounter,paramGrads.counter)
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
             
 
@@ -468,8 +526,8 @@ class FixedRateSGDLearner(FixedRateGDLearner):
                 args = {'i':i,'k':k,'startTime':startTime,'mode':mode}
                 paramGrads = self.crossEntropyGrad(mode,X,Y,tracerArgs=args)
                 self.regularizer.regularizeParams(self.prog,n)
-                self.applyMeanUpdate(paramGrads,self.rate,n)
-                epochCounter = GradAccumulator.mergeCounters([paramGrads],epochCounter)
+                self.applyUpdate(paramGrads,self.rate)
+                GradAccumulator.accumToCounter(epochCounter,paramGrads.counter)
 
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
 

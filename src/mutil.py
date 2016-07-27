@@ -152,7 +152,7 @@ def mapData(dataFun,mat):
     newdata = dataFun(mat.data)
     return SS.csr_matrix((newdata,mat.indices,mat.indptr), shape=mat.shape, dtype='float64')
 
-#TODO get rid of this, it's expensive
+#TODO avoid this, it's expensive
 def stack(mats):
     """Vertically stack matrices and return a sparse csr matrix."""
     for m in mats: checkCSR(m)

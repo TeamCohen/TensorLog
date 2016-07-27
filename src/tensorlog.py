@@ -264,7 +264,7 @@ class ProPPRProgram(Program):
                 rule.rhs.append(goal)
             rule.rhs.append( parser.Goal(paramName,[outputVar]) )
             # record the feature predicate 'foo' as a parameter
-            self.db.markAsParam(paramName,1)
+            if self.db: self.db.markAsParam(paramName,1)
             # record the domain of the predicate
             for goal in rule0.findall:
                 if outputVar in goal.args:

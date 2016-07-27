@@ -1,18 +1,19 @@
 TODO: 
 
- - check grid, fb, family?
+ - check family
+ - check subfunction reuse in grid
+ - add ruleid-listing routine in tensorlog.propprprogram
 
- - replace {all(f):....} with {weighted(F):...}
+ - DOCUMENT: replace {all(f):....} with {weighted(F):...}
  so textcat can be "predict(X,Y) :- assign(Y,pos) { posWeight(F):hasWord(X,F) }."
  - add some analysis to allow you to initialize these weights?
  - note: {r} is short for {weighted(R):assign(R,r)}
 
  - cleanup gradient stuff:
- -- routine to reshape/average gradients
-    use sum, not mean
- -- routine to apply gradients
- -- routine to apply regularization to parameters
-    lazy regularization?
+ -- plearn tasks should postprocess the parameters via rowsum for the paramGrad weights - sort of like a combiner
+ -- plearn postprocessing should do weighted average of the gradients - maybe do with with a bunch of pairwise addition tasks?
+
+ - parallelize dataset predict for 
 
  - need to test Adagrad on real data
    - update: regularization runs but it possibly broken
@@ -23,15 +24,6 @@ TODO:
  -- maybe extend env so that env.matrixType[v] indicates type: sparse or dense+offset
  -- have ops dispatch to the correct operator as appropriate
 
- - optimization for cora-expt:
- -- train is 8.7s, mostly gradient
- -- matrix init is 3.7s
- -- mat mul is 2.5s
- -- broadcastAndWeightByRowSum is 2s (can densify)
- -- broadcastAndComponentwiseMultiply is 2.2s (densified)
- -- softmax is 1.9s (can densify)
- -- broadcastAndWeightByRowSum is also about 25%
- -- broadcastAndComponentwiseMultiply is 30%
  -- rather than types, I could just read in all constants in order so that
  you can group similar-typed ones together (eg, have 'foo.order' be 
  an extra input in programFiles and add a bit to the matrixdb to 

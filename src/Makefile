@@ -3,8 +3,8 @@ short-tests:
 	python -m unittest testtensorlog
 
 # tests that take a few minutes to run
-# run 'make prepare-for-long-tests' first
-long-tests: short-tests benchmark-test wnet-test cora-test
+# run 'make prepare-for-long-tests' in a fresh install before you run these
+long-tests: short-tests benchmark-test wnet-test cora-test grid-test
 
 prepare-for-long-tests:
 	make fb15k-valid.db 
@@ -27,8 +27,10 @@ wnet-test:
 cora-test:
 	(export PYTHONPATH=`pwd`; cd ../datasets/cora/; make clean; make; make check)
 
+grid-test:
+	(export PYTHONPATH=`pwd`; cd ../datasets/grid/; make clean; make; make check)
+
 textcattoy-expt:
-	#python -m expt --db test/textcattoy.cfacts --prog test/textcat.ppr --trainData test/toytrain.exam --testData test/toytrain.exam --proppr +++ --learner plearn.ParallelAdaGradLearner --learnerOpts '{"regularizer":learn.L2Regularizer()}'
 	python -m expt --db test/textcattoy.cfacts --prog test/textcat.ppr --trainData test/toytrain.exam --testData test/toytrain.exam --proppr
 
 # debug-test needs to be interactive
@@ -47,6 +49,6 @@ wc-all:
 # cleanup
 
 clean:
-	rm -f *.pyc *.py~ *.prof
+	rm -f *.pyc *.py~ *.prof 
 	rm -f toy-test.examples toy-test.solutions.txt toy-train.examples 
 	rm -rf toy-trained.db
