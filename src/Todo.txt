@@ -3,7 +3,7 @@ TODO:
  - check family
  - check subfunction reuse in grid
  - DOCUMENT: add ruleid-listing routine in list
-
+ - add __repr__ functions for learners so you can echo them in expt
  - DOCUMENT: options --savedModel, --targetMode,
    --savedTestPredictions, --savedTestExamples, savedTrainExamples for
    expt
