@@ -2,11 +2,15 @@ TODO:
 
  - check family
  - check subfunction reuse in grid
- - add ruleid-listing routine in tensorlog.propprprogram
+ - DOCUMENT: add ruleid-listing routine in list
+
+ - DOCUMENT: options --savedModel, --targetMode,
+   --savedTestPredictions, --savedTestExamples, savedTrainExamples for
+   expt
 
  - DOCUMENT: replace {all(f):....} with {weighted(F):...}
  so textcat can be "predict(X,Y) :- assign(Y,pos) { posWeight(F):hasWord(X,F) }."
- - add some analysis to allow you to initialize these weights?
+ - DOCUMENT: prog.setFeatureWeights(), prog.setRuleWeights
  - note: {r} is short for {weighted(R):assign(R,r)}
 
  - cleanup gradient stuff:

@@ -5,6 +5,21 @@ expt.log:
 	python supervised-expt.py citeseer >> expt.log
 	python supervised-expt.py pubmed >> expt.log
 
+%.eval:
+	python -m expt \
+	    --db 'inputs/$*.db|inputs/$*-corpus.cfacts' --prog inputs/$*-textcat.ppr --proppr \
+	    --train 'inputs/$*-train.dset|inputs/$*-train.exam' \
+	    --test 'inputs/$*-test.dset|inputs/$*-test.exam' \
+	    +++ \
+	    --learner plearn.ParallelFixedRateGDLearner --learnerOpts "\"{'epochs':60,'parallel':55,'rate':20}\"" \
+	    --savedModel tmp-cache/$*.model
+
+sr8:
+	python supervised-expt.py r8 20
+
+profile:
+	python -m cProfile -s cumtime supervised-expt.py r8 4
+
 check: actual.txt
 	diff -y actual.txt expected.txt || true
 
@@ -14,10 +29,10 @@ actual.txt: expt.log
 	grep 'eval.*on test' expt.log >> actual.txt
 
 clean:
-	rm -rf tmp-cache/* inputs/* *~ bin/*~ expt.log
+	rm -rf tmp-cache/* *~ bin/*~ expt.log
 
 #
-# import the original inputs from /afs/cs/project/proppr-1
+# import the original inputs, by default from /afs/cs/project/proppr-1
 #
 
 import:

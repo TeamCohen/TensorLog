@@ -28,9 +28,9 @@ class Expt(object):
         self.config = configDict
 
     def run(self):
+        print 'Expt configuration:',self.config
         return self._run(**self.config)
 
-    #TODO targetPred->targetMode
     def _run(self,
              prog=None, trainData=None, testData=None, targetMode=None, 
              savedTestPredictions=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None,
@@ -139,7 +139,7 @@ class Expt(object):
         print 'eval',modelMsg,'on',testSet,': acc',acc,'xent/ex',xent
         return (acc,xent)
 
-# a sample main
+# a useful main
 
 if __name__=="__main__":
 
@@ -150,7 +150,8 @@ if __name__=="__main__":
         '    where e is a filename, f is the name of a learner class', 
         '    and learnerOpts is a string that "evals" to a python dict',
     ]
-    argSpec = ["learner=", "savedModel=", "learnerOpts="]
+    argSpec = ["learner=", "savedModel=", "learnerOpts=", "targetMode=",
+               "savedTestPredictions=", "savedTestExamples=", "savedTrainExamples="]
 
     optdict,args = tensorlog.parseCommandLine(
         sys.argv[1:], 
@@ -158,11 +159,14 @@ if __name__=="__main__":
     ) 
 
     optdict['prog'].setFeatureWeights()
+    optdict['prog'].setRuleWeights()
     learner = None
     if 'learner' in optdict:
         try:
             optdict['learner'] = eval(optdict['learner'])
-            optdict['learnerOpts'] = eval(optdict.get('learnerOpts','{}'))
+            #so darn hard to get the number of quotes right in Makefile/shell, so eval 'while'...
+            while type(optdict['learnerOpts'])==type(""):
+                optdict['learnerOpts'] = eval(optdict.get('learnerOpts','{}'))                
             print "decoded learner spec to "+repr(optdict['learner'])+" args "+repr(optdict['learnerOpts'])
             learner = optdict['learner'](optdict['prog'], **optdict['learnerOpts'])
         except Exception as ex:
@@ -174,8 +178,11 @@ if __name__=="__main__":
               'trainData':optdict['trainData'],
               'testData':optdict['testData'],
               'learner':learner,
-              'savedModel':optdict.get('savedModel','expt-model.db')}
+              'savedModel':optdict.get('savedModel'),
+              'targetMode':optdict.get('targetMode'),
+              'savedTestPredictions':optdict.get('savedTestPredictions'),
+              'savedTestExamples':optdict.get('savedTestExamples'),
+              'savedTrainExamples':optdict.get('savedTrainExamples'),
+    }
 
     Expt(params).run()
-
-

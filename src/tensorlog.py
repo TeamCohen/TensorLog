@@ -30,8 +30,11 @@ VERSION = "1.2.3"
 # version 1.1.2: tracer output is not per example, no parallel option in funs
 # version 1.2.0: not sure, really.
 # version 1.2.1: plearn replaces epoch-level status monitoring with merged results minibatches
-# version 1.2.2: add learner option to command-line
-# version 1.2.3: add p(X,Y) :- ... {foo(F): q(X,F)} templates, propprProg.setRuleWeights(), propprProg.setFeatureWeights()
+# version 1.2.2: add learner option to expt command-line
+# version 1.2.3: 
+#    add p(X,Y) :- ... {foo(F): q(X,F)} templates, propprProg.setRuleWeights(), propprProg.setFeatureWeights()
+#    list --prog xxx --ruleids            
+#    more options for expt
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
@@ -199,13 +202,15 @@ class ProPPRProgram(Program):
         the default parameter used to weight rule-ids features, e.g.,
         "r" in p(X,Y):-... {r}.
         """
-        self.db.markAsParam("weighted",1)
-        if weights==None:
-            assert len(self.ruleIds)>0, 'no rule features have been defined'
-            weights = self.db.onehot(self.ruleIds[0])
-            for rid in self.ruleIds[1:]:
-                weights = weights + self.db.onehot(rid)
-        self.db.setParameter("weighted",1,weights)
+        if len(self.ruleIds)==0: 
+            logging.warn('no rule features have been defined')
+        else:
+            self.db.markAsParam("weighted",1)
+            if weights==None:
+                weights = self.db.onehot(self.ruleIds[0])
+                for rid in self.ruleIds[1:]:
+                    weights = weights + self.db.onehot(rid)
+            self.db.setParameter("weighted",1,weights)
 
     def getRuleWeights(self):  
         """ Return a vector of the weights for a rule """
@@ -386,7 +391,6 @@ def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]
         optlist,args = getopt.getopt(argv, 'x', argspec)
         if extraArgConsumer:
             if args:
-                print 'args',args
                 if not args[0].startswith('+'): logging.warn("command-line options for %s should follow a +++ argument" % extraArgConsumer)
                 extraOptList,extraArgs = getopt.getopt(args[1:], 'x', extraArgSpec)
                 args = extraArgs
