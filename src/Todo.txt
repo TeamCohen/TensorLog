@@ -1,6 +1,7 @@
 TODO: 
 
- - check family
+ - check y - p vs p - y in tensorlog (and gradient sign)
+ - check family dataset
  - check subfunction reuse in grid
  - DOCUMENT: add ruleid-listing routine in list
  - add __repr__ functions for learners so you can echo them in expt
@@ -17,13 +18,10 @@ TODO:
  -- plearn tasks should postprocess the parameters via rowsum for the paramGrad weights - sort of like a combiner
  -- plearn postprocessing should do weighted average of the gradients - maybe do with with a bunch of pairwise addition tasks?
 
- - parallelize dataset predict for 
-
  - need to test Adagrad on real data
    - update: regularization runs but it possibly broken
 
  - faster database loader/fact buffer flushing
- - add to database loader code to handle ruleids - and assigns?
  - think about typed predicates and dense matrices
  -- maybe extend env so that env.matrixType[v] indicates type: sparse or dense+offset
  -- have ops dispatch to the correct operator as appropriate
@@ -36,21 +34,6 @@ TODO:
 TUTORIAL/DOCS
 
   see wiki
-
-Trip work:
-
- - spent time stabilizing the learner on grid task.  progress but
- learning rate still needs to be tuned by grid size....problems mostly
- were lack of regularization and exploding gradients
-  - no regularizer arguments for expt yet TODO
- - learner now has regularizer and clips gradients and parameters correctly
- - major cleanup of mutil
- - regularization seems slow for wnet task compared to previously....should try with sparse params
- - explored using Log before SoftMax to make it more stable but experiments were disappointing, learning
- seemed much much slower.....
- - wrote debug.py
- - refactored preimages
- - tested sparse weight vectors - seem to work
 
 TODO: Thinking thru functions and re-use: I'm not sure that re-used functions are handled properly.
 They cache their outputs so if they are called multiple times at the same level with different
