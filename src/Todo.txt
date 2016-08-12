@@ -3,16 +3,7 @@ TODO:
  - check y - p vs p - y in tensorlog (and gradient sign)
  - check family dataset
  - check subfunction reuse in grid
- - DOCUMENT: add ruleid-listing routine in list
  - add __repr__ functions for learners so you can echo them in expt
- - DOCUMENT: options --savedModel, --targetMode,
-   --savedTestPredictions, --savedTestExamples, savedTrainExamples for
-   expt
-
- - DOCUMENT: replace {all(f):....} with {weighted(F):...}
- so textcat can be "predict(X,Y) :- assign(Y,pos) { posWeight(F):hasWord(X,F) }."
- - DOCUMENT: prog.setFeatureWeights(), prog.setRuleWeights
- - note: {r} is short for {weighted(R):assign(R,r)}
 
  - cleanup gradient stuff:
  -- plearn tasks should postprocess the parameters via rowsum for the paramGrad weights - sort of like a combiner
