@@ -30,7 +30,8 @@ if __name__=="__main__":
     # use a non-default learner, overriding the tracing function,
     # number of epochs, and regularizer
 #    learner = learn.FixedRateGDLearner(prog,regularizer=learn.L2Regularizer(),traceFun=learn.Learner.cheapTraceFun,epochs=epochs)
-    learner = plearn.ParallelFixedRateGDLearner(prog,epochs=epochs,parallel=40,regularizer=learn.L2Regularizer())
+#    learner = plearn.ParallelFixedRateGDLearner(prog,epochs=epochs,parallel=40,regularizer=learn.L2Regularizer())
+    learner = plearn.ParallelFixedRateGDLearner(prog,epochs=epochs,parallel=55,rate=20.0, regularizer=learn.L2Regularizer(0.0001))
 #    learner = plearn.ParallelAdaGradLearner(prog,epochs=epochs,parallel=40,regularizer=learn.L2Regularizer())
 #    learner = plearn.ParallelFixedRateGDLearner(prog,epochs=epochs,parallel=40)
 

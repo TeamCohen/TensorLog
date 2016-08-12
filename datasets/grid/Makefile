@@ -14,7 +14,6 @@ test:
 	python grid-expt.py acc
 
 clean:
-	rm -f *.pyc *.cfacts *.exam *~ visualize.png
-
+	rm -f *.pyc *.cfacts *.exam *~ visualize.png expt.log actual.txt
 
 
