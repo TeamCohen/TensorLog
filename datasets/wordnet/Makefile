@@ -10,7 +10,13 @@ eval.log: expt.log
 
 # prepare for running expt
 
-setup: inputs/wnet.cfacts inputs/wnet-learned.ppr inputs/wnet-train.exam inputs/wnet-valid.exam
+setup: inputs tmp-cache inputs/wnet.cfacts inputs/wnet-learned.ppr inputs/wnet-train.exam inputs/wnet-valid.exam
+
+inputs:
+	mkdir $@
+
+tmp-cache:
+	mkdir $@
 
 inputs/wnet-train.exam inputs/wnet-valid.exam:
 	python bin/convert-examples.py
