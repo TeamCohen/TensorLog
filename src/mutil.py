@@ -176,7 +176,7 @@ def nzCols(m,i):
 def repeat(row,n):
     """Construct an n-row matrix where each row is a copy of the given one."""
     checkCSR(row)
-    assert numRows(row)==1
+    assert numRows(row)==1,"Tried to repeat multi-row matrix"
     #create the data and indices vector - which are just n copies of
     #the row data
     d = NP.tile(row.data,n)
@@ -207,10 +207,10 @@ def softmax(db,mat):
     else:
         def softMaxAlteration(data,lo,hi,unused):
             rowMax = max(data[lo:hi])
-            assert not math.isnan(rowMax)
+            assert not math.isnan(rowMax),"softMaxAlteration: NaN rowMax"
             data[lo:hi] = NP.exp(data[lo:hi] - rowMax)
             rowNorm = sum(data[lo:hi])
-            assert not math.isnan(rowNorm)
+            assert not math.isnan(rowNorm),"softMaxAlteration: NaN rowNorm"
             data[lo:hi] /= rowNorm
             #replace the zeros in data, which are underflow, with something small
             minValue = math.exp(nullEpsilon)
@@ -271,7 +271,7 @@ def broadcastAndWeightByRowSum(m1,m2):
             bm1.data[bm1.indptr[i]:bm1.indptr[i+1]] = m1.data * w
         return bm1
     else:
-        assert r1==r2
+        assert r1==r2, "broadcastAndWeightByRowSum: r1 must match r2"
         result = m1.copy()
         for i in xrange(r1):
             w = m2.data[m2.indptr[i]:m2.indptr[i+1]].sum()

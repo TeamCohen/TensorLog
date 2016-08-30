@@ -48,7 +48,7 @@ class Function(object):
         kids = self.children()
         for i in range(len(kids)):
             for j in range(i+1,len(kids)):
-                assert not kids[i] is kids[j]
+                assert not kids[i] is kids[j], "Matching values not permitted for kids[%d],kids[%d]" % (i,j)
         for f in kids:
             if isinstance(f,Function):
                 f._checkDuplications()

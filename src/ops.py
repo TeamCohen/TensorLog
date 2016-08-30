@@ -248,7 +248,7 @@ class BuiltInIOOp(Op):
     def _ppLHS(self):
         return "buitin_%s(%s)" % (self.matMode.functor,self.src)
     def _doEval(self,env,pad):
-        assert self.matMode.functor=='printf'
+        assert self.matMode.functor=='printf',"matMode functor '%s' not supported (printf only)" % self.matMode.functor
         d = env.db.matrixAsSymbolDict(env[self.src])
         print '= %s->%s' % (self.msgFrom,self.msgTo),
         if len(d.keys())==1:

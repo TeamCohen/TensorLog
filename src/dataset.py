@@ -254,7 +254,7 @@ class Dataset(object):
         fp = open(fileName,'a' if append else 'w')
         modeKeys = [mode] if mode else self.xDict.keys()
         for mode in modeKeys:
-            assert mode in self.yDict
+            assert mode in self.yDict, "No mode '%s' in yDict" % mode
             dx = db.matrixAsSymbolDict(self.xDict[mode])
             dy = db.matrixAsSymbolDict(self.yDict[mode])
             theoryPred = mode.functor

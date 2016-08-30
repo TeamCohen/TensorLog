@@ -125,7 +125,7 @@ class MatrixDB(object):
 
     def vector(self,mode):
         """Returns a row vector for a unary predicate."""
-        assert mode.arity==1
+        assert mode.arity==1, "mode arity for '%s' must be 1" % mode
         result = self.matEncoding[(mode.functor,mode.arity)]
         return result
 
@@ -133,7 +133,7 @@ class MatrixDB(object):
         """The preimage associated with this mode, eg if mode is p(i,o) then
         return a row vector equivalent to 1 * M_p^T.  Also returns a row vector
         for a unary predicate."""
-        assert mode.arity==2
+        assert mode.arity==2, "mode arity for '%s' must be 2" % mode
         #TODO feels like this could be done more efficiently
         return self.ones() * self.matrix(mode,transpose=True)
 
@@ -171,7 +171,7 @@ class MatrixDB(object):
         result = {}
         coorow = row.tocoo()
         for i in range(len(coorow.data)):
-            assert coorow.row[i]==0
+            assert coorow.row[i]==0,"Expected 0 at coorow.row[%d]" % i
             s = self.stab.getSymbol(coorow.col[i])
             result[s] = coorow.data[i]
         return result
@@ -193,9 +193,9 @@ class MatrixDB(object):
                 w = m1.data[i]
                 result[parser.Goal(functor,[a,b])] = w
         else:
-            assert arity==1
+            assert arity==1,"Arity (%d) must be 1 or 2" % arity
             for i in range(len(m1.data)):
-                assert m1.row[i]==0
+                assert m1.row[i]==0, "Expected 0 at m1.row[%d]" % i
                 b = self.stab.getSymbol(m1.col[i])
                 w = m1.data[i]
                 result[parser.Goal(functor,[b])] = w
@@ -233,7 +233,7 @@ class MatrixDB(object):
     def partnerWith(self,other):
         """Check that a database can be used as a partner.
         """
-        assert other.dim()==self.dim()
+        assert other.dim()==self.dim(),"Dimensions don't match"
 
     def createPartner(self):
         """Create a 'partner' datavase, which shares the same symbol table,

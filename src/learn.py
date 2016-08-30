@@ -338,7 +338,7 @@ class Learner(object):
         weightedSum = 0.0
         totalWeight = 0.0
         for mode in goldDset.modesToLearn():
-            assert predictedDset.hasMode(mode)
+            assert predictedDset.hasMode(mode), "Accuracy: Mode '%s' not available in predictedDset" % mode
             Y = goldDset.getY(mode)
             P = predictedDset.getY(mode)
             weight = mutil.numRows(Y)
@@ -352,7 +352,7 @@ class Learner(object):
         """ Return cross entropy on a dataset. """
         result = 0.0
         for mode in goldDset.modesToLearn():
-            assert predictedDset.hasMode(mode)
+            assert predictedDset.hasMode(mode), "CrossEntropy: Mode '%s' not available in predictedDset" % mode
             Y = goldDset.getY(mode)
             P = predictedDset.getY(mode)
             divisor = mutil.numRows(Y) if perExample else 1.0

@@ -138,9 +138,9 @@ class BPCompiler(object):
     def validateRuleBeforeAnalysis(self):
         """Raises error if the rule doesn't satisfy the assumptions made by
         the compiler.  Can be before flow analysis."""
-        assert self.rule.lhs.arity==2
+        assert self.rule.lhs.arity==2, "Bad arity in rule lhs"
         for goal in self.rule.rhs:
-            assert goal.arity==1 or goal.arity==2
+            assert goal.arity==1 or goal.arity==2, "Bad arity in rhs goal '%s'" % goal
 
 
     def inferFlow(self):

@@ -37,7 +37,7 @@ class Debugger(object):
         #evaluate the function so the outputs are cached
         assert self.targetPred,'most specify targetPred'
         self.mode = declare.asMode(self.targetPred)
-        assert self.trainData.hasMode(self.mode)
+        assert self.trainData.hasMode(self.mode),"No mode '%s' in trainData" % self.mode
         self.X = self.trainData.getX(self.mode)
         self.Y = self.trainData.getY(self.mode)
         self.fun = self.prog.getPredictFunction(self.mode)

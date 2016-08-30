@@ -98,7 +98,7 @@ class Envir(object):
         self.db = db
     def bindList(self,vars,vals):
         """Bind each variable in a list to the corresponding value."""
-        assert len(vars)==len(vals)
+        assert len(vars)==len(vals),"Number of variables (%d) must match number of values (%d)" % (len(vars),len(vals))
         for i in range(len(vars)):
             self[vars[i]] = vals[i]
     def __repr__(self):
