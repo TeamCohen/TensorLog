@@ -14,6 +14,17 @@ expt.log:
 	    --learner plearn.ParallelFixedRateGDLearner --learnerOpts "\"{'epochs':60,'parallel':55,'rate':20}\"" \
 	    --savedModel tmp-cache/$*.model
 
+setup: inputs tmp-cache
+
+inputs:
+	mkdir -p inputs
+	python bin/import.py cora
+	python bin/import.py citeseer
+	python bin/import.py pubmed
+
+tmp-cache:
+	mkdir tmp-cache
+
 sr8:
 	python supervised-expt.py r8 20
 
