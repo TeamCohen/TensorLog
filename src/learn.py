@@ -495,10 +495,14 @@ class FixedRateGDLearner(Learner):
             for j,mode in enumerate(dset.modesToLearn()):
                 n = mutil.numRows(dset.getX(mode))
                 args = {'i':i,'startTime':startTime,'mode':str(mode)}
-                paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),tracerArgs=args)
-                self.regularizer.regularizeParams(self.prog,n)
-                self.applyUpdate(paramGrads,self.rate)
-                GradAccumulator.accumToCounter(epochCounter,paramGrads.counter)
+                try:
+                    paramGrads = self.crossEntropyGrad(mode,dset.getX(mode),dset.getY(mode),tracerArgs=args)
+                    self.regularizer.regularizeParams(self.prog,n)
+                    self.applyUpdate(paramGrads,self.rate)
+                    GradAccumulator.accumToCounter(epochCounter,paramGrads.counter)
+                except:
+                    print "Unexpected error at %s:" % str(args), sys.exc_info()[0]
+                    raise
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
             
 

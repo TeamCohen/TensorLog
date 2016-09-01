@@ -36,37 +36,77 @@ def convertGoal(ret):
     # trim <> from <functor>
     # trim ? from ?a
     functor = ret[1][1:-1]
-    return (functor, "%s(%s,%s)" % (functor,ret[0][1:].upper(),ret[2][1:].upper()))
+    goal = "%s(%s,%s)" % (functor,ret[0][1:].upper(),ret[2][1:].upper())
+    return (functor, goal, goal)
+
 
 def convertGoals(amie):
     ret = []
+    args = ['?a'] # always call rules with first argument bound
+    build = []
     for token in amie.split():
-        ret.append(token)
-        if len(ret)==3: 
-            yield convertGoal(ret)
-            ret = []
+        build.append(token)
+        if len(build)==3: 
+            gg = convertGoal(build)
+            if build[0] in args and build[-1] in args:
+                # TL does not handle this yet
+                ret[0] = ("#%s" % ret[0][0],ret[0][1])
+
+            if len(args)>0 and build[0] not in args and build[-1] in args:
+                # switch to inverse
+                #print "using inverse for %s\n\targs %s\n\tbody %s" % (gg[0]," ".join(args),amie)
+                #print "\tret %s" % " ".join([r[1] for r in ret])
+                ig = tuple(("inv_%s" % x for x in convertGoal(build[-1::-1])))
+                gg = (ig[0],ig[1],gg[2])
             
-def convert(infn,outfnstem):
+            # NB '?a' in args only works because no AMIE bodies have more than two goals
+            if len(args)==0 or '?a' in args:
+                ret.append(gg)
+                args.append(build[0])
+                args.append(build[-1])
+            else: # bind variables left to right
+                ret.insert(0,gg)
+                args.append(build[0])
+                args.append(build[-1])
+            build = []
+    return ret
+    
+            
+def convert(infn,outfnstem,prefix=""):
     with open(infn,'r') as f, open(outfnstem+".ppr",'w') as ppr, open(outfnstem+"-ruleids.cfacts","w") as cfacts:
+        if len(prefix)>0:
+            cfacts.write("rule\tground\n")
         i=0
         for line in f:
             line = line.strip()
             # skip header
             if not line.startswith("?"): continue
             i+=1
-            # also skip p(o,i) queries
-            if not line.endswith("?a"): continue
             parts = line.split("\t")
             amieRule = parts[0]
             body,neck,head = amieRule.partition("=>")
-            (functor,convertedHead) = convertGoal(head.split())
-            ppr.write(" ".join(["i_"+convertedHead,":-",",".join([x[1] for x in convertGoals(body)]),"{r%d}.\n" % i]))
-            cfacts.write("rule\ti_"+functor+"\n")
-            cfacts.write("rule\tr%d\n" % i)
-
+            (functor,convertedHead,groundConvertedHead) = convertGoal(head.split())
+            convertedBody = convertGoals(body)
+            # TL does not handle p(A,B),r(A,B) sequences
+            handled = not convertedBody[0][0].startswith("#")
+            if not handled:
+                ppr.write("# ")
+            ppr.write(" ".join(["i_"+convertedHead,":-",",".join([prefix+x[1] for x in convertedBody]),"{r%d}.\n" % i]))
+            if handled:
+                if len(prefix)>0:
+                    ground = set()
+                    for x,g,gg in convertedBody + [(functor,convertedHead,groundConvertedHead)]: 
+                        if x not in ground:
+                            ppr.write("i_{0} :- {1}{{ground}}.\n".format(g,gg))
+                            ground.add(x)
+                cfacts.write("rule\ti_"+functor+"\n") # just for the query, not the groundings -- used in a join later
+                cfacts.write("rule\tr%d\n" % i)
+            ppr.write("\n")
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         convert('/remote/curtis/wcohen/data/amie/rules/amie/amie_yago2_sample_support_2.tsv','inputs/yago2-sample')
+    elif len(sys.argv) > 3:
+        convert(sys.argv[1],sys.argv[2],sys.argv[3])
     else:
         convert(sys.argv[1],sys.argv[2])

@@ -1,7 +1,7 @@
 DATASETS:=yago2-sample
 TAB=$(shell echo "\t")
 
-expt: expt.log
+expt: actual.txt
 
 expt.log: yago2-sample.expt.log
 	cp $< $@
@@ -25,14 +25,18 @@ inputs:
 	mkdir -p inputs
 #	python bin/import.py yago2-sample
 
-inputs/%-core.cfacts: inputs
-	python bin/convert-facts.py
+#inputs/%-core.cfacts: inputs
+#	python bin/convert-facts.py
 
-inputs/%.ppr inputs/%-ruleids.cfacts: inputs
-	python bin/convert-rules.py
+#inputs/%.ppr inputs/%-ruleids.cfacts: inputs
+import: $(addprefix inputs/,yago2-sample.ppr yago2-sample-train.exam yago2-sample-test.exam)
+
+inputs/%.ppr inputs/%-ruleids.cfacts inputs/%-core.cfacts:
+	python bin/import.py
+	sort -u inputs/$*.ppr -o inputs/$*.ppr
 	sort -uk 2b,2 inputs/$*-ruleids.cfacts -o inputs/$*-ruleids.cfacts
-	# TODO: Remove once issues with AMIE rules are resolved
-	cp inputs/$*.ppr.hand-tuned inputs/$*.ppr
+#	# TODO: Remove once issues with AMIE rules are resolved
+#	cp inputs/$*.ppr.hand-tuned inputs/$*.ppr
 
 inputs/%.cfacts:inputs/%-core.cfacts inputs/%-ruleids.cfacts
 	cat $^ > $@
@@ -79,7 +83,7 @@ reset:
 #
 
 #TODO
-import:
-	python bin/import.py yago2-sample
+#import:
+#	python bin/import.py yago2-sample
 
 .SECONDARY:

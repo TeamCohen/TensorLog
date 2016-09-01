@@ -6,6 +6,8 @@ import tensorlog
 import learn
 import plearn
 
+
+
 if __name__=="__main__":
     #usage: [dataset] [epochs]
     
@@ -15,7 +17,7 @@ if __name__=="__main__":
 
     # use tensorlog.parseCommandLine to set up the program, etc
     optdict,args = tensorlog.parseCommandLine([
-            '--logging', 'warn',
+            '--logging', 'debug', # was: 'warn'
             '--db', 'inputs/{0}.db|inputs/{0}.cfacts'.format(dataset),
             '--prog','inputs/{0}.ppr'.format(dataset), '--proppr',
             '--train','inputs/{0}-train.dset|inputs/{0}-train.exam'.format(dataset),
@@ -26,11 +28,16 @@ if __name__=="__main__":
 
     # the weight vector is sparse - just the constants in the unary predicate rule
     prog.setRuleWeights(prog.db.vector(declare.asMode("rule(i)")))
+    
+    # set the max recursion depth
+    prog.maxDepth = 1
 
     # use a non-default learner, overriding the tracing function,
     # number of epochs, and regularizer
-    learner = plearn.ParallelFixedRateGDLearner(
-        prog,epochs=epochs,parallel=40,regularizer=learn.L2Regularizer())
+    #learner = plearn.ParallelFixedRateGDLearner(
+    #    prog,epochs=epochs,parallel=40,regularizer=learn.L2Regularizer())
+    learner = learn.FixedRateGDLearner(
+        prog,epochs=epochs,regularizer=learn.L2Regularizer())
 #    learner = plearn.ParallelAdaGradLearner(
 #        prog,epochs=epochs,parallel=40,regularizer=learn.L2Regularizer())
     targetMode = None
