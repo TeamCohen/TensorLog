@@ -30,14 +30,20 @@ if __name__=="__main__":
     prog.setRuleWeights(prog.db.vector(declare.asMode("rule(i)")))
     
     # set the max recursion depth
-    prog.maxDepth = 1
+    prog.maxDepth = 0
 
     # use a non-default learner, overriding the tracing function,
     # number of epochs, and regularizer
     #learner = plearn.ParallelFixedRateGDLearner(
     #    prog,epochs=epochs,parallel=40,regularizer=learn.L2Regularizer())
+
     learner = learn.FixedRateGDLearner(
         prog,epochs=epochs,regularizer=learn.L2Regularizer())
+
+    #learner = learn.FixedRateSGDLearner(
+    #    prog,epochs=epochs,regularizer=learn.L2Regularizer())
+
+
 #    learner = plearn.ParallelAdaGradLearner(
 #        prog,epochs=epochs,parallel=40,regularizer=learn.L2Regularizer())
     targetMode = None

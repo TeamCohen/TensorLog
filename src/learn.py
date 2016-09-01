@@ -327,8 +327,8 @@ class Learner(object):
             try:
                 #yDict[mode] = self.prog.getPredictFunction(mode).eval(self.prog.db, [X])
                 yDict[mode] = self.predict(mode,X)
-            except FloatingPointError:
-                print "Trouble with mode %s" % str(mode)
+            except:
+                print "Trouble with mode %s:" % str(mode), sys.exc_info()[:2]
                 raise
         return dataset.Dataset(xDict,yDict)
 
@@ -501,7 +501,7 @@ class FixedRateGDLearner(Learner):
                     self.applyUpdate(paramGrads,self.rate)
                     GradAccumulator.accumToCounter(epochCounter,paramGrads.counter)
                 except:
-                    print "Unexpected error at %s:" % str(args), sys.exc_info()[0]
+                    print "Unexpected error at %s:" % str(args), sys.exc_info()[:2]
                     raise
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
             
@@ -528,10 +528,14 @@ class FixedRateSGDLearner(FixedRateGDLearner):
                 n = mutil.numRows(X)
                 k = k+1
                 args = {'i':i,'k':k,'startTime':startTime,'mode':mode}
-                paramGrads = self.crossEntropyGrad(mode,X,Y,tracerArgs=args)
-                self.regularizer.regularizeParams(self.prog,n)
-                self.applyUpdate(paramGrads,self.rate)
-                GradAccumulator.accumToCounter(epochCounter,paramGrads.counter)
+                try:
+                    paramGrads = self.crossEntropyGrad(mode,X,Y,tracerArgs=args)
+                    self.regularizer.regularizeParams(self.prog,n)
+                    self.applyUpdate(paramGrads,self.rate)
+                    GradAccumulator.accumToCounter(epochCounter,paramGrads.counter)
+                except:
+                    print "Unexpected error at %s:" % str(args), sys.exc_info()[:2]
+                    raise
 
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
 

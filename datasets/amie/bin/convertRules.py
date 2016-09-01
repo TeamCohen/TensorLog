@@ -56,8 +56,11 @@ def convertGoals(amie):
                 # switch to inverse
                 #print "using inverse for %s\n\targs %s\n\tbody %s" % (gg[0]," ".join(args),amie)
                 #print "\tret %s" % " ".join([r[1] for r in ret])
+                
                 ig = tuple(("inv_%s" % x for x in convertGoal(build[-1::-1])))
                 gg = (ig[0],ig[1],gg[2])
+                
+                #gg = tuple(("inv_%s" % x for x in convertGoal(build[-1::-1])))
             
             # NB '?a' in args only works because no AMIE bodies have more than two goals
             if len(args)==0 or '?a' in args:
@@ -72,9 +75,9 @@ def convertGoals(amie):
     return ret
     
             
-def convert(infn,outfnstem,prefix=""):
+def convert(infn,outfnstem,prefix="",groundInverses=True):
     with open(infn,'r') as f, open(outfnstem+".ppr",'w') as ppr, open(outfnstem+"-ruleids.cfacts","w") as cfacts:
-        if len(prefix)>0:
+        if len(prefix)>0 or groundInverses:
             cfacts.write("rule\tground\n")
         i=0
         for line in f:
@@ -95,10 +98,14 @@ def convert(infn,outfnstem,prefix=""):
             if handled:
                 if len(prefix)>0:
                     ground = set()
-                    for x,g,gg in convertedBody + [(functor,convertedHead,groundConvertedHead)]: 
+                    for x,g,gg in convertedBody: 
                         if x not in ground:
-                            ppr.write("i_{0} :- {1}{{ground}}.\n".format(g,gg))
+                            ppr.write("i_{0} :- {1}{{ground}}.\n".format(g,gg if groundInverses else g))
                             ground.add(x)
+                elif groundInverses:
+                    for x,g,gg in convertedBody:
+                        if x.startswith("inv_"):
+                            ppr.write("{0} :- {1}{{ground}}.\n".format(g,gg))
                 cfacts.write("rule\ti_"+functor+"\n") # just for the query, not the groundings -- used in a join later
                 cfacts.write("rule\tr%d\n" % i)
             ppr.write("\n")

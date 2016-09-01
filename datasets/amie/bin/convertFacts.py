@@ -27,7 +27,7 @@ import re
 
 STOP=re.compile("['(),]")
 
-def convert(ifn, ofn):
+def convert(ifn, ofn, includeInverse=False):
     def sanitize(s):
         return 's_%s' % STOP.sub("",s[1:-1])
     with open(ifn,'r') as f, open(ofn,'w') as o:
@@ -35,8 +35,12 @@ def convert(ifn, ofn):
             line = line.strip()
             # drop trailing '.'
             parts = line[:-1].split("\t")
-            o.write("\t".join([parts[1][1:-1],sanitize(parts[0]),sanitize(parts[2])]))
+            pred = [parts[1][1:-1],sanitize(parts[0]),sanitize(parts[2])]
+            o.write("\t".join(pred))
             o.write("\n")
+            if includeInverse:
+                o.write("\t".join(["inv_"+pred[0],pred[2],pred[1]]))
+                o.write("\n")
 
 if __name__ == '__main__':
     convert('/remote/curtis/wcohen/data/amie/kbs/yago2/yago2core.10kseedsSample.compressed.notypes.tsv','inputs/yago2-sample-core.cfacts')

@@ -6,7 +6,7 @@ expt: actual.txt
 expt.log: yago2-sample.expt.log
 	cp $< $@
 
-%.expt.log: inputs/%.ppr inputs/%.cfacts
+%.expt.log: inputs/%.ppr inputs/%.cfacts inputs/%-train.exam inputs/%-test.exam
 	python amie-expt.py $* > $@
 
 #TODO
