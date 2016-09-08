@@ -14,8 +14,7 @@ if __name__=="__main__":
     # defaults:
     opts['infn'] = '/remote/curtis/wcohen/data/amie/rules/amie/amie_yago2_sample_support_2.tsv'
     opts['outfnstem'] = 'inputs/yago2-sample'
-    opts['prefix'] = PREFIX_SINGLE
-    opts['groundInverses'] = False
+    opts['recursive'] = False
     
     if len(sys.argv)>1:
         for setting in sys.argv[1:]:
