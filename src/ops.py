@@ -11,6 +11,7 @@ import scipy.sparse
 import opfunutil
 import mutil
 import config
+import copy
 
 conf = config.Config()
 conf.trace = False;      conf.help.trace =           "Print debug info during op execution"
@@ -97,6 +98,9 @@ class Op(opfunutil.OperatorOrFunction):
         self.id = nextId
         return nextId+1
 
+    def copy(self):
+        assert False, "abstract method called"
+
 class DefinedPredOp(Op):
     """Op that calls a defined predicate."""
     def __init__(self,tensorlogProg,dst,src,mode,depth):
@@ -105,28 +109,33 @@ class DefinedPredOp(Op):
         self.src = src
         self.funMode = mode
         self.depth = depth
+        #self.subfun = copy.deepcopy(self.tensorlogProg.function[(self.funMode,self.depth)])
         self.subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
     def __repr__(self):
         return "DefinedPredOp(%r,%r,%s,%d)" % (self.dst,self.src,str(self.funMode),self.depth)
     def _ppLHS(self):
         return "f_[%s,%d](%s)" % (str(self.funMode),self.depth,self.src)
     def _doEval(self,env,pad):
-        subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
         vals = [env[self.src]]
-        outputs = subfun.eval(self.tensorlogProg.db, vals, pad)
+        outputs = self.subfun.eval(self.tensorlogProg.db, vals, pad)
         env[self.dst] = outputs
     def _doBackprop(self,env,gradAccum,pad):
-        subfun = self.tensorlogProg.function[(self.funMode,self.depth)]
-        newDelta = subfun.backprop(env.delta[self.dst],gradAccum,pad)
+        newDelta = self.subfun.backprop(env.delta[self.dst],gradAccum,pad)
         env.delta[self.src] = newDelta
     def pprint(self,depth=-1):
         top = super(DefinedPredOp,self).pprint(depth)
         if depth>conf.pprintMaxdepth: return top + ["%s..." % ('| '*(depth+1))]
-        return top + self.tensorlogProg.function[(self.funMode,self.depth)].pprint(depth=depth+1)
+        return top + self.subfun.pprint(depth=depth+1)
     def install(self,nextId):
         """ Give a numeric id to this operator """
         self.id = nextId
+        # only use deep copy if we have a duplicate
+        if hasattr(self.subfun,'id'): 
+            self.subfun = self.subfun.copy() #copy.deepcopy(self.subfun)
+            # NB copy.id is not set
         return self.subfun.install(nextId+1)
+    def copy(self):
+        return DefinedPredOp(self.tensorlogProg,self.dst,self.src,self.funMode,self.depth)
 
 
 class AssignPreimageToVar(Op):
@@ -146,6 +155,8 @@ class AssignPreimageToVar(Op):
     def _doBackprop(self,env,gradAccum,pad):
         #TODO implement preimages
         assert False,'backprop with preimages not implemented'
+    def copy(self):
+        return AssignPreimageToVar(self.dst,self.matMode)
 
 class AssignVectorToVar(Op):
     """Mat is a unary predicate like p(X). Assign a row vector which
@@ -164,6 +175,8 @@ class AssignVectorToVar(Op):
             update = env.delta[self.dst]
             key = (self.matMode.functor,self.matMode.arity)
             gradAccum.accum(key,update)
+    def copy(self):
+        return AssignVectorToVar(self.dst,self.matMode)
 
 class AssignZeroToVar(Op):
     """Set the dst variable to an all-zeros row."""
@@ -177,6 +190,8 @@ class AssignZeroToVar(Op):
         env[self.dst] = env.db.zeros()
     def _doBackprop(self,env,gradAccum,pad):
         pass
+    def copy(self):
+        return AssignZeroToVar(self.dst)
 
 class AssignOnehotToVar(Op):
     """ Assign a one-hot row encoding of a constant to the dst variable.
@@ -193,6 +208,8 @@ class AssignOnehotToVar(Op):
         env[self.dst] = env.db.onehot(self.onehotConst)
     def _doBackprop(self,env,gradAccum,pad):
         pass
+    def copy(self):
+        return AssignOnehotToVar(self.dst,self.mode)
 
 class VecMatMulOp(Op):
     """Op of the form "dst = src*mat or dst=src*mat.tranpose()"
@@ -234,6 +251,8 @@ class VecMatMulOp(Op):
             key = (self.matMode.functor,self.matMode.arity)
             mutil.checkCSR(update,'update for %s mode %s transpose %s' % (str(key),str(self.matMode),transposeUpdate))
             gradAccum.accum(key,update)
+    def copy(self):
+        return VecMatMulOp(self.dst,self.src,self.matMode,self.transpose)
 
 class BuiltInIOOp(Op):
     """Built-in special op, like printf(src,dst), with one input and one
@@ -260,6 +279,8 @@ class BuiltInIOOp(Op):
         env[self.dst] = env[self.src]
     def _doBackprop(self,env,gradAccum,pad):
         env.delta[self.src] = env.delta[self.dst]
+    def copy(self):
+        return BuiltInIOOp(self.dst,self.src,self.matMode)
 
 
 class ComponentwiseVecMulOp(Op):
@@ -279,6 +300,8 @@ class ComponentwiseVecMulOp(Op):
     def _doBackprop(self,env,gradAccum,pad):
         env.delta[self.src] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src2])
         env.delta[self.src2] = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.src])
+    def copy(self):
+        return ComponentwiseVecMulOp(self.dst,self.src,self.src2)
 
 class WeightedVec(Op):
     """Implements dst = vec * weighter.sum(), where dst and vec are row
@@ -313,4 +336,5 @@ class WeightedVec(Op):
         # but we can combine 2b and 1 as follows (optimized):
         tmp = mutil.broadcastAndComponentwiseMultiply(env.delta[self.dst],env[self.vec])
         env.delta[self.weighter] = mutil.broadcastAndWeightByRowSum(env[self.weighter], tmp)
-
+    def copy(self):
+        return WeightedVec(self.dst,self.weighter,self.vec)

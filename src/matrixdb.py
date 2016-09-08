@@ -311,7 +311,7 @@ class MatrixDB(object):
         deserialize it.  As always the factFile can be a
         colon-separated list.
         """
-        if not os.path.exists(dbFile) or any([os.path.getmtime(factFile)>os.path.getmtime(dbFile) for f in factFile.split(":")]):
+        if not os.path.exists(dbFile) or any([os.path.getmtime(f)>os.path.getmtime(dbFile) for f in factFile.split(":")]):
             db = MatrixDB.loadFile(factFile)
             db.serialize(dbFile)
             os.utime(dbFile,None) #update the modification time for the directory
@@ -352,7 +352,7 @@ class MatrixDB(object):
             return
         key = (f,arity)
         if (key in self.matEncoding):
-            logging.error("predicate encoding is already completed for "+key+ " at line: "+line)
+            logging.error("predicate encoding is already completed for "+str(key)+ " at line: "+line)
             return
         i = self.stab.getId(a1)
         j = self.stab.getId(a2) if a2 else -1

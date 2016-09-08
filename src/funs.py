@@ -5,6 +5,7 @@
 
 import sys
 import logging
+import copy
 
 import opfunutil
 import ops
@@ -20,6 +21,7 @@ class Function(object):
     """The tensorlog representation of a function. This supports eval and
     evalGrad operations, and take a list of input values as the inputs.
     """
+    
 
     def eval(self,db,values,pad):
         self._checkDuplications()
@@ -56,11 +58,19 @@ class Function(object):
     def install(self,nextId=1):
         """ Give a numeric id to each function in this tree, and all the
         operations below it. """
+        if hasattr(self,'id'): raise Exception("Tried to install already-installed function")
         self.id = nextId
         nextId += 1
         for f in self.children():
+            #if hasattr(f,'id'):
+            #    logging.debug("Deduping function %-2d %s" % (f.id,str(f)))
+            #    f=self.dedupeChild(f) # TODO: replace with index
             nextId = f.install(nextId)
         return nextId
+
+    def copy(self):
+        """Return deep copy of function, to avoid duplication"""
+        assert False, 'abstract method called'
 
     # these are used in pprint, and also in the debugging
     # visualization
@@ -85,6 +95,8 @@ class Function(object):
     def children(self):
         """Return list of child functions, for visualization"""
         assert False, 'abstract method called'
+    #def dedupeChild(self,f):
+    #    assert False, 'abstract method called'
 
 class OpSeqFunction(Function):
     """A function defined by executing a sequence of operators."""
@@ -118,6 +130,14 @@ class OpSeqFunction(Function):
         return pad[self.id].opEnv.delta[self.opInputs[0]]
     def children(self):
         return self.ops
+    def copy(self):
+        ret = OpSeqFunction(self.opInputs, self.opOutput, [o.copy() for o in self.ops], self.rule)
+        return ret
+    # def dedupeChild(self,f):
+    #     i = self.ops.index(f)
+    #     self.ops[i] = copy.deepcopy(self.ops[i])
+    #     del self.ops[i].id
+    #     return self.ops[i]
 
 class NullFunction(Function):
     """Returns an all-zeros vector."""
@@ -137,6 +157,10 @@ class NullFunction(Function):
         return pad[self.id].output
     def children(self):
         return []
+    def copy(self):
+        return NullFunction(self.lhsMode)
+    #def dedupeChild(self,f):
+    #    raise Exception("Tried to dedupe a child of a null function?")
 
 class LogFunction(Function):
     """Returns element-wise log of the output of the inner function."""
@@ -155,7 +179,14 @@ class LogFunction(Function):
         return self.fun.backprop(newDelta,gradAccum)
     def children(self):
         return [self.fun]
-
+    def copy(self):
+        ret = LogFunction(self.fun.copy())
+        if hasattr(self,'inner'): ret.inner = self.inner
+        return ret
+    #def dedupeChild(self,f):
+    #    self.fun = copy.deepcopy(self.fun)
+    #    del self.fun.id
+    #    return self.fun
 
 class SumFunction(Function):
     """A function which computes the sum of a bunch of other functions."""
@@ -176,10 +207,23 @@ class SumFunction(Function):
         addends = map(lambda f:f.backprop(delta,gradAccum,pad), self.funs)
         accum = addends[0]
         for i in range(1,len(addends)):
-            accum = accum + addends[i]
+            try:
+                accum = accum + addends[i]
+            except:
+                print "accum %s" % mutil.summary(accum)
+                print "addends[%d] %s" % (i,mutil.summary(addends[i]))
+                print "\n".join(self.pprint())
+                raise
         return accum
     def children(self):
         return self.funs
+    def copy(self):
+        return SumFunction([f.copy() for f in self.funs])
+    #def dedupeChild(self,f):
+    #    i = self.funs.index(f)
+    #    self.funs[i] = copy.deepcopy(self.funs[i])
+    #    del self.funs[i].id
+    #    return self.funs[i]
 
 class SoftmaxFunction(Function):
     """A function which computes row-wise softmax of an inner function."""
@@ -198,3 +242,9 @@ class SoftmaxFunction(Function):
         assert False, 'should not call this directly'
     def children(self):
         return [self.fun]
+    def copy(self):
+        return SoftmaxFunction(self.fun.copy())
+    #def dedupeChild(self,f):
+    #    self.fun = copy.deepcopy(self.fun)
+    #    del self.fun.id
+    #    return self.fun
