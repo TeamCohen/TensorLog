@@ -8,7 +8,7 @@ expt.log: $(D).expt.log
 	cp $< $@
 
 
-
+N:=nonrecursive
 EPOCHS:=20
 DEPTH:=1
 PARALLEL:=30
@@ -21,9 +21,9 @@ MEMORY=460800000000
 	python amie-expt.py $* $(EPOCHS) $(DEPTH) $(PARALLEL) > $@
 
 
-NAME:=$(D)-e$(EPOCHS)-d$(DEPTH)-t$(PARALLEL)
-phase: $(D).expt.log
-	echo actual results on `date`: $(D) > actual-$(NAME).txt
+NAME:=$(D)-$(N)-e$(EPOCHS)-d$(DEPTH)-t$(PARALLEL)
+phase: $(D)-$(N).expt.log
+	echo actual results on `date`: $(D)-$(N) depth $(DEPTH) > actual-$(NAME).txt
 	grep 'training.*done' $< >> actual-$(NAME).txt
 	grep 'eval.*on test' $< >> actual-$(NAME).txt
 	cat actual-$(NAME).txt
@@ -47,23 +47,26 @@ setup: inputs tmp-cache $(addprefix inputs/,$(addsuffix -train.exam,$(DATASETS))
 inputs:
 	mkdir -p inputs
 
-src/yago2core_facts.tsv: /remote/curtis/wcohen/data/amie/kbs/yago2/yago2core_facts.clean.notypes.tsv
+src:
 	mkdir -p src
+
+src/yago2-core.tsv: /remote/curtis/wcohen/data/amie/kbs/yago2/yago2core_facts.clean.notypes.tsv src
 	sed 's_http://www.w3.org/2000/01/rdf-schema#__; s/$$/./' $< > $@
+
+src/yago2-sample.tsv: /remote/curtis/wcohen/data/amie/kbs/yago2/yago2core.10kseedsSample.compressed.notypes.tsv src
+	ln -s $< $@
 
 #inputs/%-core.cfacts: inputs
 #	python bin/convert-facts.py
 
 #inputs/%.ppr inputs/%-ruleids.cfacts: inputs
-import: $(addprefix inputs/,$(D).ppr $(D)-train.exam $(D)-fortrain.cfacts)
+#import: $(addprefix inputs/,$(D).ppr $(D)-train.exam $(D)-fortrain.cfacts)
 
-inputs/%.ppr inputs/%-ruleids.cfacts inputs/%-core.cfacts: 
-	python bin/import.py outfnstem=inputs/$* $(IMPORT)
-	sort -u inputs/$*.ppr -o inputs/$*.ppr
-	sort -k 2b,2 inputs/$*-core.cfacts -o inputs/$*-core.cfacts
-	sort -uk 2b,2 inputs/$*-ruleids.cfacts -o inputs/$*-ruleids.cfacts
-#	# TODO: Remove once issues with AMIE rules are resolved
-#	cp inputs/$*.ppr.hand-tuned inputs/$*.ppr
+inputs/$(D)-$(N).ppr inputs/$(D)-$(N)-ruleids.cfacts inputs/$(D)-$(N)-core.cfacts: src/$(D).tsv
+	python bin/import.py $(D) $(N) $(IMPORT)
+	sort -u inputs/$(D)-$(N).ppr -o inputs/$(D)-$(N).ppr
+	sort -k 2b,2 inputs/$(D)-$(N)-core.cfacts -o inputs/$(D)-$(N)-core.cfacts
+	sort -uk 2b,2 inputs/$(D)-$(N)-ruleids.cfacts -o inputs/$(D)-$(N)-ruleids.cfacts
 
 %-db.cfacts:inputs/evalids.cfacts %-core.cfacts %-fortrain.cfacts %-ruleids.cfacts
 	LC_ALL=C; cat $^ | sort -u > $@
