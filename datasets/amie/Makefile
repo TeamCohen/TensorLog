@@ -14,16 +14,17 @@ DEPTH:=1
 PARALLEL:=30
 
 # MEMORY currently configured for tanka:
-#   ~450 GB, expressed in 1024-byte chunks
-MEMORY=460800000000
+#   ~450 GB, expressed in 1Kb chunks
+MEMORY=450000000
 %.expt.log: inputs/%.ppr inputs/%-db.cfacts inputs/%-train.exam inputs/eval.exam
-	ulimit -mH $(MEMORY); \
+	ulimit -m $(MEMORY); \
 	python amie-expt.py $* $(EPOCHS) $(DEPTH) $(PARALLEL) > $@
 
 
 NAME:=$(D)-$(N)-e$(EPOCHS)-d$(DEPTH)-t$(PARALLEL)
-phase: $(D)-$(N).expt.log
-	echo actual results on `date`: $(D)-$(N) depth $(DEPTH) > actual-$(NAME).txt
+STEM:=$(D)-$(N)
+phase: $(STEM).expt.log
+	echo actual results on `date`: $(STEM) depth $(DEPTH) > actual-$(NAME).txt
 	grep 'training.*done' $< >> actual-$(NAME).txt
 	grep 'eval.*on test' $< >> actual-$(NAME).txt
 	cat actual-$(NAME).txt
@@ -41,6 +42,12 @@ eval:
 	    +++ \
 	    --learner plearn.ParallelFixedRateGDLearner --learnerOpts "\"{'epochs':60,'parallel':55,'rate':20}\"" \
 	    --savedModel tmp-cache/$*.model
+
+proppr:
+	proppr set --programFiles inputs/$(STEM).wam:inputs/$(STEM)-db.cfacts --duplicateCheck -1 --threads $(PARALLEL)
+	proppr answer $(NAME)/$(STEM)-train.examples $(NAME)/proppr.$(STEM)-train.solutions.txt | tee $(NAME)/proppr.log
+	proppr answer $(NAME)/$(STEM)-eval.examples $(NAME)/proppr.$(STEM)-eval.solutions.txt | tee -a $(NAME)/proppr.log
+	proppr eval $(NAME)/$(STEM)-eval.examples --metric auc --defaultNeg | tee -a $(NAME)/proppr.log
 
 setup: inputs tmp-cache $(addprefix inputs/,$(addsuffix -train.exam,$(DATASETS)) $(addsuffix -test.exam,$(DATASETS)))
 
