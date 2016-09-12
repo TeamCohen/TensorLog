@@ -24,7 +24,11 @@ def setup(optdict, settings):
     # use a non-default learner, overriding the tracing function,
     # number of epochs, and regularizer
     learner = plearn.ParallelFixedRateGDLearner(
-        prog,epochs=settings['epochs'],parallel=settings['para'],regularizer=learn.L2Regularizer())
+        prog,
+        epochs=settings['epochs'],
+        parallel=settings['para'],
+        rate=settings['rate'],
+        regularizer=learn.L2Regularizer())
 
     #learner = learn.FixedRateGDLearner(
     #    prog,epochs=epochs,regularizer=learn.L2Regularizer())
@@ -47,6 +51,8 @@ if __name__=="__main__":
     settings['epochs'] = 30 if len(sys.argv)<=2 else int(sys.argv[2])
     settings['maxDepth'] = 1 if len(sys.argv)<=3 else int(sys.argv[3])
     settings['para'] = 30 if len(sys.argv)<=4 else int(sys.argv[4])
+    settings['rate'] = 0.1 if len(sys.argv)<=5 else float(sys.argv[5])
+
 
     # first run eval set on untrained model:
 
@@ -55,7 +61,9 @@ if __name__=="__main__":
         '--db', 'inputs/{0}.db|inputs/{0}-db.cfacts'.format(settings['dataset']),
         '--prog','inputs/{0}.ppr'.format(settings['dataset']), '--proppr',
         '--train','inputs/{0}-train.dset|inputs/{0}-train.exam'.format(settings['dataset']),
-        '--test', 'inputs/eval.dset|inputs/eval.exam'])
+#        '--test', 'inputs/eval.dset|inputs/eval.exam']) # using AMIE decade evaluation data
+        '--test', 'inputs/{0}-eval.dset|inputs/{0}-eval.exam'.format(settings['dataset']) # using eval data partitioned from the KB
+    ])
     learner = setup(optdict,settings)
 
     # configute the experiment
