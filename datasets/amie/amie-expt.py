@@ -28,6 +28,7 @@ def setup(optdict, settings):
         epochs=settings['epochs'],
         parallel=settings['para'],
         rate=settings['rate'],
+        miniBatchSize=settings['batch'],
         regularizer=learn.L2Regularizer())
 
     #learner = learn.FixedRateGDLearner(
@@ -52,6 +53,7 @@ if __name__=="__main__":
     settings['maxDepth'] = 1 if len(sys.argv)<=3 else int(sys.argv[3])
     settings['para'] = 30 if len(sys.argv)<=4 else int(sys.argv[4])
     settings['rate'] = 0.1 if len(sys.argv)<=5 else float(sys.argv[5])
+    settings['batch'] = 100 if len(sys.argv)<=6 else int(sys.argv[6])
 
 
     # first run eval set on untrained model:

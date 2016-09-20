@@ -13,6 +13,7 @@ EPOCHS:=20
 DEPTH:=1
 PARALLEL:=30
 RATE:=0.1
+BATCH:=100
 
 # MEMORY currently configured for tanka:
 #   ~450 GB, expressed in 1Kb chunks
@@ -20,10 +21,14 @@ MEMORY=450000000
 #%.expt.log: inputs/%.ppr inputs/%-db.cfacts inputs/%-train.exam inputs/eval.exam
 %.expt.log: inputs/%.ppr inputs/%-db.cfacts inputs/%-train.exam inputs/%-eval.exam
 	ulimit -m $(MEMORY); \
-	python amie-expt.py $* $(EPOCHS) $(DEPTH) $(PARALLEL) $(RATE)> $@
+	python amie-expt.py $* $(EPOCHS) $(DEPTH) $(PARALLEL) $(RATE) $(BATCH) > $@
+
+%.minibatch.log: inputs/%.ppr inputs/%-minibatchdb.cfacts inputs/minibatch-eval.exam
+	ulimit -m $(MEMORY); \
+	python amie-minibatch.py $* $(EPOCHS) $(DEPTH) $(PARALLEL) $(RATE) $(BATCH) > $@
 
 
-NAME:=$(D)-$(N)-e$(EPOCHS)-d$(DEPTH)-t$(PARALLEL)
+NAME:=$(D)-$(N)-e$(EPOCHS)-d$(DEPTH)-t$(PARALLEL)-b$(BATCH)
 STEM:=$(D)-$(N)
 phase: $(STEM).expt.log
 	echo actual results on `date`: $(STEM) depth $(DEPTH) > actual-$(NAME).txt
@@ -36,6 +41,16 @@ phase: $(STEM).expt.log
 	mv tmp-cache/* $(NAME)
 	mv $< $(NAME)
 
+minibatch: $(STEM).minibatch.log
+	echo actual results on `date`: $(STEM) batch size $(BATCH) > actual-$(NAME).txt ; \
+	grep 'done in' $< >> actual-$(NAME).txt ; \
+	cat actual-$(NAME).txt
+	rm -rf $(NAME)
+	mkdir $(NAME)
+	mv actual-$(NAME).txt $(NAME)
+	mv $< $(NAME)
+
+
 #TODO
 eval:
 	python -m expt \
@@ -47,10 +62,19 @@ eval:
 	    --savedModel tmp-cache/$*.model
 
 proppr:
-	proppr set --programFiles inputs/$(STEM).wam:inputs/$(STEM)-db.cfacts --duplicateCheck -1 --threads $(PARALLEL)
-	proppr answer $(NAME)/$(STEM)-train.examples $(NAME)/proppr.$(STEM)-train.solutions.txt | tee $(NAME)/proppr.log
-	proppr answer $(NAME)/$(STEM)-eval.examples $(NAME)/proppr.$(STEM)-eval.solutions.txt | tee -a $(NAME)/proppr.log
-	proppr eval $(NAME)/$(STEM)-eval.examples --metric auc --defaultNeg | tee -a $(NAME)/proppr.log
+	proppr compile inputs/$(STEM).ppr
+	proppr set --programFiles inputs/$(STEM).wam:inputs/$(STEM)-db.cfacts --duplicateCheck -1 --threads $(PARALLEL) --trainer streaming
+	proppr answer $(NAME)/$(STEM)-train.examples $(NAME)/$(STEM)-train.proppr-untrained.solutions.txt 2>&1 | tee $(NAME)/proppr.log
+	proppr answer $(NAME)/$(STEM)-eval.examples $(NAME)/$(STEM)-eval.proppr-untrained.solutions.txt 2>&1 | tee -a $(NAME)/proppr.log
+	proppr ground $(NAME)/$(STEM)-train.examples $(NAME)/$(STEM)-train.grounded 2>&1 | tee -a $(NAME)/proppr.log
+	proppr train $(NAME)/$(STEM)-train.grounded $(NAME)/params.wts 2>&1 | tee -a $(NAME)/proppr.log
+	proppr answer $(NAME)/$(STEM)-train.examples $(NAME)/$(STEM)-train.proppr-trained.solutions.txt --params $(NAME)/params.wts 2>&1 | tee -a $(NAME)/proppr.log 
+	proppr answer $(NAME)/$(STEM)-eval.examples $(NAME)/$(STEM)-eval.proppr-trained.solutions.txt --params $(NAME)/params.wts 2>&1 | tee -a $(NAME)/proppr.log
+	for s in train eval; do \
+		for m in untrained trained; do \
+			proppr eval $(NAME)/$(STEM)-$${s}.examples $(NAME)/$(STEM)-$${s}.proppr-$${m}.solutions.txt --metric map --defaultNeg 2>&1 | tee -a $(NAME)/proppr.log ; \
+		done ; \
+	done
 
 setup: inputs tmp-cache src
 
@@ -82,6 +106,9 @@ inputs/$(D)-$(N).ppr inputs/$(D)-$(N)-ruleids.cfacts inputs/$(D)-$(N)-core.cfact
 %-db.cfacts: %-foreval.cfacts %-fortrain.cfacts %-ruleids.cfacts
 	LC_ALL=C; cat $^ | sort -u > $@
 
+%-minibatchdb.cfacts: inputs/minibatch-evalids.cfacts %-core.cfacts %-ruleids.cfacts
+	LC_ALL=C; cat $^ | sort -u > $@
+
 #%-db-training.cfacts:inputs/evalids.cfacts %-fortrain.cfacts %-ruleids.cfacts
 #	LC_ALL=C; cat $^ | sort -u > $@
 
@@ -109,9 +136,10 @@ SET_M:=M=5000;
 	grep "^inv_" $(word 2,$^) >> $*-fortrain.cfacts ; \
 	sort -u $*-fortrain.cfacts -o $*-fortrain.cfacts ; \
 	sed -i 's/^/tr_/' $*-fortrain.cfacts
+	sed -i 's/^/tri_/' $*-train.stub
 
 NUM_EVAL:=100
-%-eval.stub %-foreval.cfacts: %-test.stub
+%-eval.stub %-foreval.cfacts: %-test.stub %-core.cfacts
 	sed 's/\t/:/' $< | sort -k 1b,1 > tmp.txt
 	sed 's/\t.*//' tmp.txt | \
 	sort -u | sort -R --random-source=random.src | \
@@ -121,6 +149,8 @@ NUM_EVAL:=100
 	cut -f 2 $*-eval.stub | sort -u | sed 's/^/entity\t/' > $*-foreval.cfacts
 	join -t "$(TAB)" -v 2 keys.txt tmp.txt | \
 	sed 's/:/\t/' >> $*-foreval.cfacts
+	grep "^inv_" $(word 2,$^) >> $*-foreval.cfacts
+	sed -i 's/^/i_/' $*-eval.stub
 	rm tmp.txt keys.txt
 
 %.exam: %.stub
@@ -128,8 +158,8 @@ NUM_EVAL:=100
 	awk 'BEGIN{FS=OFS="\t"} \
 	{key=$$1$$2; if (key != last) { if (last != "") { print buf; } buf = $$1 FS $$2; } \
 	buf = buf FS $$3; last = key;} END{print buf;}' | \
-	sort -R --random-source=random.src | \
-	sed 's/^/tri_/' > $@
+	sort -R --random-source=random.src > $@
+#	sed 's/^/tri_/' > $@
 
 inputs/%-eval.exam:inputs/%-core.cfacts inputs/eval.exam 
 	join -t "$(TAB)" -1 2 -2 2 $^ | \
@@ -137,7 +167,11 @@ inputs/%-eval.exam:inputs/%-core.cfacts inputs/eval.exam
 
 inputs/eval.exam inputs/evalids.cfacts:
 	python bin/convertEval.py
-	sort -k 2b,2 $@ -o $@
+	sort -k 2b,2 inputs/eval.exam -o inputs/eval.exam
+
+inputs/minibatch-eval.exam inputs/minibatch-evalids.cfacts:
+	python bin/convertEvalMinibatch.py
+
 
 tmp-cache:
 	mkdir -p tmp-cache
