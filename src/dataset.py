@@ -258,7 +258,7 @@ class Dataset(object):
             dx = db.matrixAsSymbolDict(self.xDict[mode])
             dy = db.matrixAsSymbolDict(self.yDict[mode])
             theoryPred = mode.functor
-            for i in range(max(dx.keys())):
+            for i in range(max(dx.keys())+1):
                 dix = dx[i]
                 diy = dy[i]
                 assert len(dix.keys())==1,'X row %d is not onehot: %r' % (i,dix)
