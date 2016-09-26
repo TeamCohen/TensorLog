@@ -110,7 +110,7 @@ class Expt(object):
         dx = db.matrixAsSymbolDict(X)
         dp = db.matrixAsSymbolDict(P)
         n=max(dx.keys())
-        for i in range(n):
+        for i in range(n+1):
             dix = dx[i]
             dip = dp[i]
             assert len(dix.keys())==1,'X %s row %d is not onehot: %r' % (theoryPred,i,dix)
