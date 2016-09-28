@@ -72,13 +72,16 @@ def convertGoals(amie):
                 args.append(build[0])
                 args.append(build[-1])
             build = []
-    return ret
-    
-            
-def convert(infn,outfnstem,prefix="",groundInverses=True):
+    return ret    
+
+def convert(infn,outfnstem,recursive=False):
+    if type(recursive)==type(""): recursive = recursive=="True"
+    print "Converting %srules" % ("recursive " if recursive else "")
     with open(infn,'r') as f, open(outfnstem+".ppr",'w') as ppr, open(outfnstem+"-ruleids.cfacts","w") as cfacts:
-        if len(prefix)>0 or groundInverses:
+        ground = None
+        if recursive:
             cfacts.write("rule\tground\n")
+            ground = {"":set(),"tr_":set()}
         i=0
         for line in f:
             line = line.strip()
@@ -92,28 +95,30 @@ def convert(infn,outfnstem,prefix="",groundInverses=True):
             convertedBody = convertGoals(body)
             # TL does not handle p(A,B),r(A,B) sequences
             handled = not convertedBody[0][0].startswith("#")
-            if not handled:
-                ppr.write("# ")
-            ppr.write(" ".join(["i_"+convertedHead,":-",",".join([prefix+x[1] for x in convertedBody]),"{r%d}.\n" % i]))
-            if handled:
-                if len(prefix)>0:
-                    ground = set()
-                    for x,g,gg in convertedBody: 
-                        if x not in ground:
-                            ppr.write("i_{0} :- {1}{{ground}}.\n".format(g,gg if groundInverses else g))
-                            ground.add(x)
-                elif groundInverses:
-                    for x,g,gg in convertedBody:
-                        if x.startswith("inv_"):
-                            ppr.write("{0} :- {1}{{ground}}.\n".format(g,gg))
-                cfacts.write("rule\ti_"+functor+"\n") # just for the query, not the groundings -- used in a join later
-                cfacts.write("rule\tr%d\n" % i)
+            def rule(fix="i_",groundfix=""):
+                if not handled: ppr.write("# ")
+                ppr.write(" ".join([fix+convertedHead,\
+                                    ":-",\
+                                    ",".join([(fix if recursive else groundfix)+x[1] for x in convertedBody]),\
+                                    "{r%d}.\n" % i]))
+                if handled and recursive:
+                    for b in convertedBody:
+                        if len(b)<3: assert False, "bad body entry: %s at line %d" % (str(b), i)
+                        x,g,gg = b
+                        if x not in ground[groundfix]:
+                            ppr.write("{0}{1} :- {2}{1}{{ground}}.\n".format(fix,g,groundfix))
+                            ground[groundfix].add(x)
+            # vanilla rule for evaluation, tr prefix for restricted training KB
+            rule()
+            rule(fix="tri_",groundfix="tr_")
+            cfacts.write("include\t"+functor+"\n") # just for the query, not the groundings -- used in a join later
+            cfacts.write("rule\tr%d\n" % i)
             ppr.write("\n")
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         convert('/remote/curtis/wcohen/data/amie/rules/amie/amie_yago2_sample_support_2.tsv','inputs/yago2-sample')
     elif len(sys.argv) > 3:
-        convert(sys.argv[1],sys.argv[2],sys.argv[3])
+        convert(*sys.argv[1:])
     else:
         convert(sys.argv[1],sys.argv[2])

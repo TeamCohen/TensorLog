@@ -24,12 +24,11 @@ dealsWith     s_Azerbaijan    s_Georgia_country
 
 import sys
 import re
+from amie import *
 
-STOP=re.compile("['(),]")
+
 
 def convert(ifn, ofn, includeInverse=False):
-    def sanitize(s):
-        return 's_%s' % STOP.sub("",s[1:-1])
     with open(ifn,'r') as f, open(ofn,'w') as o:
         for line in f:
             line = line.strip()

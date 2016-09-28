@@ -62,6 +62,9 @@ class Function(object):
         self.id = nextId
         nextId += 1
         for f in self.children():
+            #if hasattr(f,'id'):
+            #    logging.debug("Deduping function %-2d %s" % (f.id,str(f)))
+            #    f=self.dedupeChild(f) # TODO: replace with index
             nextId = f.install(nextId)
         return nextId
 
