@@ -195,7 +195,7 @@ class ProPPRProgram(Program):
         self.rules.mapRules(self._moveFeaturesToRHS)
         if weights!=None: self.setRuleWeights(weights)
 
-    def setRuleWeights(self,weights=None):
+    def setRuleWeights(self,weights=None,epsilon=1.0):
         """Set the db predicate 'weighted/1' as a parameter, and initialize it
         to the given vector.  If no vector is given, default to a
         sparse vector of all constant rule features. 'weighted/1' is
@@ -210,13 +210,13 @@ class ProPPRProgram(Program):
                 weights = self.db.onehot(self.ruleIds[0])
                 for rid in self.ruleIds[1:]:
                     weights = weights + self.db.onehot(rid)
-            self.db.setParameter("weighted",1,weights)
+            self.db.setParameter("weighted",1,weights*epsilon)
 
     def getRuleWeights(self):  
         """ Return a vector of the weights for a rule """
         return self.db.matEncoding[('weighted',1)]
 
-    def setFeatureWeights(self):
+    def setFeatureWeights(self,epsilon=1.0):
         """ Initialize each feature used in the feature part of a rule, i.e.,
         for all rules annotated by "{foo(F):...}", declare 'foo/1' to
         be a parameter, and initialize it to something plausible.  The
@@ -231,7 +231,7 @@ class ProPPRProgram(Program):
             for mode in domainModes[1:]:
                 weights = weights + self.db.matrixPreimage(mode)
             weights = weights * 1.0/len(domainModes)
-            self.db.setParameter(paramName,1,weights)
+            self.db.setParameter(paramName,1,weights*epsilon)
             logging.info('parameter %s/1 initialized to %s' % (paramName,"+".join(map(lambda dm:'preimage(%s)' % str(dm), domainModes))))
         for (paramName,arity) in self.getParams():
             if not self.db.parameterIsSet(paramName,arity):

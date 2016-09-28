@@ -43,7 +43,6 @@ class Debugger(object):
         self.fun = self.prog.getPredictFunction(self.mode)
         self.pad = opfunutil.Scratchpad()
         self.P = self.fun.eval(self.prog.db, [self.X], self.pad)
-
         # find the symbols that correspond to the inputs
         dd = self.prog.db.matrixAsSymbolDict(self.X)
         self.xSymbols = [d.keys()[0] for d in dd.values()]
@@ -154,7 +153,14 @@ class Debugger(object):
             comment = fun.pprintComment()
             key = "iid%d" % len(self.treeOutputs.keys())
             funOutput = self.pad[fun.id].output
-            funDelta = None if self.grad!=None else self.pad[fun.id].delta
+            if self.grad:
+                #todo: clean up
+                if 'delta' in self.pad[fun.id].__dict__:
+                    funDelta = self.pad[fun.id].delta
+                else:
+                    funDelta = None
+            else:
+                funDelta = None
             child = self.tree.insert(
                 parent,offset,iid=key,text=description,
                 values=(comment,mutil.pprintSummary(funOutput),mutil.pprintSummary(funDelta)),open=True)

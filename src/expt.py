@@ -146,20 +146,22 @@ if __name__=="__main__":
     
     usageLines = [
         'expt-specific options, given after the argument +++:',
-        '    --savedModel e --learner f --learnerOpts g',
+        '    --savedModel e --learner f --learnerOpts g --weightEpsilon eps',
         '    where e is a filename, f is the name of a learner class', 
         '    and learnerOpts is a string that "evals" to a python dict',
     ]
     argSpec = ["learner=", "savedModel=", "learnerOpts=", "targetMode=",
-               "savedTestPredictions=", "savedTestExamples=", "savedTrainExamples="]
+               "savedTestPredictions=", "savedTestExamples=", "savedTrainExamples=", "weightEpsilon="]
 
     optdict,args = tensorlog.parseCommandLine(
         sys.argv[1:], 
         extraArgConsumer="expt", extraArgSpec=argSpec, extraArgUsage=usageLines
     ) 
 
-    optdict['prog'].setFeatureWeights()
-    optdict['prog'].setRuleWeights()
+    weightEpsilon = float(optdict.get('--weightEpsilon',1.0))
+    print 'weightEpsilon = ',weightEpsilon
+    optdict['prog'].setFeatureWeights(epsilon=weightEpsilon)
+    optdict['prog'].setRuleWeights(epsilon=weightEpsilon)
     learner = None
     if 'learner' in optdict:
         try:
