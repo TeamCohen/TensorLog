@@ -146,13 +146,15 @@ if __name__=="__main__":
     
     usageLines = [
         'expt-specific options, given after the argument +++:',
-        '    --savedModel e --learner f --learnerOpts g --weightEpsilon eps',
-        '    where e is a filename, f is the name of a learner class', 
-        '    and learnerOpts is a string that "evals" to a python dict',
+        '    --savedModel e      # where e is a filename',
+        '    --learner f         # where f is the name of a learner class', 
+        '    --learnerOpts g     # g is a string that "evals" to a python dict',
+        '    --weightEpsilon eps # parameter weights multiplied by eps',
+        '    --params p1/k1,..   # comma-sep list of functor/arity pairs'
     ]
     argSpec = ["learner=", "savedModel=", "learnerOpts=", "targetMode=",
-               "savedTestPredictions=", "savedTestExamples=", "savedTrainExamples=", "weightEpsilon="]
-
+               "savedTestPredictions=", "savedTestExamples=", "savedTrainExamples=", 
+               "params=","weightEpsilon="]
     optdict,args = tensorlog.parseCommandLine(
         sys.argv[1:], 
         extraArgConsumer="expt", extraArgSpec=argSpec, extraArgUsage=usageLines
@@ -160,6 +162,11 @@ if __name__=="__main__":
 
     weightEpsilon = float(optdict.get('--weightEpsilon',1.0))
     print 'weightEpsilon = ',weightEpsilon
+    if '--params' in optdict:
+        paramSpecs = optdict['--params'].split(",")
+        for spec in paramSpecs:
+            functor,arity = spec.split("/")
+            optdict['db'].markAsParam(functor,int(arity))
     optdict['prog'].setFeatureWeights(epsilon=weightEpsilon)
     optdict['prog'].setRuleWeights(epsilon=weightEpsilon)
     learner = None

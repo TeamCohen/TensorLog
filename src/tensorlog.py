@@ -19,8 +19,9 @@ import learn
 import plearn
 import mutil
 import debug
+import ops 
 
-VERSION = "1.2.3"
+VERSION = "1.2.4"
 
 # externally visible changes:
 #
@@ -35,10 +36,15 @@ VERSION = "1.2.3"
 #    add p(X,Y) :- ... {foo(F): q(X,F)} templates, propprProg.setRuleWeights(), propprProg.setFeatureWeights()
 #    list --prog xxx --ruleids            
 #    more options for expt
+# version 1.2.4: 
+#    added --params and --weightEpsilon to expt.py
+#    made conf.ops.long_trace a number
+#    added interp.set()
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
 #DEFAULT_NORMALIZE='log+softmax' # equiv to 'ordinary' normalization
+#DEFAULT_NORMALIZE='none'        # don't normalize
 
 ##############################################################################
 ## a program
@@ -58,6 +64,9 @@ class Program(object):
             return r
         if not calledFromProPPRProgram:
             self.rules.mapRules(checkRule)
+
+    def clearFunctionCache(self):
+        self.function = {}
 
     def findPredDef(self,mode):
         """Find the set of rules with a lhs that match the given mode."""
@@ -92,6 +101,8 @@ class Program(object):
                     self.function[(mode,0)] = funs.SoftmaxFunction(self.function[(mode,0)])
                 elif self.normalize=='log+softmax':
                     self.function[(mode,0)] = funs.SoftmaxFunction(funs.LogFunction(self.function[(mode,0)]))
+                elif self.normalize=='none':
+                    pass
                 else:
                     assert not self.normalize, 'bad value of self.normalize: %r' % self.normalize
                 # label internal nodes/ops of function with ids
@@ -134,6 +145,12 @@ class Program(object):
         if (mode,0) not in self.function: self.compile(mode)
         fun = self.function[(mode,0)]
         return fun.evalGrad(self.db, inputs)
+
+    def setFeatureWeights(self,epsilon=1.0):
+        logging.warn('trying to call setFeatureWeights on a non-ProPPR program')
+
+    def setRuleWeights(self,weights=None,epsilon=1.0):
+        logging.warn('trying to call setFeatureWeights on a non-ProPPR program')
 
     @staticmethod 
     def _load(fileNames,db=None):
@@ -298,6 +315,7 @@ class Interp(object):
         self.db = self.prog.db
         self.trainData = trainData
         self.testData = testData
+        self.numTopEcho = 10
 
     def help(self):
         print "ti.list(foo): foo can be a compiled function, eg \"foo/io\", a predicate definition, eg"
@@ -306,6 +324,25 @@ class Interp(object):
         print "ti.eval(\"functor/mode\",\"c\"): evaluate a function on a database constant c"
         print "ti.debug(\"functor/mode\",\"c\"): debug the corresponding eval command"
         print "ti.debugDset(\"functor/mode\"[,test=True]): run debugger on a dataset"
+        print "ti.set(depth=d): reset the max depth"
+        print "ti.set(normalize='none'|'softmax'|'log+softmax'): reset the normalizer"
+        print "ti.set(echo=N): number of top items to print when doing an eval"
+        print "ti.set(trace=True|False): print summary of messages sent in inference"
+        print "ti.set(maxTraceMsg=N): print data in messages if they have fewer than N non-zero entries"
+
+    def set(self,depth=None,echo=None,normalize=None,maxTraceMsg=-1,trace=None):
+        if depth!=None:
+            self.prog.maxDepth = depth
+            self.prog.clearFunctionCache()
+        if normalize!=None:
+            self.prog.normalize = normalize
+            self.prog.clearFunctionCache()
+        if echo!=None:
+            self.numTopEcho = echo
+        if trace!=None:
+            ops.conf.trace = trace
+        if maxTraceMsg>=0:
+            ops.conf.long_trace = maxTraceMsg
 
     def list(self,str=None):
         if str==None:
@@ -350,8 +387,13 @@ class Interp(object):
 
     def eval(self,modeSpec,sym):
         mode = declare.asMode(modeSpec)        
-        result = self.prog.evalSymbols(mode,[sym])
-        return self.prog.db.rowAsSymbolDict(result)
+        tmp = self.prog.evalSymbols(mode,[sym])
+        result = self.prog.db.rowAsSymbolDict(tmp)
+        if (self.numTopEcho):
+            top = sorted(map(lambda (key,val):(val,key), result.items()), reverse=True)
+            for rank in range(min(len(top),self.numTopEcho)):
+                print '%d\t%g\t%s' % (rank+1,top[rank][0],top[rank][1])
+        return result
     
     def debug(self,modeSpec,sym):
         mode = declare.asMode(modeSpec)        
@@ -503,6 +545,6 @@ if __name__ == "__main__":
     else:
         print "Usage: python -i -m tensorlog [opts]"
         print "- For option help: 'python -m tensorlog --help'"
-        print "- The interpreter it is really only useful with the -i option."
+        print "- The interpreter is really only useful with the -i option."
 
 

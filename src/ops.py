@@ -15,7 +15,7 @@ import copy
 
 conf = config.Config()
 conf.trace = False;      conf.help.trace =           "Print debug info during op execution"
-conf.long_trace = False; conf.help.long_trace =      "Print output of functions after op - only for small tasks"
+conf.long_trace = 0;     conf.help.long_trace =      "Print output of messages with < n nonzeros - only for small tasks"
 conf.max_trace = False;  conf.help.max_trace =       "Print max value of functions after op"
 conf.check_nan = True;   conf.help.check_overflow =  "Check if output of each op is nan."
 conf.pprintMaxdepth=0;   conf.help.pprintMaxdepth =  "Controls op.pprint() output"
@@ -52,7 +52,8 @@ class Op(opfunutil.OperatorOrFunction):
         self._doEval(env,pad)
         pad[self.id].output = env[self.dst]
         if conf.trace:
-            if conf.long_trace: print 'stores',env.db.matrixAsSymbolDict(env[self.dst]),
+            print 'stores',mutil.summary(env[self.dst]),
+            if conf.long_trace>env[self.dst].nnz: print 'holding',env.db.matrixAsSymbolDict(env[self.dst]),
             if conf.max_trace: print 'max',mutil.maxValue(env[self.dst]),
             print
         if conf.check_nan:
