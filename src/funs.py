@@ -33,7 +33,7 @@ class Function(object):
             if conf.long_trace:
                 for k,v in enumerate(values):
                     print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
-                print '. result :',db.matrixAsSymbolDict(result)
+                print '. result :',db.matrixAsSymbolDict(pad[self.id].output)
         return pad[self.id].output
 
     def backprop(self,delta,gradAccum,pad):
