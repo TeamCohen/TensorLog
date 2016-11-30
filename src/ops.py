@@ -236,7 +236,7 @@ class VecMatMulOp(Op):
             update = env[self.src].transpose() * (env.delta[self.dst])
             update = scipy.sparse.csr_matrix(update)
             # The transpose flag is set in BP when sending a message
-            # 'backward' from a goal output to variable, an indicates
+            # 'backward' from a goal output to variable, and indicates
             # if the operation needs to transpose the matrix.  Since
             # the db stores predicates p(a,b) internally as a matrix
             # where a is a row and b is a column, when the matMode is
