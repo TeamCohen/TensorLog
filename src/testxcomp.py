@@ -3,14 +3,17 @@ import tensorlog
 import declare
 import testtensorlog
 import matrixdb
+import parser
 
 import unittest
 import sys
+import theano
 
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     
     def testIf(self):
         self.inferenceCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
+        self.xcompCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
 
     def testFailure(self):
         #self.inferenceCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
@@ -91,6 +94,29 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 #                            {'william':1.0})
         pass
 
+
+    def xcompCheck(self,ruleStrings,modeString,inputSymbol,expectedResultDict):
+        print 'xcomp inference for mode',modeString,'on input',inputSymbol,'with rules:'
+        testtensorlog.maybeNormalize(expectedResultDict)
+        for r in ruleStrings:
+            print '>',r
+        rules = parser.RuleCollection()
+        for r in ruleStrings:
+            rules.add(parser.Parser.parseRule(r))
+        prog = tensorlog.Program(db=self.db,rules=rules)
+        mode = declare.ModeDeclaration(modeString)
+        tlogFun = prog.compile(mode)
+        crossCompiler = xc.CrossCompiler(prog.db)
+        (inputs,expr) = crossCompiler.fun2Expr(tlogFun,1)
+        print 'inputs',inputs
+        print 'matrix params',crossCompiler.matrixArgNames
+        print 'matrix params vals',crossCompiler.matrixArgs
+        print 'expr',theano.pp(expr)
+
+#        print "\n".join(fun.pprint())
+#        y1 = prog.evalSymbols(mode,[inputSymbol]) 
+#        self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
+    
 
 if __name__ == "__main__":
     if len(sys.argv)==1:
