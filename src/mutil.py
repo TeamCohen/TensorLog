@@ -25,13 +25,16 @@ NP.seterr(all='raise',under='ignore')
 # stop execution & print traceback for various floating-point issues
 # except underflow; aiui we don't mind if very small numbers go to zero --kmm
 
+# comparison to None in scipy is switching to elementwise so we're going to check type instead
+NONETYPE=type(None) 
+
 def summary(mat):
     """Helpful string describing a matrix for debugging.""" 
     checkCSR(mat)
     return 'nnz %d rows %d cols %d' % (mat.nnz,numRows(mat),numCols(mat))
 
 def pprintSummary(mat):
-    if mat!=None:
+    if type(mat)!=NONETYPE:
         checkCSR(mat)
         return '%3d x %3d [%d nz]' % (numRows(mat),numCols(mat),mat.nnz)
     else:
@@ -136,7 +139,7 @@ def rowsum(mat):
 #    rowSum = sparseOnes.dot(m2)
     # v3: like v2, but densify
     denseMat,undensifier = densify(mat)
-    if denseMat!=None:
+    if type(denseMat)!=NONETYPE:
         return undensify(denseMat.sum(0), undensifier)
     else:
         ndense = mat.data.shape[0]
@@ -199,10 +202,10 @@ def alterMatrixRows(mat,alterationFun):
 def softmax(db,mat):
     """ Compute the softmax of each row of a matrix.
     """
-    nullEpsilon = -10  # scores for null entity will be exp(nullMatrix)
+    nullEpsilon = -10  # scores for null entity will be exp(nullEpsilon)
     result = repeat(db.nullMatrix(1)*nullEpsilon, numRows(mat)) + mat
     denseResult,undensifier = densify(result)
-    if denseResult!=None:
+    if type(denseResult)!=NONETYPE:
         return undensify(denseSoftmax(denseResult), undensifier)
     else:
         def softMaxAlteration(data,lo,hi,unused):
@@ -242,7 +245,7 @@ def broadcastAndComponentwiseMultiply(m1,m2):
 
 def multiplyByBroadcastRowVec(m,v):
     (dm,dv,i) = codensify(m,v)
-    if dm!=None:
+    if type(dm)!=NONETYPE:
         dp = NP.multiply(dm,dv)
         return undensify(dp, i)
     else:
@@ -256,7 +259,7 @@ def broadcastAndWeightByRowSum(m1,m2):
     """ 
     if conf.densifyWeightByRowSum:
         (d1,d2,i) = codensify(m1, m2)
-        if d1!=None:
+        if type(d1)!=NONETYPE:
             dr = NP.multiply(d1, d2.sum(axis=1))
             return undensify(dr, i)
 
@@ -281,7 +284,7 @@ def broadcastAndWeightByRowSum(m1,m2):
 def shuffleRows(m,shuffledRowNums=None):
     """Create a copy of m with the rows permuted."""
     checkCSR(m)
-    if shuffledRowNums==None:
+    if type(shuffledRowNums)==NONETYPE:
         shuffledRowNums = NP.arange(numRows(m))
         NR.shuffle(shuffledRowNums)
     data = NP.array(m.data)
