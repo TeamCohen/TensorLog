@@ -1,9 +1,10 @@
-import theanoxcomp as xc
+import theanoxcomp 
 import tensorlog
 import declare
 import testtensorlog
 import matrixdb
 import parser
+import mutil
 
 import unittest
 import sys
@@ -106,12 +107,9 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         prog = tensorlog.Program(db=self.db,rules=rules)
         mode = declare.ModeDeclaration(modeString)
         tlogFun = prog.compile(mode)
-        crossCompiler = xc.CrossCompiler(prog.db)
-        (inputs,expr) = crossCompiler.fun2Expr(tlogFun,1)
-        print 'inputs',inputs
-        print 'matrix params',crossCompiler.matrixArgNames
-        print 'matrix params vals',crossCompiler.matrixArgs
-        print 'expr',theano.pp(expr)
+        xc = theanoxcomp.CrossCompiler(prog.db)
+        xc.compile(tlogFun)
+        xc.show()
 
 #        print "\n".join(fun.pprint())
 #        y1 = prog.evalSymbols(mode,[inputSymbol]) 
