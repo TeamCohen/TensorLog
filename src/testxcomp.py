@@ -9,11 +9,14 @@ import unittest
 import sys
 import theano
 
+import funs
+import ops
+
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     
     def testIf(self):
         self.inferenceCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
-        self.xcompCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
+        return self.xcompCheck(    ['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
 
     def testFailure(self):
         #self.inferenceCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
@@ -112,15 +115,32 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         print 'matrix params',crossCompiler.matrixArgNames
         print 'matrix params vals',crossCompiler.matrixArgs
         print 'expr',theano.pp(expr)
-
-#        print "\n".join(fun.pprint())
-#        y1 = prog.evalSymbols(mode,[inputSymbol]) 
+        
+        funs.conf.long_trace=funs.conf.trace=True
+        ops.conf.trace=True
+        ops.conf.long_trace=21
+        y_tl = prog.evalSymbols(mode,[inputSymbol]) 
+        
+        fwd = theano.function(inputs=inputs + 
+                              [crossCompiler.matrixEnv[u] for u in crossCompiler.matrixArgNames],
+                              outputs=expr)
+        x1 = self.db.onehot(inputSymbol).toarray().flatten()
+        x2 = crossCompiler.matrixArgs[0].transpose().toarray()
+        y1 = fwd(x1,x2)
+        print 'tensorlog y1: ',self.db.rowAsSymbolDict(y_tl)
+        print 'theano y1:    ',self.db.arrayAsSymbolDict(y1.flatten())
+        return inputs,expr,crossCompiler,fwd,x1,x2,y_tl,y1
+        
 #        self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
     
 
 if __name__ == "__main__":
     if len(sys.argv)==1:
         unittest.main()
+    else:
+        foo=TestXCSmallProofs('testIf')
+        foo.setUp()
+        bar=foo.testIf()
     
 
 

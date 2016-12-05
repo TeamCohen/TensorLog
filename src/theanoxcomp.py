@@ -9,6 +9,7 @@ import theano.tensor as TT
 import theano.tensor.nnet as TNN
 import theano.sparse as TS
 import theano.sparse.basic as TSB
+from theano.ifelse import ifelse
 import numpy as NP
 
 
@@ -43,12 +44,17 @@ class CrossCompiler(object):
 
         if isinstance(fun,funs.SoftmaxFunction):
             # wrap inner function with softmax function
+            print "softMax..."
             inputs,subExpr = self.fun2Expr(fun.fun,numInputs)
-            return (inputs, TNN.nnet.softmax(subExpr))
+            # tricky: in our softmax code, we mask the results to keep 0 entries 0
+            # before normalizing :-/
+            result = TNN.nnet.softmax(subExpr) * (1 - TT.isclose(subExpr,TT.zeros_like(subExpr)))
+            return (inputs, result / result.sum())
 
         elif isinstance(fun,funs.OpSeqFunction):
             assert len(fun.opInputs)==numInputs, 'mismatching number of inputs'
             # env maps nameSpaced variables to theano subexpressions
+            print "opSeq..."
             ns = self.nextNameSpace()
             thEnv = {}
             # seqInputs is a list of theano variables which can be
@@ -56,7 +62,7 @@ class CrossCompiler(object):
             seqInputs = []
             for v in fun.opInputs:
                 u = self.localName(v,ns)
-                thEnv[u] = TT.dmatrix(u)
+                thEnv[u] = TT.dvector(u) #TT.dmatrix(u)
                 seqInputs.append(thEnv[u])
 
             for op in fun.ops:
@@ -72,8 +78,9 @@ class CrossCompiler(object):
     def op2Expr(self,thEnv,ns,op):
         
         if isinstance(op,ops.VecMatMulOp):
+            print "+vecMatMul..."
             u = self.localName(op.src,ns)
-            return thEnv[u] * self.matrixFor(op.matMode,op.transpose)
+            return theano.dot(thEnv[u], self.matrixFor(op.matMode,op.transpose))
 
         else:
             assert False,'cannot cross-compile %r' % op

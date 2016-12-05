@@ -175,6 +175,13 @@ class MatrixDB(object):
             s = self.stab.getSymbol(coorow.col[i])
             result[s] = coorow.data[i]
         return result
+    
+    def arrayAsSymbolDict(self,arr):
+        result = {}
+        for i in range(len(arr)):
+            s = self.stab.getSymbol(i)
+            result[s] = arr[i]
+        return result
 
     def matrixAsSymbolDict(self,m):
         result = {}
