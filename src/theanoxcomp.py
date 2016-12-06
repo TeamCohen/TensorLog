@@ -4,13 +4,19 @@ import ops
 import matrixdb
 import declare
 import mutil
+import config
 
 import theano
 import theano.tensor as TT
 import theano.tensor.nnet as TNN
 import theano.sparse as TS
 import theano.sparse.basic as TSB
+import scipy.sparse as SS
 import numpy as NP
+
+conf = config.Config()
+conf.denseMsg = True;        conf.help.denseMsg =  'Represent messages and input-variable bindings as dense vectors'
+conf.denseMat = True;        conf.help.denseMat =  'Represent database matrices as dense matrices'
 
 class TheanoEnv(object):
 
@@ -31,6 +37,30 @@ class TheanoEnv(object):
     def __setitem__(self,key,val):
         self.env[self.internalName(key)] = val
 
+def densifyMsg(v):
+    tmp = v.todense() if conf.denseMsg else v
+    #print 'densifyMsg',type(v),'is',type(tmp),tmp
+    return tmp
+def sparsifyMsg(v):
+    if conf.denseMsg: 
+        tmp = SS.csr_matrix(v) 
+        tmp.eliminate_zeros()
+        return tmp
+    else:
+        return v
+
+def densifyMat(m):
+    tmp = m.todense() if conf.denseMat else m
+    #print 'densifyMat',type(m),'is',type(tmp),tmp
+    return tmp
+def sparsifyMat(m):
+    if conf.denseMat: 
+        tmp = SS.csr_matrix(m) 
+        tmp.eliminate_zeros()
+        return tmp
+    else:
+        return v
+
 class CrossCompiler(object):
 
     def __init__(self,db):
@@ -45,6 +75,10 @@ class CrossCompiler(object):
         self.dbMatrixExprBinding = {}
         # hold the database
         self.db = db
+        # TODO: make conditional on conf.  when messages are dense,
+        # make sure the NULL value is small but bigger than zero,
+        # which will be the default value
+        self.nullSmoothing = theano.shared(densifyMsg(self.db.nullMatrix(1)*1e-5))
         #
         # stuff below is set by compile
         #
@@ -58,6 +92,7 @@ class CrossCompiler(object):
         # theano function
         self.thFun = None
 
+
     def allocNamespace(self):
         """Allocate a new name space.
         """
@@ -70,9 +105,9 @@ class CrossCompiler(object):
         print 'expr',theano.pp(self.expr)
         print len(self.dbArgs),'db param(s):'
         for i in range(len(self.dbArgs)):
-            print ' |',self.dbArgs[i],mutil.summary(self.dbVals[i])
+            print ' |',self.dbArgs[i],type(self.dbVals[i])
         print 'fun',theano.pp(self.thFun.maker.fgraph.outputs[0])
-        print 'debuug fun',theano.printing.debugprint(self.thFun.maker.fgraph.outputs[0])
+        print 'debug fun',theano.printing.debugprint(self.thFun.maker.fgraph.outputs[0])
 
     def compile(self,fun,numInputs=1):
         (self.exprArgs,self.expr) = self.fun2Expr(fun,numInputs=numInputs)
@@ -83,15 +118,35 @@ class CrossCompiler(object):
             self.dbVals.append(self.dbMatrixExprBinding[key])
         self.args = self.exprArgs + self.dbArgs
         self.thFun = theano.function(inputs=self.args, outputs=self.expr)
+        # for convenience
+        return self
+
+    #
+    # the main compilation routines
+    # 
+
+    def evalSymbols(self,inputSyms):
+        assert len(inputSyms)==len(self.exprArgs)
+        def sym2Vector(sym): return densifyMsg(self.db.onehot(sym))
+        inputs = map(sym2Vector, inputSyms)
+        formalArgs = inputs+self.dbVals
+        theanoResult = self.thFun(*formalArgs)
+        return map(sparsifyMat,theanoResult)
+
+    #
+    # the main compilation routines
+    # 
 
     def matrixExpr(self,matMode):
         """Return a theano expression that denotes the matrix retrieved by
         the (matMode, transpose) pair using the matrixdb
         """ 
+        # todo dense switch
         if (matMode) not in self.dbMatrixExpr:
             u = "M__" + matMode.getFunctor() +"_" + "".join([matMode.arg(i) for i in range(matMode.getArity())])
             self.dbMatrixExpr[matMode] = TT.dmatrix(u)
             self.dbMatrixExprBinding[matMode] = self.db.matrix(matMode,False)
+            self.dbMatrixExprBinding[matMode] = densifyMat(self.dbMatrixExprBinding[matMode])
         return self.dbMatrixExpr[matMode]
 
     def fun2Expr(self,fun,numInputs=1):
@@ -105,7 +160,7 @@ class CrossCompiler(object):
         if isinstance(fun,funs.SoftmaxFunction):
             # wrap inner function with softmax function
             inputs,subExpr = self.fun2Expr(fun.fun,numInputs)
-            return (inputs, TNN.nnet.softmax(subExpr))
+            return (inputs, TNN.nnet.softmax(subExpr) + self.nullSmoothing)
 
         elif isinstance(fun,funs.OpSeqFunction):
             assert len(fun.opInputs)==numInputs, 'mismatching number of inputs'
@@ -117,6 +172,7 @@ class CrossCompiler(object):
             # as inputs to the expression
             seqInputs = []
             for v in fun.opInputs:
+                # todo dense switch
                 thEnv[v] = TT.dmatrix(thEnv.internalName(v))
                 seqInputs.append(thEnv[v])
             # fill in the theano environment appropriately
@@ -134,6 +190,7 @@ class CrossCompiler(object):
         destination of the Operator.
         """
         
+        # todo dense switch
         if isinstance(op,ops.VecMatMulOp):
             mExpr = self.matrixExpr(op.matMode)
             if op.transpose:

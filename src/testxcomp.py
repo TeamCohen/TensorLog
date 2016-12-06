@@ -13,11 +13,10 @@ import theano
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     
     def testIf(self):
-        self.inferenceCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
         self.xcompCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
 
     def testFailure(self):
-        #self.inferenceCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
+        self.xcompCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
         pass
 
     def testRevIf(self):
@@ -97,10 +96,9 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
 
     def xcompCheck(self,ruleStrings,modeString,inputSymbol,expectedResultDict):
-        print 'xcomp inference for mode',modeString,'on input',inputSymbol,'with rules:'
-        testtensorlog.maybeNormalize(expectedResultDict)
-        for r in ruleStrings:
-            print '>',r
+        self.inferenceCheck(ruleStrings,modeString,inputSymbol,expectedResultDict)
+        print 'xcomp inference for mode',modeString,'on input',inputSymbol
+        testtensorlog.softmaxNormalize(expectedResultDict)
         rules = parser.RuleCollection()
         for r in ruleStrings:
             rules.add(parser.Parser.parseRule(r))
@@ -110,11 +108,31 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         xc = theanoxcomp.CrossCompiler(prog.db)
         xc.compile(tlogFun)
         xc.show()
+        print '== performing theano eval =='
+        ys = xc.evalSymbols([inputSymbol])
+        y = ys[0]
+        self.checkMaxesInDicts(self.db.rowAsSymbolDict(y), expectedResultDict)
+        print '== theano eval checks passed =='
+
+    def checkMaxesInDicts(self,actual,expected):
+        def maximalElements(d):
+            m = max(d.values())
+            return set(k for k in d if d[k]==m)
+        actualMaxes = maximalElements(actual)
+        expectedMaxes = maximalElements(expected)
+        print 'actual',actualMaxes,'from',actual
+        print 'expected',expectedMaxes,'from',expected
+        for a in actualMaxes:
+            self.assertTrue(a in expectedMaxes)
+        for a in expectedMaxes:
+            self.assertTrue(a in actualMaxes)
 
 #        print "\n".join(fun.pprint())
 #        y1 = prog.evalSymbols(mode,[inputSymbol]) 
 #        self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
     
+
+
 
 if __name__ == "__main__":
     if len(sys.argv)==1:
