@@ -83,13 +83,15 @@ class AbstractCrossCompiler(object):
     def compile(self,fun,numInputs=1):
         """ Compile a tensorlog function to theano
         """
-        (self.exprArgs,self.expr) = self.fun2Expr(fun,numInputs=numInputs)
+        (self.exprArgs,self.expr) = self.fun2Expr(fun,None,numInputs=numInputs)
         self.dbArgs = []
         self.dbVals = []
         for key in sorted(self.dbMatrixExpr):
             self.dbArgs.append(self.dbMatrixExpr[key])
             self.dbVals.append(self.dbMatrixExprBinding[key])
         self.args = self.exprArgs + self.dbArgs
+        print 'self.args',self.args
+        print 'self.expr',theano.pp(self.expr)
         self.thFun = theano.function(inputs=self.args, outputs=self.expr)
         # for convenience
         return self
@@ -158,18 +160,31 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             self.dbMatrixExprBinding[matMode] = self.densifyMat(m)
         return self.dbMatrixExpr[matMode]
 
-    def fun2Expr(self,fun,numInputs=1):
+    def fun2Expr(self,fun,sharedInputs=None,numInputs=1):
         """Return a pair (inputs, expr) where binding the inputs in theano,
         and then evaluating the expression, is roughly equivalent to
         evaluating the Function fun in tensorlog.  It's only roughly
         equivalent because one also needs to bind the necessary
         variables from the matrixdb to their values.
+
+        The sharedInputs is used if you already have theano variables
+        corresponding to the inputs to this expression.  This is the case
+        when you have a SumFunction: all the subexpressions share the same inputs.
         """ 
 
         if isinstance(fun,funs.SoftmaxFunction):
             # wrap inner function with softmax function
-            inputs,subExpr = self.fun2Expr(fun.fun,numInputs)
+            inputs,subExpr = self.fun2Expr(fun.fun,sharedInputs,numInputs)
             return (inputs, TNN.nnet.softmax(subExpr) + self.nullSmoothing)
+
+        elif isinstance(fun,funs.SumFunction):
+            assert(len(fun.funs)>=1)
+            inputs,accum = self.fun2Expr(fun.funs[0],sharedInputs,numInputs)
+            for f in fun.funs[1:]:
+                (moreInputs,addend) = self.fun2Expr(f,inputs,numInputs)
+                assert(len(moreInputs)==len(inputs))
+                accum = accum+addend
+            return (inputs,accum)
 
         elif isinstance(fun,funs.OpSeqFunction):
             assert len(fun.opInputs)==numInputs, 'mismatching number of inputs'
@@ -180,9 +195,16 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             # create the list of theano variables which should be used
             # as inputs to the expression
             seqInputs = []
-            for v in fun.opInputs:
-                thEnv[v] = self.theanoMatrix(thEnv.internalName(v))
-                seqInputs.append(thEnv[v])
+            if sharedInputs==None:
+                for v in fun.opInputs:
+                    thEnv[v] = self.theanoMatrix(thEnv.internalName(v))
+                    seqInputs.append(thEnv[v])
+            else:
+                assert len(fun.opInputs)==len(sharedInputs)
+                for i in range(len(fun.opInputs)):
+                    v = fun.opInputs[i]
+                    thEnv[v] = sharedInputs[i]
+                    seqInputs.append(thEnv[v])
             # fill in the theano environment appropriately
             for op in fun.ops:
                 thEnv[op.dst] = self.op2Expr(thEnv,op)
@@ -227,52 +249,9 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
 
     def theanoMatrix(self,name):
         return TS.csr_matrix(name=name)
-
-    #
-    # the main compilation routines
-    # 
-
-    def fun2Expr(self,fun,numInputs=1):
-        """Return a pair (inputs, expr) where binding the inputs in theano,
-        and then evaluating the expression, is roughly equivalent to
-        evaluating the Function fun in tensorlog.  It's only roughly
-        equivalent because one also needs to bind the necessary
-        variables from the matrixdb to their values.
-        """ 
-
-        if isinstance(fun,funs.SoftmaxFunction):
-            # wrap inner function with softmax function
-            inputs,subExpr = self.fun2Expr(fun.fun,numInputs)
-            return (inputs, TNN.nnet.softmax(subExpr) + self.nullSmoothing)
-
-        elif isinstance(fun,funs.OpSeqFunction):
-            assert len(fun.opInputs)==numInputs, 'mismatching number of inputs'
-            # thEnv, a 'theano environment', maps nameSpaced variables
-            # from the OpSeqFunction's environment to the
-            # corresponding theano subexpressions
-            thEnv = TheanoEnv(self.allocNamespace())
-            # create the list of theano variables which should be used
-            # as inputs to the expression
-            seqInputs = []
-            for v in fun.opInputs:
-                thEnv[v] = self.theanoMatrix(thEnv.internalName(v))
-                seqInputs.append(thEnv[v])
-            # fill in the theano environment appropriately
-            for op in fun.ops:
-                thEnv[op.dst] = self.op2Expr(thEnv,op)
-            # return the inputs and the expression for the
-            # OpSeqFunction's output
-            return (seqInputs, thEnv[fun.ops[-1].dst])
-        
-        else:
-            assert False,'cannot cross-compile %r' % fun
     
     def op2Expr(self,thEnv,op):
-        """Extend the theano environment with an expression for the
-        destination of the Operator.
-        """
-        
-        # for dense matrices
+        # for sparse matrices
         if isinstance(op,ops.VecMatMulOp):
             mExpr = self.matrixExpr(op.matMode)
             if op.transpose:

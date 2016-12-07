@@ -13,31 +13,37 @@ import theano
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     
     def testIf(self):
+        print '** testIf'
         self.xcompCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
+        pass
 
     def testFailure(self):
+        print '** testFailure'
         self.xcompCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
         pass
 
     def testRevIf(self):
-        #self.inferenceCheck(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
+        print '** testRevIf'
+        self.xcompCheck(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
         pass
 
     def testOr(self):
-        #self.inferenceCheck(['p(X,Y):-spouse(X,Y).', 'p(X,Y):-sister(X,Y).'], 'p(i,o)', 'william', 
-        #                    {'susan':1.0, 'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
+        print '** testOr'
+        self.xcompCheck(['p(X,Y):-spouse(X,Y).', 'p(X,Y):-sister(X,Y).'], 'p(i,o)', 'william', 
+                        {'susan':1.0, 'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
         pass
 
     def testChain(self):
-#        self.inferenceCheck(['p(X,Z):-spouse(X,Y),sister(Y,Z).'], 'p(i,o)', 'susan', 
-#                            {'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
-#        self.inferenceCheck(['p(X,Z):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
-#                            {'charlotte':1.0, 'lucas':1.0, 'poppy':1.0, 'caroline':1.0, 'elizabeth':1.0})
+        print '** testChain'
+        self.xcompCheck(['p(X,Z):-spouse(X,Y),sister(Y,Z).'], 'p(i,o)', 'susan', 
+                        {'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
+        self.xcompCheck(['p(X,Z):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
+                        {'charlotte':1.0, 'lucas':1.0, 'poppy':1.0, 'caroline':1.0, 'elizabeth':1.0})
         pass
 
     def testMid(self):
-#        self.inferenceCheck(['p(X,Y):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
-#                            {'sarah': 1.0, 'rachel': 2.0, 'lottie': 2.0})
+#        self.xcompCheck(['p(X,Y):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
+#                        {'sarah': 1.0, 'rachel': 2.0, 'lottie': 2.0})
         pass
 
     def testNest(self):
@@ -105,15 +111,15 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         prog = tensorlog.Program(db=self.db,rules=rules)
         mode = declare.ModeDeclaration(modeString)
         tlogFun = prog.compile(mode)
-        xc = theanoxcomp.SparseMatDenseMsgCrossCompiler(prog.db)
-        xc.compile(tlogFun)
-        xc.show()
-        print '== performing theano eval =='
-        ys = xc.evalSymbols([inputSymbol])
-        y = ys[0]
-        print 'eval returned',type(y)
-        self.checkMaxesInDicts(self.db.rowAsSymbolDict(y), expectedResultDict)
-        print '== theano eval checks passed =='
+        for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler, theanoxcomp.SparseMatDenseMsgCrossCompiler]:
+            xc = compilerClass(prog.db)
+            xc.compile(tlogFun)
+            xc.show()
+            print '== performing theano eval with',compilerClass,'=='
+            ys = xc.evalSymbols([inputSymbol])
+            y = ys[0]
+            self.checkMaxesInDicts(self.db.rowAsSymbolDict(y), expectedResultDict)
+            print '== theano eval checks passed =='
 
     def checkMaxesInDicts(self,actual,expected):
         def maximalElements(d):
