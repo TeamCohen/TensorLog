@@ -1,9 +1,10 @@
-import theanoxcomp as xc
+import theanoxcomp 
 import tensorlog
 import declare
 import testtensorlog
 import matrixdb
 import parser
+import mutil
 
 import unittest
 import sys
@@ -109,28 +110,33 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         prog = tensorlog.Program(db=self.db,rules=rules)
         mode = declare.ModeDeclaration(modeString)
         tlogFun = prog.compile(mode)
-        crossCompiler = xc.CrossCompiler(prog.db)
-        (inputs,expr) = crossCompiler.fun2Expr(tlogFun,1)
-        print 'inputs',inputs
-        print 'matrix params',crossCompiler.matrixArgNames
-        print 'matrix params vals',crossCompiler.matrixArgs
-        print 'expr',theano.pp(expr)
+        xc = theanoxcomp.CrossCompiler(prog.db)
+        xc.compile(tlogFun)
+        xc.show()
+        #crossCompiler = xc.CrossCompiler(prog.db)
+        #(inputs,expr) = crossCompiler.fun2Expr(tlogFun,1)
+        #print 'inputs',inputs
+        #print 'matrix params',crossCompiler.matrixArgNames
+        #print 'matrix params vals',crossCompiler.matrixArgs
+        #print 'expr',theano.pp(expr)
+        #funs.conf.long_trace=funs.conf.trace=True
+        #ops.conf.trace=True
+        #ops.conf.long_trace=21
+        #y_tl = prog.evalSymbols(mode,[inputSymbol]) 
         
-        funs.conf.long_trace=funs.conf.trace=True
-        ops.conf.trace=True
-        ops.conf.long_trace=21
-        y_tl = prog.evalSymbols(mode,[inputSymbol]) 
+        #fwd = theano.function(inputs=inputs + 
+        #                      [crossCompiler.matrixEnv[u] for u in crossCompiler.matrixArgNames],
+        #                      outputs=expr)
+        #x1 = self.db.onehot(inputSymbol).toarray().flatten()
+        #x2 = xc.dbVals[0].transpose().toarray()
+        #y1 = xc.thFun(x1,x2)
+        #print 'tensorlog y1: ',self.db.rowAsSymbolDict(y_tl)
+        #print 'theano y1:    ',self.db.arrayAsSymbolDict(y1.flatten())
+        #return xc,x1,x2,y_tl,y1
         
-        fwd = theano.function(inputs=inputs + 
-                              [crossCompiler.matrixEnv[u] for u in crossCompiler.matrixArgNames],
-                              outputs=expr)
-        x1 = self.db.onehot(inputSymbol).toarray().flatten()
-        x2 = crossCompiler.matrixArgs[0].transpose().toarray()
-        y1 = fwd(x1,x2)
-        print 'tensorlog y1: ',self.db.rowAsSymbolDict(y_tl)
-        print 'theano y1:    ',self.db.arrayAsSymbolDict(y1.flatten())
-        return inputs,expr,crossCompiler,fwd,x1,x2,y_tl,y1
-        
+
+#        print "\n".join(fun.pprint())
+#        y1 = prog.evalSymbols(mode,[inputSymbol]) 
 #        self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
     
 
