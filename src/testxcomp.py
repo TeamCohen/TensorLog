@@ -105,12 +105,13 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         prog = tensorlog.Program(db=self.db,rules=rules)
         mode = declare.ModeDeclaration(modeString)
         tlogFun = prog.compile(mode)
-        xc = theanoxcomp.CrossCompiler(prog.db)
+        xc = theanoxcomp.SparseMatDenseMsgCrossCompiler(prog.db)
         xc.compile(tlogFun)
         xc.show()
         print '== performing theano eval =='
         ys = xc.evalSymbols([inputSymbol])
         y = ys[0]
+        print 'eval returned',type(y)
         self.checkMaxesInDicts(self.db.rowAsSymbolDict(y), expectedResultDict)
         print '== theano eval checks passed =='
 
@@ -120,8 +121,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
             return set(k for k in d if d[k]==m)
         actualMaxes = maximalElements(actual)
         expectedMaxes = maximalElements(expected)
-        print 'actual',actualMaxes,'from',actual
-        print 'expected',expectedMaxes,'from',expected
+        print 'actual',actualMaxes,'expected',expectedMaxes
         for a in actualMaxes:
             self.assertTrue(a in expectedMaxes)
         for a in expectedMaxes:
