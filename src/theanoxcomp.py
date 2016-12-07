@@ -105,11 +105,17 @@ class CrossCompiler(object):
 
         if isinstance(fun,funs.SoftmaxFunction):
             # wrap inner function with softmax function
-            #print "softMax..."
             inputs,subExpr = self.fun2Expr(fun.fun,numInputs)
-            # tricky: in our softmax code, we mask the results to keep 0 entries 0
-            # before normalizing :-/
-            result = TNN.nnet.softmax(subExpr) * (1 - TT.isclose(subExpr,TT.zeros_like(subExpr)))
+            
+            # mimic mutil.denseSoftmax():
+            
+            # FIXME: if subExpr is a matrix, how do we tell / what do we do
+            # FIXME: using dense nullEpsilon for now
+            nullEpsilon = (-10 * self.db.nullMatrix(1)).toarray()  # scores for null entity will be exp(nullEpsilon)
+            filtered = subExpr + nullEpsilon
+            # run softmax but keep the zero entries as zero
+            # ... isclose() isn't great for this but it's not as slow as switch()
+            result = TNN.nnet.softmax(filtered) * (1 - TT.isclose(filtered,TT.zeros_like(filtered)))
             return (inputs, result / result.sum())
 
         elif isinstance(fun,funs.OpSeqFunction):
@@ -122,7 +128,7 @@ class CrossCompiler(object):
             # as inputs to the expression
             seqInputs = []
             for v in fun.opInputs:
-                thEnv[v] = TT.dmatrix(thEnv.internalName(v)) # dvector?
+                thEnv[v] = TT.dmatrix(thEnv.internalName(v))
                 seqInputs.append(thEnv[v])
             # fill in the theano environment appropriately
             for op in fun.ops:

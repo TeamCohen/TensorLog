@@ -99,6 +99,8 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
 
+    def _removeZeros(self, sdict):
+        return dict([ (k,v) for (k,v) in sdict.items() if v != 0])
     def xcompCheck(self,ruleStrings,modeString,inputSymbol,expectedResultDict):
         print 'xcomp inference for mode',modeString,'on input',inputSymbol,'with rules:'
         testtensorlog.maybeNormalize(expectedResultDict)
@@ -113,31 +115,20 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         xc = theanoxcomp.CrossCompiler(prog.db)
         xc.compile(tlogFun)
         xc.show()
-        #crossCompiler = xc.CrossCompiler(prog.db)
-        #(inputs,expr) = crossCompiler.fun2Expr(tlogFun,1)
-        #print 'inputs',inputs
-        #print 'matrix params',crossCompiler.matrixArgNames
-        #print 'matrix params vals',crossCompiler.matrixArgs
-        #print 'expr',theano.pp(expr)
+        
+        y_tl=None
         #funs.conf.long_trace=funs.conf.trace=True
         #ops.conf.trace=True
         #ops.conf.long_trace=21
         #y_tl = prog.evalSymbols(mode,[inputSymbol]) 
-        
-        #fwd = theano.function(inputs=inputs + 
-        #                      [crossCompiler.matrixEnv[u] for u in crossCompiler.matrixArgNames],
-        #                      outputs=expr)
-        #x1 = self.db.onehot(inputSymbol).toarray().flatten()
-        #x2 = xc.dbVals[0].transpose().toarray()
-        #y1 = xc.thFun(x1,x2)
         #print 'tensorlog y1: ',self.db.rowAsSymbolDict(y_tl)
-        #print 'theano y1:    ',self.db.arrayAsSymbolDict(y1.flatten())
-        #return xc,x1,x2,y_tl,y1
         
-
-#        print "\n".join(fun.pprint())
-#        y1 = prog.evalSymbols(mode,[inputSymbol]) 
-#        self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
+        x1 = self.db.onehot(inputSymbol).toarray()
+        x2 = xc.dbVals[0].toarray()
+        y1 = xc.thFun(x1,x2)
+        s = self._removeZeros(self.db.arrayAsSymbolDict(y1.flatten()))
+        self.checkDicts(s,expectedResultDict)
+        return xc,x1,x2,y_tl,y1
     
 
 if __name__ == "__main__":
