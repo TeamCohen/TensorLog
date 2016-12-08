@@ -104,16 +104,18 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
     def _removeZeros(self, sdict):
         return dict([ (k,v) for (k,v) in sdict.items() if v != 0])
-    def xcompCheck(self,ruleStrings,modeString,inputSymbol,expectedResultDict):
+    def xcompCheck(self,ruleStrings,modeString,inputSymbol,expectedResultDict,compare=False):
         self.inferenceCheck(ruleStrings,modeString,inputSymbol,expectedResultDict)
         print 'xcomp inference for mode',modeString,'on input',inputSymbol
-        testtensorlog.softmaxNormalize(expectedResultDict)
+        #testtensorlog.softmaxNormalize(expectedResultDict)
         rules = parser.RuleCollection()
         for r in ruleStrings:
             rules.add(parser.Parser.parseRule(r))
         prog = tensorlog.Program(db=self.db,rules=rules)
         mode = declare.ModeDeclaration(modeString)
         tlogFun = prog.compile(mode)
+        ytl=None
+        if compare: ytl=prog.evalSymbols(mode,[inputSymbol])
         for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler, theanoxcomp.SparseMatDenseMsgCrossCompiler]:
         #for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler]:
             xc = compilerClass(prog.db)
@@ -122,7 +124,11 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
             print '== performing theano eval with',compilerClass,'=='
             ys = xc.evalSymbols([inputSymbol])
             y = ys[0]
-            self.checkMaxesInDicts(self.db.rowAsSymbolDict(y), expectedResultDict)
+            actual = self.db.rowAsSymbolDict(y)
+            print 'expected',expectedResultDict
+            print 'actual',self._removeZeros(actual)
+            if compare: print 'actualTL',self.db.rowAsSymbolDict(ytl)
+            self.checkMaxesInDicts(actual, expectedResultDict)
             print '== theano eval checks passed =='
 
     def checkMaxesInDicts(self,actual,expected):

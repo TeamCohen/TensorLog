@@ -109,10 +109,8 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         AbstractCrossCompiler.__init__(self,db)
         self.denseMsg = True
         self.denseMat = True
-        # when messages are dense,
-        # make sure the NULL value is small but bigger than zero,
-        # which will be the default value
-        self.nullSmoothing = theano.shared(self.densifyMsg(self.db.nullMatrix(1)*10), name="nullSmoothing")
+        # add to dense message inputs before pushing through softMax
+        self.nullSmoothing = theano.shared(self.densifyMsg(self.db.nullMatrix(1)*-10), name="nullSmoothing")
 
     def densifyMsg(self,v):
         return v.todense()
@@ -142,11 +140,14 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
 
     def evalSymbols(self,inputSyms):
         assert len(inputSyms)==len(self.exprArgs)
-        def sym2Vector(sym): return densifyMsg(self.db.onehot(sym))
+        #def sym2Vector(sym): return densifyMsg(self.db.onehot(sym))
         inputs = map(lambda sym:self.densifyMsg(self.db.onehot(sym)), inputSyms)
         formalArgs = inputs+self.dbVals
+        #print "inputs:\n","\n".join([str(self.db.matrixAsSymbolDict(SS.csr_matrix(x))) for x in inputs])
         theanoResult = self.thFun(*formalArgs)
-        return map(lambda v:self.sparsifyMsg(v), theanoResult)
+        result = map(lambda v:self.sparsifyMsg(v), theanoResult)
+        #print "result:\n","\n".join([str(self.db.matrixAsSymbolDict(SS.csr_matrix(x))) for x in theanoResult])
+        return result
 
     #
     # the main compilation routines
@@ -187,13 +188,11 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             # wrap inner function with softmax function
             inputs,subExpr = self.fun2Expr(fun.fun,sharedInputs,depth=depth)
             # mimic mutil.denseSoftmax():
-            
-            # FIXME: if subExpr is a matrix, how do we tell / what do we do
-            # FIXME: using dense nullEpsilon for now
-            filtered = subExpr + self.nullSmoothing
-            # run softmax but keep the zero entries as zero
+            augmented = subExpr + self.nullSmoothing
+            # run softmax, then filter to keep the zero inputs as zeros in the output
             # ... isclose() isn't great for this but it's not as slow as switch()
-            result = TNN.nnet.softmax(filtered) * (1 - TT.isclose(filtered,TT.zeros_like(filtered)))
+            result = TNN.nnet.softmax(augmented) * (1 - TT.isclose(augmented,TT.zeros_like(augmented)))
+            # renormalize after filtering
             return (inputs, result / result.sum())
         elif isinstance(fun,funs.SumFunction):
             assert(len(fun.funs)>=1)
