@@ -1,0 +1,8 @@
+.classpath
+.project
+.settings
+*~
+tmp-cache
+*.pyc
+*.db
+*.mat
