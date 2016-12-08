@@ -112,7 +112,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         # when messages are dense,
         # make sure the NULL value is small but bigger than zero,
         # which will be the default value
-        self.nullSmoothing = theano.shared(self.densifyMsg(self.db.nullMatrix(1)*1e-5))
+        self.nullSmoothing = theano.shared(self.densifyMsg(self.db.nullMatrix(1)*1e-5), name="nullSmoothing")
 
     def densifyMsg(self,v):
         return v.todense()
@@ -132,6 +132,9 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
 
     def theanoMatrix(self,name):
         return TT.dmatrix(name)
+
+    def theanoRow(self,name):
+        return TT.drow(name)
 
     #
     # the main compilation routines
@@ -159,6 +162,14 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             self.dbMatrixExpr[matMode] = self.theanoMatrix(u)
             self.dbMatrixExprBinding[matMode] = self.densifyMat(m)
         return self.dbMatrixExpr[matMode]
+
+    def ones(self):
+        """Return a theano expression that denotes an all-ones row vector
+        """ 
+        if 'ones' not in self.dbMatrixExpr:
+            self.dbMatrixExpr['ones'] = self.theanoRow('v__ones')
+            self.dbMatrixExprBinding['ones'] = self.densifyMsg(self.db.ones())
+        return self.dbMatrixExpr['ones']
 
     def fun2Expr(self,fun,sharedInputs=None,numInputs=1):
         """Return a pair (inputs, expr) where binding the inputs in theano,
@@ -192,14 +203,15 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             # from the OpSeqFunction's environment to the
             # corresponding theano subexpressions
             thEnv = TheanoEnv(self.allocNamespace())
-            # create the list of theano variables which should be used
-            # as inputs to the expression
             seqInputs = []
             if sharedInputs==None:
+                # create the list of theano variables, which should be
+                # used as inputs to the expression
                 for v in fun.opInputs:
-                    thEnv[v] = self.theanoMatrix(thEnv.internalName(v))
+                    thEnv[v] = self.theanoRow(thEnv.internalName(v))
                     seqInputs.append(thEnv[v])
             else:
+                # copy over the existing inputs to the new environment
                 assert len(fun.opInputs)==len(sharedInputs)
                 for i in range(len(fun.opInputs)):
                     v = fun.opInputs[i]
@@ -226,6 +238,11 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             if op.transpose:
                 mExpr = mExpr.T
             return thEnv[op.src].dot(mExpr)
+        elif isinstance(op,ops.AssignPreimageToVar):
+            mExpr = self.matrixExpr(op.matMode)
+            return self.ones().dot(mExpr.T)
+        elif isinstance(op,ops.ComponentwiseVecMulOp):
+            return thEnv[op.src]*thEnv[op.src2]
         else:
             assert False,'cannot cross-compile %r' % op
 
@@ -257,5 +274,11 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
             if op.transpose:
                 mExpr = mExpr.transpose()
             return TSB.dot(thEnv[op.src],mExpr)
+        elif isinstance(op,ops.AssignPreimageToVar):
+            mExpr = self.matrixExpr(op.matMode)
+            # TODO: not sure why this simple expression doesn't work: TSB.dot(self.ones(), mExpr.transpose())
+            return TSB.dot(mExpr,self.ones().transpose()).transpose()
+        elif isinstance(op,ops.ComponentwiseVecMulOp):
+            return thEnv[op.src] * thEnv[op.src2]
         else:
             assert False,'cannot cross-compile %r' % op

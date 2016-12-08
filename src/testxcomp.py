@@ -13,49 +13,46 @@ import theano
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     
     def testIf(self):
-        print '** testIf'
         self.xcompCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
         pass
 
     def testFailure(self):
-        print '** testFailure'
         self.xcompCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
         pass
 
     def testRevIf(self):
-        print '** testRevIf'
         self.xcompCheck(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
         pass
 
     def testOr(self):
-        print '** testOr'
         self.xcompCheck(['p(X,Y):-spouse(X,Y).', 'p(X,Y):-sister(X,Y).'], 'p(i,o)', 'william', 
                         {'susan':1.0, 'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
         pass
 
     def testChain(self):
-        print '** testChain'
         self.xcompCheck(['p(X,Z):-spouse(X,Y),sister(Y,Z).'], 'p(i,o)', 'susan', 
                         {'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
         self.xcompCheck(['p(X,Z):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
                         {'charlotte':1.0, 'lucas':1.0, 'poppy':1.0, 'caroline':1.0, 'elizabeth':1.0})
         pass
 
+        
     def testMid(self):
-#        self.xcompCheck(['p(X,Y):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
-#                        {'sarah': 1.0, 'rachel': 2.0, 'lottie': 2.0})
+        self.xcompCheck(['p(X,Y):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
+                        {'sarah': 1.0, 'rachel': 2.0, 'lottie': 2.0})
         pass
 
     def testNest(self):
-#        self.inferenceCheck(['s(X,Y):-spouse(X,Y).','t(X,Z):-spouse(X,Y),s(Y,Z).'], 't(i,o)', 'susan', {'susan': 1.0}) 
+        # need definedPredOp
+#        self.xcompCheck(['s(X,Y):-spouse(X,Y).','t(X,Z):-spouse(X,Y),s(Y,Z).'], 't(i,o)', 'susan', {'susan': 1.0}) 
         pass
 
     def testBack1(self):
-#        self.inferenceCheck(['p(X,Y):-spouse(X,Y),sister(X,Z).'], 'p(i,o)', 'william', {'susan': 3.0})
+        self.xcompCheck(['p(X,Y):-spouse(X,Y),sister(X,Z).'], 'p(i,o)', 'william', {'susan': 3.0})
         pass
 
     def testBack2(self):
-#        self.inferenceCheck(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
+        self.xcompCheck(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
         pass
 
     def testRec1(self):
@@ -66,8 +63,9 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
     def testConstOutput(self):
-#        self.inferenceCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'sarah', {'william': 1.0})
-#        self.inferenceCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'lottie', {'william': 2.0})
+        # needed: AssignOnehotToVar
+#        self.xcompCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'sarah', {'william': 1.0})
+#        self.xcompCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'lottie', {'william': 2.0})
         pass
 
     def testConstChain1(self):
@@ -80,7 +78,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
     def testAltChain(self):
-#        self.inferenceCheck(['p(X,W) :- spouse(X,W),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
+#        self.xcompCheck(['p(X,W) :- spouse(X,W),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
         pass
 
     def testProppr1(self):
@@ -96,8 +94,9 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
     def testReuse1(self):
-#        self.inferenceCheck(['p(X,Y) :- r(X,Z),r(Z,Y).', 'r(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', 
-#                            {'william':1.0})
+        # need DefinedPredOp
+#        self.xcompCheck(['p(X,Y) :- r(X,Z),r(Z,Y).', 'r(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', 
+#                        {'william':1.0})
         pass
 
 
@@ -112,6 +111,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         mode = declare.ModeDeclaration(modeString)
         tlogFun = prog.compile(mode)
         for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler, theanoxcomp.SparseMatDenseMsgCrossCompiler]:
+        #for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler]:
             xc = compilerClass(prog.db)
             xc.compile(tlogFun)
             xc.show()
