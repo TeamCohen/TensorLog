@@ -43,8 +43,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
     def testNest(self):
-        # need definedPredOp
-#        self.xcompCheck(['s(X,Y):-spouse(X,Y).','t(X,Z):-spouse(X,Y),s(Y,Z).'], 't(i,o)', 'susan', {'susan': 1.0}) 
+        self.xcompCheck(['s(X,Y):-spouse(X,Y).','t(X,Z):-spouse(X,Y),s(Y,Z).'], 't(i,o)', 'susan', {'susan': 1.0}) 
         pass
 
     def testBack1(self):

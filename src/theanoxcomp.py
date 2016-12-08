@@ -80,10 +80,10 @@ class AbstractCrossCompiler(object):
         print 'fun',theano.pp(self.thFun.maker.fgraph.outputs[0])
         print 'debug fun',theano.printing.debugprint(self.thFun.maker.fgraph.outputs[0])
 
-    def compile(self,fun,numInputs=1):
+    def compile(self,fun):
         """ Compile a tensorlog function to theano
         """
-        (self.exprArgs,self.expr) = self.fun2Expr(fun,None,numInputs=numInputs)
+        (self.exprArgs,self.expr) = self.fun2Expr(fun,None)
         self.dbArgs = []
         self.dbVals = []
         for key in sorted(self.dbMatrixExpr):
@@ -171,7 +171,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             self.dbMatrixExprBinding['ones'] = self.densifyMsg(self.db.ones())
         return self.dbMatrixExpr['ones']
 
-    def fun2Expr(self,fun,sharedInputs=None,numInputs=1):
+    def fun2Expr(self,fun,sharedInputs=None,depth=0):
         """Return a pair (inputs, expr) where binding the inputs in theano,
         and then evaluating the expression, is roughly equivalent to
         evaluating the Function fun in tensorlog.  It's only roughly
@@ -185,20 +185,20 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
 
         if isinstance(fun,funs.SoftmaxFunction):
             # wrap inner function with softmax function
-            inputs,subExpr = self.fun2Expr(fun.fun,sharedInputs,numInputs)
+            inputs,subExpr = self.fun2Expr(fun.fun,sharedInputs,depth=depth)
             return (inputs, TNN.nnet.softmax(subExpr) + self.nullSmoothing)
 
         elif isinstance(fun,funs.SumFunction):
             assert(len(fun.funs)>=1)
-            inputs,accum = self.fun2Expr(fun.funs[0],sharedInputs,numInputs)
+            inputs,accum = self.fun2Expr(fun.funs[0],sharedInputs,depth=depth)
             for f in fun.funs[1:]:
-                (moreInputs,addend) = self.fun2Expr(f,inputs,numInputs)
+                (moreInputs,addend) = self.fun2Expr(f,inputs,depth=depth)
                 assert(len(moreInputs)==len(inputs))
                 accum = accum+addend
             return (inputs,accum)
 
         elif isinstance(fun,funs.OpSeqFunction):
-            assert len(fun.opInputs)==numInputs, 'mismatching number of inputs'
+            assert len(fun.opInputs)==1, 'mismatching number of inputs'
             # thEnv, a 'theano environment', maps nameSpaced variables
             # from the OpSeqFunction's environment to the
             # corresponding theano subexpressions
@@ -219,7 +219,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
                     seqInputs.append(thEnv[v])
             # fill in the theano environment appropriately
             for op in fun.ops:
-                thEnv[op.dst] = self.op2Expr(thEnv,op)
+                thEnv[op.dst] = self.op2Expr(thEnv,op,depth)
             # return the inputs and the expression for the
             # OpSeqFunction's output
             return (seqInputs, thEnv[fun.ops[-1].dst])
@@ -227,7 +227,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         else:
             assert False,'cannot cross-compile %r' % fun
     
-    def op2Expr(self,thEnv,op):
+    def op2Expr(self,thEnv,op,depth):
         """Extend the theano environment with an expression for the
         destination of the Operator.
         """
@@ -243,6 +243,9 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             return self.ones().dot(mExpr.T)
         elif isinstance(op,ops.ComponentwiseVecMulOp):
             return thEnv[op.src]*thEnv[op.src2]
+        elif isinstance(op,ops.DefinedPredOp):
+            _inputs,subExpr = self.fun2Expr(op.subfun,[thEnv[op.src]],depth=depth+1)
+            return subExpr
         else:
             assert False,'cannot cross-compile %r' % op
 
@@ -267,7 +270,7 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     def theanoMatrix(self,name):
         return TS.csr_matrix(name=name)
     
-    def op2Expr(self,thEnv,op):
+    def op2Expr(self,thEnv,op,depth):
         # for sparse matrices
         if isinstance(op,ops.VecMatMulOp):
             mExpr = self.matrixExpr(op.matMode)
@@ -280,5 +283,8 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
             return TSB.dot(mExpr,self.ones().transpose()).transpose()
         elif isinstance(op,ops.ComponentwiseVecMulOp):
             return thEnv[op.src] * thEnv[op.src2]
+        elif isinstance(op,ops.DefinedPredOp):
+            _inputs,subExpr = self.fun2Expr(op.subfun,[thEnv[op.src]],depth=depth+1)
+            return subExpr
         else:
             assert False,'cannot cross-compile %r' % op
