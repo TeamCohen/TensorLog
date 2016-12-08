@@ -28,7 +28,7 @@ import dataset
 import expt
 
 
-def maybeNormalize(expectedResultDict):
+def softmaxNormalize(expectedResultDict):
     #softmax normalization
     for k in expectedResultDict:
         expectedResultDict[k] = math.exp(expectedResultDict[k])
@@ -223,15 +223,9 @@ class TestSmallProofs(unittest.TestCase):
     # support routines
     # 
 
-    def maybeNormalize(self,expectedResultDict):
-        norm = sum(expectedResultDict.values())
-        for c in expectedResultDict:
-            expectedResultDict[c] /= norm
-
-
     def inferenceCheck(self,ruleStrings,modeString,inputSymbol,expectedResultDict):
         print 'testing inference for mode',modeString,'on input',inputSymbol,'with rules:'
-        maybeNormalize(expectedResultDict)
+        softmaxNormalize(expectedResultDict)
         for r in ruleStrings:
             print '>',r
         rules = parser.RuleCollection()
@@ -247,7 +241,7 @@ class TestSmallProofs(unittest.TestCase):
 
     def propprInferenceCheck(self,weightVec,ruleStrings,modeString,inputSymbol,expectedResultDict):
         print 'testing inference for mode',modeString,'on input',inputSymbol,'with proppr rules:'
-        maybeNormalize(expectedResultDict)
+        softmaxNormalize(expectedResultDict)
         rules = parser.RuleCollection()
         for r in ruleStrings:
             rules.add(parser.Parser.parseRule(r))
@@ -292,7 +286,7 @@ class TestMultiRowOps(unittest.TestCase):
             {'caroline':1.0,'elizabeth':1.0}])
     def compareCheck(self,ruleStrings,modeString,inputSymbols,expectedResultDicts):
         for d in expectedResultDicts:
-            maybeNormalize(d)
+            softmaxNormalize(d)
             d[matrixdb.NULL_ENTITY_NAME] = 0
         self.inferenceCheck(ruleStrings,modeString,inputSymbols,expectedResultDicts)
         self.predictCheck(ruleStrings,modeString,inputSymbols,expectedResultDicts)

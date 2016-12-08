@@ -16,44 +16,45 @@ import ops
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     
     def testIf(self):
-        self.inferenceCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
-        return self.xcompCheck(    ['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
+        self.xcompCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
+        pass
 
     def testFailure(self):
-        #self.inferenceCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
+        self.xcompCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
         pass
 
     def testRevIf(self):
-        #self.inferenceCheck(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
+        self.xcompCheck(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
         pass
 
     def testOr(self):
-        #self.inferenceCheck(['p(X,Y):-spouse(X,Y).', 'p(X,Y):-sister(X,Y).'], 'p(i,o)', 'william', 
-        #                    {'susan':1.0, 'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
+        self.xcompCheck(['p(X,Y):-spouse(X,Y).', 'p(X,Y):-sister(X,Y).'], 'p(i,o)', 'william', 
+                        {'susan':1.0, 'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
         pass
 
     def testChain(self):
-#        self.inferenceCheck(['p(X,Z):-spouse(X,Y),sister(Y,Z).'], 'p(i,o)', 'susan', 
-#                            {'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
-#        self.inferenceCheck(['p(X,Z):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
-#                            {'charlotte':1.0, 'lucas':1.0, 'poppy':1.0, 'caroline':1.0, 'elizabeth':1.0})
+        self.xcompCheck(['p(X,Z):-spouse(X,Y),sister(Y,Z).'], 'p(i,o)', 'susan', 
+                        {'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
+        self.xcompCheck(['p(X,Z):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
+                        {'charlotte':1.0, 'lucas':1.0, 'poppy':1.0, 'caroline':1.0, 'elizabeth':1.0})
         pass
 
+        
     def testMid(self):
-#        self.inferenceCheck(['p(X,Y):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
-#                            {'sarah': 1.0, 'rachel': 2.0, 'lottie': 2.0})
+        self.xcompCheck(['p(X,Y):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
+                        {'sarah': 1.0, 'rachel': 2.0, 'lottie': 2.0})
         pass
 
     def testNest(self):
-#        self.inferenceCheck(['s(X,Y):-spouse(X,Y).','t(X,Z):-spouse(X,Y),s(Y,Z).'], 't(i,o)', 'susan', {'susan': 1.0}) 
+        self.xcompCheck(['s(X,Y):-spouse(X,Y).','t(X,Z):-spouse(X,Y),s(Y,Z).'], 't(i,o)', 'susan', {'susan': 1.0}) 
         pass
 
     def testBack1(self):
-#        self.inferenceCheck(['p(X,Y):-spouse(X,Y),sister(X,Z).'], 'p(i,o)', 'william', {'susan': 3.0})
+        self.xcompCheck(['p(X,Y):-spouse(X,Y),sister(X,Z).'], 'p(i,o)', 'william', {'susan': 3.0})
         pass
 
     def testBack2(self):
-#        self.inferenceCheck(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
+        self.xcompCheck(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
         pass
 
     def testRec1(self):
@@ -64,8 +65,9 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
     def testConstOutput(self):
-#        self.inferenceCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'sarah', {'william': 1.0})
-#        self.inferenceCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'lottie', {'william': 2.0})
+        # needed: AssignOnehotToVar
+#        self.xcompCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'sarah', {'william': 1.0})
+#        self.xcompCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'lottie', {'william': 2.0})
         pass
 
     def testConstChain1(self):
@@ -78,7 +80,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
     def testAltChain(self):
-#        self.inferenceCheck(['p(X,W) :- spouse(X,W),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
+#        self.xcompCheck(['p(X,W) :- spouse(X,W),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
         pass
 
     def testProppr1(self):
@@ -94,42 +96,53 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
     def testReuse1(self):
-#        self.inferenceCheck(['p(X,Y) :- r(X,Z),r(Z,Y).', 'r(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', 
-#                            {'william':1.0})
+        # need DefinedPredOp
+#        self.xcompCheck(['p(X,Y) :- r(X,Z),r(Z,Y).', 'r(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', 
+#                        {'william':1.0})
         pass
 
 
     def _removeZeros(self, sdict):
         return dict([ (k,v) for (k,v) in sdict.items() if v != 0])
     def xcompCheck(self,ruleStrings,modeString,inputSymbol,expectedResultDict):
-        print 'xcomp inference for mode',modeString,'on input',inputSymbol,'with rules:'
-        testtensorlog.maybeNormalize(expectedResultDict)
-        for r in ruleStrings:
-            print '>',r
+        self.inferenceCheck(ruleStrings,modeString,inputSymbol,expectedResultDict)
+        print 'xcomp inference for mode',modeString,'on input',inputSymbol
+        testtensorlog.softmaxNormalize(expectedResultDict)
         rules = parser.RuleCollection()
         for r in ruleStrings:
             rules.add(parser.Parser.parseRule(r))
         prog = tensorlog.Program(db=self.db,rules=rules)
         mode = declare.ModeDeclaration(modeString)
         tlogFun = prog.compile(mode)
-        xc = theanoxcomp.CrossCompiler(prog.db)
-        xc.compile(tlogFun)
-        xc.show()
-        
-        y_tl=None
-        #funs.conf.long_trace=funs.conf.trace=True
-        #ops.conf.trace=True
-        #ops.conf.long_trace=21
-        #y_tl = prog.evalSymbols(mode,[inputSymbol]) 
-        #print 'tensorlog y1: ',self.db.rowAsSymbolDict(y_tl)
-        
-        x1 = self.db.onehot(inputSymbol).toarray()
-        x2 = xc.dbVals[0].toarray()
-        y1 = xc.thFun(x1,x2)
-        s = self._removeZeros(self.db.arrayAsSymbolDict(y1.flatten()))
-        self.checkDicts(s,expectedResultDict)
-        return xc,x1,x2,y_tl,y1
+        for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler, theanoxcomp.SparseMatDenseMsgCrossCompiler]:
+        #for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler]:
+            xc = compilerClass(prog.db)
+            xc.compile(tlogFun)
+            xc.show()
+            print '== performing theano eval with',compilerClass,'=='
+            ys = xc.evalSymbols([inputSymbol])
+            y = ys[0]
+            self.checkMaxesInDicts(self.db.rowAsSymbolDict(y), expectedResultDict)
+            print '== theano eval checks passed =='
+
+    def checkMaxesInDicts(self,actual,expected):
+        def maximalElements(d):
+            m = max(d.values())
+            return set(k for k in d if d[k]==m)
+        actualMaxes = maximalElements(actual)
+        expectedMaxes = maximalElements(expected)
+        print 'actual',actualMaxes,'expected',expectedMaxes
+        for a in actualMaxes:
+            self.assertTrue(a in expectedMaxes)
+        for a in expectedMaxes:
+            self.assertTrue(a in actualMaxes)
+
+#        print "\n".join(fun.pprint())
+#        y1 = prog.evalSymbols(mode,[inputSymbol]) 
+#        self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
     
+
+
 
 if __name__ == "__main__":
     if len(sys.argv)==1:
