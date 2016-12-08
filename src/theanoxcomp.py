@@ -8,6 +8,7 @@ import config
 
 import theano
 import theano.tensor as TT
+import theano.tensor.basic as TTB
 import theano.tensor.nnet as TNN
 import theano.sparse as TS
 import theano.sparse.basic as TSB
@@ -40,13 +41,13 @@ class AbstractCrossCompiler(object):
     def __init__(self,db):
         # namespaces are integer
         self.nameSpace = 0
-        # dbMatrixExpr is a cache mapping a (mode,transposeFlag) pair --
-        # which determine a matrix from the matrixdb -- to a theano
-        # variable that should be bound to that matrix
-        self.dbMatrixExpr = {}
-        # maps a (mode,transposeFlag) pair to the matrix that the
-        # corresponding dbMatrixExpr should be bound to
-        self.dbMatrixExprBinding = {}
+        # dbMatVar is a cache mapping a (mode,transposeFlag) pair
+        # -- which determine a matrix from the matrixdb -- to a theano
+        # shared variable that will be bound to that
+        # matrix. dbConstVar is similar but for message constants (eg,
+        # onehot values)
+        self.dbMatVar = {}
+        self.dbMsgVar = {}
         # hold the database
         self.db = db
         #
@@ -86,13 +87,9 @@ class AbstractCrossCompiler(object):
         (self.exprArgs,self.expr) = self.fun2Expr(fun,None)
         self.dbArgs = []
         self.dbVals = []
-        for key in sorted(self.dbMatrixExpr):
-            self.dbArgs.append(self.dbMatrixExpr[key])
-            self.dbVals.append(self.dbMatrixExprBinding[key])
-        self.args = self.exprArgs + self.dbArgs
-        print 'self.args',self.args
+        print 'self.args',self.exprArgs
         print 'self.expr',theano.pp(self.expr)
-        self.thFun = theano.function(inputs=self.args, outputs=self.expr)
+        self.thFun = theano.function(inputs=self.exprArgs, outputs=self.expr)
         # for convenience
         return self
 
@@ -156,20 +153,26 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         """Return a theano expression that denotes the matrix retrieved by
         the (matMode, transpose) pair using the matrixdb
         """ 
-        if (matMode) not in self.dbMatrixExpr:
+        if (matMode) not in self.dbMatVar:
             u = "M__" + matMode.getFunctor() +"_" + "".join([matMode.arg(i) for i in range(matMode.getArity())])
             m = self.db.matrix(matMode,False)
-            self.dbMatrixExpr[matMode] = self.theanoMatrix(u)
-            self.dbMatrixExprBinding[matMode] = self.densifyMat(m)
-        return self.dbMatrixExpr[matMode]
+            self.dbMatVar[matMode] = theano.shared(self.densifyMat(m), name=u)
+        return self.dbMatVar[matMode]
 
     def ones(self):
         """Return a theano expression that denotes an all-ones row vector
         """ 
-        if 'ones' not in self.dbMatrixExpr:
-            self.dbMatrixExpr['ones'] = self.theanoRow('v__ones')
-            self.dbMatrixExprBinding['ones'] = self.densifyMsg(self.db.ones())
-        return self.dbMatrixExpr['ones']
+        return self._msgVar('__ones',self.db.ones())
+
+    def onehot(self,sym):
+        """Return a theano expression that denotes the onehot row vector for a constant
+        """ 
+        return self._msgVar(sym,self.db.onehot(sym))
+
+    def _msgVar(self,key,msg):
+        if key not in self.dbMsgVar:
+            self.dbMsgVar[key] = theano.shared(self.densifyMsg(msg))
+        return self.dbMsgVar[key]
 
     def fun2Expr(self,fun,sharedInputs=None,depth=0):
         """Return a pair (inputs, expr) where binding the inputs in theano,
@@ -229,10 +232,9 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
     
     def op2Expr(self,thEnv,op,depth):
         """Extend the theano environment with an expression for the
-        destination of the Operator.
+        destination of the Operator, for dense matrices
         """
         
-        # for dense matrices
         if isinstance(op,ops.VecMatMulOp):
             mExpr = self.matrixExpr(op.matMode)
             if op.transpose:
@@ -242,10 +244,14 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             mExpr = self.matrixExpr(op.matMode)
             return self.ones().dot(mExpr.T)
         elif isinstance(op,ops.ComponentwiseVecMulOp):
-            return thEnv[op.src]*thEnv[op.src2]
+            return thEnv[op.src] * thEnv[op.src2]
         elif isinstance(op,ops.DefinedPredOp):
             _inputs,subExpr = self.fun2Expr(op.subfun,[thEnv[op.src]],depth=depth+1)
             return subExpr
+        elif isinstance(op,ops.AssignOnehotToVar):
+            return self.onehot(op.onehotConst)
+        elif isinstance(op,ops.WeightedVec):
+            return thEnv[op.vec] * TT.sum(thEnv[op.weighter], axis=1, keepdims=True)
         else:
             assert False,'cannot cross-compile %r' % op
 
@@ -286,5 +292,9 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
         elif isinstance(op,ops.DefinedPredOp):
             _inputs,subExpr = self.fun2Expr(op.subfun,[thEnv[op.src]],depth=depth+1)
             return subExpr
+        elif isinstance(op,ops.AssignOnehotToVar):
+            return self.onehot(op.onehotConst)
+        elif isinstance(op,ops.WeightedVec):
+            return thEnv[op.vec] * TT.sum(thEnv[op.weighter], axis=1, keepdims=True)
         else:
             assert False,'cannot cross-compile %r' % op
