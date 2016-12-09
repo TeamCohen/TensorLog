@@ -122,21 +122,22 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
     def testConstOutput(self):
-        # needed: AssignOnehotToVar
-#        self.xcompCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'sarah', {'william': 1.0})
-#        self.xcompCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'lottie', {'william': 2.0})
+        self.xcompCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'sarah', {'william': 1.0})
+        self.xcompCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'lottie', {'william': 2.0})
         pass
 
     def testConstChain1(self):
-#        self.inferenceCheck(['p(X,S) :- assign(S,susan),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
+        self.xcompCheck(['p(X,S) :- assign(S,susan),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
         pass
 
     def testConstChain2(self):
-#        self.inferenceCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','sarah',{'pos':1.0})
-#        self.inferenceCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','lottie',{'pos':2.0})
+        # need AssignVectorToVar
+#        self.xcompCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','sarah',{'pos':1.0})
+#        self.xcompCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','lottie',{'pos':2.0})
         pass
 
     def testAltChain(self):
+        # raises AttributeError: 'SparseTensorSharedVariable' object has no attribute 'transpose'
 #        self.xcompCheck(['p(X,W) :- spouse(X,W),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
         pass
 
@@ -153,7 +154,6 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
     def testReuse1(self):
-        # need DefinedPredOp
         self.xcompCheck(['p(X,Y) :- r(X,Z),r(Z,Y).', 'r(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', 
                         {'william':1.0})
         pass
@@ -173,7 +173,6 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         ytl=None
         if compare: ytl=prog.evalSymbols(mode,[inputSymbol])
         for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler, theanoxcomp.SparseMatDenseMsgCrossCompiler]:
-        #for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler]:
             xc = compilerClass(prog.db)
             xc.compile(tlogFun)
             #xc.show()
@@ -186,6 +185,12 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
             if compare: print 'actualTL',self.db.rowAsSymbolDict(ytl)
             self.checkMaxesInDicts(actual, expectedResultDict)
             print '== theano eval checks passed =='
+            for x in xc.exprArgs:
+                print '== performing theano gradient computation with',compilerClass,'for',x,'=='
+                # using sum() to make result a scalar...
+                gx = theano.grad(xc.expr.sum(),x)
+                print theano.pp(gx)
+            print '== theano gradients computed =='
 
     def checkMaxesInDicts(self,actual,expected):
         def maximalElements(d):
