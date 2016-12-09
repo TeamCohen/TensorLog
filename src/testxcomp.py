@@ -2,6 +2,8 @@ import theanoxcomp
 import tensorlog
 import declare
 import testtensorlog
+import learnxcomp as learnxc
+import learn
 import matrixdb
 import parser
 import mutil
@@ -12,6 +14,62 @@ import theano
 
 import funs
 import ops
+
+class TestXCGrad(testtensorlog.TestGrad):
+    
+    def testIf(self):
+        rules = ['p(X,Y):-sister(X,Y).']
+        mode = 'p(i,o)'  
+        params = [('sister',2)] 
+        self.xcGradCheck(rules, mode, params,
+                       [('william',['rachel','sarah'])], 
+                       {'sister(william,rachel)': +1,'sister(william,sarah)': +1,'sister(william,lottie)': -1})
+        self.xcGradCheck(rules, mode, params, 
+                       [('william',['lottie'])], 
+                       {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
+    
+    def xcGradCheck(self,ruleStrings,modeString,params,xyPairs,expected):
+        """
+        expected - dict mapping strings encoding facts to expected sign of the gradient
+        """
+        mode = declare.ModeDeclaration(modeString)
+        
+        #(prog,updates) = self.gradUpdates(ruleStrings,mode,params,xyPairs)
+        # expanding:
+        
+                #build program
+        rules = parser.RuleCollection()
+        for r in ruleStrings:
+            rules.add(parser.Parser.parseRule(r))
+        prog = tensorlog.Program(db=self.db,rules=rules)
+        #build dataset
+        data = testtensorlog.DataBuffer(self.db)
+        for x,ys in xyPairs:
+            data.addDataSymbols(x,ys)
+        #mark params: should be pairs (functor,arity)
+        prog.db.clearParamMarkings()
+        for functor,arity in params:
+            prog.db.markAsParam(functor,arity)
+        #compute gradient
+        learner = learnxc.XLearner(prog)
+        P = learner.predict(mode,data.getX())
+        print "Y\n",data.getY()
+        print "Pth\n",type(P),P
+        PTL=learn.OnePredFixedRateGDLearner(prog,epochs=5).predict(mode,data.getX())
+        print "PTL\n",type(PTL),PTL
+        
+        updates = learner.crossEntropyGrad(mode,data.getX(),data.getY())
+        
+        #put the gradient into a single fact-string-indexed dictionary
+        updatesWithStringKeys = {}
+        for (functor,arity),up in updates.items():
+            #print 'up for',functor,arity,'is',up
+            upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
+            #print 'upDict',upDict,'updates keys',updates.keys()
+            for fact,gradOfFact in upDict.items():
+                updatesWithStringKeys[str(fact)] = gradOfFact
+        self.checkDirections(updatesWithStringKeys,expected)
+    
 
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     
@@ -39,7 +97,6 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
                         {'charlotte':1.0, 'lucas':1.0, 'poppy':1.0, 'caroline':1.0, 'elizabeth':1.0})
         pass
 
-        
     def testMid(self):
         self.xcompCheck(['p(X,Y):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
                         {'sarah': 1.0, 'rachel': 2.0, 'lottie': 2.0})
@@ -97,10 +154,9 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
     def testReuse1(self):
         # need DefinedPredOp
-#        self.xcompCheck(['p(X,Y) :- r(X,Z),r(Z,Y).', 'r(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', 
-#                        {'william':1.0})
+        self.xcompCheck(['p(X,Y) :- r(X,Z),r(Z,Y).', 'r(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', 
+                        {'william':1.0})
         pass
-
 
     def _removeZeros(self, sdict):
         return dict([ (k,v) for (k,v) in sdict.items() if v != 0])
@@ -120,7 +176,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         #for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler]:
             xc = compilerClass(prog.db)
             xc.compile(tlogFun)
-            xc.show()
+            #xc.show()
             print '== performing theano eval with',compilerClass,'=='
             ys = xc.evalSymbols([inputSymbol])
             y = ys[0]

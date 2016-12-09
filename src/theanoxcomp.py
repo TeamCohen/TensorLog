@@ -90,11 +90,18 @@ class AbstractCrossCompiler(object):
             self.dbArgs.append(self.dbMatrixExpr[key])
             self.dbVals.append(self.dbMatrixExprBinding[key])
         self.args = self.exprArgs + self.dbArgs
-        print 'self.args',self.args
-        print 'self.expr',theano.pp(self.expr)
+        #print 'self.args',self.args
+        #print 'self.expr',theano.pp(self.expr)
         self.thFun = theano.function(inputs=self.args, outputs=self.expr)
         # for convenience
         return self
+    
+    def evalSymbols(self,inputSyms):
+        assert len(inputSyms)==len(self.exprArgs)
+        #def sym2Vector(sym): return densifyMsg(self.db.onehot(sym))
+        inputs = map(lambda sym:self.db.onehot(sym), inputSyms)
+        #print "inputs:\n","\n".join([str(self.db.matrixAsSymbolDict(SS.csr_matrix(x))) for x in inputs])
+        return self.eval(inputs)
 
 ###############################################################################
 # implementation for dense messages, dense relation matrices
@@ -138,12 +145,8 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
     # the main compilation routines
     # 
 
-    def evalSymbols(self,inputSyms):
-        assert len(inputSyms)==len(self.exprArgs)
-        #def sym2Vector(sym): return densifyMsg(self.db.onehot(sym))
-        inputs = map(lambda sym:self.densifyMsg(self.db.onehot(sym)), inputSyms)
-        formalArgs = inputs+self.dbVals
-        #print "inputs:\n","\n".join([str(self.db.matrixAsSymbolDict(SS.csr_matrix(x))) for x in inputs])
+    def eval(self,inputs):
+        formalArgs = map(lambda onehot:self.densifyMsg(onehot),inputs)+self.dbVals
         theanoResult = self.thFun(*formalArgs)
         result = map(lambda v:self.sparsifyMsg(v), theanoResult)
         #print "result:\n","\n".join([str(self.db.matrixAsSymbolDict(SS.csr_matrix(x))) for x in theanoResult])
