@@ -71,14 +71,13 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
     def testConstChain2(self):
-        # need AssignVectorToVar
         self.xcompCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','sarah',{'pos':1.0})
         self.xcompCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','lottie',{'pos':2.0})
         pass
 
     def testAltChain(self):
         # raises AttributeError: 'SparseTensorSharedVariable' object has no attribute 'transpose'
-#        self.xcompCheck(['p(X,W) :- spouse(X,W),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
+        self.xcompCheck(['p(X,W) :- spouse(X,W),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
         pass
 
     def testProppr1(self):

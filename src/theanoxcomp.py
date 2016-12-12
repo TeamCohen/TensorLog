@@ -110,7 +110,8 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         # when messages are dense,
         # make sure the NULL value is small but bigger than zero,
         # which will be the default value
-        self.nullSmoothing = theano.shared(self.densifyMsg(self.db.nullMatrix(1)*1e-5), name="nullSmoothing")
+        # self.nullSmoothing = theano.shared(self.densifyMsg(self.db.nullMatrix(1)*1e-5), name="nullSmoothing")
+        self.nullSmoothing = self.theanoSharedMsg(self.db.nullMatrix(1)*1e-5, name="nullSmoothing")
 
     # over-ride these to get different set of sparse/dense choices
 
@@ -129,10 +130,12 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         sx.eliminate_zeros()
         return sx
 
-    # over-ride these for different types of theano variables
+    # over-ride these for different types of theano row variables
+    def theanoSharedMat(self,val,name=None): return theano.shared(self.densifyMat(val), name=name)
+    def theanoSharedMsg(self,val,name=None): return theano.shared(self.densifyMsg(val), name=name)
+    def theanoSharedVec(self,val,name=None): return theano.shared(self.densifyVec(val), name=name)
+    def theanoRowVar(self,name): return TT.drow(name)
 
-    def theanoMatrix(self,name): return TT.dmatrix(name)
-    def theanoRow(self,name): return TT.drow(name)
 
     #
     # the main compilation routines
@@ -157,7 +160,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         if (matMode) not in self.dbMatVar:
             u = "M__" + matMode.getFunctor() +"_" + "".join([matMode.arg(i) for i in range(matMode.getArity())])
             m = self.db.matrix(matMode,False)
-            self.dbMatVar[matMode] = theano.shared(self.densifyMat(m), name=u)
+            self.dbMatVar[matMode] = self.theanoSharedMat(m, name=u)
         return self.dbMatVar[matMode]
 
     def vectorExpr(self,matMode):
@@ -168,7 +171,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         if (matMode) not in self.dbVecVar:
             u = "v__" + matMode.getFunctor() +"_" + matMode.arg(0)
             v = self.db.vector(matMode)
-            self.dbVecVar[matMode] = theano.shared(self.densifyVec(v), name=u)
+            self.dbVecVar[matMode] = self.theanoSharedVec(v, name=u)
         return self.dbVecVar[matMode]
 
     def ones(self):
@@ -183,7 +186,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
 
     def _msgVar(self,key,msg):
         if key not in self.dbMsgVar:
-            self.dbMsgVar[key] = theano.shared(self.densifyMsg(msg))
+            self.dbMsgVar[key] = self.theanoSharedMsg(msg,name=key)
         return self.dbMsgVar[key]
 
     def fun2Expr(self,fun,sharedInputs=None,depth=0):
@@ -223,7 +226,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
                 # create the list of theano variables, which should be
                 # used as inputs to the expression
                 for v in fun.opInputs:
-                    thEnv[v] = self.theanoRow(thEnv.internalName(v))
+                    thEnv[v] = self.theanoRowVar(thEnv.internalName(v))
                     seqInputs.append(thEnv[v])
             else:
                 # copy over the existing inputs to the new environment
@@ -285,14 +288,19 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     # over-ride these to keep sparse matrices
     def densifyMat(self,m): return m
     def sparsifyMat(self,m): return m
-    def theanoMatrix(self,name): return TS.csr_matrix(name=name)
     
+    # over-ride these for different types of theano row variables
+    def theanoSharedMat(self,val,name=None): return theano.sparse.shared(self.densifyMat(val), name=name, format='csr')
+    def theanoSharedMsg(self,val,name=None): return theano.shared(self.densifyMsg(val), name=name)
+    def theanoSharedVec(self,val,name=None): return theano.shared(self.densifyVec(val), name=name)
+    def theanoRowVar(self,name): return TT.drow(name)
+
     # operator expressions for sparse matrices
     def op2Expr(self,thEnv,op,depth):
         if isinstance(op,ops.VecMatMulOp):
             mExpr = self.matrixExpr(op.matMode)
             if op.transpose:
-                mExpr = mExpr.transpose()
+                mExpr = mExpr.get_value().transpose()
             return TSB.dot(thEnv[op.src],mExpr)
         elif isinstance(op,ops.AssignPreimageToVar):
             mExpr = self.matrixExpr(op.matMode)
