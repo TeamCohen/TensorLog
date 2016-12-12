@@ -55,10 +55,10 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
     def testRec1(self):
-#        tensorlog.DEFAULT_MAXDEPTH=4
-#        self.inferenceCheck(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
-#        tensorlog.DEFAULT_MAXDEPTH=10
-#        self.inferenceCheck(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
+        tensorlog.DEFAULT_MAXDEPTH=4
+        self.inferenceCheck(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
+        tensorlog.DEFAULT_MAXDEPTH=10
+        self.inferenceCheck(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
         pass
 
     def testConstOutput(self):
@@ -72,8 +72,8 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
     def testConstChain2(self):
         # need AssignVectorToVar
-#        self.xcompCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','sarah',{'pos':1.0})
-#        self.xcompCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','lottie',{'pos':2.0})
+        self.xcompCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','sarah',{'pos':1.0})
+        self.xcompCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','lottie',{'pos':2.0})
         pass
 
     def testAltChain(self):

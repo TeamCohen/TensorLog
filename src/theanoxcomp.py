@@ -47,6 +47,7 @@ class AbstractCrossCompiler(object):
         # matrix. dbConstVar is similar but for message constants (eg,
         # onehot values)
         self.dbMatVar = {}
+        self.dbVecVar = {}
         self.dbMsgVar = {}
         # hold the database
         self.db = db
@@ -111,27 +112,27 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         # which will be the default value
         self.nullSmoothing = theano.shared(self.densifyMsg(self.db.nullMatrix(1)*1e-5), name="nullSmoothing")
 
-    def densifyMsg(self,v):
-        return v.todense()
+    # over-ride these to get different set of sparse/dense choices
 
-    def sparsifyMsg(self,v):
-        sv = SS.csr_matrix(v) 
-        sv.eliminate_zeros()
-        return sv
+    def densifyMat(self,m): return self._densify(m)
+    def densifyMsg(self,v): return self._densify(v)
+    def densifyVec(self,v): return self._densify(v)
+
+    def sparsifyMat(self,m): return self._sparsify(m)
+    def sparsifyVec(self,v): return self._sparsify(v)
+    def sparsifyMsg(self,v): return self._sparsify(v)
         
-    def densifyMat(self,m):
-        return m.todense()
-        
-    def sparsifyMat(self,m):
-        sm = SS.csr_matrix(m) 
-        sm.eliminate_zeros()
-        return sm
+    def _densify(self,x):
+        return x.todense()
+    def _sparsify(self,x):
+        sx = SS.csr_matrix(x) 
+        sx.eliminate_zeros()
+        return sx
 
-    def theanoMatrix(self,name):
-        return TT.dmatrix(name)
+    # over-ride these for different types of theano variables
 
-    def theanoRow(self,name):
-        return TT.drow(name)
+    def theanoMatrix(self,name): return TT.dmatrix(name)
+    def theanoRow(self,name): return TT.drow(name)
 
     #
     # the main compilation routines
@@ -158,6 +159,17 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             m = self.db.matrix(matMode,False)
             self.dbMatVar[matMode] = theano.shared(self.densifyMat(m), name=u)
         return self.dbMatVar[matMode]
+
+    def vectorExpr(self,matMode):
+        """Return a theano expression that denotes the vector retrieved by
+        the (matMode, transpose) pair using the matrixdb
+        """ 
+        assert matMode.arity==1
+        if (matMode) not in self.dbVecVar:
+            u = "v__" + matMode.getFunctor() +"_" + matMode.arg(0)
+            v = self.db.vector(matMode)
+            self.dbVecVar[matMode] = theano.shared(self.densifyVec(v), name=u)
+        return self.dbVecVar[matMode]
 
     def ones(self):
         """Return a theano expression that denotes an all-ones row vector
@@ -230,6 +242,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         else:
             assert False,'cannot cross-compile %r' % fun
     
+    # operator expressions for dense matrices
     def op2Expr(self,thEnv,op,depth):
         """Extend the theano environment with an expression for the
         destination of the Operator, for dense matrices
@@ -250,6 +263,8 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             return subExpr
         elif isinstance(op,ops.AssignOnehotToVar):
             return self.onehot(op.onehotConst)
+        elif isinstance(op,ops.AssignVectorToVar):
+            return self.vectorExpr(op.matMode)
         elif isinstance(op,ops.WeightedVec):
             return thEnv[op.vec] * TT.sum(thEnv[op.weighter], axis=1, keepdims=True)
         else:
@@ -267,17 +282,13 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
         DenseMatDenseMsgCrossCompiler.__init__(self,db)
         self.denseMat = False
 
-    def densifyMat(self,m):
-        return m
-        
-    def sparsifyMat(self,m):
-        return m
-
-    def theanoMatrix(self,name):
-        return TS.csr_matrix(name=name)
+    # over-ride these to keep sparse matrices
+    def densifyMat(self,m): return m
+    def sparsifyMat(self,m): return m
+    def theanoMatrix(self,name): return TS.csr_matrix(name=name)
     
+    # operator expressions for sparse matrices
     def op2Expr(self,thEnv,op,depth):
-        # for sparse matrices
         if isinstance(op,ops.VecMatMulOp):
             mExpr = self.matrixExpr(op.matMode)
             if op.transpose:
@@ -294,6 +305,8 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
             return subExpr
         elif isinstance(op,ops.AssignOnehotToVar):
             return self.onehot(op.onehotConst)
+        elif isinstance(op,ops.AssignVectorToVar):
+            return self.vectorExpr(op.matMode)
         elif isinstance(op,ops.WeightedVec):
             return thEnv[op.vec] * TT.sum(thEnv[op.weighter], axis=1, keepdims=True)
         else:
