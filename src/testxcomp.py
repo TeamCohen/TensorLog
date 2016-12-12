@@ -81,15 +81,15 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         pass
 
     def testProppr1(self):
-#        w = 7*self.db.onehot('r1')+3*self.db.onehot('r2')        
-#        self.propprInferenceCheck(w,['p(X,Y):-sister(X,Y) {r1}.','p(X,Y):-spouse(X,Y) {r2}.'],'p(i,o)',
-#                                  'william', {'sarah': 7.0, 'rachel': 7.0, 'lottie': 7.0, 'susan': 3.0})
+        w = 7*self.db.onehot('r1')+3*self.db.onehot('r2')        
+        self.propprXCompCheck(w,['p(X,Y):-sister(X,Y) {r1}.','p(X,Y):-spouse(X,Y) {r2}.'],'p(i,o)',
+                              'william', {'sarah': 7.0, 'rachel': 7.0, 'lottie': 7.0, 'susan': 3.0})
         pass
 
     def testProppr2(self):
-#        w = 3*self.db.onehot('r2')
-#        self.propprInferenceCheck(w,['p(X,Y):-spouse(Y,X) {r2}.'],'p(i,o)',
-#                                  'susan', {'william': 3.0})
+        w = 3*self.db.onehot('r2')
+        self.propprXCompCheck(w,['p(X,Y):-spouse(Y,X) {r2}.'],'p(i,o)',
+                              'susan', {'william': 3.0})
         pass
 
     def testReuse1(self):
@@ -99,13 +99,25 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
 
     def xcompCheck(self,ruleStrings,modeString,inputSymbol,expectedResultDict):
-        self.inferenceCheck(ruleStrings,modeString,inputSymbol,expectedResultDict)
+        self._xcompCheck('vanilla',None,ruleStrings,modeString,inputSymbol,expectedResultDict)
+
+    def propprXCompCheck(self,weightVec,ruleStrings,modeString,inputSymbol,expectedResultDict):
+        self._xcompCheck('proppr',weightVec,ruleStrings,modeString,inputSymbol,expectedResultDict)
+
+    def _xcompCheck(self,progType,weightVec,ruleStrings,modeString,inputSymbol,expectedResultDict):
+        if progType=='proppr':
+            self.propprInferenceCheck(weightVec,ruleStrings,modeString,inputSymbol,expectedResultDict)
+        else:
+            self.inferenceCheck(ruleStrings,modeString,inputSymbol,expectedResultDict)
         print 'xcomp inference for mode',modeString,'on input',inputSymbol
         testtensorlog.softmaxNormalize(expectedResultDict)
         rules = parser.RuleCollection()
         for r in ruleStrings:
             rules.add(parser.Parser.parseRule(r))
-        prog = tensorlog.Program(db=self.db,rules=rules)
+        if progType=='proppr':
+            prog = tensorlog.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
+        else:
+            prog = tensorlog.Program(db=self.db,rules=rules) 
         mode = declare.ModeDeclaration(modeString)
         tlogFun = prog.compile(mode)
         for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler, theanoxcomp.SparseMatDenseMsgCrossCompiler]:
@@ -123,6 +135,32 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
                 gx = theano.grad(xc.expr.sum(),x)
                 print theano.pp(gx)
             print '== theano gradients computed =='
+
+#    def propprXCompCheck(self,weightVec,ruleStrings,modeString,inputSymbol,expectedResultDict):
+#        self.propprInferenceCheck(weightVec,ruleStrings,modeString,inputSymbol,expectedResultDict)
+#        testtensorlog.softmaxNormalize(expectedResultDict)
+#        rules = parser.RuleCollection()
+#        for r in ruleStrings:
+#            rules.add(parser.Parser.parseRule(r))
+#       p rog = tensorlog.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
+#        mode = declare.ModeDeclaration(modeString)
+#        tlogFun = prog.compile(mode)
+#        for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler, theanoxcomp.SparseMatDenseMsgCrossCompiler]:
+#            xc = compilerClass(prog.db)
+#            xc.compile(tlogFun)
+#            xc.show()
+#            print '== performing theano eval with',compilerClass,'=='
+#            ys = xc.evalSymbols([inputSymbol])
+#            y = ys[0]
+#            self.checkMaxesInDicts(self.db.rowAsSymbolDict(y), expectedResultDict)
+#            print '== theano eval checks passed =='
+#            for x in xc.exprArgs:
+#                print '== performing theano gradient computation with',compilerClass,'for',x,'=='
+#                # using sum() to make result a scalar...
+#                gx = theano.grad(xc.expr.sum(),x)
+#                print theano.pp(gx)
+#            print '== theano gradients computed =='
+#
 
     def checkMaxesInDicts(self,actual,expected):
         def maximalElements(d):
