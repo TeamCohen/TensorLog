@@ -92,7 +92,6 @@ class AbstractCrossCompiler(object):
         self.thFun = theano.function(inputs=self.exprArgs, outputs=self.expr)
         # for convenience
         return self
-    
     def evalSymbols(self,inputSyms):
         assert len(inputSyms)==len(self.exprArgs)
         #def sym2Vector(sym): return densifyMsg(self.db.onehot(sym))
@@ -141,9 +140,10 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
     #
     # the main compilation routines
     # 
-
+    def prepare(self,inputs):
+        return map(lambda onehot:self.densifyMsg(onehot),inputs)
     def eval(self,inputs):
-        formalArgs = map(lambda onehot:self.densifyMsg(onehot),inputs)+self.dbVals
+        formalArgs = self.prepare(inputs)+self.dbVals
         theanoResult = self.thFun(*formalArgs)
         result = map(lambda v:self.sparsifyMsg(v), theanoResult)
         #print "result:\n","\n".join([str(self.db.matrixAsSymbolDict(SS.csr_matrix(x))) for x in theanoResult])
@@ -161,6 +161,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             u = "M__" + matMode.getFunctor() +"_" + "".join([matMode.arg(i) for i in range(matMode.getArity())])
             m = self.db.matrix(matMode,False)
             self.dbMatVar[matMode] = theano.shared(self.densifyMat(m), name=u)
+            #print "saved matrix expression",u,"for mode",matMode
         return self.dbMatVar[matMode]
 
     def ones(self):
@@ -234,6 +235,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
                 thEnv[op.dst] = self.op2Expr(thEnv,op,depth)
             # return the inputs and the expression for the
             # OpSeqFunction's output
+            print "opseq environment:",thEnv.env
             return (seqInputs, thEnv[fun.ops[-1].dst])
         
         else:
@@ -260,6 +262,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         elif isinstance(op,ops.AssignOnehotToVar):
             return self.onehot(op.onehotConst)
         elif isinstance(op,ops.WeightedVec):
+            print 'weighted vec operator'
             return thEnv[op.vec] * TT.sum(thEnv[op.weighter], axis=1, keepdims=True)
         else:
             assert False,'cannot cross-compile %r' % op

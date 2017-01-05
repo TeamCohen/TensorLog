@@ -21,9 +21,10 @@ class TestXCGrad(testtensorlog.TestGrad):
         rules = ['p(X,Y):-sister(X,Y).']
         mode = 'p(i,o)'  
         params = [('sister',2)] 
-        self.xcGradCheck(rules, mode, params,
+        x=self.xcGradCheck(rules, mode, params,
                        [('william',['rachel','sarah'])], 
                        {'sister(william,rachel)': +1,'sister(william,sarah)': +1,'sister(william,lottie)': -1})
+        if True: return x
         self.xcGradCheck(rules, mode, params, 
                        [('william',['lottie'])], 
                        {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
@@ -53,13 +54,23 @@ class TestXCGrad(testtensorlog.TestGrad):
         #compute gradient
         learner = learnxc.XLearner(prog)
         P = learner.predict(mode,data.getX())
-        print "Y\n",data.getY()
-        print "Pth\n",type(P),P
-        PTL=learn.OnePredFixedRateGDLearner(prog,epochs=5).predict(mode,data.getX())
-        print "PTL\n",type(PTL),PTL
-        
+        #learner.xc.show()
+        #print "Y\n",data.getY()
+        #print "Pth\n",type(P),P
+        tlearner=learn.OnePredFixedRateGDLearner(prog,epochs=5)
+        #PTL = tlearner.predict(mode,data.getX())
+        #print "PTL\n",type(PTL),PTL
+        updates = {}
+        #gx=[ theano.grad(learner.xc.expr.sum(),x) for x in learner.xc.exprArgs]
+        #print theano.pp(gx[0])
+        #print theano.function(inputs=learner.xc.exprArgs,outputs=gx[0])(learner.xc.prepare([data.getX()]))
         updates = learner.crossEntropyGrad(mode,data.getX(),data.getY())
-        
+        print updates.items()
+        tupdates = tlearner.crossEntropyGrad(mode,data.getX(),data.getY())
+        print tupdates.items()
+        print mode
+        if True:
+            return prog,learner,updates,tlearner,tupdates
         #put the gradient into a single fact-string-indexed dictionary
         updatesWithStringKeys = {}
         for (functor,arity),up in updates.items():
@@ -215,7 +226,7 @@ if __name__ == "__main__":
     if len(sys.argv)==1:
         unittest.main()
     else:
-        foo=TestXCSmallProofs('testIf')
+        foo=TestXCGrad('testIf')
         foo.setUp()
         bar=foo.testIf()
     
