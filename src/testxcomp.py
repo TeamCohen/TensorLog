@@ -21,10 +21,9 @@ class TestXCGrad(testtensorlog.TestGrad):
         rules = ['p(X,Y):-sister(X,Y).']
         mode = 'p(i,o)'  
         params = [('sister',2)] 
-        x=self.xcGradCheck(rules, mode, params,
+        self.xcGradCheck(rules, mode, params,
                        [('william',['rachel','sarah'])], 
                        {'sister(william,rachel)': +1,'sister(william,sarah)': +1,'sister(william,lottie)': -1})
-        if True: return x
         self.xcGradCheck(rules, mode, params, 
                        [('william',['lottie'])], 
                        {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
@@ -36,8 +35,8 @@ class TestXCGrad(testtensorlog.TestGrad):
         mode = declare.ModeDeclaration(modeString)
         
         #(prog,updates) = self.gradUpdates(ruleStrings,mode,params,xyPairs)
-        # expanding:
         
+        # this bit from gradUpdates():
                 #build program
         rules = parser.RuleCollection()
         for r in ruleStrings:
@@ -51,9 +50,10 @@ class TestXCGrad(testtensorlog.TestGrad):
         prog.db.clearParamMarkings()
         for functor,arity in params:
             prog.db.markAsParam(functor,arity)
+        print "parameters marked"
         #compute gradient
         learner = learnxc.XLearner(prog)
-        P = learner.predict(mode,data.getX())
+        #P = learner.predict(mode,data.getX())
         #learner.xc.show()
         #print "Y\n",data.getY()
         #print "Pth\n",type(P),P
@@ -65,18 +65,33 @@ class TestXCGrad(testtensorlog.TestGrad):
         #print theano.pp(gx[0])
         #print theano.function(inputs=learner.xc.exprArgs,outputs=gx[0])(learner.xc.prepare([data.getX()]))
         updates = learner.crossEntropyGrad(mode,data.getX(),data.getY())
-        print updates.items()
+        
+        # compare to pure-tl
         tupdates = tlearner.crossEntropyGrad(mode,data.getX(),data.getY())
-        print tupdates.items()
-        print mode
-        if True:
+        
+        print "updates:",[(k,learner.xc.sparsifyMat(v)) for (k,v) in updates.items()]
+        print "tl updates:",tupdates.items()
+        
+        # debugging with -i
+        if False:
             return prog,learner,updates,tlearner,tupdates
+        
+        # now back to gradCheck():
+        
         #put the gradient into a single fact-string-indexed dictionary
         updatesWithStringKeys = {}
-        for (functor,arity),up in updates.items():
+        for param,up in updates.items():
+            i = learner.xc.paramArgs.index(param)
+            (functor,arity) = learner.xc.paramVals[i] # hack -- need a better way to swap between th and tl notation
             #print 'up for',functor,arity,'is',up
             upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
-            #print 'upDict',upDict,'updates keys',updates.keys()
+            print 'upDict',"\n".join([str(x) for x in upDict.items()])
+            
+            # check against pure-tl updates for the same problem
+            tlupDict = prog.db.matrixAsPredicateFacts(functor,arity,tupdates[ (functor,arity) ])
+            print "tlupDict","\n".join([str(x) for x in tlupDict.items()])
+            
+            print 'updates keys',updates.keys()
             for fact,gradOfFact in upDict.items():
                 updatesWithStringKeys[str(fact)] = gradOfFact
         self.checkDirections(updatesWithStringKeys,expected)
