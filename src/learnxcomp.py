@@ -7,8 +7,8 @@ import funs
 theano.config.exception_verbosity='high'
 
 def build_crossEntropyExpr(xc):
-    P=xc.theanoMatrix("P")
-    Y=xc.theanoMatrix("Y")
+    P=TT.dmatrix("P")
+    Y=TT.dmatrix("Y")
     result = -(Y*TT.log(P)).sum()
     return theano.function(inputs=[Y,P],outputs=result/Y.shape[0]), theano.function(inputs=[Y,P],outputs=result)
 
@@ -37,10 +37,10 @@ class XLearner(object):
     def _setCrossEntropyGradExpr(self,mode):
         self._setMode(mode)
         if mode in self.xeg:return
-        Y=self.xc.theanoMatrix("Y")
+        Y=TT.dmatrix("Y")
         P=self.xc.expr
         cost = Y-P
-        params = self.xc.exprArgs#db.params
+        params = self.xc.paramArgs
         paramGrads = [TT.grad(cost.sum(), param) for param in params]
         self.xeg[mode] = theano.function(inputs=self.xc.exprArgs + [Y],outputs=paramGrads),params
     def crossEntropyGrad(self,mode,X,Y,tracerArgs={},pad=None):

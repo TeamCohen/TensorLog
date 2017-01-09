@@ -88,9 +88,17 @@ class AbstractCrossCompiler(object):
         (self.exprArgs,self.expr) = self.fun2Expr(fun,None)
         self.dbArgs = []
         self.dbVals = []
-        print 'self.args',self.exprArgs
+        print 'self.exprArgs',self.exprArgs
         print 'self.expr',theano.pp(self.expr)
         self.thFun = theano.function(inputs=self.exprArgs, outputs=self.expr)
+        self.paramArgs = []
+        self.paramVals = []
+        for (mode,thvar) in self.dbMatVar.items():
+            if self.db.isParameter(mode):
+                self.paramArgs.append(thvar)
+                self.paramVals.append( (mode.functor,mode.arity) )
+        print "post-compile show():"
+        self.show()
         # for convenience
         return self
     def evalSymbols(self,inputSyms):
@@ -211,14 +219,14 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         if isinstance(fun,funs.SoftmaxFunction):
             # wrap inner function with softmax function
             inputs,subExpr = self.fun2Expr(fun.fun,sharedInputs,depth=depth)
-            # mimic mutil.denseSoftmax():
+            return (inputs, TNN.nnet.softmax(subExpr) + self.nullSmoothing)
+            # alternate (slow) solution to mimic mutil.denseSoftmax():
             #augmented = subExpr + self.nullSmoothing
             # run softmax, then filter to keep the zero inputs as zeros in the output
-            # ... isclose() isn't great for this but it's not as slow as switch()
+            # ... isclose() isn't real fast for this but it's not as slow as switch()
             #result = TNN.nnet.softmax(augmented) * (1 - TT.isclose(augmented,TT.zeros_like(augmented)))
             # renormalize after filtering
             #return (inputs, result / result.sum())
-            return (inputs, TNN.nnet.softmax(subExpr) + self.nullSmoothing)
 
         elif isinstance(fun,funs.SumFunction):
             assert(len(fun.funs)>=1)
