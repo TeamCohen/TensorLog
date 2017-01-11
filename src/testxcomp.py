@@ -14,69 +14,72 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     
     def testIf(self):
         self.xcompCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
-        pass
 
     def testFailure(self):
         self.xcompCheck(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
-        pass
 
     def testRevIf(self):
         self.xcompCheck(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
-        pass
 
     def testOr(self):
         self.xcompCheck(['p(X,Y):-spouse(X,Y).', 'p(X,Y):-sister(X,Y).'], 'p(i,o)', 'william', 
                         {'susan':1.0, 'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
-        pass
 
     def testChain(self):
         self.xcompCheck(['p(X,Z):-spouse(X,Y),sister(Y,Z).'], 'p(i,o)', 'susan', 
                         {'rachel':1.0, 'lottie':1.0, 'sarah':1.0})
         self.xcompCheck(['p(X,Z):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
                         {'charlotte':1.0, 'lucas':1.0, 'poppy':1.0, 'caroline':1.0, 'elizabeth':1.0})
-        pass
 
         
     def testMid(self):
         self.xcompCheck(['p(X,Y):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william', 
                         {'sarah': 1.0, 'rachel': 2.0, 'lottie': 2.0})
-        pass
 
     def testNest(self):
         self.xcompCheck(['s(X,Y):-spouse(X,Y).','t(X,Z):-spouse(X,Y),s(Y,Z).'], 't(i,o)', 'susan', {'susan': 1.0}) 
-        pass
 
     def testBack1(self):
         self.xcompCheck(['p(X,Y):-spouse(X,Y),sister(X,Z).'], 'p(i,o)', 'william', {'susan': 3.0})
-        pass
 
     def testBack2(self):
         self.xcompCheck(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
-        pass
 
     def testRec1(self):
         tensorlog.DEFAULT_MAXDEPTH=4
         self.inferenceCheck(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
         tensorlog.DEFAULT_MAXDEPTH=10
         self.inferenceCheck(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
-        pass
 
     def testConstOutput(self):
         self.xcompCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'sarah', {'william': 1.0})
         self.xcompCheck(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'lottie', {'william': 2.0})
-        pass
 
     def testConstChain1(self):
         self.xcompCheck(['p(X,S) :- assign(S,susan),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
-        pass
 
     def testConstChain2(self):
         self.xcompCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','sarah',{'pos':1.0})
         self.xcompCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','lottie',{'pos':2.0})
-        pass
 
     def testAltChain(self):
-        # raises AttributeError: 'SparseTensorSharedVariable' object has no attribute 'transpose'
+        # I believe the problem is it's hard to mix sparse/dense, or that somehow a dense dot.0
+        # is being mixed in with the dense outputs...
+#         funElemwise{Add}[(0, 0)] [id A] ''   
+#         |Softmax [id B] ''   
+#         | |SparseDot [id C] ''   
+#         |   |Elemwise{Mul}[(0, 1)] [id D] ''   
+#         |   | |n0__X [id E]
+#         |   | |SparseDot [id F] ''   
+#         |   |   |InplaceDimShuffle{1,0} [id G] ''   
+#         |   |   | |SparseDot [id H] ''   
+#         |   |   |   |M__child_io [id I]
+#         |   |   |   |InplaceDimShuffle{1,0} [id J] '__ones.T'   
+#         |   |   |     |__ones [id K]
+#         |   |   |SparseTranspose [id L] ''   
+#         |   |     |M__sister_io [id M]
+#         |   |M__spouse_io [id N]
+#         |nullSmoothing [id O]
         self.xcompCheck(['p(X,W) :- spouse(X,W),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
         pass
 
@@ -84,18 +87,15 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         w = 7*self.db.onehot('r1')+3*self.db.onehot('r2')        
         self.propprXCompCheck(w,['p(X,Y):-sister(X,Y) {r1}.','p(X,Y):-spouse(X,Y) {r2}.'],'p(i,o)',
                               'william', {'sarah': 7.0, 'rachel': 7.0, 'lottie': 7.0, 'susan': 3.0})
-        pass
 
     def testProppr2(self):
         w = 3*self.db.onehot('r2')
         self.propprXCompCheck(w,['p(X,Y):-spouse(Y,X) {r2}.'],'p(i,o)',
                               'susan', {'william': 3.0})
-        pass
 
     def testReuse1(self):
         self.xcompCheck(['p(X,Y) :- r(X,Z),r(Z,Y).', 'r(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', 
                         {'william':1.0})
-        pass
 
 
     def xcompCheck(self,ruleStrings,modeString,inputSymbol,expectedResultDict):
@@ -120,7 +120,8 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
             prog = tensorlog.Program(db=self.db,rules=rules) 
         mode = declare.ModeDeclaration(modeString)
         tlogFun = prog.compile(mode)
-        for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler, theanoxcomp.SparseMatDenseMsgCrossCompiler]:
+        #for compilerClass in [theanoxcomp.DenseMatDenseMsgCrossCompiler, theanoxcomp.SparseMatDenseMsgCrossCompiler]:
+        for compilerClass in [theanoxcomp.SparseMatDenseMsgCrossCompiler]:
             xc = compilerClass(prog.db)
             xc.compile(tlogFun)
             xc.show()
@@ -129,11 +130,13 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
             y = ys[0]
             self.checkMaxesInDicts(self.db.rowAsSymbolDict(y), expectedResultDict)
             print '== theano eval checks passed =='
-            for x in xc.exprArgs:
+            for x in xc.dbMatVar.values():
                 print '== performing theano gradient computation with',compilerClass,'for',x,'=='
                 # using sum() to make result a scalar...
+                xc.show()
+                #import pudb; pu.db
                 gx = theano.grad(xc.expr.sum(),x)
-                print theano.pp(gx)
+                #print theano.pp(gx)
             print '== theano gradients computed =='
 
 #    def propprXCompCheck(self,weightVec,ruleStrings,modeString,inputSymbol,expectedResultDict):
@@ -182,8 +185,8 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
 
 if __name__ == "__main__":
-    if len(sys.argv)==1:
-        unittest.main()
-    
+    unittest.main()
+
+
 
 

@@ -58,9 +58,6 @@ class AbstractCrossCompiler(object):
         # the theano variable which is the input argument(s) to
         # tensorlog function
         self.exprArgs = self.expr = None
-        # the theano variables for the matrixdb matrices used in the
-        # expression, and the values to which they should be bound
-        self.dbArgs = self.dbVals = None
         # theano function
         self.thFun = None
 
@@ -76,9 +73,12 @@ class AbstractCrossCompiler(object):
         """
         print 'exprArgs',self.exprArgs
         print 'expr',theano.pp(self.expr)
-        print len(self.dbArgs),'db param(s):'
-        for i in range(len(self.dbArgs)):
-            print ' |',self.dbArgs[i],type(self.dbVals[i])
+        print len(self.dbMatVar),'db matrices:'
+        for k,v in self.dbMatVar.items():
+            print ' |',k,v
+        print len(self.dbVecVar),'db vectors:'
+        for k,v in self.dbVecVar.items():
+            print ' |',k,v
         print 'fun',theano.pp(self.thFun.maker.fgraph.outputs[0])
         print 'debug fun',theano.printing.debugprint(self.thFun.maker.fgraph.outputs[0])
 
@@ -300,11 +300,12 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
         if isinstance(op,ops.VecMatMulOp):
             mExpr = self.matrixExpr(op.matMode)
             if op.transpose:
-                mExpr = mExpr.get_value().transpose()
+                mExpr = mExpr.T
             return TSB.dot(thEnv[op.src],mExpr)
         elif isinstance(op,ops.AssignPreimageToVar):
             mExpr = self.matrixExpr(op.matMode)
             # TODO: not sure why this simple expression doesn't work: TSB.dot(self.ones(), mExpr.transpose())
+            # return TSB.dot(self.ones(), mExpr.transpose())
             return TSB.dot(mExpr,self.ones().transpose()).transpose()
         elif isinstance(op,ops.ComponentwiseVecMulOp):
             return thEnv[op.src] * thEnv[op.src2]
