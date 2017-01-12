@@ -41,15 +41,17 @@ class AbstractCrossCompiler(object):
     def __init__(self,db):
         # namespaces are integer
         self.nameSpace = 0
-        # dbMatVar is a cache mapping a (mode,transposeFlag) pair
-        # -- which determine a matrix from the matrixdb -- to a theano
-        # shared variable that will be bound to that
-        # matrix. dbConstVar is similar but for message constants (eg,
-        # onehot values)
+        # dbMatVar is a cache mapping a mode to a theano shared
+        # variable that will be bound to the (untransposed) matrix
+        # returned by the matrixdb
         self.dbMatVar = {}
+        # dbVecVar is a similar but for unary predicates/vectors in
+        # the matrixdb
         self.dbVecVar = {}
-        self.dbMsgVar = {}
-        # hold the database
+        # dbConstVar holds constants like all-ones and one-hot vectors
+        # for db constants
+        self.dbConstVar = {}
+        # pointer back to the matrixdb
         self.db = db
         #
         # stuff below is set by compile
@@ -73,14 +75,39 @@ class AbstractCrossCompiler(object):
         """
         print 'exprArgs',self.exprArgs
         print 'expr',theano.pp(self.expr)
+        print 'expr.sum()',theano.pp(self.expr.sum())
+        print 'debug expr.sum()\n',theano.printing.debugprint(self.expr.sum())
         print len(self.dbMatVar),'db matrices:'
         for k,v in self.dbMatVar.items():
             print ' |',k,v
         print len(self.dbVecVar),'db vectors:'
         for k,v in self.dbVecVar.items():
             print ' |',k,v
-        print 'fun',theano.pp(self.thFun.maker.fgraph.outputs[0])
-        print 'debug fun',theano.printing.debugprint(self.thFun.maker.fgraph.outputs[0])
+        print 'fun\n',theano.pp(self.thFun.maker.fgraph.outputs[0])
+        print 'debug fun\n',theano.printing.debugprint(self.thFun.maker.fgraph.outputs[0])
+
+    def debugExpr(self):
+        AbstractCrossCompiler.debugVar(self.expr,0,maxdepth=20)
+
+    @staticmethod
+    def debugVar(v,depth=0,maxdepth=10):
+      if depth>maxdepth:
+        print '...'
+      else:
+        print '| '*(depth+1),
+        print 'var: name',v.name,'type',type(v),'def',theano.pp(v)
+        for a in v.get_parents():
+          AbstractCrossCompiler.debugApply(a,depth=depth+1,maxdepth=maxdepth)
+
+    @staticmethod
+    def debugApply(a,depth=0,maxdepth=10):
+      if depth>maxdepth:
+        print '...'
+      else:
+        print '| '*(depth+1),
+        print 'apply: ',a,'op',type(a.op),'output types',map(type,a.outputs)
+        for v in a.inputs:
+          AbstractCrossCompiler.debugVar(v,depth=depth+1,maxdepth=maxdepth)
 
     def compile(self,fun):
         """ Compile a tensorlog function to theano
@@ -90,7 +117,7 @@ class AbstractCrossCompiler(object):
         self.dbVals = []
         print 'self.args',self.exprArgs
         print 'self.expr',theano.pp(self.expr)
-        self.thFun = theano.function(inputs=self.exprArgs, outputs=self.expr)
+        self.thFun = theano.function(inputs=self.exprArgs, outputs=self.expr, mode='DebugMode')
         # for convenience
         return self
 
@@ -122,16 +149,20 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
     def sparsifyMat(self,m): return self._sparsify(m)
     def sparsifyVec(self,v): return self._sparsify(v)
     def sparsifyMsg(self,v): return self._sparsify(v)
-        
+
     def _densify(self,x):
         return x.todense()
     def _sparsify(self,x):
-        sx = SS.csr_matrix(x) 
+        sx = SS.csr_matrix(x)
         sx.eliminate_zeros()
         return sx
 
     # over-ride these for different types of theano row variables
-    def theanoSharedMat(self,val,name=None): return theano.shared(self.densifyMat(val), name=name)
+    def theanoSharedMat(self,val,name=None):
+      #return theano.shared(self.densifyMat(val), name=name)
+      x = theano.shared(self.densifyMat(val), name=name)
+      print 'sharedMat',x,'type',type(x)
+      return x
     def theanoSharedMsg(self,val,name=None): return theano.shared(self.densifyMsg(val), name=name)
     def theanoSharedVec(self,val,name=None): return theano.shared(self.densifyVec(val), name=name)
     def theanoRowVar(self,name): return TT.drow(name)
@@ -139,7 +170,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
 
     #
     # the main compilation routines
-    # 
+    #
 
     def evalSymbols(self,inputSyms):
         assert len(inputSyms)==len(self.exprArgs)
@@ -151,12 +182,12 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
 
     #
     # the main compilation routines
-    # 
+    #
 
     def matrixExpr(self,matMode):
-        """Return a theano expression that denotes the matrix retrieved by
-        the (matMode, transpose) pair using the matrixdb
-        """ 
+        """Return a theano expression that denotes the (untransposed) matrix
+        retrieved by matrixdb
+        """
         if (matMode) not in self.dbMatVar:
             u = "M__" + matMode.getFunctor() +"_" + "".join([matMode.arg(i) for i in range(matMode.getArity())])
             m = self.db.matrix(matMode,False)
@@ -166,7 +197,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
     def vectorExpr(self,matMode):
         """Return a theano expression that denotes the vector retrieved by
         the (matMode, transpose) pair using the matrixdb
-        """ 
+        """
         assert matMode.arity==1
         if (matMode) not in self.dbVecVar:
             u = "v__" + matMode.getFunctor() +"_" + matMode.arg(0)
@@ -176,18 +207,18 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
 
     def ones(self):
         """Return a theano expression that denotes an all-ones row vector
-        """ 
+        """
         return self._msgVar('__ones',self.db.ones())
 
     def onehot(self,sym):
         """Return a theano expression that denotes the onehot row vector for a constant
-        """ 
+        """
         return self._msgVar(sym,self.db.onehot(sym))
 
     def _msgVar(self,key,msg):
-        if key not in self.dbMsgVar:
-            self.dbMsgVar[key] = self.theanoSharedMsg(msg,name=key)
-        return self.dbMsgVar[key]
+        if key not in self.dbConstVar:
+            self.dbConstVar[key] = self.theanoSharedMsg(msg,name=key)
+        return self.dbConstVar[key]
 
     def fun2Expr(self,fun,sharedInputs=None,depth=0):
         """Return a pair (inputs, expr) where binding the inputs in theano,
@@ -199,7 +230,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         The sharedInputs is used if you already have theano variables
         corresponding to the inputs to this expression.  This is the case
         when you have a SumFunction: all the subexpressions share the same inputs.
-        """ 
+        """
 
         if isinstance(fun,funs.SoftmaxFunction):
             # wrap inner function with softmax function
@@ -241,16 +272,15 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
             # return the inputs and the expression for the
             # OpSeqFunction's output
             return (seqInputs, thEnv[fun.ops[-1].dst])
-        
+
         else:
             assert False,'cannot cross-compile %r' % fun
-    
+
     # operator expressions for dense matrices
     def op2Expr(self,thEnv,op,depth):
         """Extend the theano environment with an expression for the
         destination of the Operator, for dense matrices
         """
-        
         if isinstance(op,ops.VecMatMulOp):
             mExpr = self.matrixExpr(op.matMode)
             if op.transpose:
@@ -288,9 +318,13 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     # over-ride these to keep sparse matrices
     def densifyMat(self,m): return m
     def sparsifyMat(self,m): return m
-    
+
     # over-ride these for different types of theano row variables
-    def theanoSharedMat(self,val,name=None): return theano.sparse.shared(self.densifyMat(val), name=name, format='csr')
+    def theanoSharedMat(self,val,name=None):
+      #return theano.shared(self.densifyMat(val), name=name)
+      x = theano.shared(self.densifyMat(val), name=name)
+      print 'sharedMat',x,'type',type(x)
+      return x
     def theanoSharedMsg(self,val,name=None): return theano.shared(self.densifyMsg(val), name=name)
     def theanoSharedVec(self,val,name=None): return theano.shared(self.densifyVec(val), name=name)
     def theanoRowVar(self,name): return TT.drow(name)

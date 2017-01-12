@@ -249,7 +249,7 @@ class TestSmallProofs(unittest.TestCase):
         mode = declare.ModeDeclaration(modeString)
         fun = prog.compile(mode)
 
-        y1 = prog.evalSymbols(mode,[inputSymbol]) 
+        y1 = prog.evalSymbols(mode,[inputSymbol])
         self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
 
     def only(self,group):
@@ -852,4 +852,3 @@ class TestMatrixUtils(unittest.TestCase):
 if __name__=="__main__":
     if len(sys.argv)==1:
         unittest.main()
-

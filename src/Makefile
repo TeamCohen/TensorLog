@@ -2,6 +2,18 @@
 short-tests:
 	python -m unittest testtensorlog
 
+xctest:
+	python -m unittest testxcomp
+
+ifBug:
+	python -m unittest testxcomp.TestXCSmallProofs.testIf
+
+chainBug:
+	python -m unittest testxcomp.TestXCSmallProofs.testChain
+
+altChainBug:
+	python -m unittest testxcomp.TestXCSmallProofs.testAltChain
+
 # tests that take a few minutes to run
 # run 'make prepare-for-long-tests' in a fresh install before you run these
 long-tests: short-tests benchmark-test wnet-test cora-test grid-test
