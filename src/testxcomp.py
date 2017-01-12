@@ -68,23 +68,6 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
         self.xcompCheck(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','lottie',{'pos':2.0})
 
     def testAltChain(self):
-        # I believe the problem is it's hard to mix sparse/dense, or that somehow a dense dot.0
-        # is being mixed in with the dense outputs...
-#         funElemwise{Add}[(0, 0)] [id A] ''
-#         |Softmax [id B] ''
-#         | |SparseDot [id C] ''
-#         |   |Elemwise{Mul}[(0, 1)] [id D] ''
-#         |   | |n0__X [id E]
-#         |   | |SparseDot [id F] ''
-#         |   |   |InplaceDimShuffle{1,0} [id G] ''
-#         |   |   | |SparseDot [id H] ''
-#         |   |   |   |M__child_io [id I]
-#         |   |   |   |InplaceDimShuffle{1,0} [id J] '__ones.T'
-#         |   |   |     |__ones [id K]
-#         |   |   |SparseTranspose [id L] ''
-#         |   |     |M__sister_io [id M]
-#         |   |M__spouse_io [id N]
-#         |nullSmoothing [id O]
       self.xcompCheck(['p(X,W) :- spouse(X,W),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
       pass
 
@@ -152,14 +135,6 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
                 train = theano.function(inputs=xc.exprArgs, outputs=[cost,xc.expr],updates=[(x, (x - 0.1*gx))])
                 print '== update function =='
                 theano.printing.debugprint(train)
-#                print '== compiled function'
-#                tmpf = theano.function(inputs=[x],outputs=xc.expr.sum())
-#                theano.printing.debugprint(tmpf)
-#                #import pudb; pu.db
-#                print '== computing gx wrt',x,'type',type(x)
-#                gx = theano.grad(xc.expr.sum(),x)
-#                print '== gx computed'
-#                print theano.pp(gx)
             print '== theano gradients computed =='
 
 
@@ -174,10 +149,6 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
             self.assertTrue(a in expectedMaxes)
         for a in expectedMaxes:
             self.assertTrue(a in actualMaxes)
-
-#        print "\n".join(fun.pprint())
-#        y1 = prog.evalSymbols(mode,[inputSymbol])
-#        self.checkDicts(self.db.rowAsSymbolDict(y1), expectedResultDict)
 
 
 if __name__ == "__main__":
