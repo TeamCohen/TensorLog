@@ -335,12 +335,12 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
             mExpr = self.matrixExpr(op.matMode)
             if op.transpose:
                 mExpr = mExpr.T
-            return TSB.dot(thEnv[op.src],mExpr)
+            return TSB.structured_dot(thEnv[op.src],mExpr)
         elif isinstance(op,ops.AssignPreimageToVar):
             mExpr = self.matrixExpr(op.matMode)
             # TODO: not sure why this simple expression doesn't work: TSB.dot(self.ones(), mExpr.transpose())
             # return TSB.dot(self.ones(), mExpr.transpose())
-            return TSB.dot(mExpr,self.ones().transpose()).transpose()
+            return TSB.structured_dot(mExpr,self.ones().transpose()).transpose()
         elif isinstance(op,ops.ComponentwiseVecMulOp):
             return thEnv[op.src] * thEnv[op.src2]
         elif isinstance(op,ops.DefinedPredOp):
