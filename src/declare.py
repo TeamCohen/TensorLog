@@ -9,7 +9,7 @@ def asMode(spec):
     Or, if given a ModeDeclaration object, return that object.
     """
     if type(spec)==type("") and spec.find("/")>=0:
-        functor,rest = spec.split("/")            
+        functor,rest = spec.split("/")
         return ModeDeclaration(parser.Goal(functor,list(rest)))
     elif type(spec)==type(""):
         return ModeDeclaration(spec)
@@ -56,4 +56,3 @@ class ModeDeclaration(AbstractDeclaration):
         return self.arg(i)=='o'
     def isConst(self,i):
         return not self.isInput(i) and not self.isOutput(i)
-
