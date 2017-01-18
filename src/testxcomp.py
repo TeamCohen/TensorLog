@@ -11,7 +11,7 @@ import sys
 import theano
 
 TESTED_COMPILERS = [
-  theanoxcomp.DenseMatDenseMsgCrossCompiler,
+#  theanoxcomp.DenseMatDenseMsgCrossCompiler,
   theanoxcomp.SparseMatDenseMsgCrossCompiler,
 ]
 
@@ -125,17 +125,17 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       # are the same
       self.check_maxes_in_dicts(self.db.rowAsSymbolDict(y), expected_result_dict)
       print '== theano eval checks passed =='
-      # cycle through the possible things to differentiate against
-      # TODO move into gradient check
-      for x in xc.subexprCacheVarBindings:
-        print '== grad with',compilerClass,'wrt',x,'=='
-        pseudo_cost = xc.expr.sum()
-        gx, = theano.grad(pseudo_cost,[x])
-        print 'grad pseudo_cost wrt',x,theano.pp(gx)
-        train = theano.function(inputs=xc.exprArgs, outputs=[pseudo_cost,xc.expr],updates=[(x, (x - 0.1*gx))])
-        print '== update function =='
-        theano.printing.debugprint(train)
-      print '== theano gradients computed =='
+#      # cycle through the possible things to differentiate against
+#      # TODO move into gradient check
+#      for x in xc.subexprCacheVarBindings:
+#        #print '== grad with',compilerClass,'wrt',x,'=='
+#        pseudo_cost = xc.expr.sum()
+#        gx, = theano.grad(pseudo_cost,[x])
+#        #print 'grad pseudo_cost wrt',x,theano.pp(gx)
+#        train = theano.function(inputs=xc.exprArgs, outputs=[pseudo_cost,xc.expr],updates=[(x, (x - 0.1*gx))])
+#        #print '== update function =='
+#        #theano.printing.debugprint(train)
+#      print '== theano gradients computed =='
 
 
   def check_maxes_in_dicts(self,actual,expected):

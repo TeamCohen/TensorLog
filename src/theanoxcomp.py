@@ -12,6 +12,7 @@ import theano.tensor.basic as TTB
 import theano.tensor.nnet as TNN
 import theano.sparse as TS
 import theano.sparse.basic as TSB
+import theano.sparse.type as TST
 import scipy.sparse as SS
 import numpy as NP
 
@@ -30,8 +31,9 @@ class AbstractCrossCompiler(object):
     # include DB relation matrices/vectors and constants.
     self.subexprCache = {}
     # maps variables used in the expressions in the exprCache to their
-    # expected values
+    # expected values, and give then a canonical ordering
     self.subexprCacheVarBindings = {}
+    self.subexprCacheVarList = []
 
     # pointer back to the matrixdb
     self.db = db
@@ -49,6 +51,8 @@ class AbstractCrossCompiler(object):
     self.dataTargetArgs = None
     # functions for inference and unregularized loss
     self.inferenceFun = None
+    self.dataLossFun = None
+    self.nullSmoothing = self.constantVector("_nullSmoothing",self.db.nullMatrix(1)*(1e-5))
 
   def allocNamespace(self):
     """Allocate a new name space. """
@@ -56,19 +60,21 @@ class AbstractCrossCompiler(object):
     self.nameSpace += 1
     return result
 
-  #
-  # theano-specific?
-  #
-
-  def vector(self,matMode):
+  def vector(self, matMode):
+    """ Wraps a call to db.vector(), but will cache the results as a variable
+    """
     assert matMode.arity==1
-    #db vector ignores mode
     if (matMode) not in self.subexprCache:
-      u = "v__" + matMode.getFunctor()
-      v = self.db.vector(matMode)
-      self.subexprCache[matMode] = self.theanoSharedVec(v, name=u)
-      self.subexprCacheVarBindings[self.subexprCache[matMode]] = v
+      variable_name = "v__" + matMode.getFunctor()
+      val = self._wrapDBVector(self.db.vector(matMode)) #ignores all but functor
+      self._extendSubexprCache(matMode, self._vectorVar(variable_name), val)
     return self.subexprCache[matMode]
+
+  def constantVector(self, variable_name, val):
+    if variable_name not in self.subexprCache:
+      wrapped_val = self._wrapDBVector(val)
+      self._extendSubexprCache(variable_name, self._vectorVar(variable_name), wrapped_val)
+    return self.subexprCache[variable_name]
 
   def matrix(self,matMode,transpose=False):
     """ Wraps a call to db.matrix(), but will cache the results as a variable or expression.
@@ -76,48 +82,132 @@ class AbstractCrossCompiler(object):
     # cache an expression for the un-transposed version of the matrix
     assert matMode.arity==2
     if (matMode) not in self.subexprCache:
-      u = "M__" + matMode.getFunctor()
-      m = self.db.matrix(matMode,False)
-      self.subexprCache[matMode] = self.theanoSharedMat(m, name=u)
-      self.subexprCacheVarBindings[self.subexprCache[matMode]] = m
+      variable_name = "M__" + matMode.getFunctor()
+      val = self._wrapDBMatrix(self.db.matrix(matMode,False))
+      self._extendSubexprCache(matMode, self._matrixVar(variable_name), val)
     if transpose:
       return self.subexprCache[matMode].T
     else:
       return self.subexprCache[matMode]
 
-  def constant(self,key,msg):
-    if key not in self.subexprCache:
-      self.subexprCache[key] = self.theanoSharedMsg(msg,name=key)
-      self.subexprCacheVarBindings[self.subexprCache[key]] = msg
-    return self.subexprCache[key]
+  def ones(self):
+    """Wraps a call to db.ones(), but will cache the result """
+    return self.constantVector('__ones',self.db.ones())
+
+  def onehot(self,sym):
+    """Wraps a call to db.onehot(), but will cache the result """
+    return self.constantVector(sym,self.db.onehot(sym))
+
+  def _extendSubexprCache(self, key, var, val):
+    self.subexprCache[key] = var
+    self.subexprCacheVarBindings[var] = val
+    self.subexprCacheVarList.append(var)
+
+  def _secondaryArgs(self):
+    return self.subexprCacheVarList
+
+  def _secondaryArgBindings(self):
+    return map(lambda v:self.subexprCacheVarBindings[v], self.subexprCacheVarList)
+
+  def _wrapDBVector(self,vec):
+    """ Convert a vector from the DB into a vector value used by the
+    target language """
+    assert False, 'abstract method called'
+
+  def _wrapDBMatrix(self,mat):
+    """ Convert a matrix from the DB into a vector value used by the
+    target language """
+    assert False, 'abstract method called'
+
+  def _sparsify(self,msg):
+    """Convert a matrix produced by the target language to the usual
+    sparse-vector output of tensorlog"""
+    assert False, 'abstract method called'
+
+  def _vectorVar(self,name):
+    """Create a variable in the target language"""
+    assert False, 'abstract method called'
+
+  def _matrixVar(self,name):
+    """Create a variable in the target language"""
+    assert False, 'abstract method called'
+
+class NameSpacer(object):
+
+  """A 'namespaced' dictionary indexed by strings. Assigns every string
+    to a string 'internalName' (which depends on the string and the
+    namespaceId for this object) and indexes by that internal name.
+  """
+
+  def __init__(self,namespaceId):
+    self.namespaceId = namespaceId
+    self.env = {}
+  def internalName(self,key):
+    return 'n%d__%s' % (self.namespaceId,key)
+  def __getitem__(self,key):
+    return self.env[self.internalName(key)]
+  def __setitem__(self,key,val):
+    self.env[self.internalName(key)] = val
+
+
+class TheanoCrossCompiler(AbstractCrossCompiler):
+
+  def compile(self,fun):
+    """ Compile a tensorlog function to theano """
+    (self.exprArgs,self.expr) = self.fun2Expr(fun,None)
+    self.inferenceFun = theano.function(inputs=(self.exprArgs + self._secondaryArgs()),
+                                        outputs=self.expr,
+                                        mode='DebugMode')
+    self.buildDataLossExpr()
+    return self
+
+  def buildDataLossExpr(self):
+    # add the unregularized loss function, which is cross-entropy
+    target_y = self._vectorVar('_target_y')
+    self.dataTargetArgs = [target_y]
+    self.dataLossExpr = TNN.nnet.categorical_crossentropy(target_y, self.expr).mean()
+    self.dataLossFun = theano.function(inputs=(self.exprArgs + self.dataTargetArgs + self._secondaryArgs()),
+                                       outputs=(self.expr,self.dataLossExpr),
+                                       mode='DebugMode')
+  #
+  # evaluators
+  #
+
+  def evalSymbols(self,inputSyms):
+    assert len(inputSyms)==len(self.exprArgs)
+    inputs = map(lambda sym:self._wrapDBVector(self.db.onehot(sym)), inputSyms)
+    return self.eval(inputs)
+
+  def eval(self,inputs):
+    formalArgs = inputs +self._secondaryArgBindings()
+    theanoResult = self.inferenceFun(*formalArgs)
+    return map(lambda v:self._sparsify(v), theanoResult)
+
+  def evalLoss(self,rawInputs,rawTarget):
+    # the loss depends on the rawInputs, which will usually be
+    # [x,target_y] and the parameters, which here are
+    # passed in as (pred,arity) keys
+    inputs = map(self._wrapDBVector, rawInputs)
+    target = self._wrapDBVector(rawTarget)
+    print 'lossExpr',theano.pp(self.dataLossExpr)
+    formalArgs = inputs + [target] + _secondaryArgBindings()
+    return self.dataLossFun(*formalArgs)
+
+
+  # for debugging output
 
   def show(self):
     """ print a summary to stdout """
     print 'exprArgs',self.exprArgs
     print 'expr',theano.pp(self.expr)
     print 'expr.sum()',theano.pp(self.expr.sum())
-    print 'debug expr.sum()\n',theano.printing.debugprint(self.expr.sum())
+    #print 'debug expr.sum()\n',theano.printing.debugprint(self.expr.sum())
     print 'subexpr cache:'
     for k,v in self.subexprCacheVarBindings.items():
-      print ' |',k,v
-    print 'fun\n',theano.pp(self.inferenceFun.maker.fgraph.outputs[0])
-    print 'debug fun\n',theano.printing.debugprint(self.inferenceFun.maker.fgraph.outputs[0])
+      print ' |',k,'type',type(v)
+    print 'function:',theano.pp(self.inferenceFun.maker.fgraph.outputs[0])
+    #print 'debug fun\n',theano.printing.debugprint(self.inferenceFun.maker.fgraph.outputs[0])
 
-  def compile(self,fun):
-    """ Compile a tensorlog function to theano """
-    (self.exprArgs,self.expr) = self.fun2Expr(fun,None)
-    #print 'self.args',self.exprArgs
-    #print 'self.expr',theano.pp(self.expr)
-    self.inferenceFun = theano.function(inputs=self.exprArgs, outputs=self.expr, mode='DebugMode')
-    self.buildDataLossExpr()
-    # for convenience
-    return self
-
-  def buildDataLossExpr(self):
-    # add the unregularized loss function, which is cross-entropy
-    target_y = self.theanoRowVar('_target_y')
-    self.dataTargetArgs = [target_y]
-    self.dataLossExpr = TNN.nnet.categorical_crossentropy(target_y, self.expr).mean()
 
   def debugExpr(self):
     AbstractCrossCompiler.debugVar(self.expr,0,maxdepth=20)
@@ -142,111 +232,41 @@ class AbstractCrossCompiler(object):
       for v in a.inputs:
         AbstractCrossCompiler.debugVar(v,depth=depth+1,maxdepth=maxdepth)
 
-class NameSpacer(object):
-
-  """A 'namespaced' dictionary indexed by strings. Assigns every string
-    to a string 'internalName' (which depends on the string and the
-    namespaceId for this object) and indexes by that internal name.
-  """
-
-  def __init__(self,namespaceId):
-    self.namespaceId = namespaceId
-    self.env = {}
-  def internalName(self,key):
-    return 'n%d__%s' % (self.namespaceId,key)
-  def __getitem__(self,key):
-    return self.env[self.internalName(key)]
-  def __setitem__(self,key,val):
-    self.env[self.internalName(key)] = val
-
 ###############################################################################
 # implementation for dense messages, dense relation matrices
 ###############################################################################
 
 
-class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
+class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
   """ Use theano's numpy wrappers for everything """
 
-  def __init__(self,db):
-    AbstractCrossCompiler.__init__(self,db)
-    self.denseMsg = True
-    self.denseMat = True
-    # when messages are dense,
-    # make sure the NULL value is small but bigger than zero,
-    # which will be the default value
-    # self.nullSmoothing = theano.shared(self.densifyMsg(self.db.nullMatrix(1)*1e-5), name="nullSmoothing")
-    self.nullSmoothing = self.theanoSharedMsg(self.db.nullMatrix(1)*1e-5, name="nullSmoothing")
+  def _vectorVar(self,name):
+    return TT.drow(name)
 
-  # over-ride these to get different set of sparse/dense choices
+  def _matrixVar(self,name):
+    return TT.dmatrix(name)
 
-  def densifyMat(self,m): return self._densify(m)
-  def densifyMsg(self,v): return self._densify(v)
-  def densifyVec(self,v): return self._densify(v)
+  def _wrapDBVector(self,vec):
+    """ Convert a vector from the DB into a vector value used by the
+    target language """
+    return vec.todense()
 
-  def sparsifyMat(self,m): return self._sparsify(m)
-  def sparsifyVec(self,v): return self._sparsify(v)
-  def sparsifyMsg(self,v): return self._sparsify(v)
+  def _wrapDBMatrix(self,mat):
+    """ Convert a matrix from the DB into a vector value used by the
+    target language """
+    return mat.todense()
 
-  def _densify(self,x):
-    return x.todense()
   def _sparsify(self,x):
+    """Convert a matrix produced by the target language to the usual
+    sparse-vector output of tensorlog"""
     sx = SS.csr_matrix(x)
     sx.eliminate_zeros()
     return sx
-
-  # over-ride these for different types of theano row variables
-  def theanoSharedMat(self,val,name=None): return theano.shared(self.densifyMat(val), name=name)
-  def theanoSharedMsg(self,val,name=None): return theano.shared(self.densifyMsg(val), name=name)
-  def theanoSharedVec(self,val,name=None): return theano.shared(self.densifyVec(val), name=name)
-  def theanoRowVar(self,name): return TT.drow(name)
-
-
-  #
-  # evaluate the function
-  #
-
-  def evalSymbols(self,inputSyms):
-    assert len(inputSyms)==len(self.exprArgs)
-    def sym2Vector(sym): return densifyMsg(self.db.onehot(sym))
-    inputs = map(lambda sym:self.densifyMsg(self.db.onehot(sym)), inputSyms)
-    return self.eval(inputs)
-
-  def eval(self,inputs):
-    formalArgs = inputs
-    theanoResult = self.inferenceFun(*formalArgs)
-    return map(lambda v:self.sparsifyMsg(v), theanoResult)
-
-  def evalLoss(self,rawInputs,rawTarget,paramKeys):
-    # the loss depends on the rawInputs, which will usually be
-    # [x,target_y] and the parameters, which here are
-    # passed in as (pred,arity) keys
-    inputs = map(self.densifyMsg,rawInputs)
-    target = self.densifyMsg(rawTarget)
-    paramVars = map(self.getParamVar, paramKeys)
-    # current value of parameters
-    paramVals = map(lambda (pred,arity):self.db.matEncoding[(pred,arity)], paramKeys)
-    def show(tag,x): print tag,'type',type(x),'val',x
-    def showList(tag,xs): print tag,'types',map(type,xs)
-    showList('inputs',inputs)
-    show('target',target)
-    showList('paramVars',paramVars)
-    print 'lossExpr',theano.pp(self.dataLossExpr)
-    formalArgs = inputs + [target] + paramVals
-    lossFun = theano.function(inputs=(self.exprArgs + self.dataTargetArgs + paramVars), outputs=self.dataLossExpr)
-    return lossFun(*formalArgs)
 
 
   #
   # the main compilation routines
   #
-
-  def ones(self):
-    """Return a theano expression that denotes an all-ones row vector """
-    return self.constant('__ones',self.db.ones())
-
-  def onehot(self,sym):
-    """Return a theano expression that denotes the onehot row vector for a constant """
-    return self.constant(sym,self.db.onehot(sym))
 
   def fun2Expr(self,fun,sharedInputs=None,depth=0):
     """Return a pair (inputs, expr) where binding the inputs in theano,
@@ -285,7 +305,7 @@ class DenseMatDenseMsgCrossCompiler(AbstractCrossCompiler):
         # create the list of theano variables, which should be
         # used as inputs to the expression
         for v in fun.opInputs:
-          thEnv[v] = self.theanoRowVar(thEnv.internalName(v))
+          thEnv[v] = self._vectorVar(thEnv.internalName(v))
           seqInputs.append(thEnv[v])
       else:
         # copy over the existing inputs to the new environment
@@ -337,19 +357,28 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
   """ Use theano's numpy wrappers for everything
   """
 
-  def __init__(self,db):
-    DenseMatDenseMsgCrossCompiler.__init__(self,db)
-    self.denseMat = False
+  def _vectorVar(self,name):
+    return TT.drow(name)
 
-  # over-ride these to keep sparse matrices
-  def densifyMat(self,m): return m
-  def sparsifyMat(self,m): return m
+  def _matrixVar(self,name):
+    return TSB.matrix('csr',name=name)
 
-  # over-ride these for different types of theano row variables
-  def theanoSharedMat(self,val,name=None): return theano.shared(self.densifyMat(val), name=name)
-  def theanoSharedMsg(self,val,name=None): return theano.shared(self.densifyMsg(val), name=name)
-  def theanoSharedVec(self,val,name=None): return theano.shared(self.densifyVec(val), name=name)
-  def theanoRowVar(self,name): return TT.drow(name)
+  def _wrapDBVector(self,vec):
+    """ Convert a vector from the DB into a vector value used by the
+    target language """
+    return vec.todense()
+
+  def _wrapDBMatrix(self,mat):
+    """ Convert a matrix from the DB into a vector value used by the
+    target language """
+    return mat
+
+  def _sparsify(self,x):
+    """Convert a matrix produced by the target language to the usual
+    sparse-vector output of tensorlog"""
+    sx = SS.csr_matrix(x)
+    sx.eliminate_zeros()
+    return sx
 
   # operator expressions for sparse matrices
   def op2Expr(self,thEnv,op,depth):
