@@ -44,14 +44,23 @@ class AbstractCrossCompiler(object):
     self.expr = None
     # list of variables which are the input argument(s) to self.expr
     self.exprArgs = None
+    # compiled function for inference, corresponding to self.expr
+    self.inferenceFun = None
+
     # an expression implementing unregularized the loss function
     self.dataLossExpr = None
-    # list of variables which are the input argument(s) to
-    # self.dataLossExpr
+    # list of variables which are additional inputs to dataLoss
     self.dataTargetArgs = None
-    # functions for inference and unregularized loss
-    self.inferenceFun = None
     self.dataLossFun = None
+    # parameters we will optimize against
+    self.params = None
+    # gradient of dataLossFun wrt those params
+    self.dataLossGradExprs = None #list of expressions
+    self.dataLossGradFun = None   #function that returns multiple outputs
+
+    self.dataLossGradParams = None
+    # a constant used to put a little bit of weight on the 'null
+    # entity'
     self.nullSmoothing = self.constantVector("_nullSmoothing",self.db.nullMatrix(1)*(1e-5))
 
   def allocNamespace(self):
@@ -59,6 +68,16 @@ class AbstractCrossCompiler(object):
     result = self.nameSpace
     self.nameSpace += 1
     return result
+
+  def getSubExpr(self,param):
+    """ Find a subexpression/variable that corresponds to a DB functor,arity pair """
+    assert len(param)==2 and (param[1]==1 or param[1]==2), ('invalid parameter spec %r'%param)
+    (pred,arity)=param
+    if arity==2:
+      m = declare.ModeDeclaration(pred+"(i,o)")
+    else:
+      m = declare.ModeDeclaration(pred+"(o)")
+    return self.subexprCache.get(m)
 
   def vector(self, matMode):
     """ Wraps a call to db.vector(), but will cache the results as a variable
@@ -152,47 +171,77 @@ class NameSpacer(object):
 
 class TheanoCrossCompiler(AbstractCrossCompiler):
 
-  def compile(self,fun):
-    """ Compile a tensorlog function to theano """
+  def compile(self,fun,params=None):
+    """Compile a tensorlog function to theano.  Params are optional, if
+    they are given then also compile gradient of the loss function.
+    Params should be a list of (functor,arity) pairs.
+    """
     (self.exprArgs,self.expr) = self.fun2Expr(fun,None)
     self.inferenceFun = theano.function(inputs=(self.exprArgs + self._secondaryArgs()),
                                         outputs=self.expr,
                                         mode='DebugMode')
-    self.buildDataLossExpr()
+    self._buildLossExpr(params)
     return self
 
-  def buildDataLossExpr(self):
-    # add the unregularized loss function, which is cross-entropy
+  def _buildLossExpr(self,params):
+    """ Add in the stuff relating to loss"""
     target_y = self._vectorVar('_target_y')
     self.dataTargetArgs = [target_y]
-    self.dataLossExpr = TNN.nnet.categorical_crossentropy(target_y, self.expr).mean()
-    self.dataLossFun = theano.function(inputs=(self.exprArgs + self.dataTargetArgs + self._secondaryArgs()),
-                                       outputs=(self.expr,self.dataLossExpr),
-                                       mode='DebugMode')
+    #this expr is safe for vectors with zeros - TNN.nnet.categorical_crossentropy blows up
+    #self.dataLossExpr = (-target_y*TT.log(self.expr+1)).mean()
+    # get the non-zero values of the dense expression
+    self.dataLossExpr = (target_y*self.applyOpToNonzerosOfDense(TT.log,self.expr)).mean()
+    self.dataLossFun = theano.function(
+        inputs=(self.exprArgs + self.dataTargetArgs + self._secondaryArgs()),
+        outputs=(self.expr,self.dataLossExpr),
+        mode='DebugMode')
+    if params is not None:
+      self.params = params
+      paramVars = map(self.getSubExpr,params)
+      self.dataLossGradExprs = theano.grad(self.dataLossExpr, paramVars)
+      self.dataLossGradFun = theano.function(
+          inputs=(self.exprArgs + self.dataTargetArgs + self._secondaryArgs()),
+          outputs=self.dataLossGradExprs,
+          mode='DebugMode')
+
   #
   # evaluators
   #
 
-  def evalSymbols(self,inputSyms):
-    assert len(inputSyms)==len(self.exprArgs)
-    inputs = map(lambda sym:self._wrapDBVector(self.db.onehot(sym)), inputSyms)
-    return self.eval(inputs)
+  def wrapSymbols(self,inputSyms):
+    """ Convert a list of symbols to a list of one-hot vectors that can be sent to eval"""
+    return map(lambda sym:self._wrapDBVector(self.db.onehot(sym)), inputSyms)
+
+  def _unwrapOutputs(self,targetFunctionOutputs):
+    return map(lambda v:self._sparsify(v), targetFunctionOutputs)
 
   def eval(self,inputs):
     formalArgs = inputs +self._secondaryArgBindings()
-    theanoResult = self.inferenceFun(*formalArgs)
-    return map(lambda v:self._sparsify(v), theanoResult)
+    return self._unwrapOutputs(self.inferenceFun(*formalArgs))
 
-  def evalLoss(self,rawInputs,rawTarget):
+  def evalDataLoss(self,rawInputs,rawTarget):
     # the loss depends on the rawInputs, which will usually be
     # [x,target_y] and the parameters, which here are
     # passed in as (pred,arity) keys
     inputs = map(self._wrapDBVector, rawInputs)
     target = self._wrapDBVector(rawTarget)
-    print 'lossExpr',theano.pp(self.dataLossExpr)
-    formalArgs = inputs + [target] + _secondaryArgBindings()
-    return self.dataLossFun(*formalArgs)
+    formalArgs = inputs + [target] + self._secondaryArgBindings()
+    return self._unwrapOutputs(self.dataLossFun(*formalArgs))
 
+  def evalDataLossGrad(self,rawInputs,rawTarget):
+    # the loss depends on the rawInputs, which will usually be
+    # [x,target_y] and the parameters, which here are
+    # passed in as (pred,arity) keys
+    inputs = map(self._wrapDBVector, rawInputs)
+    target = self._wrapDBVector(rawTarget)
+    formalArgs = inputs + [target] + self._secondaryArgBindings()
+    return self._unwrapOutputs(self.dataLossGradFun(*formalArgs))
+
+  def applyOpToNonzerosOfDense(self,op,expr):
+    sparseExpr = TSB.clean(TSB.csr_from_dense(expr))
+    newData = op(TSB.csm_data(sparseExpr)).flatten()
+    newSparse = TS.CSR(newData, TSB.csm_indices(sparseExpr), TSB.csm_indptr(sparseExpr), TSB.csm_shape(sparseExpr))
+    return TSB.dense_from_sparse(newSparse)
 
   # for debugging output
 
@@ -283,7 +332,8 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
     if isinstance(fun,funs.SoftmaxFunction):
       # wrap inner function with softmax function
       inputs,subExpr = self.fun2Expr(fun.fun,sharedInputs,depth=depth)
-      return (inputs, TNN.nnet.softmax(subExpr) + self.nullSmoothing)
+      softmaxOverNonzeros = self.applyOpToNonzerosOfDense(TNN.nnet.softmax,subExpr+self.nullSmoothing)
+      return (inputs, softmaxOverNonzeros)
 
     elif isinstance(fun,funs.SumFunction):
       assert(len(fun.funs)>=1)

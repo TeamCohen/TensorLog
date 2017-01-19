@@ -496,9 +496,9 @@ class TestGrad(unittest.TestCase):
     #put the gradient into a single fact-string-indexed dictionary
     updates_with_string_keys = {}
     for (functor,arity),up in updates.items():
-      #print 'up for',functor,arity,'is',up
+      print 'testtensorlog update for',functor,arity,'is',up
       upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
-      #print 'upDict',upDict,'updates keys',updates.keys()
+      print 'upDict',upDict
       for fact,grad_of_fact in upDict.items():
         updates_with_string_keys[str(fact)] = grad_of_fact
     self.check_directions(updates_with_string_keys,expected)

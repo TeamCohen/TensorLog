@@ -11,7 +11,7 @@ import sys
 import theano
 
 TESTED_COMPILERS = [
-#  theanoxcomp.DenseMatDenseMsgCrossCompiler,
+  theanoxcomp.DenseMatDenseMsgCrossCompiler,
   theanoxcomp.SparseMatDenseMsgCrossCompiler,
 ]
 
@@ -118,25 +118,13 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       # evaluate the theano function and get the output y
       xc.show()
       print '== performing theano eval with',compilerClass,'=='
-      ys = xc.evalSymbols([input_symbol])
+      ys = xc.eval(xc.wrapSymbols([input_symbol]))
       y = ys[0]
       # theano output will a be (probably dense) message, so
       # just compare that maximal elements from these two dicts
       # are the same
       self.check_maxes_in_dicts(self.db.rowAsSymbolDict(y), expected_result_dict)
       print '== theano eval checks passed =='
-#      # cycle through the possible things to differentiate against
-#      # TODO move into gradient check
-#      for x in xc.subexprCacheVarBindings:
-#        #print '== grad with',compilerClass,'wrt',x,'=='
-#        pseudo_cost = xc.expr.sum()
-#        gx, = theano.grad(pseudo_cost,[x])
-#        #print 'grad pseudo_cost wrt',x,theano.pp(gx)
-#        train = theano.function(inputs=xc.exprArgs, outputs=[pseudo_cost,xc.expr],updates=[(x, (x - 0.1*gx))])
-#        #print '== update function =='
-#        #theano.printing.debugprint(train)
-#      print '== theano gradients computed =='
-
 
   def check_maxes_in_dicts(self,actual,expected):
     def maximalElements(d):
@@ -305,57 +293,24 @@ class TestXCGrad(testtensorlog.TestGrad):
   def xgrad_check(self,rule_strings,mode_string,params,xyPairs,expected):
     rules = testtensorlog.rules_from_strings(rule_strings)
     prog = tensorlog.Program(db=self.db,rules=rules)
-
-    x,y = xyPairs[0]
     data = testtensorlog.DataBuffer(self.db)
     for x,ys in xyPairs:
       data.add_data_symbols(x,ys)
-    print 'data.x =',data.get_x()
-    print 'data.y =',data.get_y()
     mode = declare.ModeDeclaration(mode_string)
     tlogFun = prog.compile(mode)
     for compilerClass in TESTED_COMPILERS:
       xc = compilerClass(prog.db)
-      xc.compile(tlogFun)
-      loss = xc.evalLoss([data.get_x()],data.get_y(),params)
+      xc.compile(tlogFun,params)
+      result,loss = xc.evalDataLoss([data.get_x()],data.get_y())
       print 'loss',loss
-
-#    (prog,updates) = self.xgrad_updates(rule_strings,mode,params,xyPairs)
-#    #put the gradients into a single fact-string-indexed dictionary
-#    updates_with_string_keys = {}
-#    for (functor,arity),up in updates.items():
-#      #print 'up for',functor,arity,'is',up
-#      up_dict = prog.db.matrixAsPredicateFacts(functor,arity,up)
-#      #print 'up_dict',up_dict,'updates keys',updates.keys()
-#      for fact,grad_of_fact in up_dict.items():
-#        updates_with_string_keys[str(fact)] = grad_of_fact
-#        self.check_directions(updates_with_string_keys,expected)
-
-def xgrad_updates(self,rule_strings,mode,params,xyPairs):
-  """
-  rule_strings - a list of tensorlog rules to use with the db.
-  mode_string - mode for the data.
-  params - list of (functor,arity) pairs that gradients will be computed for
-  xyPairs - list of pairs (x,[y1,..,yk]) such that the desired result for x is uniform dist over y's
-
-  return (program,updates)
-  """
-  #build program
-  rules = testtensorlog.rules_from_strings(rule_strings)
-  prog = tensorlog.Program(db=self.db,rules=rules)
-  #build dataset
-  data = DataBuffer(self.db)
-  for x,ys in xyPairs:
-    data.add_data_symbols(x,ys)
-  #mark params: should be pairs (functor,arity)
-  prog.db.clearParamMarkings()
-  for functor,arity in params:
-    prog.db.markAsParam(functor,arity)
-  #compute gradient
-  learner = learn.OnePredFixedRateGDLearner(prog)
-  updates = learner.crossEntropyGrad(mode,data.get_x(),data.get_y())
-  return prog,updates
-
+      updates = xc.evalDataLossGrad([data.get_x()],data.get_y())
+      updates_with_string_keys = {}
+      for (functor,arity),up in zip(params,updates):
+        print 'testxcomp update for',functor,arity,'is',up
+        upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
+        for fact,grad_of_fact in upDict.items():
+          updates_with_string_keys[str(fact)] = grad_of_fact
+      self.check_directions(updates_with_string_keys,expected)
 
 if __name__ == "__main__":
   unittest.main()
