@@ -4,9 +4,9 @@ live theano, for instrumentation:
 
 Next actions:
 
- - cleanup testtensorlog, map additional tests to testxcomp: up to testlearn and testgradient
- - actual theano-based learner
- - refactor to allow multiple cross-compilers
+ - fix reverse_if bug
+ - look at sparse messages in actual theano-based learner
+ - look at tensorflow
 
 Bigger steps:
 
