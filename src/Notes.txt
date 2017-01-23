@@ -1,0 +1,16 @@
+live theano, for instrumentation:
+
+ - export PYTHONPATH=/usr/local/google/home/cohenw/code/TensorLog/src:/usr/local/google/home/cohenw/code/Theano
+
+Next actions:
+
+ - cleanup testtensorlog, map additional tests to testxcomp: up to testlearn and testgradient
+ - actual theano-based learner
+ - refactor to allow multiple cross-compilers
+
+Bigger steps:
+
+ - typing for tensorlog.  add typed matrixDB, type declarations/inference for IDB?
+ - ideas - unary predicate for each type? sparse matrix mapping type-specific code to type-independent code?
+
+

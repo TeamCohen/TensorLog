@@ -4,7 +4,7 @@ import theano
 import theano.tensor as TT
 import funs
 
-theano.config.exception_verbosity='high'
+#theano.config.exception_verbosity='high'
 
 def build_crossEntropyExpr(xc):
     P=TT.dmatrix("P")

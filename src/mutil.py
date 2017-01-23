@@ -21,7 +21,7 @@ conf.maxExpandFactor = 3;            conf.help.maxExpand = 'K, where you can can
 conf.maxExpandIntercept = 10000;     conf.help.maxExpand = 'B, where you can can use B + KM the sparse-matrix memory M when densifying matrices'
 conf.warnAboutDensity = False;       conf.help.warnAboutDensity = 'warn when you fail to densify a matrix'
 
-NP.seterr(all='raise',under='ignore') 
+NP.seterr(all='raise',under='ignore')
 # stop execution & print traceback for various floating-point issues
 # except underflow; aiui we don't mind if very small numbers go to zero --kmm
 
@@ -29,7 +29,7 @@ NP.seterr(all='raise',under='ignore')
 NONETYPE=type(None) 
 
 def summary(mat):
-    """Helpful string describing a matrix for debugging.""" 
+    """Helpful string describing a matrix for debugging."""
     checkCSR(mat)
     return 'nnz %d rows %d cols %d' % (mat.nnz,numRows(mat),numCols(mat))
 
@@ -191,7 +191,7 @@ def repeat(row,n):
     else:
         ptrs = NP.zeros(n+1, dtype='int')
     return SS.csr_matrix((d,inds,ptrs),shape=(n,numCols(row)), dtype='float64')
-        
+
 
 def alterMatrixRows(mat,alterationFun):
     """ apply alterationFun(data,lo,hi) to each row.
@@ -239,9 +239,9 @@ def broadcastAndComponentwiseMultiply(m1,m2):
     else:
         assert r1==1 or r2==1, 'mismatched matrix sizes: #rows %d,%d' % (r1,r2)
     if r1==1:
-        return multiplyByBroadcastRowVec(m1,m2)        
+        return multiplyByBroadcastRowVec(m1,m2)
     else:
-        return multiplyByBroadcastRowVec(m1,m2)        
+        return multiplyByBroadcastRowVec(m1,m2)
 
 def multiplyByBroadcastRowVec(m,v):
     (dm,dv,i) = codensify(m,v)
@@ -256,7 +256,7 @@ def multiplyByBroadcastRowVec(m,v):
 def broadcastAndWeightByRowSum(m1,m2):
     checkCSR(m1); checkCSR(m2)
     """ Optimized combination of broadcast2 and weightByRowSum operations
-    """ 
+    """
     if conf.densifyWeightByRowSum:
         (d1,d2,i) = codensify(m1, m2)
         if type(d1)!=NONETYPE:
@@ -302,7 +302,7 @@ def shuffleRows(m,shuffledRowNums=None):
             indices[indptr[i]+j] = m.indices[m.indptr[r]+j]
     result = SS.csr_matrix((data,indices,indptr), shape=m.shape, dtype='float64')
     result.sort_indices()
-    return result    
+    return result
 
 def selectRows(m,lo,hi):
     """Return a sparse matrix that copies rows lo...hi-1 of m.  If hi is
@@ -311,12 +311,12 @@ def selectRows(m,lo,hi):
     if hi>numRows(m): hi=numRows(m)
     #data for rows [lo, hi) are in cells [jLo...jHi)
     jLo = m.indptr[lo]
-    jHi = m.indptr[hi]  
+    jHi = m.indptr[hi]
     #allocate space
     data = NP.zeros(jHi - jLo)
     indices = NP.zeros(jHi - jLo, dtype='int')
     indptr = NP.zeros(hi - lo + 1, dtype='int')
-    for i in range(hi - lo): 
+    for i in range(hi - lo):
         rowLen = m.indptr[lo+i+1] - m.indptr[lo+i]
         #translate the index pointers
         indptr[i] = m.indptr[lo+i] - jLo
