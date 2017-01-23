@@ -1,0 +1,8 @@
+predict	pb	pos
+predict	yc	pos
+predict	rb2	pos
+predict	rp	pos
+predict	bp	neg
+predict	he	neg
+predict	wt	neg
+

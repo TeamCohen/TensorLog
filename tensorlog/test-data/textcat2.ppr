@@ -1,0 +1,3 @@
+predict(X,Pos) :- assign(Pos,pos) {posWeighted(W): hasWord(X,W)}.
+predict(X,Neg) :- assign(Neg,neg) {negWeighted(W): hasWord(X,W)}.
+

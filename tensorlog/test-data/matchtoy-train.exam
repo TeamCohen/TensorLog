@@ -1,0 +1,5 @@
+match	r1	r2	r1
+match	r3	r4	r3
+
+amatch	a2	a1	a2
+amatch	a4	a3	a4

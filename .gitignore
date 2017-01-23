@@ -1,0 +1,16 @@
+#ignore these files
+*.pyc
+
+*~
+
+tensorlog/fb15k-valid.db
+tensorlog/fb15k-valid.db/*
+tensorlog/tlog-cache
+tensorlog/tlog-cache/*
+
+datasets/*/actual.txt
+datasets/*/eval.log
+datasets/*/expt.log
+datasets/*/tmp-cache/*
+datasets/*/inputs/*
+
