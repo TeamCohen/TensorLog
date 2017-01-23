@@ -380,7 +380,35 @@ class TestXCGrad(testtensorlog.TestGrad):
                      [('william',['rachel','sarah','lottie'])],
                      {'feat(r1)': +1,'feat(r2)': -1})
 
+  def learnxc_check(self,rule_strings,mode_string,params,xyPairs,expected):
+    print "XLearner loss/grad eval"
+    rules = testtensorlog.rules_from_strings(rule_strings)
+    prog = tensorlog.Program(db=self.db,rules=rules)
+    mode = declare.ModeDeclaration(mode_string)
+    tlogFun = prog.compile(mode)
+    # TODO: not working yet for mini-batches so check each example
+    # individually
+    for x,ys in xyPairs:
+      data = testtensorlog.DataBuffer(self.db)
+      data.add_data_symbols(x,ys)
+      for compilerClass in TESTED_COMPILERS:
+        xc = compilerClass(prog.db)
+        xc.compile(tlogFun,params)
+        
+        learner = learnxc.XLearner(prog,xc)
+        updates = learner.crossEntropyGrad(mode,data.get_x(),data.get_y())
+        updates_with_string_keys = {}
+        for (functor,arity),up in zip(params,updates):
+          print 'testxcomp update for',functor,arity,'is',up
+          upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
+          print 'upDict',upDict
+          for fact,grad_of_fact in upDict.items():
+            updates_with_string_keys[str(fact)] = grad_of_fact
+        self.check_directions(updates_with_string_keys,expected)
+    
+
   def xgrad_check(self,rule_strings,mode_string,params,xyPairs,expected):
+    print "direct loss/grad eval"
     rules = testtensorlog.rules_from_strings(rule_strings)
     prog = tensorlog.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
@@ -404,11 +432,13 @@ class TestXCGrad(testtensorlog.TestGrad):
         updates = xc.evalDataLossGrad([data.get_x()],data.get_y())
         updates_with_string_keys = {}
         for (functor,arity),up in zip(params,updates):
-          print 'testxcomp update for',functor,arity,'is',up
+          print 'testxcomp update for',functor,arity,'is'
+          print up
           upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
           for fact,grad_of_fact in upDict.items():
             updates_with_string_keys[str(fact)] = grad_of_fact
         self.check_directions(updates_with_string_keys,expected)
+    self.learnxc_check(rule_strings,mode_string,params,xyPairs,expected)
 
 if __name__ == "__main__":
     if len(sys.argv)==1:
