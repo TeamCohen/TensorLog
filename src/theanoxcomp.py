@@ -72,26 +72,24 @@ class AbstractCrossCompiler(object):
 
   def getSubExpr(self,param):
     """ Find a subexpression/variable that corresponds to a DB functor,arity pair """
-    assert len(param)==2 and (param[1]==1 or param[1]==2), ('invalid parameter spec %r'%param)
-    (pred,arity)=param
-    if arity==2:
-      m = declare.ModeDeclaration(pred+"(i,o)")
-    else:
-      m = declare.ModeDeclaration(pred+"(o)")
-    return self.subexprCache.get(m)
+    assert len(param)==2 and (param[1]==1 or param[1]==2), 'parameter spec should be functor,arity pair'
+    assert param in self.subexprCache,'key is %r subexprCache is %r' % (param,self.subexprCache)
+    return self.subexprCache[param]
 
   def vector(self, matMode):
     """ Wraps a call to db.vector(), but will cache the results as a variable
     """
     assert matMode.arity==1
-    if (matMode) not in self.subexprCache:
+    key = (matMode.getFunctor(),1)
+    if (key) not in self.subexprCache:
       variable_name = "v__" + matMode.getFunctor()
-      val = self._wrapDBVector(self.db.vector(matMode)) #ignores all but functor
-      self._extendSubexprCache(matMode, self._vectorVar(variable_name), val)
-    return self.subexprCache[matMode]
+      val = self._wrapDBVector(self.db.vector(matMode)) #ignores all but functor for arity 1
+      self._extendSubexprCache(key, self._vectorVar(variable_name), val)
+    return self.subexprCache[key]
 
   def constantVector(self, variable_name, val):
-    if variable_name not in self.subexprCache:
+    key = (variable_name,0)
+    if key not in self.subexprCache:
       wrapped_val = self._wrapDBVector(val)
       self._extendSubexprCache(variable_name, self._vectorVar(variable_name), wrapped_val)
     return self.subexprCache[variable_name]
@@ -100,15 +98,17 @@ class AbstractCrossCompiler(object):
     """ Wraps a call to db.matrix(), but will cache the results as a variable or expression.
     """
     # cache an expression for the un-transposed version of the matrix
+    print '==> called matrix',matMode,transpose
     assert matMode.arity==2
-    if (matMode) not in self.subexprCache:
+    key = (matMode.getFunctor(),2)
+    if (key) not in self.subexprCache:
       variable_name = "M__" + matMode.getFunctor()
       val = self._wrapDBMatrix(self.db.matrix(matMode,False))
-      self._extendSubexprCache(matMode, self._matrixVar(variable_name), val)
-    if transpose:
-      return self.subexprCache[matMode].T
+      self._extendSubexprCache(key, self._matrixVar(variable_name), val)
+    if self.db.transposeNeeded(matMode,transpose):
+      return self.subexprCache[key].T
     else:
-      return self.subexprCache[matMode]
+      return self.subexprCache[key]
 
   def ones(self):
     """Wraps a call to db.ones(), but will cache the result """
@@ -439,7 +439,6 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     elif isinstance(op,ops.AssignPreimageToVar):
       mExpr = self.matrix(op.matMode)
       # TODO: not sure why this simple expression doesn't work: TSB.dot(self.ones(), mExpr.transpose())
-      # return TSB.dot(self.ones(), mExpr.transpose())
       return TSB.structured_dot(mExpr,self.ones().transpose()).transpose()
     elif isinstance(op,ops.ComponentwiseVecMulOp):
       return thEnv[op.src] * thEnv[op.src2]
