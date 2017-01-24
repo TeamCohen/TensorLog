@@ -19,87 +19,6 @@ TESTED_COMPILERS = [
 
 import funs
 import ops
-
-class TestXCGrad(testtensorlog.TestGrad):
-    
-    def testIf(self):
-        rules = ['p(X,Y):-sister(X,Y).']
-        mode = 'p(i,o)'  
-        params = [('sister',2)] 
-        self.xcGradCheck(rules, mode, params,
-                       [('william',['rachel','sarah'])], 
-                       {'sister(william,rachel)': +1,'sister(william,sarah)': +1,'sister(william,lottie)': -1})
-        self.xcGradCheck(rules, mode, params, 
-                       [('william',['lottie'])], 
-                       {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
-    
-    def xcGradCheck(self,ruleStrings,modeString,params,xyPairs,expected):
-        """
-        expected - dict mapping strings encoding facts to expected sign of the gradient
-        """
-        mode = declare.ModeDeclaration(modeString)
-        
-        #(prog,updates) = self.gradUpdates(ruleStrings,mode,params,xyPairs)
-        
-        # this bit from gradUpdates():
-                #build program
-        rules = parser.RuleCollection()
-        for r in ruleStrings:
-            rules.add(parser.Parser.parseRule(r))
-        prog = tensorlog.Program(db=self.db,rules=rules)
-        #build dataset
-        data = testtensorlog.DataBuffer(self.db)
-        for x,ys in xyPairs:
-            data.addDataSymbols(x,ys)
-        #mark params: should be pairs (functor,arity)
-        prog.db.clearParamMarkings()
-        for functor,arity in params:
-            prog.db.markAsParam(functor,arity)
-        print "parameters marked"
-        #compute gradient
-        learner = learnxc.XLearner(prog)
-        #P = learner.predict(mode,data.getX())
-        #learner.xc.show()
-        #print "Y\n",data.getY()
-        #print "Pth\n",type(P),P
-        tlearner=learn.OnePredFixedRateGDLearner(prog,epochs=5)
-        #PTL = tlearner.predict(mode,data.getX())
-        #print "PTL\n",type(PTL),PTL
-        updates = {}
-        #gx=[ theano.grad(learner.xc.expr.sum(),x) for x in learner.xc.exprArgs]
-        #print theano.pp(gx[0])
-        #print theano.function(inputs=learner.xc.exprArgs,outputs=gx[0])(learner.xc.prepare([data.getX()]))
-        updates = learner.crossEntropyGrad(mode,data.getX(),data.getY())
-        
-        # compare to pure-tl
-        tupdates = tlearner.crossEntropyGrad(mode,data.getX(),data.getY())
-        
-        print "updates:",[(k,learner.xc.sparsifyMat(v)) for (k,v) in updates.items()]
-        print "tl updates:",tupdates.items()
-        
-        # debugging with -i
-        if False:
-            return prog,learner,updates,tlearner,tupdates
-        
-        # now back to gradCheck():
-        
-        #put the gradient into a single fact-string-indexed dictionary
-        updatesWithStringKeys = {}
-        for param,up in updates.items():
-            i = learner.xc.paramArgs.index(param)
-            (functor,arity) = learner.xc.paramVals[i] # hack -- need a better way to swap between th and tl notation
-            #print 'up for',functor,arity,'is',up
-            upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
-            print 'upDict',"\n".join([str(x) for x in upDict.items()])
-            
-            # check against pure-tl updates for the same problem
-            tlupDict = prog.db.matrixAsPredicateFacts(functor,arity,tupdates[ (functor,arity) ])
-            print "tlupDict","\n".join([str(x) for x in tlupDict.items()])
-            
-            print 'updates keys',updates.keys()
-            for fact,gradOfFact in upDict.items():
-                updatesWithStringKeys[str(fact)] = gradOfFact
-        self.checkDirections(updatesWithStringKeys,expected)
     
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
@@ -267,14 +186,14 @@ class TestXCGrad(testtensorlog.TestGrad):
                      {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
 
   def test_reverse_if(self):
+#TODO fix
     pass
-# TODO fix
-#    rules = ['p(X,Y):-parent(Y,X).']
-#    mode = 'p(i,o)'
-#    params = [('parent',2)]
-#    self.xgrad_check(rules, mode, params,
-#                     [('lottie',['charlotte'])],
-#                     {'parent(charlotte,lottie)': +1,'parent(lucas,lottie)': -1})
+#     rules = ['p(X,Y):-parent(Y,X).']
+#     mode = 'p(i,o)'
+#     params = [('parent',2)]
+#     self.xgrad_check(rules, mode, params,
+#                      [('lottie',['charlotte'])],
+#                      {'parent(charlotte,lottie)': +1,'parent(lucas,lottie)': -1})
 
   def test_chain1(self):
     rules = ['p(X,Z):-sister(X,Y),child(Y,Z).']
