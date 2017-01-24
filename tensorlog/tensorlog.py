@@ -21,7 +21,7 @@ import mutil
 import debug
 import ops 
 
-VERSION = "1.2.4"
+VERSION = "1.2.5"
 
 # externally visible changes:
 #
@@ -32,14 +32,16 @@ VERSION = "1.2.4"
 # version 1.2.0: not sure, really.
 # version 1.2.1: plearn replaces epoch-level status monitoring with merged results minibatches
 # version 1.2.2: add learner option to expt command-line
-# version 1.2.3: 
+# version 1.2.3:
 #    add p(X,Y) :- ... {foo(F): q(X,F)} templates, propprProg.setRuleWeights(), propprProg.setFeatureWeights()
-#    list --prog xxx --ruleids            
+#    list --prog xxx --ruleids
 #    more options for expt
-# version 1.2.4: 
+# version 1.2.4:
 #    added --params and --weightEpsilon to expt.py
 #    made conf.ops.long_trace a number
 #    added interp.set()
+# version 1.2.5:
+#    cross-compilation
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
@@ -546,5 +548,3 @@ if __name__ == "__main__":
         print "Usage: python -i -m tensorlog [opts]"
         print "- For option help: 'python -m tensorlog --help'"
         print "- The interpreter is really only useful with the -i option."
-
-

@@ -16,20 +16,22 @@ import os
 import os.path
 import shutil
 
-import funs
-import tensorlog
-import declare
-import parser
-import matrixdb
-import bpcompiler
-import ops
-import funs
-import learn
-import mutil
-import plearn
-import dataset
-import expt
+import tensorlog.funs
+import tensorlog.tensorlog
+import tensorlog.declare
+import tensorlog.parser
+import tensorlog.matrixdb
+import tensorlog.bpcompiler
+import tensorlog.ops
+import tensorlog.funs
+import tensorlog.learn
+import tensorlog.mutil
+import tensorlog.plearn
+import tensorlog.dataset
+import tensorlog.expt
 
+
+TEST_DATA_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),"../test-data/")
 
 def softmax_normalize(expected_result_dict):
   """Compute the softmax of the values in a dictionary, i.e.,
@@ -44,9 +46,9 @@ def rules_from_strings(rule_strings):
   """Convert a list of strings to a RuleCollection"""
   for r in rule_strings:
     print '>',r
-    rules = parser.RuleCollection()
+    rules = tensorlog.parser.RuleCollection()
     for r in rule_strings:
-      rules.add(parser.Parser.parseRule(r))
+      rules.add(tensorlog.parser.Parser.parseRule(r))
   return rules
 
 class DataBuffer(object):
@@ -75,18 +77,18 @@ class DataBuffer(object):
     return self.get_x(),self.get_y()
   def get_x(self):
     assert self.xs, 'no data inserted for mode %r in %r' % (mode,self.xs)
-    return mutil.stack(self.xs)
+    return tensorlog.mutil.stack(self.xs)
   def get_y(self):
     assert self.ys, 'no labels inserted for mode %r' % mode
-    return mutil.stack(self.ys)
+    return tensorlog.mutil.stack(self.ys)
 
 class TestModeDeclaration(unittest.TestCase):
   """ Test for mode declarations """
 
   def test_hash(self):
     d = {}
-    m1 = declare.ModeDeclaration('foo(i,o)')
-    m2 = declare.ModeDeclaration('foo(i, o)')
+    m1 = tensorlog.declare.ModeDeclaration('foo(i,o)')
+    m2 = tensorlog.declare.ModeDeclaration('foo(i, o)')
     self.assertTrue(m1==m2)
     d[m1] = 1.0
     self.assertTrue(m2 in d)
@@ -97,8 +99,11 @@ class TestInterp(unittest.TestCase):
   """
 
   def setUp(self):
-    optdict,args = tensorlog.parseCommandLine("--db test/textcattoy.cfacts --prog test/textcat.ppr --proppr".split())
-    self.ti = tensorlog.Interp(optdict['prog'])
+    optdict,args = tensorlog.tensorlog.parseCommandLine(
+        ["--db", os.path.join(TEST_DATA_DIR,"textcattoy.cfacts"),
+         "--prog", os.path.join(TEST_DATA_DIR,"textcat.ppr"),
+         "--proppr"])
+    self.ti = tensorlog.tensorlog.Interp(optdict['prog'])
     self.ti.prog.setFeatureWeights()
 
   def test_list(self):
@@ -111,13 +116,13 @@ class TestInterp(unittest.TestCase):
 class TestSmallProofs(unittest.TestCase):
 
   def setUp(self):
-    self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'fam.cfacts'))
 
   def test_if(self):
     self.inference_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
 
   def test_failure(self):
-    self.inference_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
+    self.inference_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {tensorlog.matrixdb.NULL_ENTITY_NAME:1.0})
 
   def test_reverse_if(self):
     self.inference_check(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
@@ -146,9 +151,9 @@ class TestSmallProofs(unittest.TestCase):
     self.inference_check(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
 
   def test_rec1(self):
-    tensorlog.DEFAULT_MAXDEPTH=4
+    tensorlog.tensorlog.DEFAULT_MAXDEPTH=4
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
-    tensorlog.DEFAULT_MAXDEPTH=10
+    tensorlog.tensorlog.DEFAULT_MAXDEPTH=10
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
 
   def test_const_output(self):
@@ -190,8 +195,8 @@ class TestSmallProofs(unittest.TestCase):
     print 'testing inference for mode',mode_string,'on input',inputSymbol,'with rules:'
     softmax_normalize(expected_result_dict)
     rules = rules_from_strings(rule_strings)
-    prog = tensorlog.Program(db=self.db,rules=rules)
-    mode = declare.ModeDeclaration(mode_string)
+    prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
+    mode = tensorlog.declare.ModeDeclaration(mode_string)
     fun = prog.compile(mode)
     print "\n".join(fun.pprint())
     y1 = prog.evalSymbols(mode,[inputSymbol])
@@ -202,8 +207,8 @@ class TestSmallProofs(unittest.TestCase):
     print 'testing inference for mode',mode_string,'on input',inputSymbol,'with proppr rules:'
     softmax_normalize(expected_result_dict)
     rules = rules_from_strings(rule_strings)
-    prog = tensorlog.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
-    mode = declare.ModeDeclaration(mode_string)
+    prog = tensorlog.tensorlog.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
+    mode = tensorlog.declare.ModeDeclaration(mode_string)
     fun = prog.compile(mode)
 
     y1 = prog.evalSymbols(mode,[inputSymbol])
@@ -215,8 +220,8 @@ class TestSmallProofs(unittest.TestCase):
 
   def check_dicts(self,actual, expected):
     print 'actual:  ',actual
-    if not matrixdb.NULL_ENTITY_NAME in expected:
-      expected[matrixdb.NULL_ENTITY_NAME]=0.0
+    if not tensorlog.matrixdb.NULL_ENTITY_NAME in expected:
+      expected[tensorlog.matrixdb.NULL_ENTITY_NAME]=0.0
     if expected:
       print 'expected:',expected
       self.assertEqual(len(actual.keys()), len(expected.keys()))
@@ -229,7 +234,7 @@ class TestMultiRowOps(unittest.TestCase):
 
   def setUp(self):
     #logging.basicConfig(level=logging.DEBUG)
-    self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'fam.cfacts'))
   def testThing(self):
     self.compareCheck([
     "p(X,Y):-q(X,Y).",
@@ -246,7 +251,7 @@ class TestMultiRowOps(unittest.TestCase):
   def compareCheck(self,rule_strings,mode_string,input_symbols,expected_result_dicts):
     for d in expected_result_dicts:
       softmax_normalize(d)
-      d[matrixdb.NULL_ENTITY_NAME] = 0
+      d[tensorlog.matrixdb.NULL_ENTITY_NAME] = 0
     self.inference_check(rule_strings,mode_string,input_symbols,expected_result_dicts)
     self.predictCheck(rule_strings,mode_string,input_symbols,expected_result_dicts)
 
@@ -254,11 +259,11 @@ class TestMultiRowOps(unittest.TestCase):
     print '\n\ntesting inference for mode',mode_string,'on input',input_symbols,'with rules:'
     for r in rule_strings:
       print '>',r
-    rules = parser.RuleCollection()
+    rules = tensorlog.parser.RuleCollection()
     for r in rule_strings:
-      rules.add(parser.Parser.parseRule(r))
-    prog = tensorlog.Program(db=self.db,rules=rules)
-    mode = declare.ModeDeclaration(mode_string)
+      rules.add(tensorlog.parser.Parser.parseRule(r))
+    prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
+    mode = tensorlog.declare.ModeDeclaration(mode_string)
 
     fun = prog.compile(mode)
     for i in range(len(input_symbols)):
@@ -269,11 +274,11 @@ class TestMultiRowOps(unittest.TestCase):
     print '\n\ntesting predictions for mode',mode_string,'on input',input_symbols,'with rules:'
     for r in rule_strings:
       print '>',r
-    rules = parser.RuleCollection()
+    rules = tensorlog.parser.RuleCollection()
     for r in rule_strings:
-      rules.add(parser.Parser.parseRule(r))
-    prog = tensorlog.Program(db=self.db,rules=rules)
-    mode = declare.ModeDeclaration(mode_string)
+      rules.add(tensorlog.parser.Parser.parseRule(r))
+    prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
+    mode = tensorlog.declare.ModeDeclaration(mode_string)
 
     td = []
     print 'training data:'
@@ -285,7 +290,7 @@ class TestMultiRowOps(unittest.TestCase):
     trainingData.addLines(td)
     trainSpec = (mode.functor,mode.arity)
     X,Y = trainingData.matrixAsTrainingData(*trainSpec)
-    learner = learn.OnePredFixedRateGDLearner(prog,epochs=5)
+    learner = tensorlog.learn.OnePredFixedRateGDLearner(prog,epochs=5)
     P0 = learner.predict(mode,X)
 
   def check_dicts(self,actual, expected):
@@ -302,7 +307,7 @@ class TestMatrixRecursion(unittest.TestCase):
   """
 
   def setUp(self):
-    self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'fam.cfacts'))
 
   def testRec0(self):
     self.mat_inference_check(['p(X,Y):-child(X,Y).','p(X,Y):-r1(X,Y).','r1(X,Y):-child(X,Y).'],
@@ -326,10 +331,10 @@ class TestMatrixRecursion(unittest.TestCase):
   def mat_inference_check(self,rule_strings,mode_string,input_symbols,expected_result_dict,max_depth=None):
     print 'testing inference for mode',mode_string,'on inputs',input_symbols,'with rules:'
     rules = rules_from_strings(rule_strings)
-    prog = tensorlog.Program(db=self.db,rules=rules)
+    prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
     if max_depth!=None: prog.maxDepth=max_depth
-    mode = declare.ModeDeclaration(mode_string)
-    X = mutil.stack(map(lambda s:prog.db.onehot(s), input_symbols))
+    mode = tensorlog.declare.ModeDeclaration(mode_string)
+    X = tensorlog.mutil.stack(map(lambda s:prog.db.onehot(s), input_symbols))
     actual = prog.eval(mode,[X])
     print 'compiled functions',prog.function.keys()
     self.check_dict_of_dicts(prog.db.matrixAsSymbolDict(actual), expected_result_dict)
@@ -341,8 +346,8 @@ class TestMatrixRecursion(unittest.TestCase):
     for r in actual.keys():
       da = actual[r]
       de = expected[r]
-      if not matrixdb.NULL_ENTITY_NAME in de:
-        de[matrixdb.NULL_ENTITY_NAME]=0.0
+      if not tensorlog.matrixdb.NULL_ENTITY_NAME in de:
+        de[tensorlog.matrixdb.NULL_ENTITY_NAME]=0.0
       self.assertTrue(len(da.keys())==len(de.keys()))
       for k in da.keys():
         self.assertAlmostEqual(da[k],de[k],delta=0.05)
@@ -350,7 +355,7 @@ class TestMatrixRecursion(unittest.TestCase):
 class TestGrad(unittest.TestCase):
 
   def setUp(self):
-    self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'fam.cfacts'))
 
   def test_if(self):
     rules = ['p(X,Y):-sister(X,Y).']
@@ -491,7 +496,7 @@ class TestGrad(unittest.TestCase):
     """
     expected - dict mapping strings encoding facts to expected sign of the gradient
     """
-    mode = declare.ModeDeclaration(mode_string)
+    mode = tensorlog.declare.ModeDeclaration(mode_string)
     (prog,updates) = self.grad_updates(rule_strings,mode,params,xyPairs)
     #put the gradient into a single fact-string-indexed dictionary
     updates_with_string_keys = {}
@@ -523,7 +528,7 @@ class TestGrad(unittest.TestCase):
     """
     #build program
     rules = rules_from_strings(rule_strings)
-    prog = tensorlog.Program(db=self.db,rules=rules)
+    prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
     #build dataset
     data = DataBuffer(self.db)
     for x,ys in xyPairs:
@@ -533,7 +538,7 @@ class TestGrad(unittest.TestCase):
     for functor,arity in params:
       prog.db.markAsParam(functor,arity)
     #compute gradient
-    learner = learn.OnePredFixedRateGDLearner(prog)
+    learner = tensorlog.learn.OnePredFixedRateGDLearner(prog)
     updates = learner.crossEntropyGrad(mode,data.get_x(),data.get_y())
     return prog,updates
 
@@ -541,34 +546,39 @@ class TestProPPR(unittest.TestCase):
 
   def setUp(self):
     #logging.basicConfig(level=logging.DEBUG)
-    self.prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr","test/textcattoy.cfacts"])
+    self.prog = tensorlog.tensorlog.ProPPRProgram.load(
+        [os.path.join(TEST_DATA_DIR,'textcat.ppr'),
+         os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')])
     self.labeledData = self.prog.db.createPartner()
     self.prog.db.moveToPartner(self.labeledData,'train',2)
     self.prog.db.moveToPartner(self.labeledData,'test',2)
     self.prog.setFeatureWeights()
-    self.xsyms,self.X,self.Y = self.loadExamples("test/textcattoy-train.examples",self.prog.db)
+    self.xsyms,self.X,self.Y = self.loadExamples(
+        os.path.join(TEST_DATA_DIR,'textcattoy-train.examples'),
+        self.prog.db)
     self.numExamples = self.X.get_shape()[0]
     self.numFeatures = self.X.get_shape()[1]
-    self.mode = declare.ModeDeclaration('predict(i,o)')
+    self.mode = tensorlog.declare.ModeDeclaration('predict(i,o)')
     self.numWords = \
       {'dh':4.0, 'ft':5.0, 'rw':3.0, 'sc':5.0, 'bk':5.0,
        'rb':4.0, 'mv':8.0,  'hs':9.0, 'ji':6.0, 'tf':8.0, 'jm':8.0 }
     self.rawPos = "dh ft rw sc bk rb".split()
     self.rawNeg = "mv hs ji tf jm".split()
-    self.rawData = {'dh':	'a	pricy	doll	house',
-            'ft':	'a	little	red	fire	truck',
-            'rw':	'a	red	wagon',
-            'sc':	'a	pricy	red	sports	car',
-            'bk':	'punk	queen	barbie	and	ken',
-            'rb':	'a	little	red	bike',
-            'mv':	'a	big	7-seater	minivan	with	an	automatic	transmission',
-            'hs':	'a	big	house	in	the	suburbs	with	crushing	mortgage',
-            'ji':	'a	job	for	life	at	IBM',
-            'tf':	'a	huge	pile	of	tax	forms	due	yesterday',
-            'jm':	'huge	pile	of	junk	mail	bills	and	catalogs'}
+    self.rawData = {
+        'dh': 'a pricy doll house',
+        'ft': 'a little red fire truck',
+        'rw': 'a red wagon',
+        'sc': 'a pricy red sports car',
+        'bk': 'punk queen barbie and ken',
+        'rb': 'a little red bike',
+        'mv': 'a big 7-seater minivan with an automatic transmission',
+        'hs': 'a big house in the suburbs with crushing mortgage',
+        'ji': 'a job for life at IBM',
+        'tf': 'a huge pile of tax forms due yesterday',
+        'jm': 'huge pile of junk mail bills and catalogs'}
 
   def testDBKeys(self):
-    self.assertTrue(self.prog.db.stab.hasId(matrixdb.NULL_ENTITY_NAME))
+    self.assertTrue(self.prog.db.stab.hasId(tensorlog.matrixdb.NULL_ENTITY_NAME))
 
   def testNativeRow(self):
     for i in range(self.numExamples):
@@ -589,13 +599,13 @@ class TestProPPR(unittest.TestCase):
   def testGradMatrix(self):
     data = DataBuffer(self.prog.db)
     X,Y = self.labeledData.matrixAsTrainingData('train',2)
-    learner = learn.OnePredFixedRateGDLearner(self.prog)
-    updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X,Y)
+    learner = tensorlog.learn.OnePredFixedRateGDLearner(self.prog)
+    updates =  learner.crossEntropyGrad(tensorlog.declare.ModeDeclaration('predict(i,o)'),X,Y)
     w = updates[('weighted',1)]
     def checkGrad(i,x,psign,nsign):
       ri = w.getrow(i)
       di = self.prog.db.rowAsSymbolDict(ri)
-      for toki in self.rawData[x].split("\t"):
+      for toki in self.rawData[x].split():
         posToki = toki+'_pos'
         negToki = toki+'_neg'
         self.assertTrue(posToki in di)
@@ -614,16 +624,19 @@ class TestProPPR(unittest.TestCase):
     self.assertFalse(self.prog.db.inDB('test',2))
 
   def testMultiLearn1(self):
-    mode = declare.ModeDeclaration('predict(i,o)')
-    dset = dataset.Dataset.loadExamples(self.prog.db,"test/toytrain.examples",proppr=True)
+    mode = tensorlog.declare.ModeDeclaration('predict(i,o)')
+    dset = tensorlog.dataset.Dataset.loadExamples(
+        self.prog.db,
+        os.path.join(TEST_DATA_DIR,"toytrain.examples"),
+        proppr=True)
     for mode in dset.modesToLearn():
       X = dset.getX(mode)
       Y = dset.getY(mode)
       print mode
-      print "\tX "+mutil.pprintSummary(X)
-      print "\tY "+mutil.pprintSummary(Y)
+      print "\tX "+tensorlog.mutil.pprintSummary(X)
+      print "\tY "+tensorlog.mutil.pprintSummary(Y)
 
-    learner = learn.FixedRateGDLearner(self.prog,epochs=5)
+    learner = tensorlog.learn.FixedRateGDLearner(self.prog,epochs=5)
     P0 = learner.datasetPredict(dset)
     acc0 = learner.datasetAccuracy(dset,P0)
     xent0 = learner.datasetCrossEntropy(dset,P0)
@@ -640,7 +653,10 @@ class TestProPPR(unittest.TestCase):
     self.assertTrue(xent0>xent1)
     self.assertTrue(acc1==1)
 
-    Udset = dataset.Dataset.loadExamples(self.prog.db,"test/toytest.examples",proppr=True)
+    Udset = tensorlog.dataset.Dataset.loadExamples(
+        self.prog.db,
+        os.path.join(TEST_DATA_DIR,"toytest.examples"),
+        proppr=True)
 
     P2 = learner.datasetPredict(Udset)
     acc2 = learner.datasetAccuracy(Udset,P2)
@@ -652,9 +668,9 @@ class TestProPPR(unittest.TestCase):
 
 
   def testLearn(self):
-    mode = declare.ModeDeclaration('predict(i,o)')
+    mode = tensorlog.declare.ModeDeclaration('predict(i,o)')
     X,Y = self.labeledData.matrixAsTrainingData('train',2)
-    learner = learn.OnePredFixedRateGDLearner(self.prog,epochs=5)
+    learner = tensorlog.learn.OnePredFixedRateGDLearner(self.prog,epochs=5)
     P0 = learner.predict(mode,X)
     acc0 = learner.accuracy(Y,P0)
     xent0 = learner.crossEntropy(Y,P0,perExample=True)
@@ -688,12 +704,12 @@ class TestProPPR(unittest.TestCase):
       xsyms.append(sx)
       xs.append(db.onehot(sx))
       ys.append(db.onehot(sy))
-    return xsyms,mutil.stack(xs),mutil.stack(ys)
+    return xsyms,tensorlog.mutil.stack(xs),tensorlog.mutil.stack(ys)
 
   def check_dicts(self,actual, expected):
     print 'actual:  ',actual
-    if not matrixdb.NULL_ENTITY_NAME in expected:
-      expected[matrixdb.NULL_ENTITY_NAME]=0.0
+    if not tensorlog.matrixdb.NULL_ENTITY_NAME in expected:
+      expected[tensorlog.matrixdb.NULL_ENTITY_NAME]=0.0
     if expected:
       print 'expected:',expected
       self.assertEqual(len(actual.keys()), len(expected.keys()))
@@ -742,13 +758,17 @@ class TestExpt(unittest.TestCase):
     self.assertAlmostEqual(acc1,1.0)
 
   def runTCToyExpt(self):
-    db = matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test/textcattoy.cfacts')
+    db = tensorlog.matrixdb.MatrixDB.uncache(
+        'tlog-cache/textcat.db',
+        str(os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')))
     db.listing()
-    trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
-    testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
+    trainData = tensorlog.dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
+    testData = tensorlog.dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
     print 'trainData:\n','\n'.join(trainData.pprint())
     print 'testData"\n','\n'.join(testData.pprint())
-    prog = tensorlog.ProPPRProgram.load(["test/textcat.ppr"],db=db)
+    prog = tensorlog.tensorlog.ProPPRProgram.load(
+        [os.path.join(TEST_DATA_DIR,"textcat.ppr")],
+        db=db)
     prog.setFeatureWeights()
     params = {'prog':prog,
           'trainData':trainData, 'testData':testData,
@@ -756,73 +776,99 @@ class TestExpt(unittest.TestCase):
           'savedTestPredictions':'tlog-cache/toy-test.solutions.txt',
           'savedTrainExamples':'tlog-cache/toy-train.examples',
           'savedTestExamples':'tlog-cache/toy-test.examples'}
-    return expt.Expt(params).run()
+    return tensorlog.expt.Expt(params).run()
 
   def runTCToyExpt2(self):
-    db = matrixdb.MatrixDB.uncache('tlog-cache/textcat2.db','test/textcattoy2.cfacts')
-    trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
-    testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
-    prog = tensorlog.ProPPRProgram.load(["test/textcat2.ppr"],db=db)
+    db = tensorlog.matrixdb.MatrixDB.uncache(
+        'tlog-cache/textcat2.db',
+        str(os.path.join(TEST_DATA_DIR,'textcattoy2.cfacts')))
+    trainData = tensorlog.dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
+    testData = tensorlog.dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
+    prog = tensorlog.tensorlog.ProPPRProgram.load(
+        [os.path.join(TEST_DATA_DIR,"textcat2.ppr")],
+        db=db)
     prog.setFeatureWeights()
     prog.db.listing()
     params = {'prog':prog,'trainData':trainData, 'testData':testData }
-    return expt.Expt(params).run()
+    return tensorlog.expt.Expt(params).run()
 
   def runMToyExpt1(self):
-    db = matrixdb.MatrixDB.uncache('tlog-cache/matchtoy.db','test/matchtoy.cfacts')
-    trainData = dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test/matchtoy-train.exam',proppr=False)
+    db = tensorlog.matrixdb.MatrixDB.uncache(
+        'tlog-cache/matchtoy.db',
+        str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
+    trainData = tensorlog.dataset.Dataset.uncacheExamples(
+        'tlog-cache/mtoy-train.dset',db,
+        os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
+    prog = tensorlog.tensorlog.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData}
-    return expt.Expt(params).run()
+    return tensorlog.expt.Expt(params).run()
 
   def runMToyExpt2(self):
-    db = matrixdb.MatrixDB.uncache('tlog-cache/matchtoy.db','test/matchtoy.cfacts')
-    trainData = dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test/matchtoy-train.exam',proppr=False)
+    db = tensorlog.matrixdb.MatrixDB.uncache(
+        'tlog-cache/matchtoy.db',
+        str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
+    trainData = tensorlog.dataset.Dataset.uncacheExamples(
+        'tlog-cache/mtoy-train.dset',db,
+        os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
+    prog = tensorlog.tensorlog.ProPPRProgram.load(
+        [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
+        db=db)
     prog.setRuleWeights(db.ones())
-    params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':learn.FixedRateSGDLearner(prog)}
-    return expt.Expt(params).run()
+    params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':tensorlog.learn.FixedRateSGDLearner(prog)}
+    return tensorlog.expt.Expt(params).run()
 
   def runMToyExpt3(self):
-    db = matrixdb.MatrixDB.uncache('tlog-cache/matchtoy.db','test/matchtoy.cfacts')
-    trainData = dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test/matchtoy-train.exam',proppr=False)
+    db = tensorlog.matrixdb.MatrixDB.uncache(
+        'tlog-cache/matchtoy.db',
+        str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
+    trainData = tensorlog.dataset.Dataset.uncacheExamples(
+        'tlog-cache/mtoy-train.dset',db,
+        os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
+    prog = tensorlog.tensorlog.ProPPRProgram.load(
+        [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
+        db=db)
     prog.setRuleWeights(db.ones())
-    params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':plearn.ParallelAdaGradLearner(prog)}
-    return expt.Expt(params).run()
+    params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':tensorlog.plearn.ParallelAdaGradLearner(prog)}
+    return tensorlog.expt.Expt(params).run()
 
   def runMToyParallel(self):
-    db = matrixdb.MatrixDB.uncache('tlog-cache/matchtoy.db','test/matchtoy.cfacts')
-    trainData = dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test/matchtoy-train.exam',proppr=False)
+    db = tensorlog.matrixdb.MatrixDB.uncache(
+        'tlog-cache/matchtoy.db',
+        str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
+    trainData = tensorlog.dataset.Dataset.uncacheExamples(
+        'tlog-cache/mtoy-train.dset',db,
+        os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = tensorlog.ProPPRProgram.load(["test/matchtoy.ppr"],db=db)
+    prog = tensorlog.tensorlog.ProPPRProgram.load(
+        [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
+        db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData,
           'testData':testData,
-          'learner':plearn.ParallelFixedRateGDLearner(prog)}
-    return expt.Expt(params).run()
+          'learner':tensorlog.plearn.ParallelFixedRateGDLearner(prog)}
+    return tensorlog.expt.Expt(params).run()
 
 class TestDataset(unittest.TestCase):
 
   def setUp(self):
-    self.db = matrixdb.MatrixDB.loadFile('test/matchtoy.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts'))
 
   def testProPPRLoadExamples(self):
-    self.checkMatchExamples('test/matchtoy-train.examples', proppr=True)
+    self.checkMatchExamples(os.path.join(TEST_DATA_DIR,'matchtoy-train.examples'), proppr=True)
 
   def testLoadExamples(self):
-    self.checkMatchExamples('test/matchtoy-train.exam', proppr=False)
+    self.checkMatchExamples(os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'), proppr=False)
 
   def checkMatchExamples(self,filename,proppr):
-    dset = dataset.Dataset.loadExamples(self.db,filename,proppr=proppr)
+    dset = tensorlog.dataset.Dataset.loadExamples(self.db,filename,proppr=proppr)
     modes = dset.modesToLearn()
     self.assertEqual(len(modes),2)
-    m1 = declare.asMode("match/io")
-    m2 = declare.asMode("amatch/io")
+    m1 = tensorlog.declare.asMode("match/io")
+    m2 = tensorlog.declare.asMode("amatch/io")
     self.assertTrue(m1 in modes); self.assertTrue(m2 in modes)
     x1 = dset.getX(m1); y1 = dset.getY(m1)
     x2 = dset.getX(m2); y2 = dset.getY(m2)
@@ -845,12 +891,12 @@ class TestDataset(unittest.TestCase):
 class TestMatrixUtils(unittest.TestCase):
 
   def setUp(self):
-    self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'fam.cfacts'))
     self.row1 = self.db.onehot('william')+self.db.onehot('poppy')
 
   def testRepeat(self):
-    mat = mutil.repeat(self.row1,3)
-    self.assertEqual(mutil.numRows(mat), 3)
+    mat = tensorlog.mutil.repeat(self.row1,3)
+    self.assertEqual(tensorlog.mutil.numRows(mat), 3)
     dm = self.db.matrixAsSymbolDict(mat)
     for i in range(3):
       di = dm[i]

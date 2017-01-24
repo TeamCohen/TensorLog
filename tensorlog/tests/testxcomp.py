@@ -1,24 +1,24 @@
-import theanoxcomp
-import tensorlog
-import declare
 import testtensorlog
-import learnxcomp as learnxc
-import learn
-import matrixdb
-import parser
-import mutil
+
+import tensorlog.theanoxcomp
+import tensorlog.tensorlog
+import tensorlog.declare
+import tensorlog.matrixdb
+import tensorlog.parser
+import tensorlog.mutil
+import tensorlog.funs
+import tensorlog.ops
+import tensorlog.learnxcomp as learnxc
 
 import unittest
 import sys
 import theano
+import os
 
 TESTED_COMPILERS = [
-  theanoxcomp.DenseMatDenseMsgCrossCompiler,
-  theanoxcomp.SparseMatDenseMsgCrossCompiler,
+  tensorlog.theanoxcomp.DenseMatDenseMsgCrossCompiler,
+  tensorlog.theanoxcomp.SparseMatDenseMsgCrossCompiler,
 ]
-
-import funs
-import ops
     
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
@@ -26,7 +26,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
 
   def testFailure(self):
-    self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
+    self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {tensorlog.matrixdb.NULL_ENTITY_NAME:1.0})
 
 #  TODO fix
 #  def test_reverse_if(self):
@@ -56,6 +56,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     self.xcomp_check(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
 
   def test_rec1(self):
+    #TODO fix
     tensorlog.DEFAULT_MAXDEPTH=4
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
     tensorlog.DEFAULT_MAXDEPTH=10
@@ -115,14 +116,14 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     # inference routines
     print 'xcomp inference for mode',mode_string,'on input',input_symbol
     testtensorlog.softmax_normalize(expected_result_dict)
-    rules = parser.RuleCollection()
+    rules = tensorlog.parser.RuleCollection()
     for r in ruleStrings:
-      rules.add(parser.Parser.parseRule(r))
+      rules.add(tensorlog.parser.Parser.parseRule(r))
     if progType=='proppr':
-      prog = tensorlog.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
+      prog = tensorlog.tensorlog.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
     else:
-      prog = tensorlog.Program(db=self.db,rules=rules)
-    mode = declare.ModeDeclaration(mode_string)
+      prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
+    mode = tensorlog.declare.ModeDeclaration(mode_string)
     tlogFun = prog.compile(mode)
     ytl=None
     if compare: ytl=prog.evalSymbols(mode,[input_symbol])
@@ -161,7 +162,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 class TestXCGrad(testtensorlog.TestGrad):
 
   def setUp(self):
-    self.db = matrixdb.MatrixDB.loadFile('test/fam.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,'fam.cfacts'))
 
   def test_if(self):
     rules = ['p(X,Y):-sister(X,Y).']
@@ -302,8 +303,8 @@ class TestXCGrad(testtensorlog.TestGrad):
   def learnxc_check(self,rule_strings,mode_string,params,xyPairs,expected):
     print "XLearner loss/grad eval"
     rules = testtensorlog.rules_from_strings(rule_strings)
-    prog = tensorlog.Program(db=self.db,rules=rules)
-    mode = declare.ModeDeclaration(mode_string)
+    prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
+    mode = tensorlog.declare.ModeDeclaration(mode_string)
     tlogFun = prog.compile(mode)
     # TODO: not working yet for mini-batches so check each example
     # individually
@@ -329,8 +330,8 @@ class TestXCGrad(testtensorlog.TestGrad):
   def xgrad_check(self,rule_strings,mode_string,params,xyPairs,expected):
     print "direct loss/grad eval"
     rules = testtensorlog.rules_from_strings(rule_strings)
-    prog = tensorlog.Program(db=self.db,rules=rules)
-    mode = declare.ModeDeclaration(mode_string)
+    prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
+    mode = tensorlog.declare.ModeDeclaration(mode_string)
     tlogFun = prog.compile(mode)
     # TODO: not working yet for mini-batches so check each example
     # individually

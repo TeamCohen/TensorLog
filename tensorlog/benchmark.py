@@ -17,7 +17,7 @@ import tensorlog
 
 def fbModes():
   modes = []
-  for line in open("test/fb15k-valid.preds"):
+  for line in open("test-data/fb15k-valid.preds"):
     pred = line.strip()
     modes.append(declare.ModeDeclaration("%s(i,o)" % pred))
   return modes
@@ -43,7 +43,7 @@ def fbQueries(prog, db, modes):
     modeDict[m.functor] = m
   queries = []
   ignored = 0
-  for line in open("test/fb15k-valid.examples"):
+  for line in open("test-data/fb15k-valid.examples"):
     k1 = line.find("(")
     k2 = line.find(",")
     pred = line[:k1]
@@ -61,7 +61,7 @@ def fbQueries(prog, db, modes):
 def runBenchmark(com):
   print "benchmark:",com
   if com=="fb-db-serialize":
-    db = matrixdb.MatrixDB.loadFile("test/fb15k-valid.cfacts")
+    db = matrixdb.MatrixDB.loadFile("test-data/fb15k-valid.cfacts")
     start = time.time()
     db.serialize("fb15k-valid.db")
   elif com=="fb-db-load":
@@ -69,17 +69,17 @@ def runBenchmark(com):
     db = matrixdb.MatrixDB.deserialize("fb15k-valid.db")
   elif com=="fb-rule-parse":
     start = time.time()
-    rules = parser.Parser.parseFile("test/fb15k.ppr")
+    rules = parser.Parser.parseFile("test-data/fb15k.ppr")
   elif com=="fb-rule-compile":
     db = matrixdb.MatrixDB.deserialize("fb15k-valid.db")
-    rules = parser.Parser.parseFile("test/fb15k.ppr")
+    rules = parser.Parser.parseFile("test-data/fb15k.ppr")
     print rules.size(),"rules compiled and db loaded"
     modes = fbModes()
     start = time.time()
     prog = fbProgram(rules,db,modes)
   elif com=="fb-rule-answer-native":
     db = matrixdb.MatrixDB.deserialize("fb15k-valid.db")
-    rules = parser.Parser.parseFile("test/fb15k.ppr")
+    rules = parser.Parser.parseFile("test-data/fb15k.ppr")
     modes = fbModes()
     prog = fbProgram(rules,db,modes)
     modeDict = {}
@@ -95,7 +95,7 @@ def runBenchmark(com):
     print "answered",len(queries),"queries at",len(queries)/(time.time() - start),"qps"
   elif com=="fb-rule-answer-matrix":
     db = matrixdb.MatrixDB.deserialize("fb15k-valid.db")
-    rules = parser.Parser.parseFile("test/fb15k.ppr")
+    rules = parser.Parser.parseFile("test-data/fb15k.ppr")
     modes = fbModes()
     prog = fbProgram(rules,db,modes)
     modeDict = {}

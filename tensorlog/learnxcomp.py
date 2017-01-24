@@ -3,7 +3,7 @@ import learn as L
 import theano
 import theano.tensor as TT
 import funs
-from termios import XCASE
+#from termios import XCASE
 
 #theano.config.exception_verbosity='high'
 
