@@ -6,6 +6,7 @@
 tensorlog/fb15k-valid.db
 tensorlog/fb15k-valid.db/*
 tensorlog/tlog-cache
+tensorlog/toy-trained.db
 tensorlog/tlog-cache/*
 
 datasets/*/actual.txt
