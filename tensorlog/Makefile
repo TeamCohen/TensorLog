@@ -1,18 +1,9 @@
 # unit tests that take a few secs to run
 short-tests:
-	python -m unittest testtensorlog
+	nosetests tests/testtensorlog.py
 
 xctest:
-	python -m unittest testxcomp
-
-ifBug:
-	python -m unittest testxcomp.TestXCSmallProofs.testIf
-
-chainBug:
-	python -m unittest testxcomp.TestXCSmallProofs.testChain
-
-altChainBug:
-	python -m unittest testxcomp.TestXCSmallProofs.testAltChain
+	nosetests tests/testxcomp.py
 
 # tests that take a few minutes to run
 # run 'make prepare-for-long-tests' in a fresh install before you run these
@@ -24,7 +15,7 @@ prepare-for-long-tests:
 	(export PYTHONPATH=`pwd`; cd ../datasets/cora; make setup)
 
 fb15k-valid.db:
-	python matrixdb.py --serialize test/fb15k-valid.cfacts fb15k-valid.db
+	python matrixdb.py --serialize test-data/fb15k-valid.cfacts fb15k-valid.db
 
 #
 # individual long tests

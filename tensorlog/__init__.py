@@ -23,6 +23,6 @@ import putil
 import pyparsing
 import symtab
 import tensorlog
-import testtensorlog
-import testxcomp
 import theanoxcomp
+import tests.testtensorlog
+import tests.testxcomp

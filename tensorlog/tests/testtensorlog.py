@@ -31,6 +31,8 @@ import tensorlog.dataset
 import tensorlog.expt
 
 
+TEST_DATA_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),"../test-data/")
+
 def softmax_normalize(expected_result_dict):
   """Compute the softmax of the values in a dictionary, i.e.,
   exponentiate and normalize."""
@@ -97,7 +99,10 @@ class TestInterp(unittest.TestCase):
   """
 
   def setUp(self):
-    optdict,args = tensorlog.tensorlog.parseCommandLine("--db test-data/textcattoy.cfacts --prog test-data/textcat.ppr --proppr".split())
+    optdict,args = tensorlog.tensorlog.parseCommandLine(
+        ["--db", os.path.join(TEST_DATA_DIR,"textcattoy.cfacts"),
+         "--prog", os.path.join(TEST_DATA_DIR,"textcat.ppr"),
+         "--proppr"])
     self.ti = tensorlog.tensorlog.Interp(optdict['prog'])
     self.ti.prog.setFeatureWeights()
 
@@ -111,7 +116,7 @@ class TestInterp(unittest.TestCase):
 class TestSmallProofs(unittest.TestCase):
 
   def setUp(self):
-    self.db = tensorlog.matrixdb.MatrixDB.loadFile('test-data/fam.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'fam.cfacts'))
 
   def test_if(self):
     self.inference_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
@@ -229,7 +234,7 @@ class TestMultiRowOps(unittest.TestCase):
 
   def setUp(self):
     #logging.basicConfig(level=logging.DEBUG)
-    self.db = tensorlog.matrixdb.MatrixDB.loadFile('test-data/fam.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'fam.cfacts'))
   def testThing(self):
     self.compareCheck([
     "p(X,Y):-q(X,Y).",
@@ -302,7 +307,7 @@ class TestMatrixRecursion(unittest.TestCase):
   """
 
   def setUp(self):
-    self.db = tensorlog.matrixdb.MatrixDB.loadFile('test-data/fam.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'fam.cfacts'))
 
   def testRec0(self):
     self.mat_inference_check(['p(X,Y):-child(X,Y).','p(X,Y):-r1(X,Y).','r1(X,Y):-child(X,Y).'],
@@ -350,7 +355,7 @@ class TestMatrixRecursion(unittest.TestCase):
 class TestGrad(unittest.TestCase):
 
   def setUp(self):
-    self.db = tensorlog.matrixdb.MatrixDB.loadFile('test-data/fam.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'fam.cfacts'))
 
   def test_if(self):
     rules = ['p(X,Y):-sister(X,Y).']
@@ -541,12 +546,16 @@ class TestProPPR(unittest.TestCase):
 
   def setUp(self):
     #logging.basicConfig(level=logging.DEBUG)
-    self.prog = tensorlog.tensorlog.ProPPRProgram.load(["test-data/textcat.ppr","test-data/textcattoy.cfacts"])
+    self.prog = tensorlog.tensorlog.ProPPRProgram.load(
+        [os.path.join(TEST_DATA_DIR,'textcat.ppr'),
+         os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')])
     self.labeledData = self.prog.db.createPartner()
     self.prog.db.moveToPartner(self.labeledData,'train',2)
     self.prog.db.moveToPartner(self.labeledData,'test',2)
     self.prog.setFeatureWeights()
-    self.xsyms,self.X,self.Y = self.loadExamples("test-data/textcattoy-train.examples",self.prog.db)
+    self.xsyms,self.X,self.Y = self.loadExamples(
+        os.path.join(TEST_DATA_DIR,'textcattoy-train.examples'),
+        self.prog.db)
     self.numExamples = self.X.get_shape()[0]
     self.numFeatures = self.X.get_shape()[1]
     self.mode = tensorlog.declare.ModeDeclaration('predict(i,o)')
@@ -616,7 +625,10 @@ class TestProPPR(unittest.TestCase):
 
   def testMultiLearn1(self):
     mode = tensorlog.declare.ModeDeclaration('predict(i,o)')
-    dset = tensorlog.dataset.Dataset.loadExamples(self.prog.db,"test-data/toytrain.examples",proppr=True)
+    dset = tensorlog.dataset.Dataset.loadExamples(
+        self.prog.db,
+        os.path.join(TEST_DATA_DIR,"toytrain.examples"),
+        proppr=True)
     for mode in dset.modesToLearn():
       X = dset.getX(mode)
       Y = dset.getY(mode)
@@ -641,7 +653,10 @@ class TestProPPR(unittest.TestCase):
     self.assertTrue(xent0>xent1)
     self.assertTrue(acc1==1)
 
-    Udset = tensorlog.dataset.Dataset.loadExamples(self.prog.db,"test-data/toytest.examples",proppr=True)
+    Udset = tensorlog.dataset.Dataset.loadExamples(
+        self.prog.db,
+        os.path.join(TEST_DATA_DIR,"toytest.examples"),
+        proppr=True)
 
     P2 = learner.datasetPredict(Udset)
     acc2 = learner.datasetAccuracy(Udset,P2)
@@ -743,13 +758,17 @@ class TestExpt(unittest.TestCase):
     self.assertAlmostEqual(acc1,1.0)
 
   def runTCToyExpt(self):
-    db = tensorlog.matrixdb.MatrixDB.uncache('tlog-cache/textcat.db','test-data/textcattoy.cfacts')
+    db = tensorlog.matrixdb.MatrixDB.uncache(
+        'tlog-cache/textcat.db',
+        str(os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')))
     db.listing()
     trainData = tensorlog.dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
     testData = tensorlog.dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
     print 'trainData:\n','\n'.join(trainData.pprint())
     print 'testData"\n','\n'.join(testData.pprint())
-    prog = tensorlog.tensorlog.ProPPRProgram.load(["test-data/textcat.ppr"],db=db)
+    prog = tensorlog.tensorlog.ProPPRProgram.load(
+        [os.path.join(TEST_DATA_DIR,"textcat.ppr")],
+        db=db)
     prog.setFeatureWeights()
     params = {'prog':prog,
           'trainData':trainData, 'testData':testData,
@@ -760,47 +779,73 @@ class TestExpt(unittest.TestCase):
     return tensorlog.expt.Expt(params).run()
 
   def runTCToyExpt2(self):
-    db = tensorlog.matrixdb.MatrixDB.uncache('tlog-cache/textcat2.db','test-data/textcattoy2.cfacts')
+    db = tensorlog.matrixdb.MatrixDB.uncache(
+        'tlog-cache/textcat2.db',
+        str(os.path.join(TEST_DATA_DIR,'textcattoy2.cfacts')))
     trainData = tensorlog.dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
     testData = tensorlog.dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
-    prog = tensorlog.tensorlog.ProPPRProgram.load(["test-data/textcat2.ppr"],db=db)
+    prog = tensorlog.tensorlog.ProPPRProgram.load(
+        [os.path.join(TEST_DATA_DIR,"textcat2.ppr")],
+        db=db)
     prog.setFeatureWeights()
     prog.db.listing()
     params = {'prog':prog,'trainData':trainData, 'testData':testData }
     return tensorlog.expt.Expt(params).run()
 
   def runMToyExpt1(self):
-    db = tensorlog.matrixdb.MatrixDB.uncache('tlog-cache/matchtoy.db','test-data/matchtoy.cfacts')
-    trainData = tensorlog.dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test-data/matchtoy-train.exam',proppr=False)
+    db = tensorlog.matrixdb.MatrixDB.uncache(
+        'tlog-cache/matchtoy.db',
+        str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
+    trainData = tensorlog.dataset.Dataset.uncacheExamples(
+        'tlog-cache/mtoy-train.dset',db,
+        os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = tensorlog.tensorlog.ProPPRProgram.load(["test-data/matchtoy.ppr"],db=db)
+    prog = tensorlog.tensorlog.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData}
     return tensorlog.expt.Expt(params).run()
 
   def runMToyExpt2(self):
-    db = tensorlog.matrixdb.MatrixDB.uncache('tlog-cache/matchtoy.db','test-data/matchtoy.cfacts')
-    trainData = tensorlog.dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test-data/matchtoy-train.exam',proppr=False)
+    db = tensorlog.matrixdb.MatrixDB.uncache(
+        'tlog-cache/matchtoy.db',
+        str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
+    trainData = tensorlog.dataset.Dataset.uncacheExamples(
+        'tlog-cache/mtoy-train.dset',db,
+        os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = tensorlog.tensorlog.ProPPRProgram.load(["test-data/matchtoy.ppr"],db=db)
+    prog = tensorlog.tensorlog.ProPPRProgram.load(
+        [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
+        db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':tensorlog.learn.FixedRateSGDLearner(prog)}
     return tensorlog.expt.Expt(params).run()
 
   def runMToyExpt3(self):
-    db = tensorlog.matrixdb.MatrixDB.uncache('tlog-cache/matchtoy.db','test-data/matchtoy.cfacts')
-    trainData = tensorlog.dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test-data/matchtoy-train.exam',proppr=False)
+    db = tensorlog.matrixdb.MatrixDB.uncache(
+        'tlog-cache/matchtoy.db',
+        str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
+    trainData = tensorlog.dataset.Dataset.uncacheExamples(
+        'tlog-cache/mtoy-train.dset',db,
+        os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = tensorlog.tensorlog.ProPPRProgram.load(["test-data/matchtoy.ppr"],db=db)
+    prog = tensorlog.tensorlog.ProPPRProgram.load(
+        [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
+        db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':tensorlog.plearn.ParallelAdaGradLearner(prog)}
     return tensorlog.expt.Expt(params).run()
 
   def runMToyParallel(self):
-    db = tensorlog.matrixdb.MatrixDB.uncache('tlog-cache/matchtoy.db','test-data/matchtoy.cfacts')
-    trainData = tensorlog.dataset.Dataset.uncacheExamples('tlog-cache/mtoy-train.dset',db,'test-data/matchtoy-train.exam',proppr=False)
+    db = tensorlog.matrixdb.MatrixDB.uncache(
+        'tlog-cache/matchtoy.db',
+        str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
+    trainData = tensorlog.dataset.Dataset.uncacheExamples(
+        'tlog-cache/mtoy-train.dset',db,
+        os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = tensorlog.tensorlog.ProPPRProgram.load(["test-data/matchtoy.ppr"],db=db)
+    prog = tensorlog.tensorlog.ProPPRProgram.load(
+        [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
+        db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData,
           'testData':testData,
@@ -810,13 +855,13 @@ class TestExpt(unittest.TestCase):
 class TestDataset(unittest.TestCase):
 
   def setUp(self):
-    self.db = tensorlog.matrixdb.MatrixDB.loadFile('test-data/matchtoy.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts'))
 
   def testProPPRLoadExamples(self):
-    self.checkMatchExamples('test-data/matchtoy-train.examples', proppr=True)
+    self.checkMatchExamples(os.path.join(TEST_DATA_DIR,'matchtoy-train.examples'), proppr=True)
 
   def testLoadExamples(self):
-    self.checkMatchExamples('test-data/matchtoy-train.exam', proppr=False)
+    self.checkMatchExamples(os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'), proppr=False)
 
   def checkMatchExamples(self,filename,proppr):
     dset = tensorlog.dataset.Dataset.loadExamples(self.db,filename,proppr=proppr)
@@ -846,7 +891,7 @@ class TestDataset(unittest.TestCase):
 class TestMatrixUtils(unittest.TestCase):
 
   def setUp(self):
-    self.db = tensorlog.matrixdb.MatrixDB.loadFile('test-data/fam.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'fam.cfacts'))
     self.row1 = self.db.onehot('william')+self.db.onehot('poppy')
 
   def testRepeat(self):

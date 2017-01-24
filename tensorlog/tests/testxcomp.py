@@ -10,6 +10,7 @@ import tensorlog.mutil
 import unittest
 import sys
 import theano
+import os
 
 TESTED_COMPILERS = [
   tensorlog.theanoxcomp.DenseMatDenseMsgCrossCompiler,
@@ -145,7 +146,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 class TestXCGrad(testtensorlog.TestGrad):
 
   def setUp(self):
-    self.db = tensorlog.matrixdb.MatrixDB.loadFile('test-data/fam.cfacts')
+    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,'fam.cfacts'))
 
   def test_if(self):
     rules = ['p(X,Y):-sister(X,Y).']
