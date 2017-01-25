@@ -4,6 +4,7 @@ live theano, for instrumentation:
 
 Next actions:
 
+ - revive debug.py - how can testing this be automated? should I bother?
  - fix reverse_if bug
  - look at sparse messages in actual theano-based learner
  - look at tensorflow

@@ -7,7 +7,7 @@ def readme():
 setup(name='tensorlog',
       version='1.2.5',
       description='Differentiable deductive database platform',
-      url='http://github.com/storborg/funniest',
+      url='https://github.com/TeamCohen/TensorLog',
       author='William Cohen',
       author_email='wcohen@cs.cmu.edu',
       license='Apache 2.0',

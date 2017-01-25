@@ -24,5 +24,5 @@ import pyparsing
 import symtab
 import tensorlog
 import theanoxcomp
-import tests.testtensorlog
-import tests.testxcomp
+import testtensorlog
+import testxcomp

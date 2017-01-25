@@ -1,20 +1,20 @@
-import testtensorlog
-
-import tensorlog.theanoxcomp
-import tensorlog.tensorlog
-import tensorlog.declare
-import tensorlog.matrixdb
-import tensorlog.parser
-import tensorlog.mutil
-
 import unittest
 import sys
 import theano
 import os
 
+import declare
+import matrixdb
+import mutil
+import parser
+import tensorlog
+import theanoxcomp
+import testtensorlog
+
+
 TESTED_COMPILERS = [
-  tensorlog.theanoxcomp.DenseMatDenseMsgCrossCompiler,
-  tensorlog.theanoxcomp.SparseMatDenseMsgCrossCompiler,
+  theanoxcomp.DenseMatDenseMsgCrossCompiler,
+  theanoxcomp.SparseMatDenseMsgCrossCompiler,
 ]
 
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
@@ -106,14 +106,14 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     # inference routines
     print 'xcomp inference for mode',mode_string,'on input',input_symbol
     testtensorlog.softmax_normalize(expected_result_dict)
-    rules = tensorlog.parser.RuleCollection()
+    rules = parser.RuleCollection()
     for r in ruleStrings:
-      rules.add(tensorlog.parser.Parser.parseRule(r))
+      rules.add(parser.Parser.parseRule(r))
     if progType=='proppr':
-      prog = tensorlog.tensorlog.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
+      prog = tensorlog.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
     else:
-      prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
-    mode = tensorlog.declare.ModeDeclaration(mode_string)
+      prog = tensorlog.Program(db=self.db,rules=rules)
+    mode = declare.ModeDeclaration(mode_string)
     tlogFun = prog.compile(mode)
     for compilerClass in TESTED_COMPILERS:
       #cross-compile the function
@@ -286,8 +286,8 @@ class TestXCGrad(testtensorlog.TestGrad):
 
   def xgrad_check(self,rule_strings,mode_string,params,xyPairs,expected):
     rules = testtensorlog.rules_from_strings(rule_strings)
-    prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
-    mode = tensorlog.declare.ModeDeclaration(mode_string)
+    prog = tensorlog.Program(db=self.db,rules=rules)
+    mode = declare.ModeDeclaration(mode_string)
     tlogFun = prog.compile(mode)
     # TODO: not working yet for mini-batches so check each example
     # individually

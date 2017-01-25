@@ -1,9 +1,9 @@
 # unit tests that take a few secs to run
 short-tests:
-	nosetests tests/testtensorlog.py
+	nosetests testtensorlog.py
 
 xctest:
-	nosetests tests/testxcomp.py
+	nosetests testxcomp.py
 
 # tests that take a few minutes to run
 # run 'make prepare-for-long-tests' in a fresh install before you run these
@@ -38,8 +38,9 @@ textcattoy-expt:
 
 # debug-test needs to be interactive
 debug-test:
-	python expt.py --prog test/textcat.ppr --db test/textcattoy.cfacts --trainData test/toytrain.exam --testData test/toytest.exam --proppr
-	python debug.py --prog test/textcat.ppr --db expt-model.db --trainData test/toytrain.exam --testData test/toytest.exam --proppr predict/io
+	python expt.py --prog test-data/textcat.ppr --db test-data/textcattoy.cfacts \
+		--trainData test-data/toytrain.exam --testData test-data/toytest.exam --proppr +++ --savedModel expt-model.db
+	python debug.py --prog test-data/textcat.ppr --db expt-model.db --trainData test-data/toytrain.exam --testData test-data/toytest.exam --proppr predict/io
 
 # word count
 
