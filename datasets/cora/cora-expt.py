@@ -1,18 +1,18 @@
 import logging
 
-import expt
-import tensorlog
-import learn
-import plearn
+from tensorlog import expt
+from tensorlog import learn
+from tensorlog import plearn
+from tensorlog import comline
 
 if __name__=="__main__":
     logging.basicConfig(level=logging.INFO)
     logging.info('level is info')
 
-    db = tensorlog.parseDBSpec('tmp-cache/cora.db|inputs/cora.cfacts')
-    trainData = tensorlog.parseDatasetSpec('tmp-cache/cora-train.dset|inputs/train.examples', db)
-    testData = tensorlog.parseDatasetSpec('tmp-cache/cora-test.dset|inputs/test.examples', db)
-    prog = tensorlog.parseProgSpec("cora.ppr",db,proppr=True)
+    db = comline.parseDBSpec('tmp-cache/cora.db|inputs/cora.cfacts')
+    trainData = comline.parseDatasetSpec('tmp-cache/cora-train.dset|inputs/train.examples', db)
+    testData = comline.parseDatasetSpec('tmp-cache/cora-test.dset|inputs/test.examples', db)
+    prog = comline.parseProgSpec("cora.ppr",db,proppr=True)
     prog.setRuleWeights()
     prog.db.markAsParam('kaw',1)
     prog.db.markAsParam('ktw',1)

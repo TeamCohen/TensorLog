@@ -10,6 +10,7 @@ import ttk
 import tkFont
 import time
 
+from tensorlog import comline
 from tensorlog import config
 from tensorlog import dataset
 from tensorlog import declare
@@ -17,7 +18,6 @@ from tensorlog import learn
 from tensorlog import matrixdb
 from tensorlog import mutil
 from tensorlog import opfunutil
-import program
 
 conf = config.Config()
 conf.sortByValue = True;   conf.help.sortByValue = "In displaying message values, sort entries by weight if true, by name if false."
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     def usage():
         print 'debug.py [usual tensorlog options] mode [inputs]'
 
-    optdict,args = program.parseCommandLine(sys.argv[1:])
+    optdict,args = comline.parseCommandLine(sys.argv[1:])
     dset = optdict.get('trainData') or optdict.get('testData')
     if dset==None and len(args)<2:
         usage()

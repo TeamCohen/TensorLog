@@ -1,12 +1,12 @@
 import sys
 
-import matrixdb
-import expt
-import dataset
-import declare
-import tensorlog
-import learn
-import plearn
+from tensorlog import matrixdb
+from tensorlog import expt
+from tensorlog import dataset
+from tensorlog import declare
+from tensorlog import comline
+from tensorlog import learn
+from tensorlog import plearn
 
 if __name__=="__main__":
     #usage: fb-expt.py [processes] [epochs] [targetMode] 
@@ -19,7 +19,7 @@ if __name__=="__main__":
 
     optdict,args = expt.Expt.timeAction(
         'parsing command line and loading data',
-        lambda:tensorlog.parseCommandLine([
+        lambda:comline.parseCommandLine([
             '--logging','info',
             '--db', 'inputs/fb.db|inputs/fb.cfacts',
             '--prog','inputs/learned-rules.ppr', '--proppr',
@@ -59,4 +59,3 @@ if __name__=="__main__":
 
     # run the experiment
     expt.Expt(params).run()
-

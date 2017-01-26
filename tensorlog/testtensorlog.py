@@ -16,6 +16,7 @@ import os
 import os.path
 import shutil
 
+from tensorlog import comline
 from tensorlog import dataset
 from tensorlog import declare
 from tensorlog import expt
@@ -96,7 +97,7 @@ class TestInterp(unittest.TestCase):
   """
 
   def setUp(self):
-    optdict,args = program.parseCommandLine(
+    optdict,args = comline.parseCommandLine(
         ["--db", os.path.join(TEST_DATA_DIR,"textcattoy.cfacts"),
          "--prog", os.path.join(TEST_DATA_DIR,"textcat.ppr"),
          "--proppr"])

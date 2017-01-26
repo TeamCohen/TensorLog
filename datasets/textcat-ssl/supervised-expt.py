@@ -1,20 +1,21 @@
 import sys
 
-import expt
-import declare
-import tensorlog
-import learn
-import plearn
+from tensorlog import expt
+from tensorlog import declare
+from tensorlog import program
+from tensorlog import comline
+from tensorlog import learn
+from tensorlog import plearn
 
 if __name__=="__main__":
     #usage: [stem] [epochs]
-    
+
     #get the command-line options for this experiment
     stem = 'citeseer' if len(sys.argv)<=1 else sys.argv[1]
     epochs = 10 if len(sys.argv)<=2 else int(sys.argv[2])
 
-    # use tensorlog.parseCommandLine to set up the program, etc
-    optdict,args = tensorlog.parseCommandLine([
+    # use comline.parseCommandLine to set up the program, etc
+    optdict,args = comline.parseCommandLine([
             '--logging', 'info',
             '--db', 'inputs/%s.db|inputs/%s-corpus.cfacts' % (stem,stem),
             '--prog','inputs/%s-textcat.ppr' % stem, '--proppr',

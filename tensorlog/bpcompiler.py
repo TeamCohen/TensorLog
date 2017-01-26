@@ -12,7 +12,6 @@ from tensorlog import funs
 from tensorlog import config
 from tensorlog import symtab
 from tensorlog import parser
-import program
 from tensorlog import declare
 from tensorlog import matrixdb
 
@@ -367,31 +366,3 @@ def only(c):
     """Return only member of a singleton set, or raise an error if the set's not a singleton."""
     assert len(c)==1,'non-singleton ' + repr(c)
     for elt in c: return elt
-
-#
-# a test driver
-#
-
-if __name__ == "__main__":
-    conf.pprint()
-
-    if len(sys.argv)<2:
-        print 'usage: rule mode'
-        sys.exit(-1)
-
-    conf.strict = False
-    #conf.produce_ops = False
-    p = parser.Parser()
-
-    ruleString = sys.argv[1]
-    rule = p.parseRule(ruleString)
-    mode = declare.ModeDeclaration(sys.argv[2])
-    rules = parser.RuleCollection()
-    rules.add(rule)
-    prog = program.Program(db=None,rules=rules)
-
-    c = BPCompiler(mode,prog,0,rule)
-    c.compile()
-    c.showRule()
-    c.showVars()
-    c.showOps()

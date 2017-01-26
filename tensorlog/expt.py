@@ -10,6 +10,7 @@ import logging
 import collections
 import traceback
 
+from tensorlog import comline
 from tensorlog import config
 from tensorlog import dataset
 from tensorlog import declare
@@ -17,7 +18,6 @@ from tensorlog import learn
 from tensorlog import matrixdb
 from tensorlog import mutil
 from tensorlog import plearn
-import program
 
 conf = config.Config()
 
@@ -154,7 +154,7 @@ if __name__=="__main__":
     argSpec = ["learner=", "savedModel=", "learnerOpts=", "targetMode=",
                "savedTestPredictions=", "savedTestExamples=", "savedTrainExamples=",
                "params=","weightEpsilon="]
-    optdict,args = program.parseCommandLine(
+    optdict,args = comline.parseCommandLine(
         sys.argv[1:],
         extraArgConsumer="expt", extraArgSpec=argSpec, extraArgUsage=usageLines
     )
