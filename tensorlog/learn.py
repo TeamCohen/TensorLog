@@ -1,7 +1,7 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 #
 # learning methods for Tensorlog
-# 
+#
 
 import sys
 import time
@@ -10,13 +10,12 @@ import numpy as NP
 import scipy.sparse as SS
 import collections
 
-import opfunutil
-import funs
-import tensorlog
-import dataset
-import mutil
-import declare
-import config
+from tensorlog import config
+from tensorlog import dataset
+from tensorlog import declare
+from tensorlog import funs
+from tensorlog import mutil
+from tensorlog import opfunutil
 
 # clip to avoid exploding gradients
 
@@ -582,4 +581,3 @@ class L2Regularizer(Regularizer):
             m = prog.db.getParameter(functor,arity)
             result += (m.data * m.data).sum()
         return result*self.regularizationConstant
-

@@ -7,14 +7,14 @@ import sys
 import collections
 import logging
 
-import ops
-import funs
-import config
-import symtab 
-import parser
-import declare
-import matrixdb
-import tensorlog
+from tensorlog import ops
+from tensorlog import funs
+from tensorlog import config
+from tensorlog import symtab
+from tensorlog import parser
+import program
+from tensorlog import declare
+from tensorlog import matrixdb
 
 conf = config.Config()
 conf.strict = True;         conf.help.strict =        "Check that a clause fits all assumptions"
@@ -388,13 +388,10 @@ if __name__ == "__main__":
     mode = declare.ModeDeclaration(sys.argv[2])
     rules = parser.RuleCollection()
     rules.add(rule)
-    prog = tensorlog.Program(db=None,rules=rules)
+    prog = program.Program(db=None,rules=rules)
 
     c = BPCompiler(mode,prog,0,rule)
     c.compile()
     c.showRule()
     c.showVars()
     c.showOps()
-
-
-

@@ -3,13 +3,13 @@ import sys
 import theano
 import os
 
-import declare
-import matrixdb
-import mutil
-import parser
-import tensorlog
-import theanoxcomp
-import testtensorlog
+from tensorlog import declare
+from tensorlog import matrixdb
+from tensorlog import mutil
+from tensorlog import parser
+from tensorlog import program
+from tensorlog import testtensorlog
+from tensorlog import theanoxcomp
 
 
 TESTED_COMPILERS = [
@@ -23,7 +23,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
 
   def testFailure(self):
-    self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {tensorlog.matrixdb.NULL_ENTITY_NAME:1.0})
+    self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
 
 #  TODO fix
 #  def test_reverse_if(self):
@@ -54,9 +54,9 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
   def test_rec1(self):
     #TODO fix
-    tensorlog.DEFAULT_MAXDEPTH=4
+    program.DEFAULT_MAXDEPTH=4
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
-    tensorlog.DEFAULT_MAXDEPTH=10
+    program.DEFAULT_MAXDEPTH=10
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
 
   def test_const_output(self):
@@ -110,9 +110,9 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     for r in ruleStrings:
       rules.add(parser.Parser.parseRule(r))
     if progType=='proppr':
-      prog = tensorlog.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
+      prog = program.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
     else:
-      prog = tensorlog.Program(db=self.db,rules=rules)
+      prog = program.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
     tlogFun = prog.compile(mode)
     for compilerClass in TESTED_COMPILERS:
@@ -146,7 +146,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 class TestXCGrad(testtensorlog.TestGrad):
 
   def setUp(self):
-    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,'fam.cfacts'))
+    self.db = matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,'fam.cfacts'))
 
   def test_if(self):
     rules = ['p(X,Y):-sister(X,Y).']
@@ -286,7 +286,7 @@ class TestXCGrad(testtensorlog.TestGrad):
 
   def xgrad_check(self,rule_strings,mode_string,params,xyPairs,expected):
     rules = testtensorlog.rules_from_strings(rule_strings)
-    prog = tensorlog.Program(db=self.db,rules=rules)
+    prog = program.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
     tlogFun = prog.compile(mode)
     # TODO: not working yet for mini-batches so check each example

@@ -1,11 +1,3 @@
-import tensorlog
-import funs
-import ops
-import matrixdb
-import declare
-import mutil
-import config
-
 import theano
 import theano.tensor as TT
 import theano.tensor.basic as TTB
@@ -15,6 +7,10 @@ import theano.sparse.basic as TSB
 import theano.sparse.type as TST
 import scipy.sparse as SS
 import numpy as NP
+
+import config
+import funs
+import ops
 
 class AbstractCrossCompiler(object):
   """ Base class for tensorlog -> theano cross-compiler """

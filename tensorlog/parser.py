@@ -2,7 +2,7 @@
 
 import collections
 
-import symtab as syt
+from tensorlog import symtab
 
 #
 # Parse prolog rules in one of these sample formats

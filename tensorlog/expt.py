@@ -10,15 +10,14 @@ import logging
 import collections
 import traceback
 
-import tensorlog
-import dataset
-import matrixdb
-import tensorlog
-import declare
-import learn
-import plearn
-import mutil
-import config
+from tensorlog import config
+from tensorlog import dataset
+from tensorlog import declare
+from tensorlog import learn
+from tensorlog import matrixdb
+from tensorlog import mutil
+from tensorlog import plearn
+import program
 
 conf = config.Config()
 
@@ -147,18 +146,18 @@ if __name__=="__main__":
     usageLines = [
         'expt-specific options, given after the argument +++:',
         '    --savedModel e      # where e is a filename',
-        '    --learner f         # where f is the name of a learner class', 
+        '    --learner f         # where f is the name of a learner class',
         '    --learnerOpts g     # g is a string that "evals" to a python dict',
         '    --weightEpsilon eps # parameter weights multiplied by eps',
         '    --params p1/k1,..   # comma-sep list of functor/arity pairs'
     ]
     argSpec = ["learner=", "savedModel=", "learnerOpts=", "targetMode=",
-               "savedTestPredictions=", "savedTestExamples=", "savedTrainExamples=", 
+               "savedTestPredictions=", "savedTestExamples=", "savedTrainExamples=",
                "params=","weightEpsilon="]
-    optdict,args = tensorlog.parseCommandLine(
-        sys.argv[1:], 
+    optdict,args = program.parseCommandLine(
+        sys.argv[1:],
         extraArgConsumer="expt", extraArgSpec=argSpec, extraArgUsage=usageLines
-    ) 
+    )
 
     weightEpsilon = float(optdict.get('--weightEpsilon',1.0))
     print 'weightEpsilon = ',weightEpsilon
@@ -175,7 +174,7 @@ if __name__=="__main__":
             optdict['learner'] = eval(optdict['learner'])
             #so darn hard to get the number of quotes right in Makefile/shell, so eval 'while'...
             while type(optdict['learnerOpts'])==type(""):
-                optdict['learnerOpts'] = eval(optdict.get('learnerOpts','{}'))                
+                optdict['learnerOpts'] = eval(optdict.get('learnerOpts','{}'))
             print "decoded learner spec to "+repr(optdict['learner'])+" args "+repr(optdict['learnerOpts'])
             learner = optdict['learner'](optdict['prog'], **optdict['learnerOpts'])
         except Exception as ex:

@@ -16,16 +16,16 @@ import os
 import os.path
 import shutil
 
-import dataset
-import declare
-import expt
-import funs
-import learn
-import matrixdb
-import mutil
-import parser
-import plearn
-import tensorlog
+from tensorlog import dataset
+from tensorlog import declare
+from tensorlog import expt
+from tensorlog import funs
+from tensorlog import learn
+from tensorlog import matrixdb
+from tensorlog import mutil
+from tensorlog import parser
+from tensorlog import plearn
+from tensorlog import program
 
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),"test-data/")
@@ -96,11 +96,11 @@ class TestInterp(unittest.TestCase):
   """
 
   def setUp(self):
-    optdict,args = tensorlog.parseCommandLine(
+    optdict,args = program.parseCommandLine(
         ["--db", os.path.join(TEST_DATA_DIR,"textcattoy.cfacts"),
          "--prog", os.path.join(TEST_DATA_DIR,"textcat.ppr"),
          "--proppr"])
-    self.ti = tensorlog.Interp(optdict['prog'])
+    self.ti = program.Interp(optdict['prog'])
     self.ti.prog.setFeatureWeights()
 
   def test_list(self):
@@ -148,9 +148,9 @@ class TestSmallProofs(unittest.TestCase):
     self.inference_check(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
 
   def test_rec1(self):
-    tensorlog.DEFAULT_MAXDEPTH=4
+    program.DEFAULT_MAXDEPTH=4
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
-    tensorlog.DEFAULT_MAXDEPTH=10
+    program.DEFAULT_MAXDEPTH=10
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
 
   def test_const_output(self):
@@ -192,7 +192,7 @@ class TestSmallProofs(unittest.TestCase):
     print 'testing inference for mode',mode_string,'on input',inputSymbol,'with rules:'
     softmax_normalize(expected_result_dict)
     rules = rules_from_strings(rule_strings)
-    prog = tensorlog.Program(db=self.db,rules=rules)
+    prog = program.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
     fun = prog.compile(mode)
     print "\n".join(fun.pprint())
@@ -204,7 +204,7 @@ class TestSmallProofs(unittest.TestCase):
     print 'testing inference for mode',mode_string,'on input',inputSymbol,'with proppr rules:'
     softmax_normalize(expected_result_dict)
     rules = rules_from_strings(rule_strings)
-    prog = tensorlog.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
+    prog = program.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
     mode = declare.ModeDeclaration(mode_string)
     fun = prog.compile(mode)
 
@@ -259,7 +259,7 @@ class TestMultiRowOps(unittest.TestCase):
     rules = parser.RuleCollection()
     for r in rule_strings:
       rules.add(parser.Parser.parseRule(r))
-    prog = tensorlog.Program(db=self.db,rules=rules)
+    prog = program.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
 
     fun = prog.compile(mode)
@@ -274,7 +274,7 @@ class TestMultiRowOps(unittest.TestCase):
     rules = parser.RuleCollection()
     for r in rule_strings:
       rules.add(parser.Parser.parseRule(r))
-    prog = tensorlog.Program(db=self.db,rules=rules)
+    prog = program.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
 
     td = []
@@ -328,7 +328,7 @@ class TestMatrixRecursion(unittest.TestCase):
   def mat_inference_check(self,rule_strings,mode_string,input_symbols,expected_result_dict,max_depth=None):
     print 'testing inference for mode',mode_string,'on inputs',input_symbols,'with rules:'
     rules = rules_from_strings(rule_strings)
-    prog = tensorlog.Program(db=self.db,rules=rules)
+    prog = program.Program(db=self.db,rules=rules)
     if max_depth!=None: prog.maxDepth=max_depth
     mode = declare.ModeDeclaration(mode_string)
     X = mutil.stack(map(lambda s:prog.db.onehot(s), input_symbols))
@@ -525,7 +525,7 @@ class TestGrad(unittest.TestCase):
     """
     #build program
     rules = rules_from_strings(rule_strings)
-    prog = tensorlog.Program(db=self.db,rules=rules)
+    prog = program.Program(db=self.db,rules=rules)
     #build dataset
     data = DataBuffer(self.db)
     for x,ys in xyPairs:
@@ -543,7 +543,7 @@ class TestProPPR(unittest.TestCase):
 
   def setUp(self):
     #logging.basicConfig(level=logging.DEBUG)
-    self.prog = tensorlog.ProPPRProgram.load(
+    self.prog = program.ProPPRProgram.load(
         [os.path.join(TEST_DATA_DIR,'textcat.ppr'),
          os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')])
     self.labeledData = self.prog.db.createPartner()
@@ -763,7 +763,7 @@ class TestExpt(unittest.TestCase):
     testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
     print 'trainData:\n','\n'.join(trainData.pprint())
     print 'testData"\n','\n'.join(testData.pprint())
-    prog = tensorlog.ProPPRProgram.load(
+    prog = program.ProPPRProgram.load(
         [os.path.join(TEST_DATA_DIR,"textcat.ppr")],
         db=db)
     prog.setFeatureWeights()
@@ -781,7 +781,7 @@ class TestExpt(unittest.TestCase):
         str(os.path.join(TEST_DATA_DIR,'textcattoy2.cfacts')))
     trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
     testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
-    prog = tensorlog.ProPPRProgram.load(
+    prog = program.ProPPRProgram.load(
         [os.path.join(TEST_DATA_DIR,"textcat2.ppr")],
         db=db)
     prog.setFeatureWeights()
@@ -797,7 +797,7 @@ class TestExpt(unittest.TestCase):
         'tlog-cache/mtoy-train.dset',db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = tensorlog.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
+    prog = program.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData}
     return expt.Expt(params).run()
@@ -810,7 +810,7 @@ class TestExpt(unittest.TestCase):
         'tlog-cache/mtoy-train.dset',db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = tensorlog.ProPPRProgram.load(
+    prog = program.ProPPRProgram.load(
         [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
         db=db)
     prog.setRuleWeights(db.ones())
@@ -825,7 +825,7 @@ class TestExpt(unittest.TestCase):
         'tlog-cache/mtoy-train.dset',db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = tensorlog.ProPPRProgram.load(
+    prog = program.ProPPRProgram.load(
         [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
         db=db)
     prog.setRuleWeights(db.ones())
@@ -840,7 +840,7 @@ class TestExpt(unittest.TestCase):
         'tlog-cache/mtoy-train.dset',db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = tensorlog.ProPPRProgram.load(
+    prog = program.ProPPRProgram.load(
         [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
         db=db)
     prog.setRuleWeights(db.ones())

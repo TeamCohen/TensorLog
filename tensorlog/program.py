@@ -8,18 +8,15 @@ import logging
 import getopt
 import collections
 
-import declare
-import funs
-import opfunutil
-import parser
-import matrixdb
-import bpcompiler
-import dataset
-import learn
-import plearn
-import mutil
-import debug
-import ops 
+from tensorlog import bpcompiler
+from tensorlog import dataset
+from tensorlog import debug
+from tensorlog import declare
+from tensorlog import funs
+from tensorlog import matrixdb
+from tensorlog import opfunutil
+from tensorlog import ops
+from tensorlog import parser
 
 VERSION = "1.2.5"
 

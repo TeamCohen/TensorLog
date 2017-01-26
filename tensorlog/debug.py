@@ -10,15 +10,14 @@ import ttk
 import tkFont
 import time
 
-import tensorlog
-import dataset
-import matrixdb
-import tensorlog
-import declare
-import learn
-import mutil
-import config
-import opfunutil
+from tensorlog import config
+from tensorlog import dataset
+from tensorlog import declare
+from tensorlog import learn
+from tensorlog import matrixdb
+from tensorlog import mutil
+from tensorlog import opfunutil
+import program
 
 conf = config.Config()
 conf.sortByValue = True;   conf.help.sortByValue = "In displaying message values, sort entries by weight if true, by name if false."
@@ -174,11 +173,11 @@ class Debugger(object):
         self.root.mainloop()
 
 if __name__ == "__main__":
-    
+
     def usage():
         print 'debug.py [usual tensorlog options] mode [inputs]'
 
-    optdict,args = tensorlog.parseCommandLine(sys.argv[1:])
+    optdict,args = program.parseCommandLine(sys.argv[1:])
     dset = optdict.get('trainData') or optdict.get('testData')
     if dset==None and len(args)<2:
         usage()
@@ -195,4 +194,3 @@ if __name__ == "__main__":
         X = optdict['prog'].db.onehot(args[1])
         dset = dataset.Dataset({mode:X},{mode:optdict['prog'].db.zeros()})
         Debugger(optdict['prog'],mode,dset,gradient=False).mainloop()
-

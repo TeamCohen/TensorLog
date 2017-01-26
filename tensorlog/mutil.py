@@ -10,8 +10,7 @@ import numpy.random as NR
 import math
 import logging
 
-import config
-import matrixdb
+from tensorlog import config
 
 conf = config.Config()
 conf.careful = True;                 conf.help.careful = 'execute checks for matrix type and NANs'
