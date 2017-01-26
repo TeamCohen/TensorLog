@@ -15,6 +15,7 @@ import math
 import os
 import os.path
 import shutil
+import tempfile
 
 from tensorlog import comline
 from tensorlog import dataset
@@ -29,7 +30,7 @@ from tensorlog import plearn
 from tensorlog import program
 
 
-TEST_DATA_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),"test-data/")
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__),"test-data/")
 
 def softmax_normalize(expected_result_dict):
   """Compute the softmax of the values in a dictionary, i.e.,
@@ -719,17 +720,10 @@ class TestProPPR(unittest.TestCase):
 class TestExpt(unittest.TestCase):
 
   def setUp(self):
-    if not os.path.exists("tlog-cache"):
-      os.mkdir("tlog-cache")
-    for f in os.listdir("tlog-cache"):
-      p = os.path.join("tlog-cache",f)
-      if os.path.isdir(p):
-        print 'removing dir',p
-        shutil.rmtree(p)
-      else:
-        print 'removing file',p
-        os.remove(p)
+    self.cacheDir = tempfile.mkdtemp()
 
+  def cacheFile(self,fileName):
+    return os.path.join(self.cacheDir,fileName)
 
   def testMToyExpt(self):
     acc,xent = self.runMToyExpt1()
@@ -757,11 +751,11 @@ class TestExpt(unittest.TestCase):
 
   def runTCToyExpt(self):
     db = matrixdb.MatrixDB.uncache(
-        'tlog-cache/textcat.db',
+        self.cacheFile('textcat.db'),
         str(os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')))
     db.listing()
-    trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
-    testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
+    trainData = dataset.Dataset.uncacheMatrix(self.cacheFile('train.dset'),db,'predict/io','train')
+    testData = dataset.Dataset.uncacheMatrix(self.cacheFile('test.dset'),db,'predict/io','test')
     print 'trainData:\n','\n'.join(trainData.pprint())
     print 'testData"\n','\n'.join(testData.pprint())
     prog = program.ProPPRProgram.load(
@@ -769,19 +763,19 @@ class TestExpt(unittest.TestCase):
         db=db)
     prog.setFeatureWeights()
     params = {'prog':prog,
-          'trainData':trainData, 'testData':testData,
-          'savedModel':'toy-trained.db',
-          'savedTestPredictions':'tlog-cache/toy-test.solutions.txt',
-          'savedTrainExamples':'tlog-cache/toy-train.examples',
-          'savedTestExamples':'tlog-cache/toy-test.examples'}
+              'trainData':trainData, 'testData':testData,
+              'savedModel':self.cacheFile('toy-trained.db'),
+              'savedTestPredictions':self.cacheFile('toy-test.solutions.txt'),
+              'savedTrainExamples':self.cacheFile('toy-train.examples'),
+              'savedTestExamples':self.cacheFile('toy-test.examples')}
     return expt.Expt(params).run()
 
   def runTCToyExpt2(self):
     db = matrixdb.MatrixDB.uncache(
-        'tlog-cache/textcat2.db',
+        self.cacheFile('textcat2.db'),
         str(os.path.join(TEST_DATA_DIR,'textcattoy2.cfacts')))
-    trainData = dataset.Dataset.uncacheMatrix('tlog-cache/train.dset',db,'predict/io','train')
-    testData = dataset.Dataset.uncacheMatrix('tlog-cache/test.dset',db,'predict/io','test')
+    trainData = dataset.Dataset.uncacheMatrix(self.cacheFile('train.dset'),db,'predict/io','train')
+    testData = dataset.Dataset.uncacheMatrix(self.cacheFile('test.dset'),db,'predict/io','test')
     prog = program.ProPPRProgram.load(
         [os.path.join(TEST_DATA_DIR,"textcat2.ppr")],
         db=db)
@@ -792,10 +786,10 @@ class TestExpt(unittest.TestCase):
 
   def runMToyExpt1(self):
     db = matrixdb.MatrixDB.uncache(
-        'tlog-cache/matchtoy.db',
+        self.cacheFile('matchtoy.db'),
         str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
     trainData = dataset.Dataset.uncacheExamples(
-        'tlog-cache/mtoy-train.dset',db,
+        self.cacheFile('mtoy-train.dset'),db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
     prog = program.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
@@ -805,10 +799,10 @@ class TestExpt(unittest.TestCase):
 
   def runMToyExpt2(self):
     db = matrixdb.MatrixDB.uncache(
-        'tlog-cache/matchtoy.db',
+        self.cacheFile('matchtoy.db'),
         str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
     trainData = dataset.Dataset.uncacheExamples(
-        'tlog-cache/mtoy-train.dset',db,
+        self.cacheFile('mtoy-train.dset'),db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
     prog = program.ProPPRProgram.load(
@@ -820,10 +814,10 @@ class TestExpt(unittest.TestCase):
 
   def runMToyExpt3(self):
     db = matrixdb.MatrixDB.uncache(
-        'tlog-cache/matchtoy.db',
+        self.cacheFile('matchtoy.db'),
         str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
     trainData = dataset.Dataset.uncacheExamples(
-        'tlog-cache/mtoy-train.dset',db,
+        self.cacheFile('mtoy-train.dset'),db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
     prog = program.ProPPRProgram.load(
@@ -835,10 +829,10 @@ class TestExpt(unittest.TestCase):
 
   def runMToyParallel(self):
     db = matrixdb.MatrixDB.uncache(
-        'tlog-cache/matchtoy.db',
+        self.cacheFile('matchtoy.db'),
         str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
     trainData = dataset.Dataset.uncacheExamples(
-        'tlog-cache/mtoy-train.dset',db,
+        self.cacheFile('mtoy-train.dset'),db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
     prog = program.ProPPRProgram.load(
