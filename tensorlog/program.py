@@ -10,13 +10,21 @@ import collections
 from tensorlog import bpcompiler
 from tensorlog import comline
 from tensorlog import dataset
-from tensorlog import debug
 from tensorlog import declare
 from tensorlog import funs
 from tensorlog import matrixdb
 from tensorlog import opfunutil
 from tensorlog import ops
 from tensorlog import parser
+
+# interactive debugger is sort of optional, and it depends on a bunch
+# of stuff that might not be present, so don't require this import
+try:
+  from tensorlog import debug
+  DEBUGGER_AVAILABLE = True
+except ImportError:
+  logging.warn('debug module not imported')
+  DEBUGGER_AVAILABLE = False
 
 VERSION = "1.2.5"
 
@@ -151,7 +159,7 @@ class Program(object):
     def setRuleWeights(self,weights=None,epsilon=1.0):
         logging.warn('trying to call setFeatureWeights on a non-ProPPR program')
 
-    @staticmethod 
+    @staticmethod
     def _load(fileNames,db=None):
         ruleFiles = [f for f in fileNames if f.endswith(".ppr") or f.endswith(".tlog")]
         dbFiles = [f for f in fileNames if f.endswith(".db")]
@@ -321,8 +329,9 @@ class Interp(object):
         print "              \"foo/2\", or a database predicate, also specified as \"foo/2\"."
         print "ti.list():    list everything."
         print "ti.eval(\"functor/mode\",\"c\"): evaluate a function on a database constant c"
-        print "ti.debug(\"functor/mode\",\"c\"): debug the corresponding eval command"
-        print "ti.debugDset(\"functor/mode\"[,test=True]): run debugger on a dataset"
+        if DEBUGGER_AVAILABLE:
+          print "ti.debug(\"functor/mode\",\"c\"): debug the corresponding eval command"
+          print "ti.debugDset(\"functor/mode\"[,test=True]): run debugger on a dataset"
         print "ti.set(depth=d): reset the max depth"
         print "ti.set(normalize='none'|'softmax'|'log+softmax'): reset the normalizer"
         print "ti.set(echo=N): number of top items to print when doing an eval"
@@ -385,7 +394,7 @@ class Interp(object):
         print "\n".join(fun.pprint())
 
     def eval(self,modeSpec,sym):
-        mode = declare.asMode(modeSpec)        
+        mode = declare.asMode(modeSpec)
         tmp = self.prog.evalSymbols(mode,[sym])
         result = self.prog.db.rowAsSymbolDict(tmp)
         if (self.numTopEcho):
@@ -393,21 +402,27 @@ class Interp(object):
             for rank in range(min(len(top),self.numTopEcho)):
                 print '%d\t%g\t%s' % (rank+1,top[rank][0],top[rank][1])
         return result
-    
+
     def debug(self,modeSpec,sym):
-        mode = declare.asMode(modeSpec)        
-        X = self.db.onehot(sym)
-        dset = dataset.Dataset({mode:X},{mode:self.db.zeros()})
-        debug.Debugger(self.prog,mode,dset,gradient=False).mainloop()
-    
+      if not DEBUGGER_AVAILABLE:
+        logging.warn('debugger is not available in this environment')
+        return
+      mode = declare.asMode(modeSpec)
+      X = self.db.onehot(sym)
+      dset = dataset.Dataset({mode:X},{mode:self.db.zeros()})
+      debug.Debugger(self.prog,mode,dset,gradient=False).mainloop()
+
     def debugDset(self,modeSpec,test=False):
-        fullDataset = self.testData if test else self.trainData
-        if fullDataset==None:
-            print 'train/test dataset is not specified on command line?'
-        else:
-            mode = declare.asMode(modeSpec)        
-            dset = fullDataset.extractMode(mode)
-            debug.Debugger(self.prog,mode,dset,gradient=True).mainloop()
+      if not DEBUGGER_AVAILABLE:
+        logging.warn('debugger is not available in this environment')
+        return
+      fullDataset = self.testData if test else self.trainData
+      if fullDataset==None:
+        print 'train/test dataset is not specified on command line?'
+      else:
+        mode = declare.asMode(modeSpec)
+        dset = fullDataset.extractMode(mode)
+        debug.Debugger(self.prog,mode,dset,gradient=True).mainloop()
 
 #
 # sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william
