@@ -10,11 +10,13 @@ from tensorlog import parser
 from tensorlog import program
 from tensorlog import testtensorlog
 from tensorlog import theanoxcomp
+from tensorlog import tensorflowxcomp
 
 
 TESTED_COMPILERS = [
-  theanoxcomp.DenseMatDenseMsgCrossCompiler,
-  theanoxcomp.SparseMatDenseMsgCrossCompiler,
+#  theanoxcomp.DenseMatDenseMsgCrossCompiler,
+#  theanoxcomp.SparseMatDenseMsgCrossCompiler,
+    tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
 ]
 
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
