@@ -23,11 +23,8 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   def _buildLossExpr(self,params):
     """ Add in the stuff relating to loss"""
     pass
-    target_y = self._vectorVar('_target_y')
+#    target_y = self._vectorVar('_target_y')
 #    self.dataTargetArgs = [target_y]
-#    #this expr is safe for vectors with zeros - TNN.nnet.categorical_crossentropy blows up
-#    #self.dataLossExpr = (-target_y*TT.log(self.expr+1)).mean()
-#    # get the non-zero values of the dense expression
 #    self.dataLossExpr = (target_y*self.applyOpToNonzerosOfDense(TT.log,self.expr)).mean()
 #    self.dataLossFun = theano.function(
 #        inputs=(self.exprArgs + self.dataTargetArgs + self._secondaryArgs()),
@@ -158,7 +155,6 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
   def _sparsify(self,x):
     """Convert a vector produced by the target language to the usual
     sparse-vector output of tensorlog"""
-    print 'call sparsify',x,'type',type(x)
     sx = ss.csr_matrix(x)
     sx.eliminate_zeros()
     return sx
@@ -232,21 +228,21 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
     destination of the Operator, for dense matrices
     """
     if isinstance(op,ops.VecMatMulOp):
-      mExpr = self.matrix(op.matMode,op.transpose)
+      mExpr = self.matrix(op.matMode,op.transpose,lambda mx:tf.transpose(mx))
       return tf.matmul(tfEnv[op.src], mExpr)
-#    elif isinstance(op,ops.AssignPreimageToVar):
-#      mExpr = self.matrix(op.matMode)
-#      return self.ones().dot(mExpr.T)
-#    elif isinstance(op,ops.ComponentwiseVecMulOp):
-#      return tfEnv[op.src] * tfEnv[op.src2]
-#    elif isinstance(op,ops.DefinedPredOp):
-#      _inputs,subExpr = self.fun2Expr(op.subfun,[tfEnv[op.src]],depth=depth+1)
-#      return subExpr
-#    elif isinstance(op,ops.AssignOnehotToVar):
-#      return self.onehot(op.onehotConst)
-#    elif isinstance(op,ops.AssignVectorToVar):
-#      return self.vector(op.matMode)
-#    elif isinstance(op,ops.WeightedVec):
-#      return tfEnv[op.vec] * TT.sum(tfEnv[op.weighter], axis=1, keepdims=True)
+    elif isinstance(op,ops.AssignPreimageToVar):
+      mExpr = self.matrix(op.matMode)
+      return tf.matmul(mExpr, tf.transpose(self.ones()))
+    elif isinstance(op,ops.ComponentwiseVecMulOp):
+      return tf.multiply(tfEnv[op.src],tfEnv[op.src2])
+    elif isinstance(op,ops.DefinedPredOp):
+      _inputs,subExpr = self.fun2Expr(op.subfun,[tfEnv[op.src]],depth=depth+1)
+      return subExpr
+    elif isinstance(op,ops.AssignOnehotToVar):
+      return self.onehot(op.onehotConst)
+    elif isinstance(op,ops.AssignVectorToVar):
+      return self.vector(op.matMode)
+    elif isinstance(op,ops.WeightedVec):
+      return tf.multiply(tfEnv[op.vec], tf.reduce_sum(tfEnv[op.weighter], axis=1, keep_dims=True))
     else:
       assert False,'cannot cross-compile %r' % op

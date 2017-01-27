@@ -224,7 +224,7 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
     destination of the Operator, for dense matrices
     """
     if isinstance(op,ops.VecMatMulOp):
-      mExpr = self.matrix(op.matMode,op.transpose)
+      mExpr = self.matrix(op.matMode,op.transpose,lambda mx:mx.T)
       return thEnv[op.src].dot(mExpr)
     elif isinstance(op,ops.AssignPreimageToVar):
       mExpr = self.matrix(op.matMode)
@@ -277,7 +277,7 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
   # operator expressions for sparse matrices
   def op2Expr(self,thEnv,op,depth):
     if isinstance(op,ops.VecMatMulOp):
-      mExpr = self.matrix(op.matMode,op.transpose)
+      mExpr = self.matrix(op.matMode,op.transpose,lambda mx:mx.T)
       return TSB.structured_dot(thEnv[op.src],mExpr)
     elif isinstance(op,ops.AssignPreimageToVar):
       mExpr = self.matrix(op.matMode)
