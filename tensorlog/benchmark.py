@@ -1,14 +1,14 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
-import parser
+from tensorlog import parser
 import sys
 import time
 
-import declare
-import matrixdb
-import mutil
-import opfunutil
-import tensorlog
+from tensorlog import declare
+from tensorlog import matrixdb
+from tensorlog import mutil
+import program
+from tensorlog import opfunutil
 
 #
 # some timing benchmarks
@@ -24,7 +24,7 @@ def fbModes():
 
 
 def fbProgram(rules, db, modes):
-  prog = tensorlog.Program(db=db, rules=rules)
+  prog = program.Program(db=db, rules=rules)
   t = s = 0
   for _k, m in enumerate(modes):
     t += 1

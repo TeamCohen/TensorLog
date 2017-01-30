@@ -1,11 +1,12 @@
 import sys
 
-import expt
-import declare
-import tensorlog
-import learn
-import plearn
-import funs
+from tensorlog import comline
+from tensorlog import declare
+from tensorlog import expt
+from tensorlog import funs
+from tensorlog import learn
+from tensorlog import plearn
+from tensorlog import program
 
 
 def setup(optdict, settings):
@@ -58,7 +59,7 @@ if __name__=="__main__":
 
     # first run eval set on untrained model:
 
-    optdict,args = tensorlog.parseCommandLine([
+    optdict,args = comline.parseCommandLine([
         '--logging', 'debug', # was: 'warn'
         '--db', 'inputs/{0}.db|inputs/{0}-db.cfacts'.format(settings['dataset']),
         '--prog','inputs/{0}.ppr'.format(settings['dataset']), '--proppr',

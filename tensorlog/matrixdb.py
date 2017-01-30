@@ -12,10 +12,10 @@ import collections
 import logging
 import numpy as NP
 
-import config
-import symtab 
-import parser
-import mutil
+from tensorlog import config
+from tensorlog import symtab
+from tensorlog import parser
+from tensorlog import mutil
 
 conf = config.Config()
 conf.allow_weighted_tuples = True; conf.help.allow_weighted_tuples = 'Allow last column of cfacts file to be a weight for the fact'

@@ -1,23 +1,23 @@
-import testtensorlog
-
-import tensorlog.theanoxcomp
-import tensorlog.tensorlog
-import tensorlog.declare
-import tensorlog.matrixdb
-import tensorlog.parser
-import tensorlog.mutil
-import tensorlog.funs
-import tensorlog.ops
-import tensorlog.learnxcomp as learnxc
-
 import unittest
 import sys
 import theano
 import os
 
+from tensorlog import declare
+from tensorlog import matrixdb
+from tensorlog import mutil
+from tensorlog import parser
+from tensorlog import program
+from tensorlog import testtensorlog
+from tensorlog import theanoxcomp
+from tensorlog import funs
+from tensorlog import ops
+from tensorlog import learnxcomp as learnxc
+
+
 TESTED_COMPILERS = [
-  tensorlog.theanoxcomp.DenseMatDenseMsgCrossCompiler,
-  tensorlog.theanoxcomp.SparseMatDenseMsgCrossCompiler,
+  theanoxcomp.DenseMatDenseMsgCrossCompiler,
+  theanoxcomp.SparseMatDenseMsgCrossCompiler,
 ]
     
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
@@ -26,7 +26,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
 
   def testFailure(self):
-    self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {tensorlog.matrixdb.NULL_ENTITY_NAME:1.0})
+    self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
 
 #  TODO fix
 #  def test_reverse_if(self):
@@ -57,9 +57,9 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
   def test_rec1(self):
     #TODO fix
-    tensorlog.DEFAULT_MAXDEPTH=4
+    program.DEFAULT_MAXDEPTH=4
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
-    tensorlog.DEFAULT_MAXDEPTH=10
+    program.DEFAULT_MAXDEPTH=10
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
 
   def test_const_output(self):
@@ -116,14 +116,14 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     # inference routines
     print 'xcomp inference for mode',mode_string,'on input',input_symbol
     testtensorlog.softmax_normalize(expected_result_dict)
-    rules = tensorlog.parser.RuleCollection()
+    rules = parser.RuleCollection()
     for r in ruleStrings:
-      rules.add(tensorlog.parser.Parser.parseRule(r))
+      rules.add(parser.Parser.parseRule(r))
     if progType=='proppr':
-      prog = tensorlog.tensorlog.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
+      prog = program.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
     else:
-      prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
-    mode = tensorlog.declare.ModeDeclaration(mode_string)
+      prog = program.Program(db=self.db,rules=rules)
+    mode = declare.ModeDeclaration(mode_string)
     tlogFun = prog.compile(mode)
     ytl=None
     if compare: ytl=prog.evalSymbols(mode,[input_symbol])
@@ -162,7 +162,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 class TestXCGrad(testtensorlog.TestGrad):
 
   def setUp(self):
-    self.db = tensorlog.matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,'fam.cfacts'))
+    self.db = matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,'fam.cfacts'))
 
   def test_if(self):
     rules = ['p(X,Y):-sister(X,Y).']
@@ -303,8 +303,8 @@ class TestXCGrad(testtensorlog.TestGrad):
   def learnxc_check(self,rule_strings,mode_string,params,xyPairs,expected):
     print "XLearner loss/grad eval"
     rules = testtensorlog.rules_from_strings(rule_strings)
-    prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
-    mode = tensorlog.declare.ModeDeclaration(mode_string)
+    prog = program.Program(db=self.db,rules=rules)
+    mode = declare.ModeDeclaration(mode_string)
     tlogFun = prog.compile(mode)
     # TODO: not working yet for mini-batches so check each example
     # individually
@@ -330,8 +330,8 @@ class TestXCGrad(testtensorlog.TestGrad):
   def xgrad_check(self,rule_strings,mode_string,params,xyPairs,expected):
     print "direct loss/grad eval"
     rules = testtensorlog.rules_from_strings(rule_strings)
-    prog = tensorlog.tensorlog.Program(db=self.db,rules=rules)
-    mode = tensorlog.declare.ModeDeclaration(mode_string)
+    prog = program.Program(db=self.db,rules=rules)
+    mode = declare.ModeDeclaration(mode_string)
     tlogFun = prog.compile(mode)
     # TODO: not working yet for mini-batches so check each example
     # individually

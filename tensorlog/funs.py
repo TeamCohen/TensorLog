@@ -7,10 +7,10 @@ import sys
 import logging
 import copy
 
-import opfunutil
-import ops
-import config
-import mutil
+from tensorlog import opfunutil
+from tensorlog import ops
+from tensorlog import config
+from tensorlog import mutil
 import numpy
 
 conf = config.Config()

@@ -1,9 +1,9 @@
 import logging
 
-import tensorlog
-import expt
-import learn
-import plearn
+from tensorlog import comline
+from tensorlog import expt
+from tensorlog import learn
+from tensorlog import plearn
 
 # a version of cora with left-linear recursion
 #
@@ -14,10 +14,10 @@ if __name__=="__main__":
     logging.basicConfig(level=logging.INFO)
     logging.info('level is info')
 
-    db = tensorlog.parseDBSpec('tmp-cache/cora-linear.db|inputs/cora-linear.cfacts')
-    trainData = tensorlog.parseDatasetSpec('tmp-cache/cora-linear-train.dset|inputs/train.examples', db)
-    testData = tensorlog.parseDatasetSpec('tmp-cache/cora-linear-test.dset|inputs/test.examples', db)
-    prog = tensorlog.parseProgSpec("cora-linear.ppr",db,proppr=True)
+    db = comline.parseDBSpec('tmp-cache/cora-linear.db|inputs/cora-linear.cfacts')
+    trainData = comline.parseDatasetSpec('tmp-cache/cora-linear-train.dset|inputs/train.examples', db)
+    testData = comline.parseDatasetSpec('tmp-cache/cora-linear-test.dset|inputs/test.examples', db)
+    prog = comline.parseProgSpec("cora-linear.ppr",db,proppr=True)
     prog.setRuleWeights()
     prog.db.markAsParam('kaw',1)
     prog.db.markAsParam('ktw',1)

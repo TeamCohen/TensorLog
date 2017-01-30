@@ -11,16 +11,17 @@ import random
 import math
 import time
 
-import declare
-import matrixdb
-import dataset
-import tensorlog
-import funs
-import ops
-import expt
-import learn
-import plearn
- 
+from tensorlog import declare
+from tensorlog import matrixdb
+from tensorlog import dataset
+from tensorlog import comline
+from tensorlog import program
+from tensorlog import funs
+from tensorlog import ops
+from tensorlog import expt
+from tensorlog import learn
+from tensorlog import plearn
+
 # results july 14
 #
 # published experiments used 0.5 for EDGE_WEIGHT and learning;
@@ -138,13 +139,13 @@ if __name__=="__main__":
     generateData(n,trainFile,testFile)
 
     db = matrixdb.MatrixDB.loadFile(factFile)
-    prog = tensorlog.Program.loadRules("grid.ppr",db)
+    prog = program.Program.loadRules("grid.ppr",db)
 
     startNode = nodeName(1,1)
     if goal=='time':
         for d in [4,8,16,32,64,99]:
             print 'depth',d,
-            ti = tensorlog.Interp(prog)
+            ti = program.Interp(prog)
             ti.prog.maxDepth = d
             start = time.time()
             ti.prog.evalSymbols(declare.asMode("path/io"), [startNode])
@@ -188,4 +189,3 @@ if __name__=="__main__":
         expt.Expt(params).run()
         if False and NETWORKX:
             visualizeLearned(db,n)
-

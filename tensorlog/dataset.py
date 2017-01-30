@@ -11,9 +11,9 @@ import numpy as NP
 import numpy.random as NR
 import logging
 
-import mutil
-import matrixdb
-import declare
+from tensorlog import mutil
+from tensorlog import matrixdb
+from tensorlog import declare
 
 #
 # dealing with labeled training data

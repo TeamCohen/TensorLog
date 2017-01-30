@@ -2,13 +2,13 @@ import os
 import scipy.sparse as SS
 import scipy.io
 
-import expt
-import dataset
-import tensorlog
-import matrixdb
-import mutil
-import logging
-import funs
+from tensorlog import expt
+from tensorlog import dataset
+from tensorlog import comline
+from tensorlog import matrixdb
+from tensorlog import mutil
+from tensorlog import logging
+from tensorlog import funs
 
 #logging.basicConfig(level=logging.DEBUG)
 
@@ -24,7 +24,7 @@ if __name__=="__main__":
     print 'test: ','\n  '.join(testData.pprint())
     #dTrain = uncacheMatPairs('%s.db' % stem,'raw/%s.train.examples' % stem)
     #dTest = uncacheMatPairs('%s.db' % stem,'raw/%s.test.examples' % stem)
-    prog = tensorlog.ProPPRProgram.load(["%s-train-isg.ppr" % stem],db=db)
+    prog = program.ProPPRProgram.load(["%s-train-isg.ppr" % stem],db=db)
     prog.setRuleWeights()
     prog.maxDepth=4
     params = {'initProgram':prog,

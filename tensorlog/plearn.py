@@ -11,9 +11,9 @@ import multiprocessing.pool
 import logging
 import numpy as NP
 
-import mutil
-import learn
-import dataset
+from tensorlog import mutil
+from tensorlog import learn
+from tensorlog import dataset
 
 #TODO iterate, don't make lists
 

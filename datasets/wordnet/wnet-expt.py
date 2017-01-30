@@ -1,10 +1,10 @@
 import sys
 
-import expt
-import declare
-import tensorlog
-import learn
-import plearn
+from tensorlog import expt
+from tensorlog import declare
+from tensorlog import comline
+from tensorlog import learn
+from tensorlog import plearn
 
 if __name__=="__main__":
     #usage: [targetPredicate] [epochs]
@@ -13,8 +13,8 @@ if __name__=="__main__":
     pred = 'hypernym' if len(sys.argv)<=1 else sys.argv[1]
     epochs = 30 if len(sys.argv)<=2 else int(sys.argv[2])
 
-    # use tensorlog.parseCommandLine to set up the program, etc
-    optdict,args = tensorlog.parseCommandLine([
+    # use comline.parseCommandLine to set up the program, etc
+    optdict,args = comline.parseCommandLine([
             '--logging', 'warn',
             '--db', 'inputs/wnet.db|inputs/wnet.cfacts',
             '--prog','inputs/wnet-learned.ppr', '--proppr',

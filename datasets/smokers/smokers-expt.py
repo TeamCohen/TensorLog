@@ -1,15 +1,16 @@
 import sys
 import time
 
-import tensorlog
-import expt
-import declare
-import mutil
+from tensorlog import comline
+from tensorlog import program
+from tensorlog import expt
+from tensorlog import declare
+from tensorlog import mutil
 
 if __name__=="__main__":
-    
-    optdict,args = tensorlog.parseCommandLine('--prog smokers.ppr --proppr --db smokers.cfacts'.split())
-    ti = tensorlog.Interp(optdict['prog'])
+
+    optdict,args = comline.parseCommandLine('--prog smokers.ppr --proppr --db smokers.cfacts'.split())
+    ti = program.Interp(optdict['prog'])
     ti.prog.setRuleWeights()
     ti.prog.maxDepth = 99
     rows = []
@@ -25,5 +26,3 @@ if __name__=="__main__":
         ti.prog.eval(declare.asMode(modeString), [X])
         print 'time',time.time() - start,'sec'
     print 'total time', time.time() - start0,'sec'
-
-

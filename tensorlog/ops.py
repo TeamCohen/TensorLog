@@ -8,9 +8,9 @@ import logging
 #TODO make util smart about csc/csr
 import scipy.sparse
 
-import opfunutil
-import mutil
-import config
+from tensorlog import opfunutil
+from tensorlog import mutil
+from tensorlog import config
 import copy
 
 conf = config.Config()

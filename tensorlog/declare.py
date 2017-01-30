@@ -2,7 +2,7 @@
 
 # mode declarations for Tensorlog (and eventually type declarations)
 
-import parser
+from tensorlog import parser
 
 def asMode(spec):
     """Convert strings like "foo(i,o)" or "foo/io" to ModeDeclarations.

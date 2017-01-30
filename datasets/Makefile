@@ -18,7 +18,7 @@ test:
 	(cd grid; make)
 	(cd fb15k-237; make)
 	(cd smokers; make)
-	(cd textcat-ssl; make)
+#	(cd textcat-ssl; make)
 
 check:
 	(cd cora; make check)
@@ -26,7 +26,7 @@ check:
 	(cd grid; make check)
 	(cd fb15k-237; make check)
 	(cd smokers; make check)
-	(cd textcat-ssl; make check)
+#	(cd textcat-ssl; make check)
 
 clean:
 	(cd cora; make clean)
@@ -34,4 +34,4 @@ clean:
 	(cd grid; make clean)
 	(cd fb15k-237; make clean)
 	(cd smokers; make clean)
-	(cd textcat-ssl; make clean)
+#	(cd textcat-ssl; make clean)

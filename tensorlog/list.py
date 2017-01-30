@@ -5,9 +5,9 @@ import getopt
 # 
 # 
 
-import declare
-import tensorlog
-import matrixdb
+from tensorlog import declare
+from tensorlog import tensorlog
+from tensorlog import matrixdb
 
 if __name__ == "__main__":
     def usage():
