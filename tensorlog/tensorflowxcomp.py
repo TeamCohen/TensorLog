@@ -87,34 +87,24 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   def show(self):
     """ print a summary to stdout """
     print 'exprArgs',self.exprArgs
-    print 'expr',self.expr
+    print 'expr',self.expr,'type',type(self.expr)
+    TensorFlowCrossCompiler.pprintExpr(self.expr)
     print 'subexpr cache:'
     for k,v in self.subexprCacheVarBindings.items():
       print ' |',k,'type',type(v)
 
 
-#  def debugExpr(self):
-#    AbstractCrossCompiler.debugVar(self.expr,0,maxdepth=20)
-#
-#  @staticmethod
-#  def debugVar(v,depth=0,maxdepth=10):
-#    if depth>maxdepth:
-#      print '...'
-#    else:
-#      print '| '*(depth+1),
-#      print 'var: name',v.name,'type',type(v),'def',theano.pp(v)
-#      for a in v.get_parents():
-#        AbstractCrossCompiler.debugApply(a,depth=depth+1,maxdepth=maxdepth)
+  @staticmethod
+  def pprintExpr(expr,depth=0,maxdepth=20):
+    if depth>maxdepth:
+      print '...'
+    else:
+      print '| '*(depth+1),
+      op = expr.op
+      print 'expr:',expr,'type','op',op.name,'optype',op.type
+      for inp in op.inputs:
+        TensorFlowCrossCompiler.pprintExpr(inp,depth=depth+1,maxdepth=maxdepth)
 
-#  @staticmethod
-#  def debugApply(a,depth=0,maxdepth=10):
-#    if depth>maxdepth:
-#      print '...'
-#    else:
-#      print '| '*(depth+1),
-#      print 'apply: ',a,'op',type(a.op),'output types',map(type,a.outputs)
-#      for v in a.inputs:
-#        AbstractCrossCompiler.debugVar(v,depth=depth+1,maxdepth=maxdepth)
 
 ###############################################################################
 # implementation for dense messages, dense relation matrices
@@ -180,7 +170,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
       # wrap inner function with softmax function - note tf handles
       # sparse softmax the way tensorlog does, ignoring zeros
       inputs,subExpr = self.fun2Expr(fun.fun,sharedInputs,depth=depth)
-      sparseResult = tf.sparse_softmax(self._sparseFromDenseVec(subExpr))
+      sparseResult = tf.sparse_softmax(self._sparseFromDenseVec(subExpr+self.nullSmoothing))
       return (inputs, tf.sparse_tensor_to_dense(sparseResult))
 
     elif isinstance(fun,funs.SumFunction):
@@ -232,7 +222,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
       return tf.matmul(tfEnv[op.src], mExpr)
     elif isinstance(op,ops.AssignPreimageToVar):
       mExpr = self.matrix(op.matMode)
-      return tf.matmul(mExpr, tf.transpose(self.ones()))
+      return tf.matmul(self.ones(), tf.transpose(mExpr))
     elif isinstance(op,ops.ComponentwiseVecMulOp):
       return tf.multiply(tfEnv[op.src],tfEnv[op.src2])
     elif isinstance(op,ops.DefinedPredOp):

@@ -14,10 +14,10 @@ from tensorlog import tensorflowxcomp
 
 
 TESTED_COMPILERS = [
-  theanoxcomp.DenseMatDenseMsgCrossCompiler,
-  theanoxcomp.SparseMatDenseMsgCrossCompiler,
+#  theanoxcomp.DenseMatDenseMsgCrossCompiler,
+#  theanoxcomp.SparseMatDenseMsgCrossCompiler,
 # still working on this one
-#    tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+  tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
 ]
 
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
@@ -25,8 +25,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
   def test_if(self):
     self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
 
-  def testFailure(self):
-    # fails for tensorflowxcomp
+  def test_failure(self):
     self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
 
 #  TODO fix
@@ -44,7 +43,6 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
             {'charlotte':1.0, 'lucas':1.0, 'poppy':1.0, 'caroline':1.0, 'elizabeth':1.0})
 
   def test_mid(self):
-    # fails for tensorflowxcomp
     self.xcomp_check(['p(X,Y):-sister(X,Y),child(Y,Z).'], 'p(i,o)', 'william',
             {'sarah': 1.0, 'rachel': 2.0, 'lottie': 2.0})
 
@@ -56,7 +54,6 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     self.xcomp_check(['p(X,Y):-spouse(X,Y),sister(X,Z).'], 'p(i,o)', 'william', {'susan': 3.0})
 
   def test_back2(self):
-    # fails for tensorflowxcomp
     self.xcomp_check(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
 
   def test_rec1(self):
@@ -67,12 +64,10 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
 
   def test_const_output(self):
-    # fails for tensorflowxcomp
     self.xcomp_check(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'sarah', {'william': 1.0})
     self.xcomp_check(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'lottie', {'william': 2.0})
 
   def test_const_chain1(self):
-    # fails for tensorflowxcomp
     self.xcomp_check(['p(X,S) :- assign(S,susan),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
 
   def test_const_chain2(self):
@@ -80,7 +75,6 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     self.xcomp_check(['p(X,Pos) :- assign(Pos,pos),child(X,Y),young(Y).'],'p(i,o)','lottie',{'pos':2.0})
 
   def test_alt_chain(self):
-    # fails for tensorflowxcomp
     self.xcomp_check(['p(X,W) :- spouse(X,W),sister(X,Y),child(Y,Z).'],'p(i,o)','william',{'susan': 5.0})
     pass
 
@@ -129,16 +123,16 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       #cross-compile the function
       xc = compilerClass(prog.db)
       xc.compile(tlogFun)
-      # evaluate the theano function and get the output y
+      # evaluate the function and get the output y
       xc.show()
-      print '== performing theano eval with',compilerClass,'=='
+      print '== performing eval with',compilerClass,'=='
       ys = xc.eval(xc.wrapSymbols([input_symbol]))
       y = ys[0]
       # theano output will a be (probably dense) message, so
       # just compare that maximal elements from these two dicts
       # are the same
       self.check_maxes_in_dicts(self.db.rowAsSymbolDict(y), expected_result_dict)
-      print '== theano eval checks passed =='
+      print '== eval checks passed =='
 
   def check_maxes_in_dicts(self,actual,expected):
     def maximalElements(d):
