@@ -1,5 +1,0 @@
-queries 406 answers 58934 labeled answers 7436
-==============================================================================
-metric map (MAP): The average precision after each relevant solution is retrieved
-. micro: 0.837127757873
-. macro: 0.777064466558

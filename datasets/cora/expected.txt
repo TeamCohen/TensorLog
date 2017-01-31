@@ -1,3 +1,0 @@
-| # expected output of expt from Wed Jul 13 14:58:14 EDT 2016
-| training ... done in 21.810 sec
-| . micro: 0.975907283905
