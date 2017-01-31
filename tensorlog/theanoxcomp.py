@@ -22,8 +22,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     """
     (self.exprArgs,self.expr) = self.fun2Expr(fun,None)
     self.inferenceFun = theano.function(inputs=(self.exprArgs + self._secondaryArgs()),
-                                        outputs=self.expr,
-                                        mode='DebugMode')
+                                        outputs=self.expr)
     self._buildLossExpr(params)
     return self
 
@@ -60,7 +59,8 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     return map(lambda v:self._sparsify(v), targetFunctionOutputs)
 
   def eval(self,inputs):
-    formalArgs = inputs +self._secondaryArgBindings()
+    formalArgs = inputs + self._secondaryArgBindings()
+    assert len(formalArgs)>0
     return self._unwrapOutputs(self.inferenceFun(*formalArgs))
 
   def evalDataLoss(self,rawInputs,rawTarget):
@@ -93,8 +93,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     """ print a summary to stdout """
     print 'exprArgs',self.exprArgs
     print 'expr',theano.pp(self.expr)
-    print 'expr.sum()',theano.pp(self.expr.sum())
-    #print 'debug expr.sum()\n',theano.printing.debugprint(self.expr.sum())
+    print 'debug expr.sum()\n',theano.printing.debugprint(self.expr.sum())
     print 'subexpr cache:'
     for k,v in self.subexprCacheVarBindings.items():
       print ' |',k,'type',type(v)
@@ -214,6 +213,9 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
       # return the inputs and the expression for the
       # OpSeqFunction's output
       return (seqInputs, thEnv[fun.ops[-1].dst])
+
+    elif isinstance(fun,funs.NullFunction):
+      return ([], self.zeros())
 
     else:
       assert False,'cannot cross-compile %r' % fun

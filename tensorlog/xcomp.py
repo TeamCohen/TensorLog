@@ -99,6 +99,10 @@ class AbstractCrossCompiler(object):
     """Wraps a call to db.ones(), but will cache the result """
     return self.constantVector('__ones',self.db.ones())
 
+  def zeros(self):
+    """Wraps a call to db.zeros(), but will cache the result """
+    return self.constantVector('__zeros',self.db.zeros())
+
   def onehot(self,sym):
     """Wraps a call to db.onehot(), but will cache the result """
     return self.constantVector(sym,self.db.onehot(sym))

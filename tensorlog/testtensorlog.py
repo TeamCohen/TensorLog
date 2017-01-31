@@ -29,7 +29,6 @@ from tensorlog import parser
 from tensorlog import plearn
 from tensorlog import program
 
-
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__),"test-data/")
 
 def softmax_normalize(expected_result_dict):

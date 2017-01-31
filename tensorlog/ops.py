@@ -125,8 +125,9 @@ class DefinedPredOp(Op):
         env.delta[self.src] = newDelta
     def pprint(self,depth=-1):
         top = super(DefinedPredOp,self).pprint(depth)
+        # depth here is depth of the recursion from DefinedPredOp's to Functions
         if depth>conf.pprintMaxdepth: return top + ["%s..." % ('| '*(depth+1))]
-        return top + self.subfun.pprint(depth=depth+1)
+        else: return top + self.subfun.pprint(depth=depth+1)
     def install(self,nextId):
         """ Give a numeric id to this operator """
         self.id = nextId

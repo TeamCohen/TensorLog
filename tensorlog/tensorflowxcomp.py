@@ -209,6 +209,9 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
       # OpSeqFunction's output
       return (seqInputs, tfEnv[fun.ops[-1].dst])
 
+    elif isinstance(fun,funs.NullFunction):
+      return ([], self.zeros())
+
     else:
       assert False,'cannot cross-compile %r' % fun
 

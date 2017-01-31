@@ -16,7 +16,6 @@ from tensorlog import tensorflowxcomp
 TESTED_COMPILERS = [
 #  theanoxcomp.DenseMatDenseMsgCrossCompiler,
 #  theanoxcomp.SparseMatDenseMsgCrossCompiler,
-# still working on this one
   tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
 ]
 
@@ -28,7 +27,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
   def test_failure(self):
     self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
 
-#  TODO fix
+# TODO fix
 #  def test_reverse_if(self):
 #    self.xcomp_check(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
 
@@ -57,11 +56,10 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     self.xcomp_check(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
 
   def test_rec1(self):
-    #TODO fix
     program.DEFAULT_MAXDEPTH=4
-    self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
+    self.xcomp_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
     program.DEFAULT_MAXDEPTH=10
-    self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
+    self.xcomp_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
 
   def test_const_output(self):
     self.xcomp_check(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'sarah', {'william': 1.0})
@@ -303,12 +301,6 @@ class TestXCGrad(testtensorlog.TestGrad):
         xc.compile(tlogFun,params)
         result,loss = xc.evalDataLoss([data.get_x()],data.get_y())
         print 'loss',loss
-#        print '== expr'
-#        print theano.printing.debugprint(xc.expr)
-#        print 'end expr'
-#        print '== dataLossExpr'
-#        print theano.printing.debugprint(xc.dataLossExpr)
-#        print '== end dataLossExpr'
         updates = xc.evalDataLossGrad([data.get_x()],data.get_y())
         updates_with_string_keys = {}
         for (functor,arity),up in zip(params,updates):
