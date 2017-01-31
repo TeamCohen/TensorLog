@@ -1,4 +1,0 @@
-| # expected output of expt from Tue Jul 26 13:35:28 EDT 2016: 10 processes 20 epochs i_people_person_nationality, L2Regularizer, miniBatchSize=100
-| training ParallelFixedRateGDLearner ... done in 177.429 sec
-| eval untrained theory on train : acc 0.580528846154 xent/ex 2.4619494193
-| eval ..trained theory on train : acc 0.623798076923 xent/ex 2.86242646191
