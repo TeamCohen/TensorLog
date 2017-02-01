@@ -1,17 +1,36 @@
-live theano, for instrumentation:
-
- - export PYTHONPATH=/usr/local/google/home/cohenw/code/TensorLog/src:/usr/local/google/home/cohenw/code/Theano
+ - export PYTHONPATH=/usr/local/google/home/cohenw/code/TensorLog:$PYTHONPATH
+ - live theano add /usr/local/google/home/cohenw/code/Theano
 
 Next actions:
 
- - revive debug.py - how can testing this be automated? should I bother?
- - fix reverse_if bug
- - look at sparse messages in actual theano-based learner
- - look at tensorflow
+ - revive debug.py - how can testing this be automated? should I bother? w/ Katie?
+ - refactor the cross-compilers to reduce duplication?
+ - fix reverse_if bug - NO IDEA why this fails
+ - look at sparse messages in theano-based learner
+ - dense tensorflow - gradients -- seem to be like theano.shared, maybe I should go back to those?
+ - sparse tensorflow:
+ --- seems like inputs seem to be data, not a sparse matrix which is awkward.  I could
+     pass these in as bindings but is that what I should do?
+ --- what does tensorflow do for gradients? they seem to be wrt Variables which I'm not using.
 
 Bigger steps:
 
  - typing for tensorlog.  add typed matrixDB, type declarations/inference for IDB?
  - ideas - unary predicate for each type? sparse matrix mapping type-specific code to type-independent code?
 
+Design notes:
+ - xcomp.compile() populates xcomp.workspace
+ - xcomp contains "builtins" which bind predicates to functions
 
+ xcomp.workspace
+    .sharedVars: map name -> variable
+    .inferenceExpr
+    .dataLossExpr
+    .db
+
+Overall package structure:
+  tensorlog: config, matrixdb, parser, (bp)compiler, program, funs, ops (-eval and bprop), xcomp
+     .ui: comline, expt, list, debug  
+     .native: mutil, autodiff (eval and bprop), learn, plearn, putil, dataset
+     .th: theanoxcomp
+     .tf: tensorflowxcomp

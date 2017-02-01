@@ -21,6 +21,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     Params should be a list of (functor,arity) pairs.
     """
     (self.exprArgs,self.expr) = self.fun2Expr(fun,None)
+    # can also add mode='DebugMode'
     self.inferenceFun = theano.function(inputs=(self.exprArgs + self._secondaryArgs()),
                                         outputs=self.expr)
     self._buildLossExpr(params)
@@ -36,16 +37,14 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     self.dataLossExpr = (target_y*self.applyOpToNonzerosOfDense(TT.log,self.expr)).mean()
     self.dataLossFun = theano.function(
         inputs=(self.exprArgs + self.dataTargetArgs + self._secondaryArgs()),
-        outputs=(self.expr,self.dataLossExpr),
-        mode='DebugMode')
+        outputs=(self.expr,self.dataLossExpr))
     if params is not None:
       self.params = params
       paramVars = map(self.getSubExpr,params)
       self.dataLossGradExprs = theano.grad(self.dataLossExpr, paramVars)
       self.dataLossGradFun = theano.function(
           inputs=(self.exprArgs + self.dataTargetArgs + self._secondaryArgs()),
-          outputs=self.dataLossGradExprs,
-          mode='DebugMode')
+          outputs=self.dataLossGradExprs)
 
   #
   # evaluators
@@ -86,6 +85,9 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     newData = op(TSB.csm_data(sparseExpr)).flatten()
     newSparse = TS.CSR(newData, TSB.csm_indices(sparseExpr), TSB.csm_indptr(sparseExpr), TSB.csm_shape(sparseExpr))
     return TSB.dense_from_sparse(newSparse)
+
+  @staticmethod
+  def theanoTransposer(mx): return mx.T
 
   # for debugging output
 
@@ -226,10 +228,10 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
     destination of the Operator, for dense matrices
     """
     if isinstance(op,ops.VecMatMulOp):
-      mExpr = self.matrix(op.matMode,op.transpose,lambda mx:mx.T)
+      mExpr = self.matrix(op.matMode,op.transpose,TheanoCrossCompiler.theanoTransposer)
       return thEnv[op.src].dot(mExpr)
     elif isinstance(op,ops.AssignPreimageToVar):
-      mExpr = self.matrix(op.matMode)
+      mExpr = self.matrix(op.matMode,False,TheanoCrossCompiler.theanoTransposer)
       return self.ones().dot(mExpr.T)
     elif isinstance(op,ops.ComponentwiseVecMulOp):
       return thEnv[op.src] * thEnv[op.src2]
@@ -279,12 +281,11 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
   # operator expressions for sparse matrices
   def op2Expr(self,thEnv,op,depth):
     if isinstance(op,ops.VecMatMulOp):
-      mExpr = self.matrix(op.matMode,op.transpose,lambda mx:mx.T)
+      mExpr = self.matrix(op.matMode,op.transpose,TheanoCrossCompiler.theanoTransposer)
       return TSB.structured_dot(thEnv[op.src],mExpr)
     elif isinstance(op,ops.AssignPreimageToVar):
-      mExpr = self.matrix(op.matMode)
-      # TODO: not sure why this simple expression doesn't work: TSB.dot(self.ones(), mExpr.transpose())
-      return TSB.structured_dot(mExpr,self.ones().transpose()).transpose()
+      mExpr = self.matrix(op.matMode,False,TheanoCrossCompiler.theanoTransposer)
+      return TSB.dot(self.ones(),mExpr.T)
     elif isinstance(op,ops.ComponentwiseVecMulOp):
       return thEnv[op.src] * thEnv[op.src2]
     elif isinstance(op,ops.DefinedPredOp):

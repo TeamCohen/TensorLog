@@ -84,15 +84,19 @@ class AbstractCrossCompiler(object):
     """ Wraps a call to db.matrix(), but will cache the results as a variable or expression.
     """
     # cache an expression for the un-transposed version of the matrix
+    #print '*** calling matrix',matMode,transpose,matrixTransposer
     assert matMode.arity==2
     key = (matMode.getFunctor(),2)
     if (key) not in self.subexprCache:
       variable_name = "M__" + matMode.getFunctor()
       val = self._wrapDBMatrix(self.db.matrix(matMode,False))
       self._extendSubexprCache(key, self._matrixVar(variable_name), val)
+      #print '*** caching',key
     if self.db.transposeNeeded(matMode,transpose):
+      #print '*** returning transpose of cache for',key
       return matrixTransposer(self.subexprCache[key])
     else:
+      #print '*** returning cache of ',key
       return self.subexprCache[key]
 
   def ones(self):
