@@ -90,9 +90,14 @@ class AbstractCrossCompiler(object):
     """
     # build the expression used for inference
     (self.ws.inferenceArgs,self.ws.inferenceExpr) = self.fun2Expr(fun)
-    # do any postprocessing needed to call it
+    # do any postprocessing needed
     self.finalizeInference()
-    #self.buildLossExpr(params)
+    # extend the inferenceExpr to also compute loss
+    self.buildLossExpr(params)
+
+  #
+  # main compilation code
+  #
 
   def fun2Expr(self,fun,sharedInputs=None,depth=0):
     """Return a pair (inputs, expr) where binding the inputs in, and then
@@ -109,7 +114,8 @@ class AbstractCrossCompiler(object):
     """
 
     if isinstance(fun,funs.SoftmaxFunction):
-      return self.softmaxFun2Expr(fun,sharedInputs,depth)
+      inputs,subExpr = self.fun2Expr(fun.fun,sharedInputs,depth)
+      return inputs,self.softmaxFun2Expr(subExpr)
 
     elif isinstance(fun,funs.SumFunction):
       assert(len(fun.funs)>=1)
@@ -176,7 +182,7 @@ class AbstractCrossCompiler(object):
   # subclasses should implement these
   #
 
-  # variables and i/o
+  # shared variables and placeholders
 
   def createPlaceholder(self,name,kind):
     """Create a placeholder for top-level inputs"""
@@ -185,6 +191,8 @@ class AbstractCrossCompiler(object):
   def createSharedVar(self,name,val,kind):
     """Create a shared variable in the target language"""
     assert False, 'abstract method called'
+
+  # i/o
 
   def wrapDBVector(self,vec):
     """ Convert a vector from the DB into a vector value used by the
@@ -197,11 +205,13 @@ class AbstractCrossCompiler(object):
     assert False, 'abstract method called'
 
   def unwrapOutputs(self,targetLanguageOutputs):
-    """ Convert outputs of an eval'd target language expression
-    to what Tensorlog needs for its eval and test code """
+    """ unwrap a list of outputs
+    """
     return map(lambda v:self.unwrapOutput(v), targetLanguageOutputs)
 
   def unwrapOutput(self,targetLanguageOutputs):
+    """ Convert outputs of an eval'd target language expression
+    to what Tensorlog needs for its eval and test code """
     assert False,'abstract method called'
 
   # manipulate expressions
@@ -212,12 +222,12 @@ class AbstractCrossCompiler(object):
     """
     return accum+addend
 
-  def transposeMatrixExpr(self,mx):
-    """ Transpose a matrix """
+  def transposeMatrixExpr(self,m):
+    """ Expression to transpose a matrix """
     assert False, 'abstract method called'
 
-  def softmaxFun2Expr(fun):
-    """ Compute softmax of vector """
+  def softmaxFun2Expr(self,fun):
+    """ Compute softmax of output of fun """
     assert False, 'abstract method called'
 
   def vecMatMulExpr(self,v,m):
@@ -233,11 +243,14 @@ class AbstractCrossCompiler(object):
     vector with column sum of the weighter. """
     assert False, 'abstract method called'
 
-  def buildLossExpr(params):
-   """ Add in the stuff relating to loss"""
+  def buildLossExpr(self,params):
+   """Add in the stuff relating to loss, assuming inference expression
+   is constructed """
    assert False, 'abstract method called'
 
-  # clean up more
+  def finalizeInference(self):
+    """ Any additional bookkeeping needed after inference expression is constructed. """
+    assert False, 'abstract method called'
 
   def evalDataLoss(self,rawInputs,rawTarget):
     """Evaluate the unregularized loss of the data.  rawInputs will
@@ -250,10 +263,11 @@ class AbstractCrossCompiler(object):
     """Evaluate the gradient of the unregularized loss of the data.
     Inputs are the same as for evalDataLoss.
     """
-    pass
+    assert False, 'abstract method called'
+
+# some helper classes
 
 class NameSpacer(object):
-
   """A 'namespaced' dictionary indexed by strings. Assigns every string
     to a string 'internalName' (which depends on the string and the
     namespaceId for this object) and indexes by that internal name.
@@ -273,17 +287,25 @@ class Workspace(object):
   """ Holds information created in cross-compilation
   """
   def __init__(self,xcomp):
+    # backpointer to cross-compiler
+    self.xcomp = xcomp
+    # shared variables, which correspond to tensorlog parameters and
+    # constants, and their values.  the 'key' is a (functor,arity)
+    # pair, as used in tensorlog
     self.sharedVariable = {}
     self.sharedVariableInfoByName = {}
     self.sharedVariableInfoByKey = {}
     self.sharedVariableList = []
+    # expression used for inference
     self.inferenceExpr = None
+    # list of arguments to inferenceExpr
     self.inferenceArgs = None
+    # expression used for unregularized loss
     self.dataLossExpr = None
+    # additional arguments for computing loss
     self.dataLossArgs = None
+    # gradient of loss
     self.dataLossGradExprs = None
-    self.dataLossGradArgs = None
-    self.xcomp = xcomp
 
   # overload 'in'
   def __contains__(self, key):

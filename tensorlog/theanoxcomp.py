@@ -21,19 +21,22 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
         outputs=self.ws.inferenceExpr)
 
   def buildLossExpr(self,params):
-    target_y = self.createVectorPlaceholder(xcomp.TRAINING_TARGET_VARNAME)
-    # get the non-zero values of the dense expression
+    target_y = self.createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector')
+    self.ws.dataLossArgs = [target_y]
     self.ws.dataLossExpr = (target_y * self._applyOpToNonzerosOfDense(TT.log,self.ws.inferenceExpr)).mean()
-    self.ws.dataLossFun = theano.function(
-        inputs=(self.ws.inferenceArgs + self.dataTargetArgs),
-        outputs=(self.ws.inferenceExpr, self.dataLossExpr))
     if params is not None:
       self.ws.params = params
       paramVars = map(lambda p:self.ws[p], params)
-      self.ws.dataLossGradExprs = theano.grad(self.dataLossExpr, paramVars)
+      self.ws.dataLossGradExprs = theano.grad(self.ws.dataLossExpr, paramVars)
+
+    #finalize
+    self.ws.dataLossFun = theano.function(
+        inputs=(self.ws.inferenceArgs + self.ws.dataLossArgs),
+        outputs=(self.ws.inferenceExpr, self.ws.dataLossExpr))
+    if params is not None:
       self.ws.dataLossGradFun = theano.function(
-          inputs=(self.ws.inferenceArgs + self.dataTargetArgs),
-          outputs=self.dataLossGradExprs)
+          inputs=(self.ws.inferenceArgs + self.ws.dataLossArgs),
+          outputs=self.ws.dataLossGradExprs)
 
   #
   # evaluators
@@ -49,7 +52,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     inputs = map(self.wrapDBVector, rawInputs)
     target = self.wrapDBVector(rawTarget)
     formalArgs = inputs + [target]
-    return self.unwrapOutputs(self.dataLossFun(*formalArgs))
+    return self.unwrapOutputs(self.ws.dataLossFun(*formalArgs))
 
   def evalDataLossGrad(self,rawInputs,rawTarget):
     # the loss depends on the rawInputs, which will usually be
@@ -58,7 +61,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     inputs = map(self.wrapDBVector, rawInputs)
     target = self.wrapDBVector(rawTarget)
     formalArgs = inputs + [target]
-    return self.unwrapOutputs(self.dataLossGradFun(*formalArgs))
+    return self.unwrapOutputs(self.ws.dataLossGradFun(*formalArgs))
 
   def _applyOpToNonzerosOfDense(self,op,expr):
     # useful subroutine
@@ -67,41 +70,18 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     newSparse = TS.CSR(newData, TSB.csm_indices(sparseExpr), TSB.csm_indptr(sparseExpr), TSB.csm_shape(sparseExpr))
     return TSB.dense_from_sparse(newSparse)
 
-  # for debugging output
-
-  def show(self):
+  def show(self,verbose=0):
     """ print a summary to stdout """
     print 'inferenceArgs',self.ws.inferenceArgs
     print 'inferenceExpr',theano.pp(self.ws.inferenceExpr)
-    print 'inferenceExpr:',theano.printing.debugprint(self.ws.inferenceExpr)
-    #print 'function:',theano.pp(self.ws.inferenceFun.maker.fgraph.outputs[0])
-#    print 'subexpr cache:'
-#    for k,v in self.subexprCacheVarBindings.items():
-#      print ' |',k,'type',type(v)
-
-
-  def debugExpr(self):
-    AbstractCrossCompiler.debugVar(self.expr,0,maxdepth=20)
-
-  @staticmethod
-  def debugVar(v,depth=0,maxdepth=10):
-    if depth>maxdepth:
-      print '...'
-    else:
-      print '| '*(depth+1),
-      print 'var: name',v.name,'type',type(v),'def',theano.pp(v)
-      for a in v.get_parents():
-        AbstractCrossCompiler.debugApply(a,depth=depth+1,maxdepth=maxdepth)
-
-  @staticmethod
-  def debugApply(a,depth=0,maxdepth=10):
-    if depth>maxdepth:
-      print '...'
-    else:
-      print '| '*(depth+1),
-      print 'apply: ',a,'op',type(a.op),'output types',map(type,a.outputs)
-      for v in a.inputs:
-        AbstractCrossCompiler.debugVar(v,depth=depth+1,maxdepth=maxdepth)
+    if verbose>1:
+      print 'debugprint inferenceExpr:'
+      theano.printing.debugprint(self.ws.inferenceExpr)
+      if self.ws.dataLossExpr:
+        print 'dataLossArgs',self.ws.dataLossArgs
+        print 'dataLossExpr',theano.pp(self.ws.dataLossExpr)
+        print 'debugprint dataLossExpr:'
+        theano.printing.debugprint(self.ws.dataLossExpr)
 
 ###############################################################################
 # implementation for dense messages, dense relation matrices
@@ -134,10 +114,8 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
     sx.eliminate_zeros()
     return sx
 
-  def softmaxFun2Expr(self,fun,sharedInputs,depth):
-    inputs,subExpr = self.fun2Expr(fun.fun,sharedInputs,depth)
-    softmaxOverNonzeros = self._applyOpToNonzerosOfDense(TNN.nnet.softmax,subExpr+self.nullSmoothing)
-    return (inputs, softmaxOverNonzeros)
+  def softmaxFun2Expr(self,subExpr):
+    return self._applyOpToNonzerosOfDense(TNN.nnet.softmax,subExpr+self.nullSmoothing)
 
   def transposeMatrixExpr(self,mx):
     return mx.T
@@ -156,50 +134,9 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
 ###############################################################################
 
 class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
-  """ Use theano's numpy wrappers for everything
-  """
-
-  def _vectorVar(self,name):
-    return TT.drow(name)
-
-  def createMatrixVar(self,name):
-    return TSB.matrix('csr',name=name)
-
-  def wrapDBVector(self,vec):
-    """ Convert a vector from the DB into a vector value used by the
-    target language """
-    return vec.todense()
 
   def wrapDBMatrix(self,mat):
-    """ Convert a matrix from the DB into a vector value used by the
-    target language """
     return mat
 
-  def _sparsify(self,x):
-    """Convert a matrix produced by the target language to the usual
-    sparse-vector output of tensorlog"""
-    sx = SS.csr_matrix(x)
-    sx.eliminate_zeros()
-    return sx
-
-  # operator expressions for sparse matrices
-  def op2Expr(self,thEnv,op,depth):
-    if isinstance(op,ops.VecMatMulOp):
-      mExpr = self.matrix(op.matMode,op.transpose,TheanoCrossCompiler.theanoTransposer)
-      return TSB.structured_dot(thEnv[op.src],mExpr)
-    elif isinstance(op,ops.AssignPreimageToVar):
-      mExpr = self.matrix(op.matMode,False,TheanoCrossCompiler.theanoTransposer)
-      return TSB.dot(self.ones(),mExpr.T)
-    elif isinstance(op,ops.ComponentwiseVecMulOp):
-      return thEnv[op.src] * thEnv[op.src2]
-    elif isinstance(op,ops.DefinedPredOp):
-      _inputs,subExpr = self.fun2Expr(op.subfun,[thEnv[op.src]],depth=depth+1)
-      return subExpr
-    elif isinstance(op,ops.AssignOnehotToVar):
-      return self.onehot(op.onehotConst)
-    elif isinstance(op,ops.AssignVectorToVar):
-      return self.vector(op.matMode)
-    elif isinstance(op,ops.WeightedVec):
-      return thEnv[op.vec] * TT.sum(thEnv[op.weighter], axis=1, keepdims=True)
-    else:
-      assert False,'cannot cross-compile %r' % op
+  def vecMatMulExpr(self,v,m):
+    return TSB.structured_dot(v,m)

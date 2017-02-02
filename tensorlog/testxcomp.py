@@ -15,7 +15,7 @@ from tensorlog import tensorflowxcomp
 
 TESTED_COMPILERS = [
   theanoxcomp.DenseMatDenseMsgCrossCompiler,
-#  theanoxcomp.SparseMatDenseMsgCrossCompiler,
+  theanoxcomp.SparseMatDenseMsgCrossCompiler,
   # passes TestXCSmallProofs
 #  tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
   # not working and will need some refactoring to fix...
@@ -208,15 +208,6 @@ class TestXCGrad(testtensorlog.TestGrad):
                      [('sister',2)],
                      [('susan',['rachel'])],
                      {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
-
-
-  def test_printf(self):
-    rules = ['p(X,Z1):-printf(X,X1),spouse(X1,Y),printf(Y,Y1),sister(Y1,Z),printf(Z,Z1).']
-    mode = 'p(i,o)'
-    self.grad_check(rules,mode,
-             [('sister',2)],
-             [('susan',['rachel'])],
-             {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
 
 
   def test_call1(self):
