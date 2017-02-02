@@ -45,7 +45,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
   def wrapSymbols(self,inputSyms):
     """ Convert a list of symbols to a list of one-hot vectors that can be sent to eval"""
-    return map(lambda sym:self._wrapDBVector(self.db.onehot(sym)), inputSyms)
+    return map(lambda sym:self.wrapDBVector(self.db.onehot(sym)), inputSyms)
 
   def _unwrapOutputs(self,targetFunctionOutputs):
     return map(lambda v:self._sparsify(v), targetFunctionOutputs)
@@ -124,20 +124,16 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
   def _sparseFromDenseVec(self,expr):
     return tf.SparseTensor(self._denseVecIndices, tf.reshape(expr, [-1]), expr.get_shape())
 
-  def _vectorVar(self,name):
+  def createSharedVar(self,name,type):
     with tf.name_scope('tensorlog') as score:
       return tf.placeholder(tf.float32, shape=[1,self.db.dim()], name=name)
 
-  def _matrixVar(self,name):
-    with tf.name_scope('tensorlog') as score:
-      return tf.placeholder(tf.float32, shape=[self.db.dim(),self.db.dim()], name=name)
-
-  def _wrapDBVector(self,vec):
+  def wrapDBVector(self,vec):
     """ Convert a vector from the DB into a vector value used by the
     target language """
     return vec.todense()
 
-  def _wrapDBMatrix(self,mat):
+  def wrapDBMatrix(self,mat):
     """ Convert a matrix from the DB into a vector value used by the
     target language """
     return mat.todense()
@@ -187,13 +183,13 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
       # tfEnv, a 'tensorflow environment', maps nameSpaced variables
       # from the OpSeqFunction's environment to the corresponding
       # theano subexpressions
-      tfEnv = xcomp.NameSpacer(self.allocNamespace())
+      tfEnv = self.allocNamespace()
       seqInputs = []
       if sharedInputs==None:
         # create the list of theano variables, which should be
         # used as inputs to the expression
         for v in fun.opInputs:
-          tfEnv[v] = self._vectorVar(tfEnv.internalName(v))
+          tfEnv[v] = self.createVectorPlaceholder(tfEnv.internalName(v))
           seqInputs.append(tfEnv[v])
       else:
         # copy over the existing inputs to the new environment
@@ -258,15 +254,15 @@ class SparseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
   def _sparseFromDenseVec(self,expr):
     return tf.SparseTensor(self._denseVecIndices, tf.reshape(expr, [-1]), expr.get_shape())
 
-  def _vectorVar(self,name):
+  def createVectorVar(self,name):
     with tf.name_scope('tensorlog') as score:
       return tf.placeholder(tf.float32, shape=[1,self.db.dim()], name=name)
 
-  def _matrixVar(self,name):
+  def createMatrixVar(self,name):
     with tf.name_scope('tensorlog') as score:
       return tf.placeholder(tf.float32, shape=[self.db.dim(),self.db.dim()], name=name)
 
-  def _wrapDBVector(self,vec):
+  def wrapDBVector(self,vec):
     """ Convert a vector from the DB into a vector value used by the
     target language """
     return vec.todense()
@@ -274,7 +270,7 @@ class SparseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
   # TODO: work on interface with matrix - somehow we need to
   # extend it or subclass it to handle the three parts
   # so that we can
-  def _wrapDBMatrix(self,mat):
+  def wrapDBMatrix(self,mat):
     """ Convert a matrix from the DB into a value used by the
     target language """
     coo_mat = mat.tocoo()
@@ -328,13 +324,13 @@ class SparseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
       # tfEnv, a 'tensorflow environment', maps nameSpaced variables
       # from the OpSeqFunction's environment to the corresponding
       # theano subexpressions
-      tfEnv = xcomp.NameSpacer(self.allocNamespace())
+      tfEnv = xcompself.allocNamespace()
       seqInputs = []
       if sharedInputs==None:
         # create the list of theano variables, which should be
         # used as inputs to the expression
         for v in fun.opInputs:
-          tfEnv[v] = self._vectorVar(tfEnv.internalName(v))
+          tfEnv[v] = self.createVectorVar(tfEnv.internalName(v))
           seqInputs.append(tfEnv[v])
       else:
         # copy over the existing inputs to the new environment
