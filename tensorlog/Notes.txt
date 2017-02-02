@@ -4,6 +4,7 @@
 Next actions:
 
  - revive debug.py - how can testing this be automated? should I bother? w/ Katie?
+ - fix pyparsing
  - refactor the cross-compilers to reduce duplication?
  - fix reverse_if bug - NO IDEA why this fails
  - look at sparse messages in theano-based learner
