@@ -35,20 +35,20 @@ class AbstractCrossCompiler(object):
     """
     assert matMode.arity==1
     key = (matMode.getFunctor(),1)
-    if (key) not in self.ws:
+    if not self.ws.hasHandleExpr(key):
       variable_name = "v__" + matMode.getFunctor()
       val = self.wrapDBVector(self.db.vector(matMode)) #ignores all but functor for arity 1
-      self.ws.insertVariable(key, variable_name, val, 'vector')
-    return self.ws[key]
+      self.ws.insertHandleExpr(key, variable_name, val)
+    return self.ws.getHandleExpr(key)
 
   def constantVector(self, variable_name, val):
     """ Used to wrap a call to db.onehot(), db.zeros(), etc.
     """
     key = (variable_name,0)
-    if key not in self.ws:
+    if not self.ws.hasHandleExpr(key):
       wrapped_val = self.wrapDBVector(val)
-      self.ws.insertVariable(key, variable_name, wrapped_val, 'vector')
-    return self.ws[key]
+      self.ws.insertHandleExpr(key, variable_name, wrapped_val)
+    return self.ws.getHandleExpr(key)
 
   def matrix(self,matMode,transpose=False):
     """ Wraps a call to db.matrix()
@@ -57,14 +57,14 @@ class AbstractCrossCompiler(object):
     assert matMode.arity==2
     key = (matMode.getFunctor(),2)
     canonicalMode = declare.asMode( "%s(i,o)" % matMode.getFunctor())
-    if (key) not in self.ws:
+    if not self.ws.hasHandleExpr(key):
       variable_name = "M__" + matMode.getFunctor()
       val = self.wrapDBMatrix(self.db.matrix(canonicalMode,False))
-      self.ws.insertVariable(key, variable_name, val, 'matrix')
+      self.ws.insertHandleExpr(key, variable_name, val)
     if self.db.transposeNeeded(matMode,transpose):
-      return self.transposeMatrixExpr(self.ws[key])
+      return self.transposeMatrixExpr(self.ws.getHandleExpr(key))
     else:
-      return self.ws[key]
+      return self.ws.getHandleExpr(key)
 
   def ones(self):
     """Wraps a call to db.ones() """
@@ -188,8 +188,11 @@ class AbstractCrossCompiler(object):
     """Create a placeholder for top-level inputs"""
     assert False, 'abstract method called'
 
-  def createSharedVar(self,name,val,kind):
-    """Create a shared variable in the target language"""
+  def insertHandleExpr(self,key,expr,val,kind):
+    """Associate a DB object with given key and value
+    with an expression in the target language.
+    The key is a (functor,arity) pair.
+    """
     assert False, 'abstract method called'
 
   # i/o
@@ -284,41 +287,38 @@ class NameSpacer(object):
     self.env[self.internalName(key)] = val
 
 class Workspace(object):
-  """ Holds information created in cross-compilation
+  """ Holds information created in cross-compilation.
   """
   def __init__(self,xcomp):
+
     # backpointer to cross-compiler
     self.xcomp = xcomp
-    # shared variables, which correspond to tensorlog parameters and
-    # constants, and their values.  the 'key' is a (functor,arity)
-    # pair, as used in tensorlog
-    self.sharedVariable = {}
-    self.sharedVariableInfoByName = {}
-    self.sharedVariableInfoByKey = {}
-    self.sharedVariableList = []
+
     # expression used for inference
     self.inferenceExpr = None
-    # list of arguments to inferenceExpr
+    # list of arguments to inferenceExpr - generated with createPlaceholder
     self.inferenceArgs = None
     # expression used for unregularized loss
     self.dataLossExpr = None
-    # additional arguments for computing loss
+    # additional arguments for computing loss - generated with createPlaceholder
     self.dataLossArgs = None
-    # gradient of loss
+    # gradient of loss expression wrt each parameter
     self.dataLossGradExprs = None
 
-  # overload 'in'
-  def __contains__(self, key):
-    return key in self.sharedVariableInfoByKey
+    # the workspace also stores 'handle expressions' for some of the
+    # objects in the tensorlog database.  The DB objects are named, in
+    # tensorlog, by a (functor,arity) pair. DB constants are given
+    # arity zero.  Handle expressions should be inserted by
+    # calling xcomp.insertHandleExpr()
+    self._handleExpr = {}
 
-  # overload 'foo[]'
-  def __getitem__(self, key):
-    return self.sharedVariable[key]
+    # when a handleExpr is inserted
 
-  def insertVariable(self, key, varName, val, kind):
-    """ Add a shared variable to the workspace.
-    """
-    self.sharedVariableList.append(varName)
-    self.sharedVariableInfoByName[varName] = (key,varName,val,kind)
-    self.sharedVariableInfoByKey[key] = (key,varName,val,kind)
-    self.sharedVariable[key] = self.xcomp.createSharedVar(varName,val,kind)
+  def hasHandleExpr(self,key):
+    return key in self._handleExpr
+
+  def getHandleExpr(self,key):
+    return self._handleExpr[key]
+
+  def insertHandleExpr(self, key, varName, val):
+    self.xcomp.insertHandleExpr(key,varName,val)

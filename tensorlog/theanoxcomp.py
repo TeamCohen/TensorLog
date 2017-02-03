@@ -26,7 +26,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     self.ws.dataLossExpr = (target_y * self._applyOpToNonzerosOfDense(TT.log,self.ws.inferenceExpr)).mean()
     if params is not None:
       self.ws.params = params
-      paramVars = map(lambda p:self.ws[p], params)
+      paramVars = map(lambda p:self.ws.getHandleExpr(p), params)
       self.ws.dataLossGradExprs = theano.grad(self.ws.dataLossExpr, paramVars)
 
     #finalize
@@ -83,6 +83,9 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
         print 'debugprint dataLossExpr:'
         theano.printing.debugprint(self.ws.dataLossExpr)
 
+  def insertHandleExpr(self,key,name,val):
+    self.ws._handleExpr[key] = theano.shared(val, name=name)
+
 ###############################################################################
 # implementation for dense messages, dense relation matrices
 ###############################################################################
@@ -93,9 +96,6 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
   def createPlaceholder(self,name,kind):
     assert kind=='vector'
     return TT.drow(name)
-
-  def createSharedVar(self,name,val,kind):
-    return theano.shared(val, name=name)
 
   def wrapDBVector(self,vec):
     """ Convert a vector from the DB into a vector value used by the
