@@ -17,7 +17,7 @@ TESTED_COMPILERS = [
   theanoxcomp.DenseMatDenseMsgCrossCompiler,
   theanoxcomp.SparseMatDenseMsgCrossCompiler,
   # passes TestXCSmallProofs
-#  tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+  tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
   # not working and will need some refactoring to fix...
 #  tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
 ]

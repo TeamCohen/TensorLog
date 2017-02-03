@@ -9,6 +9,10 @@ from tensorlog import xcomp
 class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
   def __init__(self,db):
+    # track things you need to initialize before a run. NOTE: need to
+    # set this up before calling super.__init__ since super.__init__
+    # creates variables.
+    self.tfVarsToInitialize = []
     super(TensorFlowCrossCompiler,self).__init__(db)
     self.sess = tf.Session()
 
@@ -18,31 +22,42 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   def buildLossExpr(self,params):
     target_y = self.createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector')
     self.ws.dataLossArgs = [target_y]
-    nonzeroIndices = tf.where(self.inferenceExpr > 0)
-    self.ws.dataLossExpr = target_y * tf.SparseTensor(inferenceIndices, tf.log(inferenceValues), inferenceShape)
+    # ultimately I want to take the log of the non-zero entries and
+    # leave the zero entries alone, so add 1 to all the zero indices,
+    # then take a log of that.
+    inferenceReplacing0With1 = tf.where(
+        self.ws.inferenceExpr>0,
+        self.ws.inferenceExpr,
+        tf.ones([1,tf.size(self.ws.inferenceExpr)],tf.float64))
+    self.ws.dataLossExpr = target_y * tf.log(inferenceReplacing0With1)
     if params is not None:
       self.ws.params = params
-      paramVars = map(lambda p:self.ws[p], params)
+      paramVars = map(lambda p:self.ws.getHandleExpr(p), params)
+      print 'paramVars',paramVars,map(lambda p:p.name,paramVars)
+      print 'expt:'
+      self.pprintExpr(self.ws.dataLossExpr)
       optimizer = tf.train.GradientDescentOptimizer(learning_rate=1.0)
-      gradDict = dict(optimizer.compute_gradients(paramVars))
-      self.ws.dataLossGradExprs = map(lambda p:gradDict[p], self.ws.sharedVariableList)
+      # returns a None gradient????
+      gradsAndVars = optimizer.compute_gradients(self.ws.dataLossExpr,paramVars)
+      print 'gradsAndVars',gradsAndVars
+      self.ws.dataLossGradExprs = map(lambda p:gradDict[p], paramVars)
 
   def eval(self,rawInputs):
     bindings = dict(zip(self.ws.inferenceArgs,rawInputs))
-    return _evalWithBindings(self.ws.inferenceExpr,bindings)
+    return self._evalWithBindings(self.ws.inferenceExpr,bindings)
 
   def evalDataLoss(self,rawInputs,rawTarget):
     bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs,
                         rawInputs+[rawTarget]))
-    return _evalWithBindings(self.ws.dataLossExpr,bindings)
+    return self._evalWithBindings(self.ws.dataLossExpr,bindings)
 
   def evalDataGrad(self,rawInputs,rawTarget):
     bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs,
                         rawInputs+[rawTarget]))
-    return [_evalWithBindings(expr,bindings) for expr in self.ws.dataLossGradExprs]
+    return [self._evalWithBindings(expr,bindings) for expr in self.ws.dataLossGradExprs]
 
   def _evalWithBindings(self,expr,bindings):
-    for param,var in self.ws.sharedVariable.items():
+    for var in self.tfVarsToInitialize:
       self.sess.run(var.initializer)
     with self.sess.as_default():
       return self.unwrapOutputs([expr.eval(feed_dict=bindings)])
@@ -89,9 +104,11 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
     with tf.name_scope('tensorlog') as scope:
       return tf.placeholder(tf.float64, shape=[1,self.db.dim()], name=name)
 
-  def createSharedVar(self,name,val,kind):
+  def insertHandleExpr(self,key,name,val):
     with tf.name_scope('tensorlog') as scope:
-      return tf.Variable(val, name=name)
+      v = tf.Variable(val, name=name)
+      self.tfVarsToInitialize.append(v)
+      self.ws._handleExpr[key] = v
 
   def wrapDBVector(self,vec):
     """ Convert a vector from the DB into a vector value used by the
