@@ -16,21 +16,43 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     pass
 
   def buildLossExpr(self,params):
-    pass
+    target_y = self.createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector')
+    self.ws.dataLossArgs = [target_y]
+    nonzeroIndices = tf.where(self.inferenceExpr > 0)
+    self.ws.dataLossExpr = target_y * tf.SparseTensor(inferenceIndices, tf.log(inferenceValues), inferenceShape)
+    if params is not None:
+      self.ws.params = params
+      paramVars = map(lambda p:self.ws[p], params)
+      optimizer = tf.train.GradientDescentOptimizer(learning_rate=1.0)
+      gradDict = dict(optimizer.compute_gradients(paramVars))
+      self.ws.dataLossGradExprs = map(lambda p:gradDict[p], self.ws.sharedVariableList)
 
-  def eval(self,inputs):
-    bindings = dict(zip(self.ws.inferenceArgs,inputs))
+  def eval(self,rawInputs):
+    bindings = dict(zip(self.ws.inferenceArgs,rawInputs))
+    return _evalWithBindings(self.ws.inferenceExpr,bindings)
+
+  def evalDataLoss(self,rawInputs,rawTarget):
+    bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs,
+                        rawInputs+[rawTarget]))
+    return _evalWithBindings(self.ws.dataLossExpr,bindings)
+
+  def evalDataGrad(self,rawInputs,rawTarget):
+    bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs,
+                        rawInputs+[rawTarget]))
+    return [_evalWithBindings(expr,bindings) for expr in self.ws.dataLossGradExprs]
+
+  def _evalWithBindings(self,expr,bindings):
     for param,var in self.ws.sharedVariable.items():
-      print '** init var',var,'with param',param
       self.sess.run(var.initializer)
     with self.sess.as_default():
-      return self.unwrapOutputs([self.ws.inferenceExpr.eval(feed_dict=bindings)])
+      return self.unwrapOutputs([expr.eval(feed_dict=bindings)])
 
-  def show(self):
+  def show(self,verbose=0):
     """ print a summary to stdout """
     print 'exprArgs',self.ws.inferenceArgs
     print 'expr',self.ws.inferenceExpr,'type',type(self.ws.inferenceExpr)
-    TensorFlowCrossCompiler.pprintExpr(self.ws.inferenceExpr)
+    if verbose>=1:
+      TensorFlowCrossCompiler.pprintExpr(self.ws.inferenceExpr)
 
   @staticmethod
   def pprintExpr(expr,depth=0,maxdepth=20):

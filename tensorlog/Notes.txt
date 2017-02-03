@@ -35,3 +35,14 @@ Overall package structure:
      .native: mutil, autodiff (eval and bprop), learn, plearn, putil, dataset
      .th: theanoxcomp
      .tf: tensorflowxcomp
+
+---
+import tensorflow as tf
+v = tf.Variable([1.0,2.0,0.0,3.0,4.0,0.0,5.0,6.0])
+init = tf.global_variables_initializer()
+sess = tf.Session()
+sess.run(init)
+zind = tf.where(v<=0)
+zindFlat = tf.reshape(zind,[-1])
+vp1 = tf.scatter_add(v, zindFlat, tf.ones([tf.size(zindFlat)]))
+logvp1 = tf.log(vp1)

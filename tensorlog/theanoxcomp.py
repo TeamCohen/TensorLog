@@ -74,7 +74,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     """ print a summary to stdout """
     print 'inferenceArgs',self.ws.inferenceArgs
     print 'inferenceExpr',theano.pp(self.ws.inferenceExpr)
-    if verbose>1:
+    if verbose>=1:
       print 'debugprint inferenceExpr:'
       theano.printing.debugprint(self.ws.inferenceExpr)
       if self.ws.dataLossExpr:
