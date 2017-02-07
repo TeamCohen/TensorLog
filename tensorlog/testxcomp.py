@@ -16,9 +16,8 @@ from tensorlog import tensorflowxcomp
 TESTED_COMPILERS = [
   theanoxcomp.DenseMatDenseMsgCrossCompiler,
   theanoxcomp.SparseMatDenseMsgCrossCompiler,
-  # passes TestXCSmallProofs
   tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-  # not working and will need some refactoring to fix...
+  # not working yet
 #  tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
 ]
 
@@ -293,9 +292,10 @@ class TestXCGrad(testtensorlog.TestGrad):
       for compilerClass in TESTED_COMPILERS:
         xc = compilerClass(prog.db)
         xc.compile(tlogFun,params)
-        result,loss = xc.evalDataLoss([data.get_x()],data.get_y())
+        loss = xc.evalDataLoss([data.get_x()],data.get_y())
         print 'loss',loss
         updates = xc.evalDataLossGrad([data.get_x()],data.get_y())
+        print 'updates',updates
         updates_with_string_keys = {}
         for (functor,arity),up in zip(params,updates):
           print 'testxcomp update for',functor,arity,'is',up

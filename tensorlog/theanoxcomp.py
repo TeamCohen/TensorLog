@@ -28,11 +28,10 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
       self.ws.params = params
       paramVars = map(lambda p:self.ws.getHandleExpr(p), params)
       self.ws.dataLossGradExprs = theano.grad(self.ws.dataLossExpr, paramVars)
-
     #finalize
     self.ws.dataLossFun = theano.function(
         inputs=(self.ws.inferenceArgs + self.ws.dataLossArgs),
-        outputs=(self.ws.inferenceExpr, self.ws.dataLossExpr))
+        outputs=self.ws.dataLossExpr)
     if params is not None:
       self.ws.dataLossGradFun = theano.function(
           inputs=(self.ws.inferenceArgs + self.ws.dataLossArgs),
@@ -52,7 +51,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     inputs = map(self.wrapDBVector, rawInputs)
     target = self.wrapDBVector(rawTarget)
     formalArgs = inputs + [target]
-    return self.unwrapOutputs(self.ws.dataLossFun(*formalArgs))
+    return self.unwrapOutput(self.ws.dataLossFun(*formalArgs))
 
   def evalDataLossGrad(self,rawInputs,rawTarget):
     # the loss depends on the rawInputs, which will usually be

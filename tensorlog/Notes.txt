@@ -50,5 +50,7 @@ logvp1 = tf.log(vp1)
 
 
 vp1 = tf.where(v>0, v, tf.ones([tf.size(v)]))
-with sess.as_default(): print vp1.eval()
+with sess.as_default(): print 'vp1',vp1.eval()
+with sess.as_default(): print 'logvp1',logvp1.eval()
+
 

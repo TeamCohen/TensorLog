@@ -22,7 +22,9 @@ class AbstractCrossCompiler(object):
     self.db = db
     # a constant used to put a little bit of weight on the 'null
     # entity'
-    self.nullSmoothing = self.constantVector("_nullSmoothing",self.db.nullMatrix(1)*(1e-5))
+    self.nullSmoothing = self.constantVector(
+      "_nullSmoothing",
+      self.db.nullMatrix(1)*(1e-5))
 
   def allocNamespacer(self):
     """Allocate a new name space. """

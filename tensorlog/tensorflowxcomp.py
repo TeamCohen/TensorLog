@@ -15,6 +15,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     self.tfVarsToInitialize = []
     super(TensorFlowCrossCompiler,self).__init__(db)
     self.sess = tf.Session()
+    self.sessionInitialized = False
 
   def finalizeInference(self):
     pass
@@ -26,41 +27,43 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     # leave the zero entries alone, so add 1 to all the zero indices,
     # then take a log of that.
     inferenceReplacing0With1 = tf.where(
-        self.ws.inferenceExpr>0,
+        self.ws.inferenceExpr>0.0,
         self.ws.inferenceExpr,
         tf.ones([1,tf.size(self.ws.inferenceExpr)],tf.float64))
-    self.ws.dataLossExpr = target_y * tf.log(inferenceReplacing0With1)
+    self.ws.dataLossExpr = tf.reduce_sum(target_y * tf.log(inferenceReplacing0With1))
     if params is not None:
       self.ws.params = params
       paramVars = map(lambda p:self.ws.getHandleExpr(p), params)
-      print 'paramVars',paramVars,map(lambda p:p.name,paramVars)
-      print 'expt:'
-      self.pprintExpr(self.ws.dataLossExpr)
       optimizer = tf.train.GradientDescentOptimizer(learning_rate=1.0)
-      # returns a None gradient????
       gradsAndVars = optimizer.compute_gradients(self.ws.dataLossExpr,paramVars)
-      print 'gradsAndVars',gradsAndVars
-      self.ws.dataLossGradExprs = map(lambda p:gradDict[p], paramVars)
+      self.ws.dataLossGradExprs = map(lambda (grad,var):grad, gradsAndVars)
 
   def eval(self,rawInputs):
     bindings = dict(zip(self.ws.inferenceArgs,rawInputs))
-    return self._evalWithBindings(self.ws.inferenceExpr,bindings)
+    return self.unwrapOutput(self._evalWithBindings(self.ws.inferenceExpr,bindings))
 
   def evalDataLoss(self,rawInputs,rawTarget):
+    inputs = map(self.wrapDBVector, rawInputs)
+    target = self.wrapDBVector(rawTarget)
     bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs,
-                        rawInputs+[rawTarget]))
-    return self._evalWithBindings(self.ws.dataLossExpr,bindings)
+                        inputs+[target]))
+    return self.unwrapOutput(self._evalWithBindings(self.ws.dataLossExpr,bindings))
 
-  def evalDataGrad(self,rawInputs,rawTarget):
+  def evalDataLossGrad(self,rawInputs,rawTarget):
+    inputs = map(self.wrapDBVector, rawInputs)
+    target = self.wrapDBVector(rawTarget)
     bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs,
-                        rawInputs+[rawTarget]))
-    return [self._evalWithBindings(expr,bindings) for expr in self.ws.dataLossGradExprs]
+                        inputs+[target]))
+    return [self.unwrapOutput(self._evalWithBindings(expr,bindings)) 
+            for expr in self.ws.dataLossGradExprs]
 
   def _evalWithBindings(self,expr,bindings):
-    for var in self.tfVarsToInitialize:
-      self.sess.run(var.initializer)
+    if not self.sessionInitialized:
+      for var in self.tfVarsToInitialize:
+        self.sess.run(var.initializer)
+      self.sessionInitialized = True
     with self.sess.as_default():
-      return self.unwrapOutputs([expr.eval(feed_dict=bindings)])
+      return expr.eval(feed_dict=bindings)
 
   def show(self,verbose=0):
     """ print a summary to stdout """
@@ -70,7 +73,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
       TensorFlowCrossCompiler.pprintExpr(self.ws.inferenceExpr)
 
   @staticmethod
-  def pprintExpr(expr,depth=0,maxdepth=20):
+  def pprintExpr(expr,vars=[],depth=0,maxdepth=20):
     if depth>maxdepth:
       print '...'
     else:
@@ -78,7 +81,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
       op = expr.op
       print 'expr:',expr,'type','op',op.name,'optype',op.type
       for inp in op.inputs:
-        TensorFlowCrossCompiler.pprintExpr(inp,depth=depth+1,maxdepth=maxdepth)
+        TensorFlowCrossCompiler.pprintExpr(inp,vars,depth=depth+1,maxdepth=maxdepth)
 
   # helpers
 
@@ -128,8 +131,13 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
     return sx
 
   def softmaxFun2Expr(self,subExpr):
-    sparseResult = tf.sparse_softmax(self._sparseFromDenseVec(subExpr+self.nullSmoothing))
-    return tf.sparse_tensor_to_dense(sparseResult)
+#    sparseResult = tf.sparse_softmax(self._sparseFromDenseVec(subExpr+self.nullSmoothing))
+#    return tf.sparse_tensor_to_dense(sparseResult)
+    subExprReplacing0WithNeg20 = tf.where(
+      subExpr>0.0, 
+      subExpr, 
+      tf.ones([1,tf.size(subExpr)],tf.float64)*(-10.0))
+    return tf.nn.softmax(subExprReplacing0WithNeg20 + self.nullSmoothing)
 
   def transposeMatrixExpr(self,m):
     return tf.transpose(m)
