@@ -78,6 +78,7 @@ class Function(object):
     def pprint(self,depth=0):
         """Return list of lines in a pretty-print of the function.
         """
+        # depth here is depth of the recursion from DefinedPredOp's to Functions
         top = ('%-2d ' % self.id) + self.pprintSummary()
         comment = self.pprintComment()
         result = [top + ' # ' + comment] if comment else [top]
@@ -95,8 +96,6 @@ class Function(object):
     def children(self):
         """Return list of child functions, for visualization"""
         assert False, 'abstract method called'
-    #def dedupeChild(self,f):
-    #    assert False, 'abstract method called'
 
 class OpSeqFunction(Function):
     """A function defined by executing a sequence of operators."""

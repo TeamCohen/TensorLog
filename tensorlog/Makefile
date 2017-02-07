@@ -56,3 +56,6 @@ clean:
 	rm -f *.pyc *.py~ *.prof 
 	rm -f toy-test.examples toy-test.solutions.txt toy-train.examples 
 	rm -rf toy-trained.db
+
+dist:
+	tar -cvf ../tensorlog-dist.tar ../LICENSE Makefile *.py test-data/*.*

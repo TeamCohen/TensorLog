@@ -13,11 +13,15 @@ from tensorlog import theanoxcomp
 from tensorlog import funs
 from tensorlog import ops
 from tensorlog import learnxcomp as learnxc
+from tensorlog import tensorflowxcomp
 
 
 TESTED_COMPILERS = [
   theanoxcomp.DenseMatDenseMsgCrossCompiler,
   theanoxcomp.SparseMatDenseMsgCrossCompiler,
+  tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+  # not working yet
+#  tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
 ]
     
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
@@ -25,10 +29,10 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
   def test_if(self):
     self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william', {'susan':1.0})
 
-  def testFailure(self):
+  def test_failure(self):
     self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
 
-#  TODO fix
+# TODO fix
 #  def test_reverse_if(self):
 #    self.xcomp_check(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
 
@@ -50,17 +54,17 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     self.xcomp_check(['s(X,Y):-spouse(X,Y).','t(X,Z):-spouse(X,Y),s(Y,Z).'], 't(i,o)', 'susan', {'susan': 1.0})
 
   def test_back1(self):
+    # fails for tensorflowxcomp
     self.xcomp_check(['p(X,Y):-spouse(X,Y),sister(X,Z).'], 'p(i,o)', 'william', {'susan': 3.0})
 
   def test_back2(self):
     self.xcomp_check(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
 
   def test_rec1(self):
-    #TODO fix
     program.DEFAULT_MAXDEPTH=4
-    self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
+    self.xcomp_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
     program.DEFAULT_MAXDEPTH=10
-    self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
+    self.xcomp_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
 
   def test_const_output(self):
     self.xcomp_check(['sis(X,W):-assign(W,william),child(X,Y).'], 'sis(i,o)', 'sarah', {'william': 1.0})
@@ -131,9 +135,9 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       #cross-compile the function
       xc = compilerClass(prog.db)
       xc.compile(tlogFun)
-      # evaluate the theano function and get the output y
+      # evaluate the function and get the output y
       xc.show()
-      print '== performing theano eval with',compilerClass,'=='
+      print '== performing eval with',compilerClass,'=='
       ys = xc.eval(xc.wrapSymbols([input_symbol]))
       y = ys[0]
       actual = self.db.rowAsSymbolDict(y)
@@ -144,7 +148,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       # just compare that maximal elements from these two dicts
       # are the same
       self.check_maxes_in_dicts(self.db.rowAsSymbolDict(y), expected_result_dict)
-      print '== theano eval checks passed =='
+      print '== eval checks passed =='
 
   def check_maxes_in_dicts(self,actual,expected):
     def maximalElements(d):
@@ -219,15 +223,6 @@ class TestXCGrad(testtensorlog.TestGrad):
                      [('sister',2)],
                      [('susan',['rachel'])],
                      {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
-
-
-  def test_printf(self):
-    rules = ['p(X,Z1):-printf(X,X1),spouse(X1,Y),printf(Y,Y1),sister(Y1,Z),printf(Z,Z1).']
-    mode = 'p(i,o)'
-    self.grad_check(rules,mode,
-             [('sister',2)],
-             [('susan',['rachel'])],
-             {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
 
 
   def test_call1(self):
@@ -341,15 +336,10 @@ class TestXCGrad(testtensorlog.TestGrad):
       for compilerClass in TESTED_COMPILERS:
         xc = compilerClass(prog.db)
         xc.compile(tlogFun,params)
-        result,loss = xc.evalDataLoss([data.get_x()],data.get_y())
+        loss = xc.evalDataLoss([data.get_x()],data.get_y())
         print 'loss',loss
-#        print '== expr'
-#        print theano.printing.debugprint(xc.expr)
-#        print 'end expr'
-#        print '== dataLossExpr'
-#        print theano.printing.debugprint(xc.dataLossExpr)
-#        print '== end dataLossExpr'
         updates = xc.evalDataLossGrad([data.get_x()],data.get_y())
+        print 'updates',updates
         updates_with_string_keys = {}
         for (functor,arity),up in zip(params,updates):
           print 'testxcomp update for',functor,arity,'is'
