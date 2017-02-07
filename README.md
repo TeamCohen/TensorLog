@@ -1,4 +1,4 @@
-This is the GitHub repository for TensorLog. Package documentation can be found in the [tensorlog|tensorlog] directory.
+This is the GitHub repository for TensorLog. Package documentation can be found in the [tensorlog](tensorlog) directory.
 
 Additional (larger) datasets are available publicly:
 
