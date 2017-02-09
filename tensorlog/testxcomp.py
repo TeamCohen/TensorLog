@@ -17,8 +17,7 @@ TESTED_COMPILERS = [
   theanoxcomp.DenseMatDenseMsgCrossCompiler,
   theanoxcomp.SparseMatDenseMsgCrossCompiler,
   tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-  # not working yet
-#  tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
+  tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
 ]
 
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
@@ -29,9 +28,8 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
   def test_failure(self):
     self.xcomp_check(['p(X,Y):-spouse(X,Y).'], 'p(i,o)', 'lottie', {matrixdb.NULL_ENTITY_NAME:1.0})
 
-# TODO fix
-#  def test_reverse_if(self):
-#    self.xcomp_check(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
+  def test_reverse_if(self):
+    self.xcomp_check(['p(X,Y):-sister(Y,X).'], 'p(i,o)', 'rachel', {'william':1.0})
 
   def test_or(self):
     self.xcomp_check(['p(X,Y):-spouse(X,Y).', 'p(X,Y):-sister(X,Y).'], 'p(i,o)', 'william',
@@ -126,7 +124,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       # evaluate the function and get the output y
       xc.show()
       print '== performing eval with',compilerClass,'=='
-      ys = xc.eval(xc.wrapSymbols([input_symbol]))
+      ys = xc.eval([prog.db.onehot(input_symbol)])
       y = ys[0]
       # theano output will a be (probably dense) message, so
       # just compare that maximal elements from these two dicts
@@ -175,14 +173,12 @@ class TestXCGrad(testtensorlog.TestGrad):
                      {'sister(william,rachel)': -1,'sister(william,lottie)': +1})
 
   def test_reverse_if(self):
-    pass
-# TODO fix
-#    rules = ['p(X,Y):-parent(Y,X).']
-#    mode = 'p(i,o)'
-#    params = [('parent',2)]
-#    self.xgrad_check(rules, mode, params,
-#                     [('lottie',['charlotte'])],
-#                     {'parent(charlotte,lottie)': +1,'parent(lucas,lottie)': -1})
+    rules = ['p(X,Y):-parent(Y,X).']
+    mode = 'p(i,o)'
+    params = [('parent',2)]
+    self.xgrad_check(rules, mode, params,
+                     [('lottie',['charlotte'])],
+                     {'parent(charlotte,lottie)': +1,'parent(lucas,lottie)': -1})
 
   def test_chain1(self):
     rules = ['p(X,Z):-sister(X,Y),child(Y,Z).']
@@ -292,13 +288,11 @@ class TestXCGrad(testtensorlog.TestGrad):
       for compilerClass in TESTED_COMPILERS:
         xc = compilerClass(prog.db)
         xc.compile(tlogFun,params)
+        result = xc.eval([data.get_x()])
         loss = xc.evalDataLoss([data.get_x()],data.get_y())
-        print 'loss',loss
         updates = xc.evalDataLossGrad([data.get_x()],data.get_y())
-        print 'updates',updates
         updates_with_string_keys = {}
         for (functor,arity),up in zip(params,updates):
-          print 'testxcomp update for',functor,arity,'is',up
           upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
           for fact,grad_of_fact in upDict.items():
             updates_with_string_keys[str(fact)] = grad_of_fact
