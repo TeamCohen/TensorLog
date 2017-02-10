@@ -29,7 +29,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     inferenceReplacing0With1 = tf.where(
         self.ws.inferenceExpr>0.0,
         self.ws.inferenceExpr,
-        tf.ones([1,tf.size(self.ws.inferenceExpr)],tf.float64))
+        tf.ones(tf.shape(self.ws.inferenceExpr), tf.float64))
     self.ws.dataLossExpr = tf.reduce_sum(target_y * tf.log(inferenceReplacing0With1))
     if params is not None:
       self.ws.params = params
@@ -127,7 +127,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
   def createPlaceholder(self,name,kind):
     assert kind=='vector'
     with tf.name_scope('tensorlog') as scope:
-      return tf.placeholder(tf.float64, shape=[1,self.db.dim()], name=name)
+      return tf.placeholder(tf.float64, shape=[None,self.db.dim()], name=name)
 
   def insertHandleExpr(self,key,name,val):
     with tf.name_scope('tensorlog') as scope:
@@ -166,7 +166,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
     subExprReplacing0WithNeg20 = tf.where(
       subExpr>0.0, 
       subExpr, 
-      tf.ones([1,tf.size(subExpr)],tf.float64)*(-10.0))
+      tf.ones(tf.shape(subExpr), tf.float64)*(-10.0))
     return tf.nn.softmax(subExprReplacing0WithNeg20 + self.nullSmoothing)
 
   def transposeMatrixExpr(self,m):
@@ -237,11 +237,13 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     # and such we will need to convert the value updates to tensorlog
     # sparse matrix updates.
     (functor,arity) = key
-    if arity<2:
-      return up
-    else:
+    if arity==1:
+      return ss.csr_matrix(up)
+    elif arity==2:
       (indices,indptr,shape) = self.sparseMatInfo[key]
       return ss.csr_matrix((up,indices,indptr),shape=shape)
+    else:
+      assert False
 
   #
   # override the dense-matrix operations with sparse ones

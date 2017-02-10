@@ -6,6 +6,7 @@ import numpy as np
 
 from tensorlog import declare
 from tensorlog import matrixdb
+from tensorlog import learn
 from tensorlog import mutil
 from tensorlog import parser
 from tensorlog import program
@@ -336,34 +337,26 @@ class TestXCProPPR(testtensorlog.TestProPPR):
         self.check_dicts(d,uniform)
 
   def testGradMatrix(self):
-    pass
-#  def testGradMatrix(self):
-#    data = DataBuffer(self.prog.db)
-#    X,Y = self.labeledData.matrixAsTrainingData('train',2)
-#    learner = learn.OnePredFixedRateGDLearner(self.prog)
-#    updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X,Y)
-#    w = updates[('weighted',1)]
-#    def checkGrad(i,x,psign,nsign):
-#      ri = w.getrow(i)
-#      di = self.prog.db.rowAsSymbolDict(ri)
-#      for toki in self.rawData[x].split():
-#        posToki = toki+'_pos'
-#        negToki = toki+'_neg'
-#        self.assertTrue(posToki in di)
-#        self.assertTrue(negToki in di)
-#        self.assertTrue(di[posToki]*psign > 0)
-#        self.assertTrue(di[negToki]*nsign > 0)
-#    for i,x in enumerate(self.rawPos):
-#      checkGrad(i,x,+1,-1)
-#    for i,x in enumerate(self.rawNeg):
-#      checkGrad(i+len(self.rawPos),x,-1,+1)
-#
-#  def testLabeledData(self):
-#    self.assertTrue(self.labeledData.inDB('train',2))
-#    self.assertTrue(self.labeledData.inDB('test',2))
-#    self.assertFalse(self.prog.db.inDB('train',2))
-#    self.assertFalse(self.prog.db.inDB('test',2))
-#
+    data = testtensorlog.DataBuffer(self.prog.db)
+    X,Y = self.labeledData.matrixAsTrainingData('train',2)
+    learner = learn.OnePredFixedRateGDLearner(self.prog)
+    updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X,Y)
+    w0 = updates[('weighted',1)].sum(axis=0)
+    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+      xc = compilerClass(self.prog.db)
+      xc.compile(self.tlogFun,[('weighted',1)])
+      updates = xc.evalDataLossGrad([X],Y)
+      w = updates[0]
+      # w is different from the w in the corresponding testtensorlog test,
+      # which is a crossEntropy gradient for each example, but it should have 
+      # the same directions
+      nrow,ncol = w.shape
+      for i in range(nrow):
+        for j in range(ncol):
+          self.assertTrue((w[i,j]==0) == (w0[i,j]==0))
+          self.assertTrue(w[i,j] * w0[i,j] >= 0.0)
+
   def testMultiLearn1(self):
     pass
 #  def testMultiLearn1(self):
