@@ -2,6 +2,7 @@ import unittest
 import sys
 import theano
 import os
+import numpy as np
 
 from tensorlog import declare
 from tensorlog import matrixdb
@@ -297,6 +298,145 @@ class TestXCGrad(testtensorlog.TestGrad):
           for fact,grad_of_fact in upDict.items():
             updates_with_string_keys[str(fact)] = grad_of_fact
         self.check_directions(updates_with_string_keys,expected)
+
+class TestXCProPPR(testtensorlog.TestProPPR):
+  
+  def setUp(self):
+    super(TestXCProPPR,self).setUp()
+    self.tlogFun = self.prog.compile(self.mode)
+
+  def evalxc(self,xc,input):
+    rawPred = xc.eval([input])
+    # trim small numbers to zero
+    pred = mutil.mapData(lambda d:np.clip((d - 1e-5),0.00,9999.99), rawPred)
+    pred.eliminate_zeros()
+    return pred
+
+  def testNativeRow(self):
+    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+      xc = compilerClass(self.prog.db)
+      xc.compile(self.tlogFun)
+      for i in range(self.numExamples):
+        pred = self.evalxc(xc, self.X.getrow(i))
+        d = self.prog.db.rowAsSymbolDict(pred)
+        uniform = {'pos':0.5,'neg':0.5}
+        self.check_dicts(d,uniform)
+
+  def testNativeMatrix(self):
+
+    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+      xc = compilerClass(self.prog.db)
+      xc.compile(self.tlogFun)
+      pred = self.prog.eval(self.mode,[self.X])
+      d0 = self.prog.db.matrixAsSymbolDict(pred)
+      for i,d in d0.items():
+        uniform = {'pos':0.5,'neg':0.5,}
+        self.check_dicts(d,uniform)
+
+  def testGradMatrix(self):
+    pass
+#  def testGradMatrix(self):
+#    data = DataBuffer(self.prog.db)
+#    X,Y = self.labeledData.matrixAsTrainingData('train',2)
+#    learner = learn.OnePredFixedRateGDLearner(self.prog)
+#    updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X,Y)
+#    w = updates[('weighted',1)]
+#    def checkGrad(i,x,psign,nsign):
+#      ri = w.getrow(i)
+#      di = self.prog.db.rowAsSymbolDict(ri)
+#      for toki in self.rawData[x].split():
+#        posToki = toki+'_pos'
+#        negToki = toki+'_neg'
+#        self.assertTrue(posToki in di)
+#        self.assertTrue(negToki in di)
+#        self.assertTrue(di[posToki]*psign > 0)
+#        self.assertTrue(di[negToki]*nsign > 0)
+#    for i,x in enumerate(self.rawPos):
+#      checkGrad(i,x,+1,-1)
+#    for i,x in enumerate(self.rawNeg):
+#      checkGrad(i+len(self.rawPos),x,-1,+1)
+#
+#  def testLabeledData(self):
+#    self.assertTrue(self.labeledData.inDB('train',2))
+#    self.assertTrue(self.labeledData.inDB('test',2))
+#    self.assertFalse(self.prog.db.inDB('train',2))
+#    self.assertFalse(self.prog.db.inDB('test',2))
+#
+  def testMultiLearn1(self):
+    pass
+#  def testMultiLearn1(self):
+#    mode = declare.ModeDeclaration('predict(i,o)')
+#    dset = dataset.Dataset.loadExamples(
+#        self.prog.db,
+#        os.path.join(TEST_DATA_DIR,"toytrain.examples"),
+#        proppr=True)
+#    for mode in dset.modesToLearn():
+#      X = dset.getX(mode)
+#      Y = dset.getY(mode)
+#      print mode
+#      print "\tX "+mutil.pprintSummary(X)
+#      print "\tY "+mutil.pprintSummary(Y)
+#
+#    learner = learn.FixedRateGDLearner(self.prog,epochs=5)
+#    P0 = learner.datasetPredict(dset)
+#    acc0 = learner.datasetAccuracy(dset,P0)
+#    xent0 = learner.datasetCrossEntropy(dset,P0)
+#    print 'toy train: acc0',acc0,'xent1',xent0
+#
+#    learner.train(dset)
+#
+#    P1 = learner.datasetPredict(dset)
+#    acc1 = learner.datasetAccuracy(dset,P1)
+#    xent1 = learner.datasetCrossEntropy(dset,P1)
+#    print 'toy train: acc1',acc1,'xent1',xent1
+#
+#    self.assertTrue(acc0<acc1)
+#    self.assertTrue(xent0>xent1)
+#    self.assertTrue(acc1==1)
+#
+#    Udset = dataset.Dataset.loadExamples(
+#        self.prog.db,
+#        os.path.join(TEST_DATA_DIR,"toytest.examples"),
+#        proppr=True)
+#
+#    P2 = learner.datasetPredict(Udset)
+#    acc2 = learner.datasetAccuracy(Udset,P2)
+#    xent2 = learner.datasetCrossEntropy(Udset,P2)
+#    print 'toy test: acc2',acc2,'xent2',xent2
+#
+#    self.assertTrue(acc2==1)
+#    ##
+#
+#
+  def testLearn(self):
+    pass
+#  def testLearn(self):
+#    mode = declare.ModeDeclaration('predict(i,o)')
+#    X,Y = self.labeledData.matrixAsTrainingData('train',2)
+#    learner = learn.OnePredFixedRateGDLearner(self.prog,epochs=5)
+#    P0 = learner.predict(mode,X)
+#    acc0 = learner.accuracy(Y,P0)
+#    xent0 = learner.crossEntropy(Y,P0,perExample=True)
+#
+#    learner.train(mode,X,Y)
+#    P1 = learner.predict(mode,X)
+#    acc1 = learner.accuracy(Y,P1)
+#    xent1 = learner.crossEntropy(Y,P1,perExample=True)
+#
+#    self.assertTrue(acc0<acc1)
+#    self.assertTrue(xent0>xent1)
+#    self.assertTrue(acc1==1)
+#    print 'toy train: acc1',acc1,'xent1',xent1
+#
+#    TX,TY = self.labeledData.matrixAsTrainingData('test',2)
+#    P2 = learner.predict(mode,TX)
+#    acc2 = learner.accuracy(TY,P2)
+#    xent2 = learner.crossEntropy(TY,P2,perExample=True)
+#    print 'toy test: acc2',acc2,'xent2',xent2
+#    self.assertTrue(acc2==1)
+#
 
 if __name__ == "__main__":
   unittest.main()

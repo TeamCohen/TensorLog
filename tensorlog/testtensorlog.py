@@ -582,8 +582,6 @@ class TestProPPR(unittest.TestCase):
     for i in range(self.numExamples):
       pred = self.prog.eval(self.mode,[self.X.getrow(i)])
       d = self.prog.db.rowAsSymbolDict(pred)
-      if i<4:
-        pass
       uniform = {'pos':0.5,'neg':0.5}
       self.check_dicts(d,uniform)
 
@@ -704,11 +702,13 @@ class TestProPPR(unittest.TestCase):
       ys.append(db.onehot(sy))
     return xsyms,mutil.stack(xs),mutil.stack(ys)
 
-  def check_dicts(self,actual, expected):
+  def check_dicts(self,actual, expected, delta=0.05):
+    if not matrixdb.NULL_ENTITY_NAME in actual:
+      actual[matrixdb.NULL_ENTITY_NAME]=0.0
     print 'actual:  ',actual
-    if not matrixdb.NULL_ENTITY_NAME in expected:
-      expected[matrixdb.NULL_ENTITY_NAME]=0.0
     if expected:
+      if not matrixdb.NULL_ENTITY_NAME in expected:
+        expected[matrixdb.NULL_ENTITY_NAME]=0.0
       print 'expected:',expected
       self.assertEqual(len(actual.keys()), len(expected.keys()))
       for k in actual.keys():
