@@ -23,7 +23,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
   def buildLossExpr(self,params):
     target_y = self.createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector')
     self.ws.dataLossArgs = [target_y]
-    self.ws.dataLossExpr = (target_y * self._applyOpToNonzerosOfDense(TT.log,self.ws.inferenceExpr)).mean()
+    self.ws.dataLossExpr = (-target_y * self._applyOpToNonzerosOfDense(TT.log,self.ws.inferenceExpr)).mean()
     if params is not None:
       self.ws.params = params
       paramVars = map(lambda p:self.ws.getHandleExprVariable(p), params)
@@ -96,7 +96,8 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
 
   def createPlaceholder(self,name,kind):
     assert kind=='vector'
-    return TT.drow(name)
+    result = TT.drow(name)
+    return result
 
   def wrapMsg(self,vec):
     """ Convert a vector from the DB into a vector value used by the

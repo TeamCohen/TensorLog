@@ -349,6 +349,9 @@ class Workspace(object):
     # handle expression, but not always.  these are indexed by key
     self._handleExprVar = {}
 
+    # parameters to optimize, as a list of keys
+    self.params = []
+
   def hasHandleExpr(self,key):
     """ Check if a handle expression has been assigned to this key """ 
     return key in self._handleExpr
@@ -366,3 +369,8 @@ class Workspace(object):
     """Insert a new handle expression, by delegation to the containing
     cross-compiler """ 
     self.xcomp.insertHandleExpr(key,varName,val)
+
+  def getParamVariables(self):
+    """ Convenience method to find variables corresponding to paramaters """
+    return map(lambda key:self.getHandleExprVariable(key), self.params)
+

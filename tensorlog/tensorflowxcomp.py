@@ -14,8 +14,46 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     # since super.__init__ creates variables.
     self.tfVarsToInitialize = []
     super(TensorFlowCrossCompiler,self).__init__(db)
-    self.sess = tf.Session()
+    self.session = tf.Session()
     self.sessionInitialized = False
+
+  #
+  # tensorflow specific stuff
+  # 
+
+  def getSession(self):
+    """ Return a session, which is the one used by default in 'eval'
+    calls.
+    """
+    return self.session
+
+  def ensureSessionInitialized(self):
+    """ Make sure the varables in the session have been initialized,
+    initializing them if needed
+    """
+    if not self.sessionInitialized:
+      for var in self.tfVarsToInitialize:
+        self.session.run(var.initializer)
+      self.sessionInitialized = True
+
+  def getInputName(self):
+    """ String key for the input placeholder
+    """
+    assert len(self.ws.inferenceArgs)==1
+    return self.ws.inferenceArgs[0].name
+
+  def getTargetName(self):
+    """ String key for the input placeholder
+    """
+    assert len(self.ws.dataLossArgs)==1
+    return self.ws.dataLossArgs[0].name
+
+  def getFeedDict(self,X,Y):
+    return { self.getInputName(): X, self.getTargetName(): Y}
+
+  #
+  # xcomp interface
+  #
 
   def finalizeInference(self):
     pass
@@ -30,7 +68,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
         self.ws.inferenceExpr>0.0,
         self.ws.inferenceExpr,
         tf.ones(tf.shape(self.ws.inferenceExpr), tf.float64))
-    self.ws.dataLossExpr = tf.reduce_sum(target_y * tf.log(inferenceReplacing0With1))
+    self.ws.dataLossExpr = tf.reduce_sum(-target_y * tf.log(inferenceReplacing0With1))
     if params is not None:
       self.ws.params = params
       paramVars = map(lambda p:self.ws.getHandleExprVariable(p), params)
@@ -58,11 +96,8 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     return map(lambda key,rawUpdate:self.unwrapUpdate(key,rawUpdate), self.ws.params, rawUpdates)
 
   def _evalWithBindings(self,expr,bindings):
-    if not self.sessionInitialized:
-      for var in self.tfVarsToInitialize:
-        self.sess.run(var.initializer)
-      self.sessionInitialized = True
-    with self.sess.as_default():
+    self.ensureSessionInitialized()
+    with self.session.as_default():
       return expr.eval(feed_dict=bindings)
 
   def show(self,verbose=0):
@@ -127,7 +162,8 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
   def createPlaceholder(self,name,kind):
     assert kind=='vector'
     with tf.name_scope('tensorlog') as scope:
-      return tf.placeholder(tf.float64, shape=[None,self.db.dim()], name=name)
+      result = tf.placeholder(tf.float64, shape=[None,self.db.dim()], name=name)
+      return result
 
   def insertHandleExpr(self,key,name,val):
     with tf.name_scope('tensorlog') as scope:

@@ -3,6 +3,7 @@ import sys
 import theano
 import os
 import numpy as np
+import tensorflow as tf
 
 from tensorlog import declare
 from tensorlog import matrixdb
@@ -282,8 +283,6 @@ class TestXCGrad(testtensorlog.TestGrad):
     prog = program.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
     tlogFun = prog.compile(mode)
-    # TODO: not working yet for mini-batches so check each example
-    # individually
     for x,ys in xyPairs:
       data = testtensorlog.DataBuffer(self.db)
       data.add_data_symbols(x,ys)
@@ -297,7 +296,8 @@ class TestXCGrad(testtensorlog.TestGrad):
         for (functor,arity),up in zip(params,updates):
           upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
           for fact,grad_of_fact in upDict.items():
-            updates_with_string_keys[str(fact)] = grad_of_fact
+            # need to flip for cross-compilers
+            updates_with_string_keys[str(fact)] = -grad_of_fact
         self.check_directions(updates_with_string_keys,expected)
 
 class TestXCProPPR(testtensorlog.TestProPPR):
@@ -350,12 +350,12 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       w = updates[0]
       # w is different from the w in the corresponding testtensorlog test,
       # which is a crossEntropy gradient for each example, but it should have 
-      # the same directions
+      # opposite directions
       nrow,ncol = w.shape
       for i in range(nrow):
         for j in range(ncol):
           self.assertTrue((w[i,j]==0) == (w0[i,j]==0))
-          self.assertTrue(w[i,j] * w0[i,j] >= 0.0)
+          self.assertTrue(w[i,j] * w0[i,j] <= 0.0)
 
   def testMultiLearn1(self):
     pass
@@ -403,33 +403,42 @@ class TestXCProPPR(testtensorlog.TestProPPR):
 #    ##
 #
 #
+
   def testLearn(self):
-    pass
-#  def testLearn(self):
-#    mode = declare.ModeDeclaration('predict(i,o)')
-#    X,Y = self.labeledData.matrixAsTrainingData('train',2)
-#    learner = learn.OnePredFixedRateGDLearner(self.prog,epochs=5)
-#    P0 = learner.predict(mode,X)
-#    acc0 = learner.accuracy(Y,P0)
-#    xent0 = learner.crossEntropy(Y,P0,perExample=True)
-#
-#    learner.train(mode,X,Y)
-#    P1 = learner.predict(mode,X)
-#    acc1 = learner.accuracy(Y,P1)
-#    xent1 = learner.crossEntropy(Y,P1,perExample=True)
-#
-#    self.assertTrue(acc0<acc1)
-#    self.assertTrue(xent0>xent1)
-#    self.assertTrue(acc1==1)
-#    print 'toy train: acc1',acc1,'xent1',xent1
-#
-#    TX,TY = self.labeledData.matrixAsTrainingData('test',2)
-#    P2 = learner.predict(mode,TX)
-#    acc2 = learner.accuracy(TY,P2)
-#    xent2 = learner.crossEntropy(TY,P2,perExample=True)
-#    print 'toy test: acc2',acc2,'xent2',xent2
-#    self.assertTrue(acc2==1)
-#
+    mode = declare.ModeDeclaration('predict(i,o)')
+    X,Y = self.labeledData.matrixAsTrainingData('train',2)
+    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+      xc = compilerClass(self.prog.db)
+      xc.compile(self.tlogFun, [('weighted',1)])
+
+      loss0 = xc.evalDataLoss([X],Y)
+      print 'initial train data loss',loss0
+      TX,TY = self.labeledData.matrixAsTrainingData('test',2)
+      loss1 = xc.evalDataLoss([TX],TY)
+      print 'initial test data loss',loss1
+
+      print 'params to optimize',xc.ws.params
+      print 'vars to optimize',map(lambda key:xc.ws.getHandleExprVariable(key).name, xc.ws.params)
+
+      optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+      train_step = optimizer.minimize(xc.ws.dataLossExpr, var_list=xc.ws.getParamVariables())
+
+      fd = xc.getFeedDict(xc.wrapMsg(X),xc.wrapMsg(Y))
+      xc.ensureSessionInitialized()
+      session = xc.getSession()
+      with session.as_default():
+        for i in range(10):
+          train_step.run(feed_dict=fd)
+
+      loss2 = xc.evalDataLoss([X],Y)
+      print 'final train data loss',loss2
+      loss3 = xc.evalDataLoss([TX],TY)
+      print 'final test data loss',loss3
+
+      self.assertTrue(loss2<loss0)
+      self.assertTrue(loss2<loss1)
+
 
 if __name__ == "__main__":
   unittest.main()

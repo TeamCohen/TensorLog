@@ -10,7 +10,13 @@ Next actions:
 Bigger steps:
 
  - repackage (see below)
- - learning for xcomp
+ - benchmark tests on tensorflow
+ - learning for xcomp 
+ -- more serious examples, expt harness
+ -- xc.updateDB() to move trained variable values into matrixDB
+ - adding tensorflow 'builtins'
+ -- p(i,o) -> lambda inputExpression:outputExpression 
+ -- p(o)   -> lambda outputExpression 
  - typing for tensorlog  
  -- cfacts parser allows #declare foo type1 type2 (insist everything typed or nothing, based on config?)
     (see bufferFile/bufferLine in matrixDB
@@ -24,3 +30,19 @@ Overall package structure:
     .native: mutil, autodiff (eval and bprop), learn, plearn, putil, dataset
     .th: theanoxcomp
     .tf: tensorflowxcomp
+
+Question->query idea
+
+ for each property pi(X,t) where t is a tag and X the set of things
+ which have that property, use the rules
+
+   q1(Q,X) :- pi_query_tag(Q,T), pi(X,T), {pi_relevant(F): query_feature(Q,F)}
+   q2(Q,X) :- anything(X) {pi_irrelevant(F): query_feature(Q,F)}
+   ...
+   qn(Q,X) :- anything(X) {pn_irrelevant(F): query_feature(Q,F)}
+   
+   q(Q,X) :- q1(Q,X),q2(Q,X),... qn(Q,X)
+
+ pi_query_tag(Q,T) : tag T for property pi is in query, eg "T=red" for pi=color in "a red sweater vest"
+ query_feature(Q,F) : words/ngrams etc in query
+ 
