@@ -5,52 +5,44 @@ Next actions:
 
  - revive debug.py - how can testing this be automated? should I bother? w/ Katie?
  - fix pyparsing
- - refactor the cross-compilers to reduce duplication?
- - fix reverse_if bug - NO IDEA why this fails
- - look at sparse messages in theano-based learner
- - dense tensorflow - gradients -- seem to be like theano.shared, maybe I should go back to those?
- - sparse tensorflow:
- --- seems like inputs seem to be data, not a sparse matrix which is awkward.  I could
-     pass these in as bindings but is that what I should do?
- --- what does tensorflow do for gradients? they seem to be wrt Variables which I'm not using.
+ - look at sparse messages in theano-based learner?
 
 Bigger steps:
 
- - typing for tensorlog.  add typed matrixDB, type declarations/inference for IDB?
- - ideas - unary predicate for each type? sparse matrix mapping type-specific code to type-independent code?
-
-Design notes:
- - xcomp.compile() populates xcomp.workspace
- - xcomp contains "builtins" which bind predicates to functions
-
- xcomp.workspace
-    .sharedVars: map name -> variable
-    .inferenceExpr
-    .dataLossExpr
-    .db
+ - repackage (see below)
+ - benchmark tests on tensorflow
+ - learning for xcomp 
+ -- more serious examples, expt harness
+ -- xc.updateDB() to move trained variable values into matrixDB
+ - adding tensorflow 'builtins'
+ -- p(i,o) -> lambda inputExpression:outputExpression 
+ -- p(o)   -> lambda outputExpression 
+ - typing for tensorlog  
+ -- cfacts parser allows #declare foo type1 type2 (insist everything typed or nothing, based on config?)
+    (see bufferFile/bufferLine in matrixDB
+ -- matrixDB keeps a symtab for each type
+ -- bpcompiler infers type of every variable
+ -- funs maintains/returns type
 
 Overall package structure:
-  tensorlog: config, matrixdb, parser, (bp)compiler, program, funs, ops (-eval and bprop), xcomp
-     .ui: comline, expt, list, debug  
-     .native: mutil, autodiff (eval and bprop), learn, plearn, putil, dataset
-     .th: theanoxcomp
-     .tf: tensorflowxcomp
+  tensorlog: config, matrixdb, parser, bpcomp(iler), program, funs, ops (-eval and bprop), xcomp
+    .ui: comline, expt, list, debug  
+    .native: mutil, autodiff (eval and bprop), learn, plearn, putil, dataset
+    .th: theanoxcomp
+    .tf: tensorflowxcomp
 
----
-# only works for Variable v
-import tensorflow as tf 
-v = tf.Variable([1.0,2.0,0.0,3.0,4.0,0.0,5.0,6.0])
-init = tf.global_variables_initializer()
-sess = tf.Session()
-sess.run(init)
-zind = tf.where(v<=0)
-zindFlat = tf.reshape(zind,[-1])
-vp1 = tf.scatter_add(v, zindFlat, tf.ones([tf.size(zindFlat)]))
-logvp1 = tf.log(vp1)
+Question->query idea
 
+ for each property pi(X,t) where t is a tag and X the set of things
+ which have that property, use the rules
 
-vp1 = tf.where(v>0, v, tf.ones([tf.size(v)]))
-with sess.as_default(): print 'vp1',vp1.eval()
-with sess.as_default(): print 'logvp1',logvp1.eval()
+   q1(Q,X) :- pi_query_tag(Q,T), pi(X,T), {pi_relevant(F): query_feature(Q,F)}
+   q2(Q,X) :- anything(X) {pi_irrelevant(F): query_feature(Q,F)}
+   ...
+   qn(Q,X) :- anything(X) {pn_irrelevant(F): query_feature(Q,F)}
+   
+   q(Q,X) :- q1(Q,X),q2(Q,X),... qn(Q,X)
 
-
+ pi_query_tag(Q,T) : tag T for property pi is in query, eg "T=red" for pi=color in "a red sweater vest"
+ query_feature(Q,F) : words/ngrams etc in query
+ 

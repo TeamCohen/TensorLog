@@ -23,10 +23,10 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
   def buildLossExpr(self,params):
     target_y = self.createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector')
     self.ws.dataLossArgs = [target_y]
-    self.ws.dataLossExpr = (target_y * self._applyOpToNonzerosOfDense(TT.log,self.ws.inferenceExpr)).mean()
+    self.ws.dataLossExpr = (-target_y * self._applyOpToNonzerosOfDense(TT.log,self.ws.inferenceExpr)).mean()
     if params is not None:
       self.ws.params = params
-      paramVars = map(lambda p:self.ws.getHandleExpr(p), params)
+      paramVars = map(lambda p:self.ws.getHandleExprVariable(p), params)
       self.ws.dataLossGradExprs = theano.grad(self.ws.dataLossExpr, paramVars)
     #finalize
     self.ws.dataLossFun = theano.function(
@@ -41,15 +41,16 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
   # evaluators
   #
 
-  def eval(self,inputs):
+  def eval(self,rawInputs):
+    inputs = map(self.wrapMsg,rawInputs)
     return self.unwrapOutputs(self.ws.inferenceFun(*inputs))
 
   def evalDataLoss(self,rawInputs,rawTarget):
     # the loss depends on the rawInputs, which will usually be
     # [x,target_y] and the parameters, which here are
     # passed in as (pred,arity) keys
-    inputs = map(self.wrapDBVector, rawInputs)
-    target = self.wrapDBVector(rawTarget)
+    inputs = map(self.wrapMsg, rawInputs)
+    target = self.wrapMsg(rawTarget)
     formalArgs = inputs + [target]
     return self.unwrapOutput(self.ws.dataLossFun(*formalArgs))
 
@@ -57,10 +58,11 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     # the loss depends on the rawInputs, which will usually be
     # [x,target_y] and the parameters, which here are
     # passed in as (pred,arity) keys
-    inputs = map(self.wrapDBVector, rawInputs)
-    target = self.wrapDBVector(rawTarget)
+    inputs = map(self.wrapMsg, rawInputs)
+    target = self.wrapMsg(rawTarget)
     formalArgs = inputs + [target]
-    return self.unwrapOutputs(self.ws.dataLossGradFun(*formalArgs))
+    rawUpdates = self.ws.dataLossGradFun(*formalArgs)
+    return map(lambda key,rawUpdate:self.unwrapUpdate(key,rawUpdate), self.ws.params, rawUpdates)
 
   def _applyOpToNonzerosOfDense(self,op,expr):
     # useful subroutine
@@ -83,7 +85,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
         theano.printing.debugprint(self.ws.dataLossExpr)
 
   def insertHandleExpr(self,key,name,val):
-    self.ws._handleExpr[key] = theano.shared(val, name=name)
+    self.ws._handleExpr[key] = self.ws._handleExprVar[key] = theano.shared(val, name=name)
 
 ###############################################################################
 # implementation for dense messages, dense relation matrices
@@ -94,7 +96,13 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
 
   def createPlaceholder(self,name,kind):
     assert kind=='vector'
-    return TT.drow(name)
+    result = TT.drow(name)
+    return result
+
+  def wrapMsg(self,vec):
+    """ Convert a vector from the DB into a vector value used by the
+    target language """
+    return vec.todense()
 
   def wrapDBVector(self,vec):
     """ Convert a vector from the DB into a vector value used by the
@@ -112,6 +120,9 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
     sx = SS.csr_matrix(x)
     sx.eliminate_zeros()
     return sx
+
+  def unwrapUpdate(self,key,up):
+    return self.unwrapOutput(up)
 
   def softmaxFun2Expr(self,subExpr):
     return self._applyOpToNonzerosOfDense(TNN.nnet.softmax,subExpr+self.nullSmoothing)
