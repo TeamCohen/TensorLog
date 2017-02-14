@@ -11,11 +11,11 @@ setup(name='tensorlog',
       author='William Cohen',
       author_email='wcohen@cs.cmu.edu',
       license='Apache 2.0',
-      install_requires=[
-          # for theano cross-compiler only
-          'theano',
-          # for debug only
-          'ttk', 'Tkinter', 'tkfont',
-      ],
+      install_requires=['numpy','scipy'],
+      extras_require={
+        'xc-theano': ['theano'],
+        'xc-tensorflow': ['tensorflow'],
+        'debug':['ttk', 'Tkinter', 'tkfont'],
+        }
       packages=['tensorlog'],
       zip_safe=False)
