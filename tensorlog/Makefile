@@ -1,3 +1,9 @@
+include Makefile.config
+NOTIFY:="DATASETS" variable not set. For long tests, clone a copy of tensorlog-datasets.git and put the path to it in your Makefile.config. For more details, see Makefile.config.template
+
+Makefile.config: Makefile.config.template
+	cp $< $@
+
 # unit tests that take a few secs to run
 short-tests:
 	nosetests testtensorlog.py
@@ -11,27 +17,39 @@ long-tests: short-tests benchmark-test wnet-test cora-test grid-test
 
 prepare-for-long-tests:
 	make fb15k-valid.db 
-	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet; make setup)
-	(export PYTHONPATH=`pwd`; cd ../datasets/cora; make setup)
+ifneq ($(DATASETS),)
+	(cd ../; PYTHONPATH=`pwd`; cd $(DATASETS)/wordnet; make setup)
+	(cd ../; PYTHONPATH=`pwd`; cd $(DATASETS)/cora; make setup)
+else
+	$(error $(NOTIFY))
+endif
 
 fb15k-valid.db:
-	python matrixdb.py --serialize test-data/fb15k-valid.cfacts fb15k-valid.db
+	PYTHONPATH=$(PYTHONPATH):../; python matrixdb.py --serialize tensorlog/test-data/fb15k-valid.cfacts tensorlog/fb15k-valid.db
 
 #
 # individual long tests
 #
 
 benchmark-test:
-	python benchmark.py
+	PYTHONPATH=../; python benchmark.py
 
 wnet-test:
-	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet/; make clean; make; make check)
+ifneq ($(DATASETS),)
+	(cd ../; PYTHONPATH=`pwd`; cd $(DATASETS)/wordnet/; make clean; make; make check)
+else
+	@echo '$(NOTIFY)'
+endif
 
 cora-test:
-	(export PYTHONPATH=`pwd`; cd ../datasets/cora/; make clean; make; make check)
+ifneq ($(DATASETS),)
+	(cd ../; PYTHONPATH=`pwd`; cd $(DATASETS)/cora/; make clean; make; make check)
+else
+	@echo '$(NOTIFY)'
+endif
 
 grid-test:
-	(export PYTHONPATH=`pwd`; cd ../datasets/grid/; make clean; make; make check)
+	(cd ../; PYTHONPATH=`pwd`; cd datasets/grid/; make clean; make; make check)
 
 textcattoy-expt:
 	python -m expt --db test/textcattoy.cfacts --prog test/textcat.ppr --trainData test/toytrain.exam --testData test/toytrain.exam --proppr
@@ -58,4 +76,4 @@ clean:
 	rm -rf toy-trained.db
 
 dist:
-	tar -cvf ../tensorlog-dist.tar ../LICENSE Makefile *.py test-data/*.*
+	tar -cvf ../tensorlog-dist.tar ../LICENSE Makefile Makefile.config.template *.py test-data/*.*
