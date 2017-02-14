@@ -38,27 +38,27 @@ wnet-test:
 ifneq ($(DATASETS),)
 	(cd ../; PYTHONPATH=`pwd`; cd $(DATASETS)/wordnet/; make clean; make; make check)
 else
-	@echo '$(NOTIFY)'
+	$(error $(NOTIFY))
 endif
 
 cora-test:
 ifneq ($(DATASETS),)
 	(cd ../; PYTHONPATH=`pwd`; cd $(DATASETS)/cora/; make clean; make; make check)
 else
-	@echo '$(NOTIFY)'
+	$(error $(NOTIFY))
 endif
 
 grid-test:
 	(cd ../; PYTHONPATH=`pwd`; cd datasets/grid/; make clean; make; make check)
 
 textcattoy-expt:
-	python -m expt --db test/textcattoy.cfacts --prog test/textcat.ppr --trainData test/toytrain.exam --testData test/toytrain.exam --proppr
+	PYTHONPATH=../; python -m expt --db test-data/textcattoy.cfacts --prog test-data/textcat.ppr --trainData test-data/toytrain.exam --testData test-data/toytrain.exam --proppr
 
 # debug-test needs to be interactive
 debug-test:
-	python expt.py --prog test-data/textcat.ppr --db test-data/textcattoy.cfacts \
+	PYTHONPATH=../; python expt.py --prog test-data/textcat.ppr --db test-data/textcattoy.cfacts \
 		--trainData test-data/toytrain.exam --testData test-data/toytest.exam --proppr +++ --savedModel expt-model.db
-	python debug.py --prog test-data/textcat.ppr --db expt-model.db --trainData test-data/toytrain.exam --testData test-data/toytest.exam --proppr predict/io
+	PYTHONPATH=../; python debug.py --prog test-data/textcat.ppr --db expt-model.db --trainData test-data/toytrain.exam --testData test-data/toytest.exam --proppr predict/io
 
 # word count
 

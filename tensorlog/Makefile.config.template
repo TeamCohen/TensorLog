@@ -1,0 +1,4 @@
+# Long datasets are not stored in the primary github repository.
+# If you want to run them, clone http://curtis.ml.cmu.edu/git/tensorlog-datasets.git
+# and place the path here:
+#DATASETS:=/home/krivard/projects/tensorlog/tensorlog-datasets
