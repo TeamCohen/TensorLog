@@ -450,7 +450,7 @@ class Learner(object):
         for (functor,arity),delta in paramGrads.items():
             m0 = self.prog.db.getParameter(functor,arity)
             m1 = m0 + rate * delta
-            m2 = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
+            m2 = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float32').max), m1)
             self.prog.db.setParameter(functor,arity,m2)
 
 #

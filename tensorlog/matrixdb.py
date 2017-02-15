@@ -56,7 +56,7 @@ class MatrixDB(object):
 
     def __init__(self,stab=None):
         #maps symbols to numeric ids
-        if not stab: 
+        if not stab:
             self.stab = symtab.SymbolTable()
             self.stab.reservedSymbols.add("i")
             self.stab.reservedSymbols.add("o")
@@ -68,10 +68,10 @@ class MatrixDB(object):
         # buffer initialization: see startBuffers()
         #mark which matrices are 'parameters' by (functor,arity) pair
         self.params = set()
-        
+
     #
     # retrieve matrixes, vectors, etc
-    # 
+    #
 
     def dim(self):
         """Number of constants in the database, and dimension of all the vectors/matrices."""
@@ -82,43 +82,43 @@ class MatrixDB(object):
         assert self.stab.hasId(s),'constant %s not in db' % s
         n = self.dim()
         i = self.stab.getId(s)
-        return scipy.sparse.csr_matrix( ([1.0],([0],[i])),
-        shape=(1,n))
+        return scipy.sparse.csr_matrix( ([float(1.0)],([0],[i])), shape=(1,n), dtype='float32')
 
     def zeros(self,numRows=1):
         """An all-zeros matrix."""
         n = self.dim()
-        return scipy.sparse.csr_matrix( ([],([],[])), shape=(numRows,n))
+        return scipy.sparse.csr_matrix( ([],([],[])), shape=(numRows,n), dtype='float32')
 
     def ones(self):
         """An all-ones row matrix."""
         n = self.dim()
-        return scipy.sparse.csr_matrix( ([1.0]*n,([0]*n,[j for j in range(n)])), shape=(1,n))
+        return scipy.sparse.csr_matrix( ([float(1.0)]*n,([0]*n,[j for j in range(n)])), shape=(1,n), dtype='float32')
 
     def nullMatrix(self,numRows=1):
         n = self.dim()
         nullId = self.stab.getId(NULL_ENTITY_NAME)
-        return scipy.sparse.csr_matrix( ([1.0]*numRows,
-                                         (list(range(numRows)),[nullId]*numRows)), 
-                                        shape=(numRows,n))
+        return scipy.sparse.csr_matrix( ([float(1.0)]*numRows,
+                                         (list(range(numRows)),[nullId]*numRows)),
+                                        shape=(numRows,n),
+                                        dtype='float32' )
 
     @staticmethod
     def transposeNeeded(mode,transpose=False):
         """Figure out if we should use the transpose of a matrix or not."""
-        leftRight = (mode.isInput(0) and mode.isOutput(1))        
+        leftRight = (mode.isInput(0) and mode.isOutput(1))
         return leftRight == transpose
 
     def matrix(self,mode,transpose=False):
         """The matrix associated with this mode - eg if mode is p(i,o) return
         a sparse matrix M_p so that v*M_p is appropriate for forward
-        propagation steps from v.  
+        propagation steps from v.
         """
         assert mode.arity==2,'arity of '+str(mode) + ' is wrong: ' + str(mode.arity)
         assert (mode.functor,mode.arity) in self.matEncoding,"can't find matrix for %s" % str(mode)
         if not self.transposeNeeded(mode,transpose):
             result = self.matEncoding[(mode.functor,mode.arity)]
         else:
-            result = self.matEncoding[(mode.functor,mode.arity)].transpose()            
+            result = self.matEncoding[(mode.functor,mode.arity)].transpose()
             result = scipy.sparse.csr_matrix(result)
         mutil.checkCSR(result,'db.matrix mode %s transpose %s' % (str(mode),str(transpose)))
         return result
@@ -266,10 +266,10 @@ class MatrixDB(object):
         m = self.matEncoding[(functor,arity)].tocoo()
         n = self.dim()
         for i in range(len(m.data)):
-            x = m.row[i]            
-            xrows.append(scipy.sparse.csr_matrix( ([1.0],([0],[x])), shape=(1,n) ))
+            x = m.row[i]
+            xrows.append(scipy.sparse.csr_matrix( ([float(1.0)],([0],[x])), shape=(1,n) ))
             rx = m.getrow(x)
-            yrows.append(rx * (1.0/rx.sum()) )
+            yrows.append(rx * (float(1.0)/rx.sum()))
         return mutil.stack(xrows),mutil.stack(yrows)
 
     #
@@ -284,7 +284,7 @@ class MatrixDB(object):
             fp.write(self.stab.getSymbol(i) + '\n')
         fp.close()
         scipy.io.savemat(os.path.join(direc,"db.mat"),self.matEncoding,do_compression=True)
-    
+
     @staticmethod
     def deserialize(direc):
         db = MatrixDB()
@@ -327,7 +327,7 @@ class MatrixDB(object):
             try:
                 return float(s)
             except ValueError:
-                return 0.0
+                return float(0.0)
 
         parts = line.split("\t")
         if conf.allow_weighted_tuples and len(parts)==4:
@@ -339,14 +339,14 @@ class MatrixDB(object):
             w = atof(a2)
             if not conf.allow_weighted_tuples or w==0:
                 arity = 2
-                w = 1.0
+                w = float(1.0)
             else:
                 arity = 1
                 #w is ok still
         elif len(parts)==2:
             f,a1,a2 = parts[0],parts[1],None
             arity = 1
-            w = 1.0
+            w = float(1.0)
         else:
             logging.error("bad line '"+line+" '" + repr(parts)+"'")
             return
@@ -391,12 +391,12 @@ class MatrixDB(object):
 
         n = self.stab.getMaxId() + 1
         if arity==2:
-            m = scipy.sparse.lil_matrix((n,n))
+            m = scipy.sparse.lil_matrix((n,n),dtype='float32')
             for i in self.buf[(f,arity)]:
                 for j in self.buf[(f,arity)][i]:
                     m[i,j] = self.buf[(f,arity)][i][j]
             del self.buf[(f,arity)]
-            self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m)
+            self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m,dtype='float32')
             self.matEncoding[(f,arity)].sort_indices()
         elif arity==1:
             m = scipy.sparse.lil_matrix((1,n))
@@ -404,7 +404,7 @@ class MatrixDB(object):
                 for j in self.buf[(f,arity)][i]:
                     m[0,i] = self.buf[(f,arity)][i][j]
             del self.buf[(f,arity)]
-            self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m)
+            self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m,dtype='float32')
             self.matEncoding[(f,arity)].sort_indices()
         mutil.checkCSR(self.matEncoding[(f,arity)], 'flushBuffer %s/%d' % (f,arity))
 
@@ -417,7 +417,7 @@ class MatrixDB(object):
                 logging.info("Re-encoding predicate %s" % functor)
                 if arity==2:
                     # first shim the extra rows
-                    shim = scipy.sparse.lil_matrix((n-rows,cols))      
+                    shim = scipy.sparse.lil_matrix((n-rows,cols))
                     m = scipy.sparse.vstack([m,shim])
                     (rows,cols) = m.get_shape()
                 # shim extra columns
@@ -428,22 +428,21 @@ class MatrixDB(object):
     def clearBuffers(self):
         """Save space by removing buffers"""
         self.buf = None
-        
+
     def startBuffers(self):
         #buffer data for a sparse matrix: buf[pred][i][j] = f
         #TODO: would lists and a coo matrix make a nicer buffer?
         def dictOfFloats(): return collections.defaultdict(float)
         def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
         self.buf = collections.defaultdict(dictOfFloatDicts)
-    
+
     def addLines(self,lines):
         self.startBuffers()
         self.bufferLines(lines)
         self.rebufferMatrices()
         self.flushBuffers()
         self.clearBuffers()
-        
-    
+
     def addFile(self,filename):
         logging.info('adding cfacts file '+ filename)
         self.startBuffers()
@@ -507,4 +506,3 @@ if __name__ == "__main__":
             print 'd for ',f,a,'is',d
             for k,w in d.items():
                 print k,w
-            

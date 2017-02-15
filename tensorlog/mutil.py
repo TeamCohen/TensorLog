@@ -73,7 +73,7 @@ def densify(mat,maxExpandFactor=-1,maxExpandIntercept=-1):
         return None,None
     else:
         newShape = (numRows(mat),hiIndex-loIndex+1)
-        D = SS.csr_matrix((mat.data,mat.indices-loIndex,mat.indptr),shape=newShape,dtype='float64').todense()
+        D = SS.csr_matrix((mat.data,mat.indices-loIndex,mat.indptr),shape=newShape,dtype='float32').todense()
         return D,(loIndex,numCols(mat))
 
 def denseSize(m,loIndex,hiIndex):
@@ -99,15 +99,15 @@ def codensify(m1,m2,maxExpandFactor=-1,maxExpandIntercept=-1):
         return None,None,None
     newShape1 = (numRows(m1),hiIndex-loIndex+1)
     newShape2 = (numRows(m2),hiIndex-loIndex+1)
-    D1 = SS.csr_matrix((m1.data,m1.indices-loIndex,m1.indptr),shape=newShape1,dtype='float64').todense()
-    D2 = SS.csr_matrix((m2.data,m2.indices-loIndex,m2.indptr),shape=newShape2,dtype='float64').todense()
+    D1 = SS.csr_matrix((m1.data,m1.indices-loIndex,m1.indptr),shape=newShape1,dtype='float32').todense()
+    D2 = SS.csr_matrix((m2.data,m2.indices-loIndex,m2.indptr),shape=newShape2,dtype='float32').todense()
     return D1,D2,(loIndex,numCols(m1))
 
 def undensify(denseMat, info):
     loIndex,numCols = info
     (numRows,_) = denseMat.shape
     tmp = SS.csr_matrix(denseMat)
-    result = SS.csr_matrix((tmp.data,tmp.indices+loIndex,tmp.indptr),shape=(numRows,numCols),dtype='float64')
+    result = SS.csr_matrix((tmp.data,tmp.indices+loIndex,tmp.indptr),shape=(numRows,numCols),dtype='float32')
     result.eliminate_zeros()
     return result
 
@@ -124,14 +124,14 @@ def rowsum(mat):
     # mat.sum(0) returns a dense matrix, and using these incantations will avoid that
     # v1: squish everything into one row and sum duplicates - slower than csr_matrix(mat.mean)
 #    newIndptr = NP.array([0,mat.data.shape[0]])
-#    rowSum = SS.csr_matrix((mat.data, mat.indices, newIndptr),(1,numCols(mat)),dtype='float64')
+#    rowSum = SS.csr_matrix((mat.data, mat.indices, newIndptr),(1,numCols(mat)),dtype='float32')
 #    rowSum.sum_duplicates() # modifies in-place
     # v2: use rowsum[k] = sum_{j:indices[j]==k} data[j] and turn it into a matrix dot product
     # still 2x slower than dense mat.mean
 #    ndense = mat.data.shape[0]
 #    indptr2 = NP.arange(0,ndense+1)
 #    m2 = SS.csr_matrix((mat.data,mat.indices,indptr2),(ndense,numCols(mat)))
-#    sparseOnes = SS.csr_matrix((NP.ones(ndense),NP.arange(0,ndense),NP.array([0,ndense])), (1,ndense), dtype='float64')
+#    sparseOnes = SS.csr_matrix((NP.ones(ndense),NP.arange(0,ndense),NP.array([0,ndense])), (1,ndense), dtype='float32')
 #    rowSum = sparseOnes.dot(m2)
     # v3: like v2, but densify
     denseMat,undensifier = densify(mat)
@@ -141,7 +141,7 @@ def rowsum(mat):
         ndense = mat.data.shape[0]
         indptr2 = NP.arange(0,ndense+1)
         m2 = SS.csr_matrix((mat.data,mat.indices,indptr2),(ndense,numCols(mat)))
-        sparseOnes = SS.csr_matrix((NP.ones(ndense),NP.arange(0,ndense),NP.array([0,ndense])), (1,ndense), dtype='float64')
+        sparseOnes = SS.csr_matrix((NP.ones(ndense),NP.arange(0,ndense),NP.array([0,ndense])), (1,ndense), dtype='float32')
         rowSum = sparseOnes.dot(m2)
         return rowSum
 
@@ -149,13 +149,13 @@ def mapData(dataFun,mat):
     """Apply some function to the mat.data array of the sparse matrix and return a new one."""
     checkCSR(mat)
     newdata = dataFun(mat.data)
-    return SS.csr_matrix((newdata,mat.indices,mat.indptr), shape=mat.shape, dtype='float64')
+    return SS.csr_matrix((newdata,mat.indices,mat.indptr), shape=mat.shape, dtype='float32')
 
 #TODO avoid this, it's expensive
 def stack(mats):
     """Vertically stack matrices and return a sparse csr matrix."""
     for m in mats: checkCSR(m)
-    return SS.csr_matrix(SS.vstack(mats, dtype='float64'))
+    return SS.csr_matrix(SS.vstack(mats, dtype='float32'))
 
 def numRows(m): 
     """Number of rows in matrix"""
@@ -186,7 +186,7 @@ def repeat(row,n):
         ptrs = NP.array(range(0,numNZCols*n+1,numNZCols))
     else:
         ptrs = NP.zeros(n+1, dtype='int')
-    return SS.csr_matrix((d,inds,ptrs),shape=(n,numCols(row)), dtype='float64')
+    return SS.csr_matrix((d,inds,ptrs),shape=(n,numCols(row)), dtype='float32')
 
 
 def alterMatrixRows(mat,alterationFun):
@@ -296,7 +296,7 @@ def shuffleRows(m,shuffledRowNums=None):
         for j in range(rowLen):
             data[indptr[i]+j] = m.data[m.indptr[r]+j]
             indices[indptr[i]+j] = m.indices[m.indptr[r]+j]
-    result = SS.csr_matrix((data,indices,indptr), shape=m.shape, dtype='float64')
+    result = SS.csr_matrix((data,indices,indptr), shape=m.shape, dtype='float32')
     result.sort_indices()
     return result
 
@@ -321,7 +321,7 @@ def selectRows(m,lo,hi):
             data[indptr[i] + j] = m.data[k]
             indices[indptr[i] + j] = m.indices[k]
     indptr[hi-lo] = m.indptr[hi] - jLo
-    result = SS.csr_matrix((data,indices,indptr), shape=(hi-lo,numCols(m)), dtype='float64')
+    result = SS.csr_matrix((data,indices,indptr), shape=(hi-lo,numCols(m)), dtype='float32')
     return result
 
 if __name__=="__main__":

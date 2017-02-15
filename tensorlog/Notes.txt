@@ -9,15 +9,18 @@ Next actions:
 
 Bigger steps:
 
- - repackage (see below)
+ - repackage (see below)???
+ - optimize compilation?
+ - multi-mode training and compilation
  - benchmark tests on tensorflow
- - learning for xcomp 
- -- more serious examples, expt harness
- -- xc.updateDB() to move trained variable values into matrixDB
  - adding tensorflow 'builtins'
  -- p(i,o) -> lambda inputExpression:outputExpression 
  -- p(o)   -> lambda outputExpression 
- - typing for tensorlog  
+ - typing for tensorlog?  
+ -- note: 10k sample has 3,434 people, 11,819 entities, larger yago has 59,120 people 118,703 entities
+    so it's 10x bigger (in message size); 10k sample uses about 15 Gb memory
+
+ -- declare.typeDeclaration
  -- cfacts parser allows #declare foo type1 type2 (insist everything typed or nothing, based on config?)
     (see bufferFile/bufferLine in matrixDB
  -- matrixDB keeps a symtab for each type

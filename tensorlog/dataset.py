@@ -20,7 +20,7 @@ from tensorlog import declare
 #
 
 class Dataset(object):
-    
+
     def __init__(self,xDict,yDict):
         # dict which maps mode declaration to X matrices for training
         self.xDict = xDict
@@ -91,7 +91,7 @@ class Dataset(object):
 
     #
     # i/o and conversions
-    # 
+    #
 
     def serialize(self,dir):
         """Save the dataset on disk."""

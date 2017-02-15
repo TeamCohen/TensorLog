@@ -80,7 +80,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
   def runExpt(self,prog=None,trainData=None,testData=None, targetMode=None,
               savedTestPredictions=None,savedTestExamples=None,savedTrainExamples=None,savedModel=None,
-              optimizer=None, epochs=10):
+              optimizer=None, epochs=10, minibatchSize=0):
     """ sort of similar to tensorlog.expt.Expt().run()
     """
     assert targetMode is not None,'targetMode must be specified'
@@ -106,12 +106,21 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     expt.Expt.timeAction('computing test accuracy',lambda:printAccuracy('initial test accuracy',X,Y))
 
     def train(X,Y):
-      fd = self.getFeedDict(self.wrapMsg(X), self.wrapMsg(Y))
       self.ensureSessionInitialized()
       session = self.getSession()
       with session.as_default():
-        for i in range(epochs):
-          train_step.run(feed_dict=fd)
+        if not minibatchSize:
+          fd = self.getFeedDict(self.wrapMsg(X), self.wrapMsg(Y))
+          for i in range(epochs):
+            print 'epoch',i+1,'of',epochs
+            train_step.run(feed_dict=fd)
+        else:
+          dset = dataset.Dataset({targetMode:X},{targetMode:Y})
+          for i in range(epochs):
+            print 'epoch',i+1,'of',epochs
+            for mode,miniX,miniY in dset.minibatchIterator(batchsize=minibatchSize):
+              fd = self.getFeedDict(self.wrapMsg(miniX), self.wrapMsg(miniY))
+              train_step.run(feed_dict=fd)
 
     expt.Expt.timeAction('training', lambda:train(X,Y))
 
@@ -158,7 +167,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     inferenceReplacing0With1 = tf.where(
         self.ws.inferenceExpr>0.0,
         self.ws.inferenceExpr,
-        tf.ones(tf.shape(self.ws.inferenceExpr), tf.float64))
+        tf.ones(tf.shape(self.ws.inferenceExpr), tf.float32))
     self.ws.dataLossExpr = tf.reduce_sum(-target_y * tf.log(inferenceReplacing0With1))
     if params is not None:
       self.ws.params = params
@@ -259,7 +268,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 
   def createPlaceholder(self,name,kind):
     assert kind=='vector'
-    result = tf.placeholder(tf.float64, shape=[None,self.db.dim()], name="tensorlog/"+name)
+    result = tf.placeholder(tf.float32, shape=[None,self.db.dim()], name="tensorlog/"+name)
     return result
 
   def insertHandleExpr(self,key,name,val):
@@ -298,7 +307,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
     subExprReplacing0WithNeg20 = tf.where(
       subExpr>0.0,
       subExpr,
-      tf.ones(tf.shape(subExpr), tf.float64)*(-10.0))
+      tf.ones(tf.shape(subExpr), tf.float32)*(-10.0))
     return tf.nn.softmax(subExprReplacing0WithNeg20 + self.nullSmoothing)
 
   def transposeMatrixExpr(self,m):
