@@ -93,7 +93,6 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     self.xcomp_check(['p(X,Y) :- r(X,Z),r(Z,Y).', 'r(X,Y):-spouse(X,Y).'], 'p(i,o)', 'william',
             {'william':1.0})
 
-
   def xcomp_check(self,ruleStrings,mode_string,input_symbol,expected_result_dict):
     self._xcomp_check('vanilla',None,ruleStrings,mode_string,input_symbol,expected_result_dict)
 
@@ -118,12 +117,10 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       prog = program.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
     else:
       prog = program.Program(db=self.db,rules=rules)
-    mode = declare.ModeDeclaration(mode_string)
-    tlogFun = prog.compile(mode)
     for compilerClass in TESTED_COMPILERS:
       #cross-compile the function
-      xc = compilerClass(prog.db)
-      xc.compile(tlogFun)
+      xc = compilerClass(prog)
+      xc.compile(mode_string)
       # evaluate the function and get the output y
       xc.show()
       print '== performing eval with',compilerClass,'=='
@@ -281,14 +278,12 @@ class TestXCGrad(testtensorlog.TestGrad):
   def xgrad_check(self,rule_strings,mode_string,params,xyPairs,expected):
     rules = testtensorlog.rules_from_strings(rule_strings)
     prog = program.Program(db=self.db,rules=rules)
-    mode = declare.ModeDeclaration(mode_string)
-    tlogFun = prog.compile(mode)
     for x,ys in xyPairs:
       data = testtensorlog.DataBuffer(self.db)
       data.add_data_symbols(x,ys)
       for compilerClass in TESTED_COMPILERS:
-        xc = compilerClass(prog.db)
-        xc.compile(tlogFun,params)
+        xc = compilerClass(prog)
+        xc.compile(mode_string,params)
         result = xc.eval([data.get_x()])
         loss = xc.evalDataLoss([data.get_x()],data.get_y())
         updates = xc.evalDataLossGrad([data.get_x()],data.get_y())
@@ -301,10 +296,9 @@ class TestXCGrad(testtensorlog.TestGrad):
         self.check_directions(updates_with_string_keys,expected)
 
 class TestXCProPPR(testtensorlog.TestProPPR):
-  
+
   def setUp(self):
     super(TestXCProPPR,self).setUp()
-    self.tlogFun = self.prog.compile(self.mode)
 
   def evalxc(self,xc,input):
     rawPred = xc.eval([input])
@@ -316,8 +310,8 @@ class TestXCProPPR(testtensorlog.TestProPPR):
   def testNativeRow(self):
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
-      xc = compilerClass(self.prog.db)
-      xc.compile(self.tlogFun)
+      xc = compilerClass(self.prog)
+      xc.compile(self.mode)
       for i in range(self.numExamples):
         pred = self.evalxc(xc, self.X.getrow(i))
         d = self.prog.db.rowAsSymbolDict(pred)
@@ -328,8 +322,8 @@ class TestXCProPPR(testtensorlog.TestProPPR):
 
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
-      xc = compilerClass(self.prog.db)
-      xc.compile(self.tlogFun)
+      xc = compilerClass(self.prog)
+      xc.compile(self.mode)
       pred = self.prog.eval(self.mode,[self.X])
       d0 = self.prog.db.matrixAsSymbolDict(pred)
       for i,d in d0.items():
@@ -344,12 +338,12 @@ class TestXCProPPR(testtensorlog.TestProPPR):
     w0 = updates[('weighted',1)].sum(axis=0)
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
-      xc = compilerClass(self.prog.db)
-      xc.compile(self.tlogFun,[('weighted',1)])
+      xc = compilerClass(self.prog)
+      xc.compile(self.mode,[('weighted',1)])
       updates = xc.evalDataLossGrad([X],Y)
       w = updates[0]
       # w is different from the w in the corresponding testtensorlog test,
-      # which is a crossEntropy gradient for each example, but it should have 
+      # which is a crossEntropy gradient for each example, but it should have
       # opposite directions
       nrow,ncol = w.shape
       for i in range(nrow):
@@ -409,35 +403,50 @@ class TestXCProPPR(testtensorlog.TestProPPR):
     X,Y = self.labeledData.matrixAsTrainingData('train',2)
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
-      xc = compilerClass(self.prog.db)
-      xc.compile(self.tlogFun, [('weighted',1)])
+      self.prog.setRuleWeights()
+      self.prog.setFeatureWeights()
+      xc = compilerClass(self.prog)
+      xc.compile(self.mode, [('weighted',1)])
 
       loss0 = xc.evalDataLoss([X],Y)
       print 'initial train data loss',loss0
       TX,TY = self.labeledData.matrixAsTrainingData('test',2)
       loss1 = xc.evalDataLoss([TX],TY)
       print 'initial test data loss',loss1
+      acc0 = xc.accuracy(X,Y)
+      print 'initial train accuracy',acc0
+      acc1 = xc.accuracy(TX,TY)
+      print 'initial test accuracy',acc1
 
       print 'params to optimize',xc.ws.params
       print 'vars to optimize',map(lambda key:xc.ws.getHandleExprVariable(key).name, xc.ws.params)
 
       optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
-      train_step = optimizer.minimize(xc.ws.dataLossExpr, var_list=xc.ws.getParamVariables())
-
-      fd = xc.getFeedDict(xc.wrapMsg(X),xc.wrapMsg(Y))
-      xc.ensureSessionInitialized()
-      session = xc.getSession()
-      with session.as_default():
-        for i in range(10):
-          train_step.run(feed_dict=fd)
+      xc.optimizeDataLoss(optimizer, X, Y, epochs=20)
 
       loss2 = xc.evalDataLoss([X],Y)
       print 'final train data loss',loss2
       loss3 = xc.evalDataLoss([TX],TY)
       print 'final test data loss',loss3
+      acc2 = xc.accuracy(X,Y)
+      print 'final train accuracy',acc2
+      acc3 = xc.accuracy(TX,TY)
+      print 'final test accuracy',acc3
+
+      self.assertTrue(acc2>acc0)
+      self.assertTrue(acc3>acc1)
+      self.assertTrue(acc2==1.0)
+      self.assertTrue(acc2>=0.9)
 
       self.assertTrue(loss2<loss0)
       self.assertTrue(loss2<loss1)
+
+      xc.exportAllLearnedParams()
+      v = self.prog.db.getParameter('weighted',1)
+      d =  self.prog.db.rowAsSymbolDict(v)
+      # sanity check a couple of values
+      self.assertTrue(d['little_pos'] > d['little_neg'])
+      self.assertTrue(d['big_pos'] < d['big_neg'])
 
 
 if __name__ == "__main__":

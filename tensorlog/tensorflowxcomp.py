@@ -1,10 +1,13 @@
 import tensorflow as tf
 import scipy.sparse as ss
 import numpy as np
+import tensorflow as tf
+import logging
 
 from tensorlog import funs
 from tensorlog import ops
 from tensorlog import xcomp
+from tensorlog import expt
 
 class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
@@ -18,8 +21,8 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     self.sessionInitialized = False
 
   #
-  # tensorflow specific stuff
-  # 
+  # tensorflow specific routines
+  #
 
   def getSession(self):
     """ Return a session, which is the one used by default in 'eval'
@@ -43,7 +46,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     return self.ws.inferenceArgs[0].name
 
   def getTargetName(self):
-    """ String key for the input placeholder
+    """ String key for the target-output placeholder
     """
     assert len(self.ws.dataLossArgs)==1
     return self.ws.dataLossArgs[0].name
@@ -51,8 +54,96 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   def getFeedDict(self,X,Y):
     return { self.getInputName(): X, self.getTargetName(): Y}
 
+  def optimizeDataLoss(self,optimizer,rawX,rawY,epochs=1):
+    X = self.wrapMsg(rawX)
+    Y = self.wrapMsg(rawY)
+    fd = self.getFeedDict(X,Y)
+    step = optimizer.minimize(self.ws.dataLossExpr, var_list=self.ws.getParamVariables())
+    self.ensureSessionInitialized()
+    # check for uninitialized variables from the optimizer
+    with self.session.as_default():
+      self.session.run(tf.global_variables_initializer())
+      for i in range(epochs):
+        step.run(feed_dict=fd)
+
+  def accuracy(self,rawX,rawY):
+    X_val = self.wrapMsg(rawX)
+    Y_val = self.wrapMsg(rawY)
+    fd = self.getFeedDict(X_val,Y_val)
+    Y_ = self.ws.inferenceExpr
+    Y = self.ws.dataLossArgs[0]
+    correct_prediction = tf.equal(tf.argmax(Y,1), tf.argmax(Y_,1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    self.ensureSessionInitialized()
+    with self.session.as_default():
+      return accuracy.eval(fd)
+
+  def runExpt(self,prog=None,trainData=None,testData=None, targetMode=None,
+              savedTestPredictions=None,savedTestExamples=None,savedTrainExamples=None,savedModel=None,
+              optimizer=None, epochs=10):
+    """ sort of similar to tensorlog.expt.Expt().run()
+    """
+    assert targetMode is not None,'targetMode must be specified'
+    assert prog is not None,'prog must be specified'
+    prog.setAllWeights()
+
+    expt.Expt.timeAction('compiling and cross-compiling', lambda:self.compile(targetMode, prog.db.params))
+
+    assert optimizer is None,'optimizers not supported yet'
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+    train_step = optimizer.minimize(self.ws.dataLossExpr, var_list=self.ws.getParamVariables())
+    X = trainData.getX(targetMode)
+    Y = trainData.getY(targetMode)
+    TX = testData.getX(targetMode)
+    TY = testData.getY(targetMode)
+
+    def printLoss(msg,X,Y): print msg,self.evalDataLoss([X],Y)
+    def printAccuracy(msg,X,Y): print msg,self.accuracy(X,Y)
+
+    expt.Expt.timeAction('computing train loss',lambda:printLoss('initial train loss',X,Y))
+    expt.Expt.timeAction('computing test loss',lambda:printLoss('initial test loss',X,Y))
+    expt.Expt.timeAction('computing train accuracy',lambda:printAccuracy('initial train accuracy',X,Y))
+    expt.Expt.timeAction('computing test accuracy',lambda:printAccuracy('initial test accuracy',X,Y))
+
+    def train(X,Y):
+      fd = self.getFeedDict(self.wrapMsg(X), self.wrapMsg(Y))
+      self.ensureSessionInitialized()
+      session = self.getSession()
+      with session.as_default():
+        for i in range(epochs):
+          train_step.run(feed_dict=fd)
+
+    expt.Expt.timeAction('training', lambda:train(X,Y))
+
+    expt.Expt.timeAction('computing train loss',lambda:printLoss('final train loss',X,Y))
+    expt.Expt.timeAction('computing test loss',lambda:printLoss('final test loss',X,Y))
+    expt.Expt.timeAction('computing train accuracy',lambda:printAccuracy('final train accuracy',X,Y))
+    expt.Expt.timeAction('computing test accuracy',lambda:printAccuracy('final test accuracy',X,Y))
+
+    if savedModel:
+      self.exportAllLearnedParams()
+      expt.Expt.timeAction('saving trained model', lambda:prog.db.serialize(savedModel))
+
+    def savePredictions(fileName):
+      Y_ = self.eval([TX])
+      expt.Expt.predictionAsProPPRSolutions(fileName,targetMode.functor,prog.db,TX,Y_)
+
+    if savedTestPredictions:
+      expt.Expt.timeAction('saving test predictions', lambda:savePredictions(savedTestPredictions))
+
+    if savedTestExamples:
+      expt.Expt.timeAction('saving test examples', lambda:testData.saveProPPRExamples(savedTestExamples,prog.db))
+
+    if savedTrainExamples:
+      expt.Expt.timeAction('saving train examples',lambda:trainData.saveProPPRExamples(savedTrainExamples,prog.db))
+
+    if savedTestPredictions and savedTestExamples:
+      print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' \
+                % (savedTestExamples,savedTestPredictions)
+
+
   #
-  # xcomp interface
+  # standard xcomp interface
   #
 
   def finalizeInference(self):
@@ -91,7 +182,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     target = self.wrapMsg(rawTarget)
     bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs,
                         inputs+[target]))
-    rawUpdates = [self._evalWithBindings(expr,bindings) 
+    rawUpdates = [self._evalWithBindings(expr,bindings)
                   for expr in self.ws.dataLossGradExprs]
     return map(lambda key,rawUpdate:self.unwrapUpdate(key,rawUpdate), self.ws.params, rawUpdates)
 
@@ -110,7 +201,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   @staticmethod
   def pprintExpr(expr,previouslySeen=None,depth=0,maxdepth=20):
     """ Print debug-level information on a tensorlog expression """
-    if previouslySeen is None: 
+    if previouslySeen is None:
       previouslySeen=set()
     if depth>maxdepth:
       print '...'
@@ -127,9 +218,9 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   def pprintAndLocateGradFailure(expr,vars,previouslySeen=None,depth=0,maxdepth=20):
     """ Print debug-level information on a tensorlog expression, and also
     give an indication of where a gradient computation failed.  """
-    if previouslySeen is None: 
+    if previouslySeen is None:
       previouslySeen=set()
-    def hasGrad(expr): 
+    def hasGrad(expr):
       try:
         return all(map(lambda g:g is not None, tf.gradients(expr,vars))),'ok'
       except Exception as ex:
@@ -148,6 +239,13 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
             inp,vars,previouslySeen,depth=depth+1,maxdepth=maxdepth)
 
 
+  def getLearnedParam(self,key):
+    self.ensureSessionInitialized()
+    with self.session.as_default():
+      varVal = self.ws._handleExprVar[key].eval()
+    # same logic works for param values as param updates
+    return self.unwrapUpdate(key, varVal)
+
 ###############################################################################
 # implementation for dense messages, dense relation matrices
 ###############################################################################
@@ -161,15 +259,13 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 
   def createPlaceholder(self,name,kind):
     assert kind=='vector'
-    with tf.name_scope('tensorlog') as scope:
-      result = tf.placeholder(tf.float64, shape=[None,self.db.dim()], name=name)
-      return result
+    result = tf.placeholder(tf.float64, shape=[None,self.db.dim()], name="tensorlog/"+name)
+    return result
 
   def insertHandleExpr(self,key,name,val):
-    with tf.name_scope('tensorlog') as scope:
-      v = tf.Variable(val, name=name)
-      self.tfVarsToInitialize.append(v)
-      self.ws._handleExpr[key] = self.ws._handleExprVar[key] = v
+    v = tf.Variable(val, name="tensorlog/"+name)
+    self.tfVarsToInitialize.append(v)
+    self.ws._handleExpr[key] = self.ws._handleExprVar[key] = v
 
   def wrapMsg(self,vec):
     """ Convert a vector from the DB into a vector value used by the
@@ -200,8 +296,8 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
     # zeros are actually big numbers for the softmax,
     # so replace them with -20
     subExprReplacing0WithNeg20 = tf.where(
-      subExpr>0.0, 
-      subExpr, 
+      subExpr>0.0,
+      subExpr,
       tf.ones(tf.shape(subExpr), tf.float64)*(-10.0))
     return tf.nn.softmax(subExprReplacing0WithNeg20 + self.nullSmoothing)
 
@@ -233,15 +329,14 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     (functor,arity) = key
     if arity<2:
       # vectors are dense so they are just stored as Variables
-      with tf.name_scope('tensorlog') as scope:
-        v = tf.Variable(val, name=name)
-        self.tfVarsToInitialize.append(v)
-        self.ws._handleExpr[key] = self.ws._handleExprVar[key] = v
+      v = tf.Variable(val, name="tensorlog/"+name)
+      self.tfVarsToInitialize.append(v)
+      self.ws._handleExpr[key] = self.ws._handleExprVar[key] = v
     else:
       # matrixes are sparse so we need to convert them into
-      # a handle expression that stores a SparseTensor, and 
+      # a handle expression that stores a SparseTensor, and
       # do some additional bookkeeping.
-      
+
       # first convert from scipy csr format of indices,indptr,data to
       # tensorflow's format, where the sparseindices are a 2-D tensor.
       sparseIndices = []
@@ -255,17 +350,16 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
       # create the handle expression, and save a link back to the
       # underlying varable which will be optimized, ie., the 'values'
       # of the SparseTensor,
-      with tf.name_scope('tensorlog') as scope:      
-        indiceVar = tf.Variable(np.array(sparseIndices), name="%s_indices" % name)
-        valueVar = tf.Variable(val.data, name="%s_values" % name)
-        # TODO: the "valueVar+0.0" seems to be necessary to get a non-zero
-        # gradient, but I don't understand why.  w/o this there is no "read"
-        # node in for the variable in the graph and the gradient fails
-        self.ws._handleExpr[key] = tf.SparseTensor(indiceVar,valueVar+0.0,[n,n])
-        self.ws._handleExprVar[key] = valueVar
-        # record the variables that need to be initialized
-        self.tfVarsToInitialize.append(indiceVar)
-        self.tfVarsToInitialize.append(valueVar)
+      indiceVar = tf.Variable(np.array(sparseIndices), name="tensorlog/%s_indices" % name)
+      valueVar = tf.Variable(val.data, name="tensorlog/%s_values" % name)
+      # TODO: the "valueVar+0.0" seems to be necessary to get a non-zero
+      # gradient, but I don't understand why.  w/o this there is no "read"
+      # node in for the variable in the graph and the gradient fails
+      self.ws._handleExpr[key] = tf.SparseTensor(indiceVar,valueVar+0.0,[n,n])
+      self.ws._handleExprVar[key] = valueVar
+      # record the variables that need to be initialized
+      self.tfVarsToInitialize.append(indiceVar)
+      self.tfVarsToInitialize.append(valueVar)
 
   def unwrapUpdate(self,key,up):
     # we will optimize by updating the ws._handleExprVar's, which are,
@@ -283,7 +377,7 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
 
   #
   # override the dense-matrix operations with sparse ones
-  # 
+  #
 
   def wrapDBMatrix(self,mat):
     return mat
@@ -295,4 +389,3 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     mT = tf.sparse_transpose(m)
     vT = tf.transpose(v)
     return tf.transpose(tf.sparse_tensor_dense_matmul(mT,vT))
-

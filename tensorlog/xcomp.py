@@ -9,7 +9,7 @@ class AbstractCrossCompiler(object):
 
   """ Base class for tensorlog -> [theano|tensorflow|....] cross-compiler """
 
-  def __init__(self,db):
+  def __init__(self,prog):
     # We need to create variables in different namespaces for
     # different instances of an OpSeqFunction, so that the variables
     # used to represent OpSeqFunction intermediate values don't clash.
@@ -18,8 +18,9 @@ class AbstractCrossCompiler(object):
     self.nextNamespaceId = 0
     # holds output of compilation - subclasses should initialize this
     self.ws = Workspace(self)
-    # pointer back to the matrixdb
-    self.db = db
+    # pointer back to the program and matrixdb
+    self.prog = prog
+    self.db = prog.db
     # a constant used to put a little bit of weight on the 'null
     # entity'
     self.nullSmoothing = self.constantVector(
@@ -36,7 +37,7 @@ class AbstractCrossCompiler(object):
   # these all define the interface to the database.  instead of
   # returning a constant matrix M, they will return a 'handle
   # expression', i.e., a target-language expression that evaluates to
-  # that matrix at learning time.  In the simple cases, this is just 
+  # that matrix at learning time.  In the simple cases, this is just
   # the name for a shared variable, but it could be an expression
   # based on that variable (eg its transpose)
   #
@@ -92,14 +93,25 @@ class AbstractCrossCompiler(object):
 
   #
   # compilation
-  # 
+  #
 
-  def compile(self,fun,params=None):
+  def compile(self,funSpec,params=None):
     """Compile a tensorlog function to theano.  Params are optional, if
     they are given then also compile gradient of the loss function
     with respect to these parameters.  Params should be a list of
-    (functor,arity) pairs.
+    (functor,arity) pairs, and funSpec should be a mode, a
+    string encoding a mode, or a funs.Function
     """
+    if isinstance(funSpec,declare.ModeDeclaration):
+      fun = self.prog.compile(funSpec)
+    elif isinstance(funSpec,str):
+      fun = self.prog.compile(declare.asMode(funSpec))
+    elif isinstance(funSpec,funs.Function):
+      fun = funSpec
+    else:
+      assert False,'invalid function spec %r' % funSpec
+    assert fun is not None
+
     # build the expression used for inference
     (self.ws.inferenceArgs,self.ws.inferenceExpr) = self.fun2Expr(fun)
     # do any postprocessing needed
@@ -240,6 +252,11 @@ class AbstractCrossCompiler(object):
     """
     assert False,'abstract method called'
 
+  def unwrapParameterValue(self,key,val):
+    """ Convert the value of learned parameter to tensorlog's format
+    """
+    assert False,'abstract method called'
+
   #
   # Primitive routines to produce target-language expressions from
   # smaller subexpressions.
@@ -301,6 +318,21 @@ class AbstractCrossCompiler(object):
     """
     assert False, 'abstract method called'
 
+  def exportAllLearnedParams(self):
+    """Replace the parameter values in self.prog.db with the values that
+    have been learned.
+    """
+    for key in self.ws.params:
+      functor,arity = key
+      newVal = self.getLearnedParam(key)
+      self.db.setParameter(functor,arity,newVal)
+
+  def getLearnedParam(self,key):
+    """Replace the parameter values in self.prog.db with the value that
+    was learned for this parameter.
+    """
+    assert False, 'abstract method called'
+
 # some helper classes
 
 class NameSpacer(object):
@@ -353,24 +385,23 @@ class Workspace(object):
     self.params = []
 
   def hasHandleExpr(self,key):
-    """ Check if a handle expression has been assigned to this key """ 
+    """ Check if a handle expression has been assigned to this key """
     return key in self._handleExpr
 
   def getHandleExpr(self,key):
-    """return the handle expression for a matrixdb relation """ 
+    """return the handle expression for a matrixdb relation """
     return self._handleExpr[key]
 
   def getHandleExprVariable(self,key):
     """Return the variable whose gradient is used to adjust the expression
-    for a matrixdb relation """ 
+    for a matrixdb relation """
     return self._handleExprVar[key]
 
   def insertHandleExpr(self, key, varName, val):
     """Insert a new handle expression, by delegation to the containing
-    cross-compiler """ 
+    cross-compiler """
     self.xcomp.insertHandleExpr(key,varName,val)
 
   def getParamVariables(self):
     """ Convenience method to find variables corresponding to paramaters """
     return map(lambda key:self.getHandleExprVariable(key), self.params)
-

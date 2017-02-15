@@ -83,9 +83,9 @@ class Program(object):
         """ Produce an ops.Function object which implements the predicate definition
         """
         #find the rules which define this predicate/function
-        
+
         if (mode,depth) in self.function:
-            return
+            return self.function[(mode,depth)]
 
         if depth>self.maxDepth:
             self.function[(mode,depth)] = funs.NullFunction(mode)
@@ -153,10 +153,20 @@ class Program(object):
         fun = self.function[(mode,0)]
         return fun.evalGrad(self.db, inputs)
 
+    def setAllWeights(self):
+        """ Set all parameter weights to a plausible value - mostly useful for proppr programs,
+        where parameters are known. """
+        self.setFeatureWeights()
+        self.setRuleWeights()
+
     def setFeatureWeights(self,epsilon=1.0):
+        """ Set feature weights to a plausible value - mostly useful for proppr programs,
+        where parameters are known. """
         logging.warn('trying to call setFeatureWeights on a non-ProPPR program')
 
     def setRuleWeights(self,weights=None,epsilon=1.0):
+        """ Set rule feature weights to a plausible value - mostly useful for proppr programs,
+        where parameters are known. """
         logging.warn('trying to call setFeatureWeights on a non-ProPPR program')
 
     @staticmethod
@@ -221,12 +231,12 @@ class ProPPRProgram(Program):
 
     def setRuleWeights(self,weights=None,epsilon=1.0):
         """Set the db predicate 'weighted/1' as a parameter, and initialize it
-        to the given vector.  If no vector is given, default to a
-        sparse vector of all constant rule features. 'weighted/1' is
-        the default parameter used to weight rule-ids features, e.g.,
-        "r" in p(X,Y):-... {r}.
+        to the given vector.  If no vector 'weights' is given, default
+        to a constants of epsilon for each rule.  'weighted/1' is the
+        default parameter used to weight rule-ids features, e.g., "r"
+        in p(X,Y):-... {r}.
         """
-        if len(self.ruleIds)==0: 
+        if len(self.ruleIds)==0:
             logging.warn('no rule features have been defined')
         else:
             self.db.markAsParam("weighted",1)
@@ -236,19 +246,19 @@ class ProPPRProgram(Program):
                     weights = weights + self.db.onehot(rid)
             self.db.setParameter("weighted",1,weights*epsilon)
 
-    def getRuleWeights(self):  
+    def getRuleWeights(self):
         """ Return a vector of the weights for a rule """
         return self.db.matEncoding[('weighted',1)]
 
     def setFeatureWeights(self,epsilon=1.0):
-        """ Initialize each feature used in the feature part of a rule, i.e.,
+        """Initialize each feature used in the feature part of a rule, i.e.,
         for all rules annotated by "{foo(F):...}", declare 'foo/1' to
         be a parameter, and initialize it to something plausible.  The
         'something plausible' is based on looking at how the variables
         defining foo are defined, eg for something like "p(X,Y):-
-        ... {posWeight(F):hasWord(X,F)}" the sparse vector of all
-        second arguments of hasWord will be used to initialize
-        posWeight.
+        ... {posWeight(F):hasWord(X,F)}" a constant sparse vector with
+        non-zero weights for all second arguments of hasWord will be
+        used to initialize posWeight.  The constant will be epsilon.
         """
         for paramName,domainModes in self.paramDomains.items():
             weights = self.db.matrixPreimage(domainModes[0])
