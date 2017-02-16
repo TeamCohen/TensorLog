@@ -19,6 +19,7 @@ Bigger steps:
  - typing for tensorlog?  
  -- note: 10k sample has 3,434 people, 11,819 entities, larger yago has 59,120 people 118,703 entities
     so it's 10x bigger (in message size); 10k sample uses about 15 Gb memory
+ -- should look at if sparse matrices are actually being used and monitor where the space is going
 
  -- declare.typeDeclaration
  -- cfacts parser allows #declare foo type1 type2 (insist everything typed or nothing, based on config?)
