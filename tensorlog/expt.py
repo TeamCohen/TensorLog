@@ -113,7 +113,7 @@ class Expt(object):
             dix = dx[i]
             dip = dp[i]
             assert len(dix.keys())==1,'X %s row %d is not onehot: %r' % (theoryPred,i,dix)
-            x = dix.keys()[0]    
+            x = dix.keys()[0]
             fp.write('# proved %d\t%s(%s,X1).\t999 msec\n' % (i+1+start,theoryPred,x))
             scoresdPs = reversed(sorted([(py,y) for (y,py) in dip.items()]))
             for (r,(py,y)) in enumerate(scoresdPs):

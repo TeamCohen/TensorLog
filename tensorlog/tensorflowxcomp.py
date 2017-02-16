@@ -51,39 +51,48 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     assert len(self.ws.dataLossArgs)==1
     return self.ws.dataLossArgs[0].name
 
-  def getFeedDict(self,rawX,rawY):
+  def getFeedDict(self,X,Y,wrapped=False):
     """ Create a feed dictionary for training based on X and Y
     """
-    return { self.getInputName(): self.wrapMsg(rawX),
-             self.getTargetName(): self.wrapMsg(rawY)}
+    (X,Y) = self._ensureWrapped(X,Y,wrapped)
+    return { self.getInputName():X, self.getTargetName():Y }
 
-  def optimizeDataLoss(self,optimizer,rawX,rawY,epochs=1,minibatchSize=0):
+  def _ensureWrapped(self,X,Y,wrapped):
+    return (X,Y) if wrapped else (self.wrapMsg(X),self.wrapMsg(Y))
+
+  def _ensureUnwrapped(self,X,Y,wrapped):
+    return (X,Y) if not wrapped else (self.unwrapOutput(X),self.unwrapOutput(Y))
+
+  def optimizeDataLoss(self,optimizer,X,Y,epochs=1,minibatchSize=0,wrapped=False):
     """ Train
     """
-    trainStep = optimizer.minimize(self.ws.dataLossExpr, var_list=self.ws.getParamVariables())
     def runAndSummarize(fd,i):
       if not self.summaryFile:
         self.session.run([trainStep],feed_dict=fd)
       else:
         (stepSummary, _) = self.session.run([self.summaryMergeAll,trainStep],feed_dict=fd)
         self.summaryWriter.add_summary(stepSummary,i)
+
+    trainStep = optimizer.minimize(self.ws.dataLossExpr, var_list=self.ws.getParamVariables())
     self.ensureSessionInitialized()
     if not minibatchSize:
-      fd = self.getFeedDict(rawX,rawY)
+      fd = self.getFeedDict(X,Y,wrapped)
       for i in range(epochs):
         runAndSummarize(fd,i)
     else:
-      dset = dataset.Dataset({targetMode:X},{targetMode:Y})
+      X1,Y1 = self._ensureUnwrapped(X,Y,wrapped)
+      dset = dataset.Dataset({targetMode:X1},{targetMode:Y1})
       for i in range(epochs):
         for mode,miniX,miniY in dset.minibatchIterator(batchsize=minibatchSize):
-          fd = self.getFeedDict(miniX, miniY)
+          fd = self.getFeedDict(miniX,miniY,wrapped=False)
           runAndSummarize(fd,i)
 
-  def accuracy(self,rawX,rawY):
+  def accuracy(self,X,Y,wrapped=False):
     # TODO advance to AbstractCrossCompiler?
     """ Return accuracy of a model on a test set
     """
-    fd = self.getFeedDict(rawX,rawY)
+    X,Y = self._ensureWrapped(X,Y,wrapped)
+    fd = self.getFeedDict(X,Y,wrapped=True)
     Y_ = self.ws.inferenceExpr
     Y = self.ws.dataLossArgs[0]
     correct_prediction = tf.equal(tf.argmax(Y,1), tf.argmax(Y_,1))
@@ -110,31 +119,35 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     train_step = optimizer.minimize(self.ws.dataLossExpr, var_list=self.ws.getParamVariables())
     X = trainData.getX(targetMode)
     Y = trainData.getY(targetMode)
+    X,Y = self._ensureWrapped(X,Y,False)
     TX = testData.getX(targetMode)
     TY = testData.getY(targetMode)
+    TX,TY = self._ensureWrapped(TX,TY,False)
 
-    def printLoss(msg,X,Y): print msg,self.evalDataLoss([X],Y)
-    def printAccuracy(msg,X,Y): print msg,self.accuracy(X,Y)
+    def printLoss(msg,X,Y): print msg,self.evalDataLoss([X],Y,wrapped=True)
+    def printAccuracy(msg,X,Y): print msg,self.accuracy(X,Y,wrapped=True)
 
     expt.Expt.timeAction('computing train loss',lambda:printLoss('initial train loss',X,Y))
-    expt.Expt.timeAction('computing test loss',lambda:printLoss('initial test loss',X,Y))
+    expt.Expt.timeAction('computing test loss',lambda:printLoss('initial test loss',TX,TY))
     expt.Expt.timeAction('computing train accuracy',lambda:printAccuracy('initial train accuracy',X,Y))
-    expt.Expt.timeAction('computing test accuracy',lambda:printAccuracy('initial test accuracy',X,Y))
+    expt.Expt.timeAction('computing test accuracy',lambda:printAccuracy('initial test accuracy',TX,TY))
 
-    expt.Expt.timeAction('training', lambda:self.optimizeDataLoss(optimizer,X,Y,epochs=epochs,minibatchSize=minibatchSize))
+    expt.Expt.timeAction('training', lambda:self.optimizeDataLoss(optimizer,X,Y,epochs=epochs,minibatchSize=minibatchSize,wrapped=True))
 
     expt.Expt.timeAction('computing train loss',lambda:printLoss('final train loss',X,Y))
-    expt.Expt.timeAction('computing test loss',lambda:printLoss('final test loss',X,Y))
+    expt.Expt.timeAction('computing test loss',lambda:printLoss('final test loss',TX,TY))
     expt.Expt.timeAction('computing train accuracy',lambda:printAccuracy('final train accuracy',X,Y))
-    expt.Expt.timeAction('computing test accuracy',lambda:printAccuracy('final test accuracy',X,Y))
+    expt.Expt.timeAction('computing test accuracy',lambda:printAccuracy('final test accuracy',TX,TY))
 
     if savedModel:
       self.exportAllLearnedParams()
       expt.Expt.timeAction('saving trained model', lambda:prog.db.serialize(savedModel))
 
     def savePredictions(fileName):
-      Y_ = self.eval([TX])
-      expt.Expt.predictionAsProPPRSolutions(fileName,targetMode.functor,prog.db,TX,Y_)
+      Y_ = self.eval([TX],wrapped=True)
+      # Y_ is unwrapped, but need to get unwrapped version of TX from testData
+      expt.Expt.predictionAsProPPRSolutions(fileName,targetMode.functor,prog.db,testData.getX(targetMode),Y_)
+
     if savedTestPredictions:
       expt.Expt.timeAction('saving test predictions', lambda:savePredictions(savedTestPredictions))
     if savedTestExamples:
@@ -216,25 +229,22 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
       paramVars = map(lambda p:self.ws.getHandleExprVariable(p), params)
       self.ws.dataLossGradExprs = tf.gradients(self.ws.dataLossExpr,paramVars)
 
-  def eval(self,rawInputs):
-    inputs = map(self.wrapMsg,rawInputs)
+  def eval(self,rawInputs,wrapped=False):
+    inputs = map(self.wrapMsg,rawInputs) if not wrapped else rawInputs
     bindings = dict(zip(self.ws.inferenceArgs,inputs))
     return self.unwrapOutput(self._evalWithBindings(self.ws.inferenceExpr,bindings))
 
-  def evalDataLoss(self,rawInputs,rawTarget):
-    inputs = map(self.wrapMsg, rawInputs)
-    target = self.wrapMsg(rawTarget)
-    bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs,
-                        inputs+[target]))
+  def evalDataLoss(self,rawInputs,rawTarget,wrapped=False):
+    inputs = map(self.wrapMsg, rawInputs) if not wrapped else rawInputs
+    target = self.wrapMsg(rawTarget) if not wrapped else rawTarget
+    bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs, inputs+[target]))
     return self.unwrapOutput(self._evalWithBindings(self.ws.dataLossExpr,bindings))
 
-  def evalDataLossGrad(self,rawInputs,rawTarget):
-    inputs = map(self.wrapMsg, rawInputs)
-    target = self.wrapMsg(rawTarget)
-    bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs,
-                        inputs+[target]))
-    rawUpdates = [self._evalWithBindings(expr,bindings)
-                  for expr in self.ws.dataLossGradExprs]
+  def evalDataLossGrad(self,rawInputs,rawTarget,wrapped=False):
+    inputs = map(self.wrapMsg, rawInputs) if not wrapped else rawInputs
+    target = self.wrapMsg(rawTarget) if not wrapped else rawTarget
+    bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs, inputs+[target]))
+    rawUpdates = [self._evalWithBindings(expr,bindings) for expr in self.ws.dataLossGradExprs]
     return map(lambda key,rawUpdate:self.unwrapUpdate(key,rawUpdate), self.ws.params, rawUpdates)
 
   def _evalWithBindings(self,expr,bindings):

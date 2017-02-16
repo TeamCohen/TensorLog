@@ -5,6 +5,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
+from tensorlog import dataset
 from tensorlog import declare
 from tensorlog import matrixdb
 from tensorlog import learn
@@ -22,6 +23,8 @@ TESTED_COMPILERS = [
   tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
   tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
 ]
+
+SAVE_SUMMARIES = False
 
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
@@ -405,7 +408,10 @@ class TestXCProPPR(testtensorlog.TestProPPR):
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
       self.prog.setRuleWeights()
       self.prog.setFeatureWeights()
-      xc = compilerClass(self.prog)
+      if SAVE_SUMMARIES:
+        xc = compilerClass(self.prog,compilerClass.__name__+".summary")
+      else:
+        xc = compilerClass(self.prog)
       xc.compile(self.mode, [('weighted',1)])
 
       loss0 = xc.evalDataLoss([X],Y)
@@ -448,6 +454,18 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       self.assertTrue(d['little_pos'] > d['little_neg'])
       self.assertTrue(d['big_pos'] < d['big_neg'])
 
+  def testExpt(self):
+    mode = declare.ModeDeclaration('predict(i,o)')
+    X,Y = self.labeledData.matrixAsTrainingData('train',2)
+    TX,TY = self.labeledData.matrixAsTrainingData('test',2)
+    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+      xc = compilerClass(self.prog)
+      xc.runExpt(
+          prog=self.prog,
+          trainData=dataset.Dataset({mode:X},{mode:Y}),
+          testData=dataset.Dataset({mode:TX},{mode:TY}),
+          targetMode=mode)
 
 if __name__ == "__main__":
   unittest.main()
