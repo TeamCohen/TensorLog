@@ -435,7 +435,7 @@ class Interp(object):
         debug.Debugger(self.prog,mode,dset,gradient=True).mainloop()
 
 #
-# sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william
+# sample main
 #
 
 if __name__ == "__main__":

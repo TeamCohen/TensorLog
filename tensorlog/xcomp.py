@@ -23,9 +23,12 @@ class AbstractCrossCompiler(object):
     self.db = prog.db
     # a constant used to put a little bit of weight on the 'null
     # entity'
-    self.nullSmoothing = self.constantVector(
-      "_nullSmoothing",
-      self.db.nullMatrix(1)*(1e-5))
+    self.globalsInitialized = None
+
+  def initGlobals(self):
+    if not self.globalsInitialized:
+      self.nullSmoothing = self.constantVector("_nullSmoothing",self.db.nullMatrix(1)*(1e-5))
+    self.globalsInitialized = True
 
   def allocNamespacer(self):
     """Allocate a new NameSpacer object, which has its own unique namespace. """
@@ -112,6 +115,10 @@ class AbstractCrossCompiler(object):
       assert False,'invalid function spec %r' % funSpec
     assert fun is not None
 
+    self.do_compile(fun,params)
+
+  def do_compile(self,fun,params):
+    self.initGlobals()
     # build the expression used for inference
     (self.ws.inferenceArgs,self.ws.inferenceExpr) = self.fun2Expr(fun)
     # do any postprocessing needed

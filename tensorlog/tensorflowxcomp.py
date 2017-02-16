@@ -11,18 +11,18 @@ from tensorlog import expt
 
 class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
-  def __init__(self,db):
-    # track things you need to initialize before evaluation. NOTE: we
-    # need to set up tfVarsToInitialize before calling super.__init__
-    # since super.__init__ creates variables.
-    self.tfVarsToInitialize = []
+  def __init__(self,db,summaryFile=None):
     super(TensorFlowCrossCompiler,self).__init__(db)
+    self.tfVarsToInitialize = []
+    self.summaryFile = summaryFile
     self.session = tf.Session()
     self.sessionInitialized = False
 
   #
   # tensorflow specific routines
   #
+
+  # low-level training stuff
 
   def getSession(self):
     """ Return a session, which is the one used by default in 'eval'
@@ -51,25 +51,39 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     assert len(self.ws.dataLossArgs)==1
     return self.ws.dataLossArgs[0].name
 
-  def getFeedDict(self,X,Y):
-    return { self.getInputName(): X, self.getTargetName(): Y}
+  def getFeedDict(self,rawX,rawY):
+    """ Create a feed dictionary for training based on X and Y
+    """
+    return { self.getInputName(): self.wrapMsg(rawX),
+             self.getTargetName(): self.wrapMsg(rawY)}
 
-  def optimizeDataLoss(self,optimizer,rawX,rawY,epochs=1):
-    X = self.wrapMsg(rawX)
-    Y = self.wrapMsg(rawY)
-    fd = self.getFeedDict(X,Y)
-    step = optimizer.minimize(self.ws.dataLossExpr, var_list=self.ws.getParamVariables())
+  def optimizeDataLoss(self,optimizer,rawX,rawY,epochs=1,minibatchSize=0):
+    """ Train
+    """
+    trainStep = optimizer.minimize(self.ws.dataLossExpr, var_list=self.ws.getParamVariables())
+    def runAndSummarize(fd,i):
+      if not self.summaryFile:
+        self.session.run([trainStep],feed_dict=fd)
+      else:
+        (stepSummary, _) = self.session.run([self.summaryMergeAll,trainStep],feed_dict=fd)
+        self.summaryWriter.add_summary(stepSummary,i)
     self.ensureSessionInitialized()
-    # check for uninitialized variables from the optimizer
-    with self.session.as_default():
-      self.session.run(tf.global_variables_initializer())
+    if not minibatchSize:
+      fd = self.getFeedDict(rawX,rawY)
       for i in range(epochs):
-        step.run(feed_dict=fd)
+        runAndSummarize(fd,i)
+    else:
+      dset = dataset.Dataset({targetMode:X},{targetMode:Y})
+      for i in range(epochs):
+        for mode,miniX,miniY in dset.minibatchIterator(batchsize=minibatchSize):
+          fd = self.getFeedDict(miniX, miniY)
+          runAndSummarize(fd,i)
 
   def accuracy(self,rawX,rawY):
-    X_val = self.wrapMsg(rawX)
-    Y_val = self.wrapMsg(rawY)
-    fd = self.getFeedDict(X_val,Y_val)
+    # TODO advance to AbstractCrossCompiler?
+    """ Return accuracy of a model on a test set
+    """
+    fd = self.getFeedDict(rawX,rawY)
     Y_ = self.ws.inferenceExpr
     Y = self.ws.dataLossArgs[0]
     correct_prediction = tf.equal(tf.argmax(Y,1), tf.argmax(Y_,1))
@@ -78,10 +92,12 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     with self.session.as_default():
       return accuracy.eval(fd)
 
+  # higher-level training stuff
+
   def runExpt(self,prog=None,trainData=None,testData=None, targetMode=None,
               savedTestPredictions=None,savedTestExamples=None,savedTrainExamples=None,savedModel=None,
               optimizer=None, epochs=10, minibatchSize=0):
-    """ sort of similar to tensorlog.expt.Expt().run()
+    """Similar to tensorlog.expt.Expt().run()
     """
     assert targetMode is not None,'targetMode must be specified'
     assert prog is not None,'prog must be specified'
@@ -105,24 +121,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     expt.Expt.timeAction('computing train accuracy',lambda:printAccuracy('initial train accuracy',X,Y))
     expt.Expt.timeAction('computing test accuracy',lambda:printAccuracy('initial test accuracy',X,Y))
 
-    def train(X,Y):
-      self.ensureSessionInitialized()
-      session = self.getSession()
-      with session.as_default():
-        if not minibatchSize:
-          fd = self.getFeedDict(self.wrapMsg(X), self.wrapMsg(Y))
-          for i in range(epochs):
-            print 'epoch',i+1,'of',epochs
-            train_step.run(feed_dict=fd)
-        else:
-          dset = dataset.Dataset({targetMode:X},{targetMode:Y})
-          for i in range(epochs):
-            print 'epoch',i+1,'of',epochs
-            for mode,miniX,miniY in dset.minibatchIterator(batchsize=minibatchSize):
-              fd = self.getFeedDict(self.wrapMsg(miniX), self.wrapMsg(miniY))
-              train_step.run(feed_dict=fd)
-
-    expt.Expt.timeAction('training', lambda:train(X,Y))
+    expt.Expt.timeAction('training', lambda:self.optimizeDataLoss(optimizer,X,Y,epochs=epochs,minibatchSize=minibatchSize))
 
     expt.Expt.timeAction('computing train loss',lambda:printLoss('final train loss',X,Y))
     expt.Expt.timeAction('computing test loss',lambda:printLoss('final test loss',X,Y))
@@ -136,27 +135,70 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     def savePredictions(fileName):
       Y_ = self.eval([TX])
       expt.Expt.predictionAsProPPRSolutions(fileName,targetMode.functor,prog.db,TX,Y_)
-
     if savedTestPredictions:
       expt.Expt.timeAction('saving test predictions', lambda:savePredictions(savedTestPredictions))
-
     if savedTestExamples:
       expt.Expt.timeAction('saving test examples', lambda:testData.saveProPPRExamples(savedTestExamples,prog.db))
-
     if savedTrainExamples:
       expt.Expt.timeAction('saving train examples',lambda:trainData.saveProPPRExamples(savedTrainExamples,prog.db))
-
     if savedTestPredictions and savedTestExamples:
-      print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' \
-                % (savedTestExamples,savedTestPredictions)
+      print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' % (savedTestExamples,savedTestPredictions)
 
+  # debug stuff
+
+  @staticmethod
+  def pprintExpr(expr,previouslySeen=None,depth=0,maxdepth=20):
+    """ Print debug-level information on a tensorlog expression """
+    if previouslySeen is None:
+      previouslySeen=set()
+    if depth>maxdepth:
+      print '...'
+    else:
+      print '| '*(depth+1),
+      op = expr.op
+      print 'expr:',expr,'type','op',op.name,'optype',op.type
+    if not expr in previouslySeen:
+      previouslySeen.add(expr)
+      for inp in op.inputs:
+        TensorFlowCrossCompiler.pprintExpr(inp,previouslySeen,depth=depth+1,maxdepth=maxdepth)
+
+  @staticmethod
+  def pprintAndLocateGradFailure(expr,vars,previouslySeen=None,depth=0,maxdepth=20):
+    """ Print debug-level information on a tensorlog expression, and also
+    give an indication of where a gradient computation failed.  """
+    if previouslySeen is None:
+      previouslySeen=set()
+    def hasGrad(expr):
+      try:
+        return all(map(lambda g:g is not None, tf.gradients(expr,vars))),'ok'
+      except Exception as ex:
+        return False,ex
+    if depth>maxdepth:
+      print '...'
+    else:
+      op = expr.op
+      stat,ex = hasGrad(expr)
+      tab = '+ ' if stat else '| '
+      print tab*(depth+1),expr,op.name,ex
+      if not expr in previouslySeen:
+        previouslySeen.add(expr)
+        for inp in op.inputs:
+          TensorFlowCrossCompiler.pprintAndLocateGradFailure(
+            inp,vars,previouslySeen,depth=depth+1,maxdepth=maxdepth)
 
   #
   # standard xcomp interface
   #
 
-  def finalizeInference(self):
-    pass
+  # override this so I can use a name scope
+  def do_compile(self,fun,params):
+    with tf.name_scope("tensorlog"):
+      self.initGlobals()
+      (self.ws.inferenceArgs,self.ws.inferenceExpr) = self.fun2Expr(fun)
+      self.buildLossExpr(params)
+      if self.summaryFile:
+        self.summaryMergeAll = tf.summary.merge_all()
+        self.summaryWriter = tf.summary.FileWriter(self.summaryFile, self.session.graph)
 
   def buildLossExpr(self,params):
     target_y = self.createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector')
@@ -207,47 +249,6 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     if verbose>=1:
       TensorFlowCrossCompiler.pprintExpr(self.ws.inferenceExpr)
 
-  @staticmethod
-  def pprintExpr(expr,previouslySeen=None,depth=0,maxdepth=20):
-    """ Print debug-level information on a tensorlog expression """
-    if previouslySeen is None:
-      previouslySeen=set()
-    if depth>maxdepth:
-      print '...'
-    else:
-      print '| '*(depth+1),
-      op = expr.op
-      print 'expr:',expr,'type','op',op.name,'optype',op.type
-    if not expr in previouslySeen:
-      previouslySeen.add(expr)
-      for inp in op.inputs:
-        TensorFlowCrossCompiler.pprintExpr(inp,previouslySeen,depth=depth+1,maxdepth=maxdepth)
-
-  @staticmethod
-  def pprintAndLocateGradFailure(expr,vars,previouslySeen=None,depth=0,maxdepth=20):
-    """ Print debug-level information on a tensorlog expression, and also
-    give an indication of where a gradient computation failed.  """
-    if previouslySeen is None:
-      previouslySeen=set()
-    def hasGrad(expr):
-      try:
-        return all(map(lambda g:g is not None, tf.gradients(expr,vars))),'ok'
-      except Exception as ex:
-        return False,ex
-    if depth>maxdepth:
-      print '...'
-    else:
-      op = expr.op
-      stat,ex = hasGrad(expr)
-      tab = '+ ' if stat else '| '
-      print tab*(depth+1),expr,op.name,ex
-      if not expr in previouslySeen:
-        previouslySeen.add(expr)
-        for inp in op.inputs:
-          TensorFlowCrossCompiler.pprintAndLocateGradFailure(
-            inp,vars,previouslySeen,depth=depth+1,maxdepth=maxdepth)
-
-
   def getLearnedParam(self,key):
     self.ensureSessionInitialized()
     with self.session.as_default():
@@ -261,8 +262,8 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
 class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 
-  def __init__(self,db):
-    super(DenseMatDenseMsgCrossCompiler,self).__init__(db)
+  def __init__(self,db,summaryFile=None):
+    super(DenseMatDenseMsgCrossCompiler,self).__init__(db,summaryFile=summaryFile)
     self._denseMatIndices = [(i,j) for i in range(self.db.dim()) for j in range(self.db.dim())]
     self._denseVecIndices = [(0,i) for i in range(self.db.dim())]
 
@@ -272,9 +273,18 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
     return result
 
   def insertHandleExpr(self,key,name,val):
-    v = tf.Variable(val, name="tensorlog/"+name)
+    # TODO this machinery is a lot like get_variable, can I use that
+    # instead?
+    v = tf.Variable(val, name=name)
     self.tfVarsToInitialize.append(v)
     self.ws._handleExpr[key] = self.ws._handleExprVar[key] = v
+    self.summarize(name,v)
+
+  def summarize(self,name,v):
+    if self.summaryFile:
+      with tf.name_scope('summaries'):
+        with tf.name_scope(name):
+          tf.summary.scalar('size', tf.size(v))
 
   def wrapMsg(self,vec):
     """ Convert a vector from the DB into a vector value used by the
@@ -328,8 +338,8 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 
 class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
 
-  def __init__(self,db):
-    super(SparseMatDenseMsgCrossCompiler,self).__init__(db)
+  def __init__(self,db,summaryFile=None):
+    super(SparseMatDenseMsgCrossCompiler,self).__init__(db,summaryFile=summaryFile)
     # we will need to save the original indices/indptr representation
     # of each sparse matrix
     self.sparseMatInfo = {}
@@ -338,9 +348,10 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     (functor,arity) = key
     if arity<2:
       # vectors are dense so they are just stored as Variables
-      v = tf.Variable(val, name="tensorlog/"+name)
+      v = tf.Variable(val, name=name)
       self.tfVarsToInitialize.append(v)
       self.ws._handleExpr[key] = self.ws._handleExprVar[key] = v
+      self.summarize(name,v)
     else:
       # matrixes are sparse so we need to convert them into
       # a handle expression that stores a SparseTensor, and
@@ -359,8 +370,8 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
       # create the handle expression, and save a link back to the
       # underlying varable which will be optimized, ie., the 'values'
       # of the SparseTensor,
-      indiceVar = tf.Variable(np.array(sparseIndices), name="tensorlog/%s_indices" % name)
-      valueVar = tf.Variable(val.data, name="tensorlog/%s_values" % name)
+      indiceVar = tf.Variable(np.array(sparseIndices), name="%s_indices" % name)
+      valueVar = tf.Variable(val.data, name="%s_values" % name)
       # TODO: the "valueVar+0.0" seems to be necessary to get a non-zero
       # gradient, but I don't understand why.  w/o this there is no "read"
       # node in for the variable in the graph and the gradient fails
@@ -369,6 +380,8 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
       # record the variables that need to be initialized
       self.tfVarsToInitialize.append(indiceVar)
       self.tfVarsToInitialize.append(valueVar)
+      self.summarize("%s_indices" % name,indiceVar)
+      self.summarize("%s_value" % name,valueVar)
 
   def unwrapUpdate(self,key,up):
     # we will optimize by updating the ws._handleExprVar's, which are,
