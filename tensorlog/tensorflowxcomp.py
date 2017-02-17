@@ -1,9 +1,10 @@
-import tensorflow as tf
-import scipy.sparse as ss
-import numpy as np
-import tensorflow as tf
 import logging
+import os
+import numpy as np
+import scipy.sparse as ss
+import tensorflow as tf
 
+from tensorlog import comline
 from tensorlog import funs
 from tensorlog import ops
 from tensorlog import xcomp
@@ -15,8 +16,9 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     super(TensorFlowCrossCompiler,self).__init__(db)
     self.tfVarsToInitialize = []
     self.summaryFile = summaryFile
-    self.session = tf.Session()
-    self.sessionInitialized = False
+    self.session = None
+    self.sessionInitialized = None
+    logging.debug('TensorFlowCrossCompiler initialized %.3f Gb' % comline.memusage())
 
   #
   # tensorflow specific routines
@@ -24,20 +26,25 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
   # low-level training stuff
 
-  def getSession(self):
-    """ Return a session, which is the one used by default in 'eval'
-    calls.
+  def setSession(self,session=None):
+    """ Insert a session for the
     """
-    return self.session
+    self.session = session
 
   def ensureSessionInitialized(self):
     """ Make sure the varables in the session have been initialized,
     initializing them if needed
     """
+    if self.session is None:
+      logging.debug('creating session %.3f Gb' % comline.memusage())
+      self.session = tf.Session()
+      logging.debug('session created %.3f Gb' % comline.memusage())
     if not self.sessionInitialized:
+      logging.debug('initializing session %.3f Gb' % comline.memusage())
       for var in self.tfVarsToInitialize:
         self.session.run(var.initializer)
       self.sessionInitialized = True
+      logging.debug('session initialized %.3f Gb' % comline.memusage())
 
   def getInputName(self):
     """ String key for the input placeholder
@@ -66,11 +73,13 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   def optimizeDataLoss(self,optimizer,X,Y,epochs=1,minibatchSize=0,wrapped=False):
     """ Train
     """
+    self.ensureSessionInitialized()
     def runAndSummarize(fd,i):
       if not self.summaryFile:
         self.session.run([trainStep],feed_dict=fd)
       else:
         (stepSummary, _) = self.session.run([self.summaryMergeAll,trainStep],feed_dict=fd)
+        self.summaryWriter = tf.summary.FileWriter(self.summaryFile, self.session.graph)
         self.summaryWriter.add_summary(stepSummary,i)
 
     trainStep = optimizer.minimize(self.ws.dataLossExpr, var_list=self.ws.getParamVariables())
@@ -110,7 +119,9 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     """
     assert targetMode is not None,'targetMode must be specified'
     assert prog is not None,'prog must be specified'
+    logging.debug('runExpt calling setAllWeights %.3f Gb' % comline.memusage())
     prog.setAllWeights()
+    logging.debug('runExpt finished setAllWeights %.3f Gb' % comline.memusage())
 
     expt.Expt.timeAction('compiling and cross-compiling', lambda:self.compile(targetMode, prog.db.params))
 
@@ -211,7 +222,6 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
       self.buildLossExpr(params)
       if self.summaryFile:
         self.summaryMergeAll = tf.summary.merge_all()
-        self.summaryWriter = tf.summary.FileWriter(self.summaryFile, self.session.graph)
 
   def buildLossExpr(self,params):
     target_y = self.createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector')
@@ -349,10 +359,13 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
 
   def __init__(self,db,summaryFile=None):
+    logging.debug('SparseMatDenseMsgCrossCompiler calling %r %.3f Gb' % (super(SparseMatDenseMsgCrossCompiler,self).__init__,comline.memusage()))
     super(SparseMatDenseMsgCrossCompiler,self).__init__(db,summaryFile=summaryFile)
+    logging.debug('SparseMatDenseMsgCrossCompiler finished super.__init__ %.3f Gb' % comline.memusage())
     # we will need to save the original indices/indptr representation
     # of each sparse matrix
     self.sparseMatInfo = {}
+    logging.debug('SparseMatDenseMsgCrossCompiler initialized %.3f Gb' % comline.memusage())
 
   def insertHandleExpr(self,key,name,val):
     (functor,arity) = key

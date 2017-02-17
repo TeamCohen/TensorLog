@@ -156,7 +156,9 @@ class Program(object):
     def setAllWeights(self):
         """ Set all parameter weights to a plausible value - mostly useful for proppr programs,
         where parameters are known. """
+        logging.debug('setting feature weights %.3f Gb' % comline.memusage())
         self.setFeatureWeights()
+        logging.debug('setting rule weights %.3f Gb' % comline.memusage())
         self.setRuleWeights()
 
     def setFeatureWeights(self,epsilon=1.0):
@@ -266,11 +268,11 @@ class ProPPRProgram(Program):
                 weights = weights + self.db.matrixPreimage(mode)
             weights = weights * 1.0/len(domainModes)
             self.db.setParameter(paramName,1,weights*epsilon)
-            logging.info('parameter %s/1 initialized to %s' % (paramName,"+".join(map(lambda dm:'preimage(%s)' % str(dm), domainModes))))
+            logging.debug('parameter %s/1 initialized to %s' % (paramName,"+".join(map(lambda dm:'preimage(%s)' % str(dm), domainModes))))
         for (paramName,arity) in self.getParams():
             if not self.db.parameterIsSet(paramName,arity):
                 logging.warn("Parameter %s could not be set automatically")
-        logging.info('total parameter size: %d', self.db.parameterSize())
+        logging.debug('total parameter size: %d', self.db.parameterSize())
 
     def setFeatureWeight(self,paramName,arity,weight):
         """ Set a particular parameter weight. """

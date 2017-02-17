@@ -1,4 +1,9 @@
+import logging
+import time
+
+from tensorlog import comline
 from tensorlog import config
+from tensorlog import comline
 from tensorlog import declare
 from tensorlog import funs
 from tensorlog import ops
@@ -24,6 +29,7 @@ class AbstractCrossCompiler(object):
     # a constant used to put a little bit of weight on the 'null
     # entity'
     self.globalsInitialized = None
+    logging.debug('AbstractCrossCompiler initialized %.3f Gb' % comline.memusage())
 
   def initGlobals(self):
     if not self.globalsInitialized:
@@ -105,17 +111,24 @@ class AbstractCrossCompiler(object):
     (functor,arity) pairs, and funSpec should be a mode, a
     string encoding a mode, or a funs.Function
     """
+    startTime = time.time()
+    def status(msg): logging.info('%s time %.3f sec mem %.3f Gb' % (msg,time.time()-startTime,comline.memusage()))
+
     if isinstance(funSpec,declare.ModeDeclaration):
+      status('tensorlog compiling %s' % funSpec)
       fun = self.prog.compile(funSpec)
     elif isinstance(funSpec,str):
+      status('tensorlog compiling %s' % funSpec)
       fun = self.prog.compile(declare.asMode(funSpec))
     elif isinstance(funSpec,funs.Function):
       fun = funSpec
     else:
       assert False,'invalid function spec %r' % funSpec
     assert fun is not None
+    status('tensorlog compilation complete')
 
     self.do_compile(fun,params)
+    status('cross compilation complete')
 
   def do_compile(self,fun,params):
     self.initGlobals()

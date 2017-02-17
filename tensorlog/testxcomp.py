@@ -1,9 +1,10 @@
+import logging
+import numpy as np
+import os
 import unittest
 import sys
-import theano
-import os
-import numpy as np
 import tensorflow as tf
+import theano
 
 from tensorlog import dataset
 from tensorlog import declare
@@ -468,4 +469,5 @@ class TestXCProPPR(testtensorlog.TestProPPR):
           targetMode=mode)
 
 if __name__ == "__main__":
+  logging.basicConfig(level=logging.INFO)
   unittest.main()

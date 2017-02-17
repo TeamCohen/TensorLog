@@ -1,5 +1,7 @@
 import getopt
+import time
 import logging
+import os
 
 from tensorlog import dataset
 from tensorlog import matrixdb
@@ -76,17 +78,25 @@ def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]
         usage()
         assert False,'--db and --prog are required options'
 
+    startTime = time.time()
+    def status(msg): logging.info('%s time %.3f sec mem %.3f Gb' % (msg,time.time()-startTime,memusage()))
+
+    status('loading db')
     db = parseDBSpec(optdict['--db'])
     optdict['--db'] = db
+    status('loading prog')
     optdict['--prog'] = parseProgSpec(optdict['--prog'],db,proppr=('--proppr' in optdict))
+    status('loading prog')
     for key in ('--trainData','--testData'):
         if key in optdict:
-            optdict[key] = parseDatasetSpec(optdict[key],db)
+          status('loading %s' % key[2:])
+          optdict[key] = parseDatasetSpec(optdict[key],db)
 
     # let these be also indexed by 'train', 'prog', etc, not just '--train','--prog'
     for key,val in optdict.items():
         optdict[key[2:]] = val
 
+    status('command line parsed')
     return optdict,args
 
 def isUncachefromSrc(s): return s.find("|")>=0
@@ -118,3 +128,15 @@ def parseProgSpec(spec,db,proppr=False):
     """Parse a specification for a Tensorlog program,, see usage() for parseCommandLine"""
     from tensorlog import program
     return program.ProPPRProgram.loadRules(spec,db) if proppr else program.Program.loadRules(spec,db)
+
+def memusage():
+    """ Memory used by the current process in Gb
+    """
+    proc_status = '/proc/%d/status' % os.getpid()
+    t = open(proc_status)
+    v = t.read()
+    t.close()
+    i = v.index('VmSize:')
+    v = v[i:].split(None,3)
+    scale = {'kB': 1024.0, 'mB': 1024.0*1024.0, 'KB': 1024.0, 'MB': 1024.0*1024.0}
+    return (float(v[1]) * scale[v[2]]) / (1024.0*1024.0*1024.0)
