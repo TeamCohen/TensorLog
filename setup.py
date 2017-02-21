@@ -16,6 +16,6 @@ setup(name='tensorlog',
         'xc-theano': ['theano'],
         'xc-tensorflow': ['tensorflow'],
         'debug':['ttk', 'Tkinter', 'tkfont'],
-        }
+        },
       packages=['tensorlog'],
       zip_safe=False)
