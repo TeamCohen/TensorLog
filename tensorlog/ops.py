@@ -34,9 +34,12 @@ class Op(opfunutil.OperatorOrFunction):
     will side-effect an environment, by binding the dst to some
     function of the input (src) bindings.
     """
-    
+
     def __init__(self,dst):
         self.dst = dst
+        # used for generating typed expressions
+        self.dstType = None
+        # used for debugging
         self.msgFrom = self.msgTo = None
 
     def setMessage(self,msgFrom,msgTo):
@@ -70,7 +73,7 @@ class Op(opfunutil.OperatorOrFunction):
             else: print
         self._doBackprop(env,gradAccum,pad)
         pad[self.id].delta = env.delta[self.dst]
-        if conf.trace: 
+        if conf.trace:
             print 'end op bp',self
 
     def pprint(self,depth=0):
@@ -80,7 +83,8 @@ class Op(opfunutil.OperatorOrFunction):
         else: return [description]
 
     def pprintSummary(self):
-        return '%s = %s' % (self.dst,self._ppLHS())
+        rhs = self.dst if (self.dstType is None) else '%s(%s)' % (self.dst,self.dstType)
+        return '%s = %s' % (rhs,self._ppLHS())
 
     def pprintComment(self):
         return '%s -> %s' % (self.msgFrom,self.msgTo) if (self.msgFrom and self.msgTo) else ''
@@ -93,7 +97,7 @@ class Op(opfunutil.OperatorOrFunction):
     def children(self):
         #override in subclass
         return []
-    
+
     def install(self,nextId):
         """ Give a numeric id to this operator/function """
         self.id = nextId

@@ -46,7 +46,7 @@ class MatrixDB(object):
     result = symtab.SymbolTable()
     result.reservedSymbols.add("i")
     result.reservedSymbols.add("o")
-    result.reservedSymbols.add("__THING__")
+    result.reservedSymbols.add(THING)
     result.insert(NULL_ENTITY_NAME)
     return result
 
@@ -338,7 +338,7 @@ class MatrixDB(object):
       if place>=0:
         decl = declare.TypeDeclaration(line[place+len(':-'):].strip())
         self.addTypeDeclaration(decl,filename,k)
-        return
+      return
 
     # buffer the parts of the line, which can be have either 1 or 2
     # arguments and optionally a numeric weight
@@ -391,9 +391,10 @@ class MatrixDB(object):
     p's matrix encoding"""
     logging.info('flushing %d buffered facts for predicate %s' % (len(self._buf[(f,arity)]),f))
 
-    n = self._stab[THING].getMaxId() + 1
     if arity==2:
-      m = scipy.sparse.lil_matrix((n,n),dtype='float32')
+      nrows = self._stab[self.getDomain(f,arity)].getMaxId() + 1
+      ncols = self._stab[self.getRange(f,arity)].getMaxId() + 1
+      m = scipy.sparse.lil_matrix((nrows,ncols),dtype='float32')
       for i in self._buf[(f,arity)]:
         for j in self._buf[(f,arity)][i]:
           m[i,j] = self._buf[(f,arity)][i][j]
@@ -401,7 +402,8 @@ class MatrixDB(object):
       self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m,dtype='float32')
       self.matEncoding[(f,arity)].sort_indices()
     elif arity==1:
-      m = scipy.sparse.lil_matrix((1,n))
+      ncols = self._stab[self.getDomain(f,arity)].getMaxId() + 1
+      m = scipy.sparse.lil_matrix((1,ncols))
       for i in self._buf[(f,arity)]:
         for j in self._buf[(f,arity)][i]:
           m[0,i] = self._buf[(f,arity)][i][j]
@@ -412,18 +414,19 @@ class MatrixDB(object):
 
   def rebufferMatrices(self):
     """Re-encode previously frozen matrices after a symbol table update"""
-    n = self._stab[THING].getMaxId() + 1
     for (functor,arity),m in self.matEncoding.items():
+      targetNrows = self._stab[self.getDomain(functor,arity)].getMaxId() + 1
+      targetNcols = self._stab[self.getRange(functor,arity)].getMaxId() + 1
       (rows,cols) = m.get_shape()
-      if cols != n:
+      if cols != targetNcols or rows != targetNrows:
         logging.info("Re-encoding predicate %s" % functor)
         if arity==2:
           # first shim the extra rows
-          shim = scipy.sparse.lil_matrix((n-rows,cols))
+          shim = scipy.sparse.lil_matrix((targetNrows-rows,cols))
           m = scipy.sparse.vstack([m,shim])
           (rows,cols) = m.get_shape()
         # shim extra columns
-        shim = scipy.sparse.lil_matrix((rows,n-cols))
+        shim = scipy.sparse.lil_matrix((rows,targetNcols-cols))
         self.matEncoding[(functor,arity)] = scipy.sparse.hstack([m,shim],format="csr")
         self.matEncoding[(functor,arity)].sort_indices()
 

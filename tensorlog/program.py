@@ -101,7 +101,7 @@ class Program(object):
             else:
                 #compute a function that will sum up the values of the
                 #clauses
-                ruleFuns = map(lambda r:bpcompiler.BPCompiler(mode,self,depth,r).getFunction(), predDef)
+                ruleFuns = map(lambda r:bpcompiler.BPCompiler(mode,self,depth,r).getFunction(),predDef)
                 self.function[(mode,depth)] = funs.SumFunction(ruleFuns)
             if depth==0:
                 if self.normalize=='softmax':
