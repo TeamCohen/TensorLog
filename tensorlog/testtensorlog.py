@@ -926,6 +926,60 @@ class TestMatrixUtils(unittest.TestCase):
       self.assertTrue('poppy' in di)
       self.assertEqual(len(di.keys()), 2)
 
+class TestTypes(unittest.TestCase):
+
+  def setUp(self):
+    self.db = matrixdb.MatrixDB()
+    self.testLines = [
+        '# :- head(triple,entity)\n',
+        '# :- tail(triple,entity)\n',
+        '# :-creator(triple,source)\n',
+        '# :- rel(triple,relation)\n',
+        '\t'.join(['head','rxy','x']) + '\n',
+        '\t'.join(['tail','rxy','y']) + '\n',
+        '\t'.join(['creator','rxy','nyt']) + '\n',
+        '\t'.join(['creator','rxy','fox']) + '\n',
+        '\t'.join(['rel','rxy','r']) + '\n',
+        '\t'.join(['undeclared','a','b']) + '\n',
+    ]
+    self.db.addLines(self.testLines)
+
+  def testSerialization(self):
+    direc = tempfile.mkdtemp()
+    self.db.serialize(direc)
+    # replace the database with round-trip deserialization
+    self.db = matrixdb.MatrixDB.deserialize(direc)
+    self.testStabs()
+    self.testDeclarations()
+
+  def testStabs(self):
+    expectedSymLists = {
+        'source':['__NULL__', 'nyt', 'fox'],
+        'relation':['__NULL__', 'r'],
+        'triple':['__NULL__', 'rxy'],
+        'entity':['__NULL__', 'x', 'y'],
+        matrixdb.THING: ['__NULL__', 'a', 'b']
+    }
+    self.assertEqual(len(expectedSymLists.keys()), len(self.db._stab.keys()))
+    for typeName in expectedSymLists:
+      self.assertTrue(typeName in self.db._stab)
+      actualSymList = self.db._stab[typeName].getSymbolList()
+      self.assertEqual(len(expectedSymLists[typeName]),len(actualSymList))
+      for a,b in zip(expectedSymLists[typeName],actualSymList):
+        self.assertEqual(a,b)
+
+  def testDeclarations(self):
+    for r in ['head','tail']:
+      self.assertEqual(self.db.getDomain(r,2), 'triple')
+      self.assertEqual(self.db.getRange(r,2), 'entity')
+    for r in ['creator','rel']:
+      self.assertEqual(self.db.getDomain(r,2), 'triple')
+    self.assertEqual(self.db.getRange('creator',2), 'source')
+    self.assertEqual(self.db.getRange('rel',2), 'relation')
+    for f in [self.db.getRange,self.db.getDomain]:
+      self.assertEqual(f('undeclared',2), matrixdb.THING)
+
+
 if __name__=="__main__":
   if len(sys.argv)==1:
     unittest.main()

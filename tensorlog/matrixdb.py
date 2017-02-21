@@ -22,7 +22,7 @@ conf = config.Config()
 conf.allow_weighted_tuples = True; conf.help.allow_weighted_tuples = 'Allow last column of cfacts file to be a weight for the fact'
 
 NULL_ENTITY_NAME = '__NULL__'
-THING = 'thing'
+THING = '__THING__'
 
 class MatrixDB(object):
   """ A logical database implemented with sparse matrices """
@@ -30,7 +30,6 @@ class MatrixDB(object):
   def __init__(self):
     #maps symbols to numeric ids
     self._stab = {THING: self._safeSymbTab() }
-    self._stab[THING].insert(NULL_ENTITY_NAME)
     #matEncoding[(functor,arity)] encodes predicate as a matrix
     self.matEncoding = {}
     # mark which matrices are 'parameters' by (functor,arity) pair
@@ -42,36 +41,51 @@ class MatrixDB(object):
     self._type = [ collections.defaultdict(lambda:THING),  collections.defaultdict(lambda:THING) ]
 
   def _safeSymbTab(self):
+    """ Symbol table with reserved words 'i', 'o', and 'any'
+    """
     result = symtab.SymbolTable()
     result.reservedSymbols.add("i")
     result.reservedSymbols.add("o")
+    result.reservedSymbols.add("__THING__")
+    result.insert(NULL_ENTITY_NAME)
     return result
 
   def getDomain(self,functor,arity):
     """ Domain of a predicate """
-    return self._type[(functor,arity)][0]
+    return self._type[0][(functor,arity)]
 
   def getRange(self,functor,arity):
     """ Range of a predicate """
-    return self._type[(functor,arity)][1]
+    return self._type[1][(functor,arity)]
 
   def getArgType(self,functor,arity,i):
     """ Type associated with argument i of a predicate"""
     return self._type[i][(functor,arity)]
 
+  def addTypeDeclaration(self,decl,filename,lineno):
+    errorMsg = '%s:%d:  multiple declarations for %s/%d' % (filename,lineno,decl.functor,decl.arity)
+    assert (decl.functor,decl.arity) not in self._type[0], errorMsg
+    logging.info('type declaration %s at %s:%d' % (str(decl),filename,lineno))
+    key = (decl.functor,decl.arity)
+    for j in range(decl.arity):
+      typeName = decl.getType(j)
+      if typeName not in self._stab:
+        self._stab[typeName] = self._safeSymbTab()
+      self._type[j][key] = typeName
+
   #
   # retrieve matrixes, vectors, etc
   #
 
-  def dim(self):
+  def dim(self,typeName=THING):
     """Number of constants in the database, and dimension of all the vectors/matrices."""
-    return self._stab[THING].getMaxId() + 1
+    return self._stab[typeName].getMaxId() + 1
 
-  def onehot(self,s):
+  def onehot(self,s,typeName=THING):
     """A onehot row representation of a symbol."""
-    assert self._stab[THING].hasId(s),'constant %s not in db' % s
+    assert self._stab[typeName].hasId(s),'constant %s not in db' % s
     n = self.dim()
-    i = self._stab[THING].getId(s)
+    i = self._stab[typeName].getId(s)
     return scipy.sparse.csr_matrix( ([float(1.0)],([0],[i])), shape=(1,n), dtype='float32')
 
   # TODO cache these?
@@ -86,9 +100,9 @@ class MatrixDB(object):
     n = self.dim()
     return scipy.sparse.csr_matrix( ([float(1.0)]*n,([0]*n,[j for j in range(n)])), shape=(1,n), dtype='float32')
 
-  def nullMatrix(self,numRows=1):
+  def nullMatrix(self,numRows=1,typeName=THING):
     n = self.dim()
-    nullId = self._stab[THING].getId(NULL_ENTITY_NAME)
+    nullId = self._stab[typeName].getId(NULL_ENTITY_NAME)
     return scipy.sparse.csr_matrix( ([float(1.0)]*numRows,
                                      (list(range(numRows)),[nullId]*numRows)),
                                     shape=(numRows,n),
@@ -164,12 +178,12 @@ class MatrixDB(object):
   # convert from vectors, matrixes to symbols - for i/o and debugging
   #
 
-  def rowAsSymbolDict(self,row):
+  def rowAsSymbolDict(self,row,typeName=THING):
     result = {}
     coorow = row.tocoo()
     for i in range(len(coorow.data)):
       assert coorow.row[i]==0,"Expected 0 at coorow.row[%d]" % i
-      s = self._stab[THING].getSymbol(coorow.col[i])
+      s = self._stab[typeName].getSymbol(coorow.col[i])
       result[s] = coorow.data[i]
     return result
 
@@ -180,20 +194,20 @@ class MatrixDB(object):
       result[r] = self.rowAsSymbolDict(m.getrow(r))
     return result
 
-  def matrixAsPredicateFacts(self,functor,arity,m):
+  def matrixAsPredicateFacts(self,functor,arity,m,typeName=THING):
     result = {}
     m1 = scipy.sparse.coo_matrix(m)
     if arity==2:
       for i in range(len(m1.data)):
-        a = self._stab[THING].getSymbol(m1.row[i])
-        b = self._stab[THING].getSymbol(m1.col[i])
+        a = self._stab[typeName].getSymbol(m1.row[i])
+        b = self._stab[typeName].getSymbol(m1.col[i])
         w = m1.data[i]
         result[parser.Goal(functor,[a,b])] = w
     else:
       assert arity==1,"Arity (%d) must be 1 or 2" % arity
       for i in range(len(m1.data)):
         assert m1.row[i]==0, "Expected 0 at m1.row[%d]" % i
-        b = self._stab[THING].getSymbol(m1.col[i])
+        b = self._stab[typeName].getSymbol(m1.col[i])
         w = m1.data[i]
         result[parser.Goal(functor,[b])] = w
     return result
@@ -237,20 +251,50 @@ class MatrixDB(object):
   def serialize(self,direc):
     if not os.path.exists(direc):
       os.makedirs(direc)
-    fp = open(os.path.join(direc,"symbols.txt"), 'w')
-    for i in range(1,self.dim()):
-      fp.write(self._stab[THING].getSymbol(i) + '\n')
-    fp.close()
+    if len(self._stab.keys())==1:
+      # old format - one symbol table
+      with open(os.path.join(direc,"symbols.txt"), 'w') as fp:
+        for i in range(1,self.dim()):
+          fp.write(self._stab[THING].getSymbol(i) + '\n')
+    else:
+      # write relation type information
+      with open(os.path.join(direc,'types.txt'),'w') as fp:
+        for i in range(2):
+          for (functor,arity) in self._type[i]:
+            fp.write('\t'.join([str(i),functor,str(arity),self._type[i][(functor,arity)]]) + '\n')
+      # write each symbol table
+      for typeName in self._stab.keys():
+        with open(os.path.join(direc,typeName+"-symbols.txt"), 'w') as fp:
+          for i in range(1,self.dim(typeName)):
+            fp.write(self._stab[typeName].getSymbol(i) + '\n')
     scipy.io.savemat(os.path.join(direc,"db.mat"),self.matEncoding,do_compression=True)
 
   @staticmethod
   def deserialize(direc):
     db = MatrixDB()
-    k = 1
-    for line in open(os.path.join(direc,"symbols.txt")):
-      i = db._stab[THING].getId(line.strip())
-      assert i==k,'symbols out of sync for symbol "%s": expected index %d actual %d' % (line.strip(),i,k)
-      k += 1
+    def checkSymbols(typeName,symbolFile):
+      k = 1
+      for line in open(symbolFile):
+        sym = line.strip()
+        i = db._stab[typeName].getId(sym)
+        assert i==k,'symbols out of sync for symbol "%s" type %d: expected index %d actual %d' % (sym,typeName,i,k)
+        k += 1
+    symbolFile = os.path.join(direc,"symbols.txt")
+    if os.path.isfile(symbolFile):
+      checkSymbols(THING,symbolFile)
+    else:
+      # read relation type information
+      for line in open(os.path.join(direc,'types.txt')):
+        iStr,functor,arityStr,typeStr = line.strip().split("\t")
+        db._type[int(iStr)][(functor,int(arityStr))] = typeStr
+      # read each symbol table
+      for f0 in os.listdir(direc):
+        f = os.path.join(direc,f0)
+        if os.path.isfile(f) and str(f).endswith("-symbols.txt"):
+          typeName = str(f0)[:-len("-symbols.txt")]
+          if typeName not in db._stab:
+            db._stab[typeName] = db._safeSymbTab()
+          checkSymbols(typeName,f)
     scipy.io.loadmat(os.path.join(direc,"db.mat"),db.matEncoding)
     #serialization/deserialization ends up converting
     #(functor,arity) pairs to strings and csr_matrix to csc_matrix
@@ -293,39 +337,40 @@ class MatrixDB(object):
       place = line.find(':-')
       if place>=0:
         decl = declare.TypeDeclaration(line[place+len(':-'):].strip())
-        logging.info('type declaration %s at %s:%d' % (str(decl),filename,k))
-        assert (decl.functor,decl.arity) not in self._type[0], '%s:%d:  multiple declarations for %s/%d' % (filename,k,decl.functor,decl.arity)
-        for j in range(decl.arity):
-          self._type[j][(decl.functor,decl.arity)] = decl.getType(j)
+        self.addTypeDeclaration(decl,filename,k)
         return
 
+    # buffer the parts of the line, which can be have either 1 or 2
+    # arguments and optionally a numeric weight
     parts = line.split("\t")
     if conf.allow_weighted_tuples and len(parts)==4:
-      f,a1,a2,wstr = parts[0],parts[1],parts[2],parts[3]
+      functor,a1,a2,wstr = parts[0],parts[1],parts[2],parts[3]
       arity = 2
       w = atof(wstr)
     elif len(parts)==3:
-      f,a1,a2 = parts[0],parts[1],parts[2]
+      functor,a1,a2 = parts[0],parts[1],parts[2]
       w = atof(a2)
       if not conf.allow_weighted_tuples or w==0:
         arity = 2
         w = float(1.0)
       else:
         arity = 1
-        #w is ok still
     elif len(parts)==2:
-      f,a1,a2 = parts[0],parts[1],None
+      functor,a1,a2 = parts[0],parts[1],None
       arity = 1
       w = float(1.0)
     else:
       logging.error("bad line '"+line+" '" + repr(parts)+"'")
       return
-    key = (f,arity)
+    key = (functor,arity)
     if (key in self.matEncoding):
       logging.error("predicate encoding is already completed for "+str(key)+ " at line: "+line)
       return
-    i = self._stab[THING].getId(a1)
-    j = self._stab[THING].getId(a2) if a2 else -1
+    i = self._stab[self.getArgType(functor,arity,0)].getId(a1)
+    if not a2:
+      j = -1
+    else:
+      j = self._stab[self.getArgType(functor,arity,1)].getId(a2)
     self._buf[key][i][j] = w
 
   def bufferFile(self,filename):

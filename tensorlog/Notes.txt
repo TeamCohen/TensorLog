@@ -21,10 +21,10 @@ Bigger steps:
     so it's 10x bigger (in message size); 10k sample uses about 15 Gb memory
  -- should look at if sparse matrices are actually being used and monitor where the space is going
 
- -- declare.typeDeclaration
+ -- declare.typeDeclaration -done
  -- cfacts parser allows #declare foo type1 type2 (insist everything typed or nothing, based on config?)
-    (see bufferFile/bufferLine in matrixDB
- -- matrixDB keeps a symtab for each type
+    (see bufferFile/bufferLine in matrixDB -done
+ -- matrixDB keeps a symtab for each type -done
  -- bpcompiler infers type of every variable
  -- funs maintains/returns type
 

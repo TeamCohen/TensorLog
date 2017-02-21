@@ -172,7 +172,7 @@ class Dataset(object):
             yrows.append(rx * (1.0/rx.sum()))
         return Dataset({functorToLearn:mutil.stack(xrows)},{functorToLearn:mutil.stack(yrows)})
 
-    @staticmethod 
+    @staticmethod
     def _parseLine(line,proppr=True):
         #returns mode, x, positive y's where x and ys are symbols
         if not line.strip() or line[0]=='#':
