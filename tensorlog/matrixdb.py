@@ -50,6 +50,9 @@ class MatrixDB(object):
     result.insert(NULL_ENTITY_NAME)
     return result
 
+  def isTypeless(self):
+    return len(self._stab.keys())==1
+
   def getDomain(self,functor,arity):
     """ Domain of a predicate """
     return self._type[0][(functor,arity)]
@@ -77,31 +80,35 @@ class MatrixDB(object):
   # retrieve matrixes, vectors, etc
   #
 
-  def dim(self,typeName=THING):
+  def dim(self,typeName=None):
+    if typeName is None: typeName = THING
     """Number of constants in the database, and dimension of all the vectors/matrices."""
     return self._stab[typeName].getMaxId() + 1
 
-  def onehot(self,s,typeName=THING):
+  def onehot(self,s,typeName=None):
+    if typeName is None: typeName = THING
     """A onehot row representation of a symbol."""
     assert self._stab[typeName].hasId(s),'constant %s not in db' % s
-    n = self.dim()
+    n = self.dim(typeName)
     i = self._stab[typeName].getId(s)
     return scipy.sparse.csr_matrix( ([float(1.0)],([0],[i])), shape=(1,n), dtype='float32')
 
   # TODO cache these?
-
-  def zeros(self,numRows=1):
+  def zeros(self,numRows=1,typeName=None):
+    if typeName is None: typeName = THING
     """An all-zeros matrix."""
-    n = self.dim()
+    n = self.dim(typeName)
     return scipy.sparse.csr_matrix( ([],([],[])), shape=(numRows,n), dtype='float32')
 
-  def ones(self):
+  def ones(self,typeName=None):
     """An all-ones row matrix."""
-    n = self.dim()
+    if typeName is None: typeName = THING
+    n = self.dim(typeName)
     return scipy.sparse.csr_matrix( ([float(1.0)]*n,([0]*n,[j for j in range(n)])), shape=(1,n), dtype='float32')
 
-  def nullMatrix(self,numRows=1,typeName=THING):
-    n = self.dim()
+  def nullMatrix(self,numRows=1,typeName=None):
+    if typeName is None: typeName = THING
+    n = self.dim(typeName)
     nullId = self._stab[typeName].getId(NULL_ENTITY_NAME)
     return scipy.sparse.csr_matrix( ([float(1.0)]*numRows,
                                      (list(range(numRows)),[nullId]*numRows)),
@@ -146,7 +153,12 @@ class MatrixDB(object):
     for a unary predicate."""
     assert mode.arity==2, "mode arity for '%s' must be 2" % mode
     #TODO feels like this could be done more efficiently
-    return self.ones() * self.matrix(mode,transpose=True)
+    (functor,arity) = (mode.getFunctor(),mode.getArity())
+    if self.transposeNeeded(mode,transpose=True):
+      onesType = self.getRange(functor,arity)
+    else:
+      onesType = self.getDomain(functor,arity)
+    return self.ones(onesType) * self.matrix(mode,transpose=True)
 
   #
   # handling parameters
@@ -251,10 +263,10 @@ class MatrixDB(object):
   def serialize(self,direc):
     if not os.path.exists(direc):
       os.makedirs(direc)
-    if len(self._stab.keys())==1:
+    if self.isTypeless():
       # old format - one symbol table
       with open(os.path.join(direc,"symbols.txt"), 'w') as fp:
-        for i in range(1,self.dim()):
+        for i in range(1,self.dim(THING)):
           fp.write(self._stab[THING].getSymbol(i) + '\n')
     else:
       # write relation type information

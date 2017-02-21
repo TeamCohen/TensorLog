@@ -282,10 +282,9 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
 class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 
+  # TODO types
   def __init__(self,db,summaryFile=None):
     super(DenseMatDenseMsgCrossCompiler,self).__init__(db,summaryFile=summaryFile)
-    self._denseMatIndices = [(i,j) for i in range(self.db.dim()) for j in range(self.db.dim())]
-    self._denseVecIndices = [(0,i) for i in range(self.db.dim())]
 
   def createPlaceholder(self,name,kind):
     assert kind=='vector'

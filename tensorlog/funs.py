@@ -21,7 +21,9 @@ class Function(object):
     """The tensorlog representation of a function. This supports eval and
     evalGrad operations, and take a list of input values as the inputs.
     """
-    
+
+    def __init__(self):
+      self.outputType = None
 
     def eval(self,db,values,pad):
         self._checkDuplications()
@@ -100,18 +102,21 @@ class Function(object):
 class OpSeqFunction(Function):
     """A function defined by executing a sequence of operators."""
 
-    def __init__(self,opInputs,opOutput,ops,rule=None):
+    def __init__(self,opInputs,opOutput,ops,rule=None,outputType=None):
+        super(OpSeqFunction,self).__init__()
         self.opInputs = opInputs    #initial bindings to insert in Envir
         self.opOutput = opOutput  #finding bindings which indicate the output
         self.ops = ops
         self.rule = rule #recorded for debug/trace
+        self.outputType = outputType
     def __repr__(self):
         shortOps = '[%r,...,%r]' % (self.ops[0],self.ops[-1])
         return 'OpSeqFunction(%r,%r,%r)' % (self.opInputs,self.opOutput,shortOps)
     def pprintSummary(self):
-        return '%s = OpSeqFunction(%r)' % (self.opOutput,self.opInputs)
+        rhs = self.opOutput if self.outputType is None else '%s(%s)' % (self.opOutput,self.outputType)
+        return '%s = OpSeqFunction(%r)' % (rhs,self.opInputs)
     def pprintComment(self):
-        return str(self.rule) if self.rule else '' 
+        return str(self.rule) if self.rule else ''
     def _doEval(self,db,values,pad):
         #eval expression
         pad[self.id].opEnv = opfunutil.Envir(db)
@@ -137,16 +142,15 @@ class NullFunction(Function):
     """Returns an all-zeros vector."""
 
     def __init__(self,lhsMode):
+        super(NullFunction,self).__init__()
         self.lhsMode = lhsMode
-        self.opInputs = [('X%d' % i)  for i in range(lhsMode.arity) if lhsMode.isInput(i)]
-        self.opOutput = 'Y'
-        self.ops = [ops.AssignZeroToVar(self.opOutput)]
     def __repr__(self):
         return 'NullFunction()'
     def pprintSummary(self):
-        return 'NullFunction'
+        rhs = 'NullFunction' if self.outputType is None else 'NullFunction(%s)' % (self.outputType)
+        return rhs
     def _doEval(self,db,values,pad):
-        return db.zeros(mutil.numRows(values[0]))
+        return db.zeros(mutil.numRows(values[0]),self.outputType)
     def _doBackprop(self,delta,gradAccum,pad):
         return pad[self.id].output
     def children(self):
@@ -158,11 +162,14 @@ class LogFunction(Function):
     """Returns element-wise log of the output of the inner function."""
 
     def __init__(self,fun):
+        super(LogFunction,self).__init__()
         self.fun = fun
+        self.outputType = self.fun.outputType
     def __repr__(self):
         return 'LogFunction(%r)' % self.fun
     def pprintSummary(self):
-        return 'LogFunction'
+        rhs = 'LogFunction' if self.outputType is None else 'LogFunction(%s)' % (self.outputType)
+        return rhs
     def _doEval(self,db,values,pad):
         self.inner = self.fun.eval(db,values,pad)
         return mutil.mapData(lambda d:numpy.log1p(d.clip(0,d)), self.inner)
@@ -180,11 +187,20 @@ class SumFunction(Function):
     """A function which computes the sum of a bunch of other functions."""
 
     def __init__(self,funs):
+        super(SumFunction,self).__init__()
         self.funs = funs
+        # propagate types from subfunctions
+        for fun in self.funs:
+          self.outputType = self.outputType or fun.outputType
+        # if any functions are unsure about the output type, pass it
+        # in to them - eg for a NullFunction
+        for fun in self.funs:
+          if fun.outputType is None: fun.outputType = self.outputType
     def __repr__(self):
         return 'SumFunction(%r)' % self.funs
     def pprintSummary(self):
-        return 'SumFunction'
+        rhs = 'SumFunction' if self.outputType is None else 'SumFunction(%s)' % (self.outputType)
+        return rhs
     def _doEval(self,db,values,pad):
         addends = map(lambda f:f.eval(db,values,pad), self.funs)
         accum = addends[0]
@@ -212,11 +228,14 @@ class SoftmaxFunction(Function):
     """A function which computes row-wise softmax of an inner function."""
 
     def __init__(self,fun):
+        super(SoftmaxFunction,self).__init__()
         self.fun = fun
+        self.outputType = self.fun.outputType
     def __repr__(self):
         return 'SoftmaxFunction(%r)' % self.fun
     def pprintSummary(self):
-        return 'SoftmaxFunction'
+        rhs = 'SoftMaxFunction' if self.outputType is None else 'SoftMaxFunction(%s)' % (self.outputType)
+        return rhs
     def _doEval(self,db,values,pad):
         unnorm = self.fun.eval(db,values,pad)
         return mutil.softmax(db,unnorm)

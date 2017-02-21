@@ -126,6 +126,7 @@ class Program(object):
         symbols that will be converted to onehot vectors, and bound to
         the corresponding input arguments.
         """
+        assert self.db.isTypeless(),'cannot evalSymbols on db with declared types'
         return self.eval(mode, [self.db.onehot(s) for s in symbols])
 
     def eval(self,mode,inputs):
@@ -142,6 +143,7 @@ class Program(object):
         symbols that will be converted to onehot vectors, and bound to
         the corresponding input arguments.
         """
+        assert self.db.isTypeless(),'cannot evalSymbols on db with declared types'
         return self.evalGrad(mode, [self.db.onehot(s) for s in symbols])
 
     def evalGrad(self,mode,inputs):
@@ -215,7 +217,7 @@ class Program(object):
 
 #
 # subclass of Program that corresponds more or less to Proppr....
-# 
+#
 
 class ProPPRProgram(Program):
 
@@ -231,16 +233,23 @@ class ProPPRProgram(Program):
         self.rules.mapRules(self._moveFeaturesToRHS)
         if weights!=None: self.setRuleWeights(weights)
 
-    def setRuleWeights(self,weights=None,epsilon=1.0):
+    def setRuleWeights(self,weights=None,epsilon=1.0,ruleIdPred=None):
         """Set the db predicate 'weighted/1' as a parameter, and initialize it
         to the given vector.  If no vector 'weights' is given, default
-        to a constants of epsilon for each rule.  'weighted/1' is the
-        default parameter used to weight rule-ids features, e.g., "r"
-        in p(X,Y):-... {r}.
+        to a constant vector of epsilon for each rule.  'weighted/1'
+        is the default parameter used to weight rule-ids features,
+        e.g., "r" in p(X,Y):-... {r}.  You can also specify the
+        ruleIds with the name of a unary db relation that holds all
+        the rule ids.
         """
         if len(self.ruleIds)==0:
             logging.warn('no rule features have been defined')
+        elif ruleIdPred is not None:
+            assert (ruleIdPred,1) in set.matEncoding,'there is no unary predicate called %s' % ruleIdPred
+            self.db.markAsParam("weighted",1)
+            self.db.setParameter(self.vector(declare.asMode('%s(o)' % ruleIdPred)) * epsilon)
         else:
+            assert self.db.isTypeless(), 'cannot setRuleWeights for db with declared types unless ruleIdPred is given'
             self.db.markAsParam("weighted",1)
             if weights==None:
                 weights = self.db.onehot(self.ruleIds[0])
@@ -420,6 +429,7 @@ class Interp(object):
         logging.warn('debugger is not available in this environment')
         return
       mode = declare.asMode(modeSpec)
+      assert self.db.isTypeless(),'cannot debug a db with declared types'
       X = self.db.onehot(sym)
       dset = dataset.Dataset({mode:X},{mode:self.db.zeros()})
       debug.Debugger(self.prog,mode,dset,gradient=False).mainloop()
@@ -428,6 +438,7 @@ class Interp(object):
       if not DEBUGGER_AVAILABLE:
         logging.warn('debugger is not available in this environment')
         return
+      assert self.db.isTypeless(),'cannot debug a db with declared types'
       fullDataset = self.testData if test else self.trainData
       if fullDataset==None:
         print 'train/test dataset is not specified on command line?'

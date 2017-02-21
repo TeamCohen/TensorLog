@@ -11,6 +11,7 @@ Bigger steps:
 
  - repackage (see below)???
  - optimize compilation???
+ - automatically move program constants into the database and introduce assign clauses when needed?
  - multi-mode training and compilation -- needed for movie app
  - benchmark tests on tensorflow
  - adding tensorflow 'builtins'

@@ -79,6 +79,7 @@ class BPCompiler(object):
     self.msgType = {}
     #final outputs of the function associated with performing BP for the mode
     self.output = None
+    self.outputType = None
     #inputs of the function associated with performing BP for the mode
     self.inputs = None
     #so we can systematically index goals with an int j, 0<=j<=n
@@ -97,7 +98,7 @@ class BPCompiler(object):
     """
     if not self.compiled:
       self.compile()
-    return funs.OpSeqFunction(self.inputs, self.output, self.ops, self.rule)
+    return funs.OpSeqFunction(self.inputs, self.output, self.ops, self.rule, self.outputType)
 
   #
   # debugging tools
@@ -314,7 +315,7 @@ class BPCompiler(object):
           # special case - binding a variable to a constant with set(Var,const)
           assert (mode.functor==ASSIGN and mode.arity==2 and mode.isOutput(0) and mode.isConst(1)), \
              'output variables without inputs are _only allowed for assign/2: %s' % str(self.rule.rhs[gin.index-1])
-          addOp(ops.AssignOnehotToVar(msgName,mode), traceDepth,j,v)
+          addOp(ops.AssignOnehotToVar(msgName,mode,self.msgType[msgName]), traceDepth,j,v)
           return msgName
         else:
           fx = msgVar2Goal(_only(gin.inputs),j,traceDepth+1) #ask for the message forward from the input to goal j
@@ -347,9 +348,9 @@ class BPCompiler(object):
             self.varDict[_only(gin.outputs)].connected = True
             assert not ops.isBuiltinIOOp(mode), 'can _only use built in io operators where inputs and outputs are used'
             assert not gin.definedPred, 'subpredicates must generate an output which is used downstream'
-            addOp(ops.AssignPreimageToVar(msgName,mode), traceDepth,j,v)
+            addOp(ops.AssignPreimageToVar(msgName,mode,self.msgType[msgName]), traceDepth,j,v)
           else:
-            addOp(ops.AssignVectorToVar(msgName,mode), traceDepth,j,v)
+            addOp(ops.AssignVectorToVar(msgName,mode,self.msgType[msgName]), traceDepth,j,v)
 
           return msgName
       else:
@@ -413,6 +414,7 @@ class BPCompiler(object):
 
     # save the output and inputs
     self.output = currentProduct
+    self.outputType = self.msgType[currentProduct]
     self.inputs = list(self.goalDict[0].inputs)
 
 def _only(c):
