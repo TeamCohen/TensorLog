@@ -336,7 +336,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
 
   def testGradMatrix(self):
     data = testtensorlog.DataBuffer(self.prog.db)
-    X,Y = self.labeledData.matrixAsTrainingData('train',2)
+    X,Y = testtensorlog.matrixAsTrainingData(self.labeledData,'train',2)
     learner = learn.OnePredFixedRateGDLearner(self.prog)
     updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X,Y)
     w0 = updates[('weighted',1)].sum(axis=0)
@@ -404,7 +404,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
 
   def testLearn(self):
     mode = declare.ModeDeclaration('predict(i,o)')
-    X,Y = self.labeledData.matrixAsTrainingData('train',2)
+    X,Y = testtensorlog.matrixAsTrainingData(self.labeledData,'train',2)
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
       self.prog.setRuleWeights()
@@ -417,7 +417,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
 
       loss0 = xc.evalDataLoss([X],Y)
       print 'initial train data loss',loss0
-      TX,TY = self.labeledData.matrixAsTrainingData('test',2)
+      TX,TY = testtensorlog.matrixAsTrainingData(self.labeledData,'test',2)
       loss1 = xc.evalDataLoss([TX],TY)
       print 'initial test data loss',loss1
       acc0 = xc.accuracy(X,Y)
@@ -457,8 +457,8 @@ class TestXCProPPR(testtensorlog.TestProPPR):
 
   def testExpt(self):
     mode = declare.ModeDeclaration('predict(i,o)')
-    X,Y = self.labeledData.matrixAsTrainingData('train',2)
-    TX,TY = self.labeledData.matrixAsTrainingData('test',2)
+    X,Y = testtensorlog.matrixAsTrainingData(self.labeledData,'train',2)
+    TX,TY = testtensorlog.matrixAsTrainingData(self.labeledData,'test',2)
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
       xc = compilerClass(self.prog)

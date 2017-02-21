@@ -10,8 +10,8 @@ Next actions:
 Bigger steps:
 
  - repackage (see below)???
- - optimize compilation?
- - multi-mode training and compilation
+ - optimize compilation???
+ - multi-mode training and compilation -- needed for movie app
  - benchmark tests on tensorflow
  - adding tensorflow 'builtins'
  -- p(i,o) -> lambda inputExpression:outputExpression 
@@ -50,3 +50,43 @@ Question->query idea
  pi_query_tag(Q,T) : tag T for property pi is in query, eg "T=red" for pi=color in "a red sweater vest"
  query_feature(Q,F) : words/ngrams etc in query
  
+--------------------
+
+movie app idea: 
+ - train inference using provenance features
+
+triple Trip has: head(Trip,H),tail(Trip,H),rel(Trip,R),creator(Trip,C)
+
+ | head	rxy	x
+ | tail	rxy	y
+ | creator	rxy	nyt
+ | creator	rxy	fox
+ | rel	rxy	r
+
+
+for predicate p(Slot,Filler):-r(Slot,Filler) inference rule is:
+
+ | p(Slot,Filler) :- 
+ |   head(Trip,Slot),assign(R,r),rel(Trip,R),tail(Trip,Filler) 
+ |   creator(Trip,C), weighted(C).
+
+for predicate p(Slot,Filler):-r1(Slot,Z),r2(Z,Filler) inference rule is:
+
+ | p(Slot,Filler) :- 
+ |     head(Trip1,Slot),assign(R1,r1), rel(Trip1,R1), tail(Trip1,Z)
+ |     head(Trip2,Z),   assign(R2,r2), rel(Trip2,R2), tail(Trip2,Filler)
+ |     creator(Trip1,C1), weighted(C1), creator(Trip2,C2), weighted(C2).
+ 
+Then train high-confidence results against low-confidence ones.
+
+ - might be better to include relation name 'rel' in the
+  head/tail/creator triple, eg r1_head(Trip,H), r1_tail(Trip,H),
+  r1_creator(Trip,C)
+
+ - if I get multi-mode training working then you could do a bit more,
+ eg train against several preds at once, or include ssl-like
+ constraints... except, will they work in Tensorlog? not sure...but
+ you could introduce an explicit entropy penalty for answer to
+ p_conflict
+
+ p_conflict(Slot,Filler) :- p(Slot,Filler)

@@ -20,6 +20,9 @@ conf.strict = True;         conf.help.strict =        "Check that a clause fits 
 conf.trace = False;         conf.help.trace =         "Print debug info during BP"
 conf.produce_ops = True;    conf.help.produce_ops =   "Turn off to debug analysis"
 
+# functor for the special 'assign(Var,const) predicate
+ASSIGN = 'assign'
+
 #
 # helper classes - info on variables and goals
 #
@@ -259,8 +262,8 @@ class BPCompiler(object):
                 mode = self.toMode(j)
                 if not gin.inputs:
                     # special case - binding a variable to a constant with set(Var,const)
-                    assert matrixdb.isAssignMode(mode),\
-                           'output variables without inputs are only allowed for assign/2: %s' % str(self.rule.rhs[gin.index-1])
+                    assert (mode.functor==ASSIGN and mode.arity==2 and mode.isOutput(0) and mode.isConst(1)), \
+                       'output variables without inputs are only allowed for assign/2: %s' % str(self.rule.rhs[gin.index-1])
                     addOp(ops.AssignOnehotToVar(msgName,mode), traceDepth,j,v)
                     return msgName
                 else:

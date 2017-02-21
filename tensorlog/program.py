@@ -290,7 +290,7 @@ class ProPPRProgram(Program):
             assert len(rule0.features)==1,'multiple constant features not supported'
             constFeature = rule0.features[0].functor
             constAsVar = constFeature.upper()
-            rule.rhs.append( matrixdb.assignGoal(constAsVar,constFeature) )
+            rule.rhs.append( parser.Goal(bpcompiler.ASSIGN, [constAsVar,constFeature]) )
             rule.rhs.append( parser.Goal('weighted',[constAsVar]) )
             # record the rule name, ie the constant feature
             self.ruleIds.append(constFeature)
@@ -299,7 +299,7 @@ class ProPPRProgram(Program):
             assert len(rule0.features)==1,'feature generators of the form {a,b: ... } not supported'
             featureLHS = rule0.features[0]
             assert featureLHS.arity==1, 'non-constant features must be of the form {foo(X):-...}'
-            outputVar = featureLHS.args[0] 
+            outputVar = featureLHS.args[0]
             paramName = featureLHS.functor
             for goal in rule0.findall:
                 rule.rhs.append(goal)
