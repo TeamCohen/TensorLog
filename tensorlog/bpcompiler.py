@@ -168,7 +168,8 @@ class BPCompiler(object):
     the compiler.  Can be before flow analysis."""
     assert self.rule.lhs.arity==2, "Bad arity in rule lhs"
     for goal in self.rule.rhs:
-      assert goal.arity==1 or goal.arity==2, "Bad arity in rhs goal '%s'" % goal
+      assert goal.arity>=1 and goal.arity<=3, "Bad arity in rhs goal '%s'" % goal
+      if goal.arity==3: assert goal.functor==ASSIGN
 
 
   def inferFlow(self):
@@ -225,19 +226,21 @@ class BPCompiler(object):
 
   def inferTypes(self):
     """ Populate varInfo.varType """
-
     def informativeType(t): return (t is not None) and (t != matrixdb.THING)
     for i in range(1,len(self.goals)):
       gin = self.goalDict[i]
       functor = self.goals[i].functor
       arity = self.goals[i].arity
-      if functor != ASSIGN or arity != 2:
+      if functor == ASSIGN and arity==3:
+        # goal is assign(Var,type,constantValue)
+        self.varDict[self.goals[i].args[0]].varType = self.goals[i].args[1]
+      elif functor != ASSIGN:
         for j in range(arity):
           vj = self.goals[i].args[j]
           newTj = self.tensorlogProg.db.getArgType(functor,arity,j)
           oldTj = self.varDict[vj].varType
           if informativeType(newTj):
-            if informativeType(oldTj):
+            if informativeType(oldTj) and oldTj!=newTj:
               logging.warn('variable %s has types %s and %s in rule %s' % (vj,oldTj,newTj,str(self.rule)))
             self.varDict[vj].varType = newTj
 
@@ -312,10 +315,10 @@ class BPCompiler(object):
         msgName = makeMessageName('f',v,j)
         mode = self.toMode(j)
         if not gin.inputs:
-          # special case - binding a variable to a constant with set(Var,const)
-          assert (mode.functor==ASSIGN and mode.arity==2 and mode.isOutput(0) and mode.isConst(1)), \
-             'output variables without inputs are _only allowed for assign/2: %s' % str(self.rule.rhs[gin.index-1])
-          addOp(ops.AssignOnehotToVar(msgName,mode,self.msgType[msgName]), traceDepth,j,v)
+          # special cases - binding a variable to a constant with assign(Var,const) or assign(Var,type,const)
+          errorMsg = 'output variables without inputs are _only allowed for assign/2 or assign/3: %s' % str(self.rule.rhs[gin.index-1])
+          assert (mode.functor==ASSIGN and mode.arity>=2 and mode.isOutput(0)), errorMsg
+          addOp(ops.AssignOnehotToVar(msgName,mode), traceDepth,j,v)
           return msgName
         else:
           fx = msgVar2Goal(_only(gin.inputs),j,traceDepth+1) #ask for the message forward from the input to goal j
