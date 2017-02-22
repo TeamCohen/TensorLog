@@ -20,9 +20,10 @@ from tensorlog import mutil
 
 conf = config.Config()
 conf.allow_weighted_tuples = True; conf.help.allow_weighted_tuples = 'Allow last column of cfacts file to be a weight for the fact'
+conf.ignore_types = False;         conf.help.ignore_types = 'Ignore type declarations'
 
-NULL_ENTITY_NAME = '__NULL__'
-THING = '__THING__'
+NULL_ENTITY_NAME = '__NULL__'  #name of null entity, which is returned when a proof fails
+THING = '__THING__'            #name of default type
 
 class MatrixDB(object):
   """ A logical database implemented with sparse matrices """
@@ -66,43 +67,50 @@ class MatrixDB(object):
     return self._type[i][(functor,arity)]
 
   def addTypeDeclaration(self,decl,filename,lineno):
-    errorMsg = '%s:%d:  multiple declarations for %s/%d' % (filename,lineno,decl.functor,decl.arity)
-    assert (decl.functor,decl.arity) not in self._type[0], errorMsg
-    logging.info('type declaration %s at %s:%d' % (str(decl),filename,lineno))
-    key = (decl.functor,decl.arity)
-    for j in range(decl.arity):
-      typeName = decl.getType(j)
-      if typeName not in self._stab:
-        self._stab[typeName] = self._safeSymbTab()
-      self._type[j][key] = typeName
+    if conf.ignore_types:
+      logging.info('ignoring type declaration %s at %s:%d' % (str(decl),filename,lineno))
+    else:
+      errorMsg = '%s:%d:  multiple declarations for %s/%d' % (filename,lineno,decl.functor,decl.arity)
+      assert (decl.functor,decl.arity) not in self._type[0], errorMsg
+      logging.info('type declaration %s at %s:%d' % (str(decl),filename,lineno))
+      key = (decl.functor,decl.arity)
+      for j in range(decl.arity):
+        typeName = decl.getType(j)
+        if typeName not in self._stab:
+          self._stab[typeName] = self._safeSymbTab()
+        self._type[j][key] = typeName
 
   #
   # retrieve matrixes, vectors, etc
   #
 
+  def _fillDefault(self,typeName):
+    if typeName is None or conf.ignore_types: return THING
+    else: return typeName
+
   def dim(self,typeName=None):
-    if typeName is None: typeName = THING
+    typeName = self._fillDefault(typeName)
     """Number of constants in the database, and dimension of all the vectors/matrices."""
     return self._stab[typeName].getMaxId() + 1
 
   def onehot(self,s,typeName=None):
-    if typeName is None: typeName = THING
+    typeName = self._fillDefault(typeName)
     """A onehot row representation of a symbol."""
-    assert self._stab[typeName].hasId(s),'constant %s not in db' % s
+    assert self._stab[typeName].hasId(s),'constant %s (type %s) not in db' % (s,typeName)
     n = self.dim(typeName)
     i = self._stab[typeName].getId(s)
     return scipy.sparse.csr_matrix( ([float(1.0)],([0],[i])), shape=(1,n), dtype='float32')
 
   # TODO cache these?
   def zeros(self,numRows=1,typeName=None):
-    if typeName is None: typeName = THING
+    typeName = self._fillDefault(typeName)
     """An all-zeros matrix."""
     n = self.dim(typeName)
     return scipy.sparse.csr_matrix( ([],([],[])), shape=(numRows,n), dtype='float32')
 
   def ones(self,typeName=None):
     """An all-ones row matrix."""
-    if typeName is None: typeName = THING
+    typeName = self._fillDefault(typeName)
     n = self.dim(typeName)
     return scipy.sparse.csr_matrix( ([float(1.0)]*n,([0]*n,[j for j in range(n)])), shape=(1,n), dtype='float32')
 

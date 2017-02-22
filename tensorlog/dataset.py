@@ -233,12 +233,12 @@ class Dataset(object):
                     ysTmp[pred].append(pos)
             logging.info("loading %d predicates from %s..." % (len(xsTmp),fileName))
             for pred in xsTmp.keys():
-                xType = db.getDomain(pred,2)
+                xType = db.getDomain(pred.getFunctor(),2)
                 xRows = map(lambda x:db.onehot(x,xType), xsTmp[pred])
                 xsResult[pred] = mutil.stack(xRows)
             for pred in ysTmp.keys():
                 def yRow(ys):
-                    yType = db.getRange(pred,2)
+                    yType = db.getRange(pred.getFunctor(),2)
                     accum = db.onehot(ys[0],yType)
                     for y in ys[1:]:
                         accum = accum + db.onehot(y,yType)

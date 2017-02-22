@@ -171,7 +171,6 @@ class BPCompiler(object):
       assert goal.arity>=1 and goal.arity<=3, "Bad arity in rhs goal '%s'" % goal
       if goal.arity==3: assert goal.functor==ASSIGN
 
-
   def inferFlow(self):
     """ Infer flow of information in the clause, by populating a VarInfo
     object for each variable and a GoalInfo object for each goal.
@@ -232,8 +231,8 @@ class BPCompiler(object):
       functor = self.goals[i].functor
       arity = self.goals[i].arity
       if functor == ASSIGN and arity==3:
-        # goal is assign(Var,type,constantValue)
-        self.varDict[self.goals[i].args[0]].varType = self.goals[i].args[1]
+        # goal is assign(Var,constantValue,type)
+        self.varDict[self.goals[i].args[0]].varType = self.goals[i].args[2]
       elif functor != ASSIGN:
         for j in range(arity):
           vj = self.goals[i].args[j]

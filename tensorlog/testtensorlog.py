@@ -814,6 +814,33 @@ class TestExpt(unittest.TestCase):
     params = {'prog':prog,'trainData':trainData, 'testData':testData }
     return expt.Expt(params).run()
 
+  def testTCToyIgnoringTypes(self):
+    # experiment with type declarations
+    matrixdb.conf.ignore_types = True
+    optdict,args = comline.parseCommandLine(
+        ["--db", os.path.join(TEST_DATA_DIR,"textcattoy3.cfacts"),
+         "--proppr", "--prog", os.path.join(TEST_DATA_DIR,"textcat3.ppr"),
+         "--trainData", os.path.join(TEST_DATA_DIR,"toytrain.exam"),
+         "--testData", os.path.join(TEST_DATA_DIR,"toytest.exam"),
+         "--proppr"])
+    optdict['prog'].setFeatureWeights()
+    params = {'prog':optdict['prog'],'trainData':optdict['trainData'], 'testData':optdict['testData']}
+    return expt.Expt(params).run()
+
+  def testTCToyTypes(self):
+    # experiment with type declarations
+    matrixdb.conf.ignore_types = False
+    optdict,args = comline.parseCommandLine(
+        ["--db", os.path.join(TEST_DATA_DIR,"textcattoy3.cfacts"),
+         "--proppr", "--prog", os.path.join(TEST_DATA_DIR,"textcat3.ppr"),
+         "--trainData", os.path.join(TEST_DATA_DIR,"toytrain.exam"),
+         "--testData", os.path.join(TEST_DATA_DIR,"toytest.exam"),
+         "--proppr"])
+    optdict['prog'].setFeatureWeights()
+    params = {'prog':optdict['prog'],'trainData':optdict['trainData'], 'testData':optdict['testData']}
+    return expt.Expt(params).run()
+
+
   def runMToyExpt1(self):
     db = matrixdb.MatrixDB.uncache(
         self.cacheFile('matchtoy.db'),
@@ -979,6 +1006,19 @@ class TestTypes(unittest.TestCase):
     for f in [self.db.getRange,self.db.getDomain]:
       self.assertEqual(f('undeclared',2), matrixdb.THING)
 
+class TestTypeSemantics(unittest.TestCase):
+
+  def setUp(self):
+    # load typed version of textcat task
+    optdict,args = comline.parseCommandLine(
+        ["--db", os.path.join(TEST_DATA_DIR,"textcattoy3.cfacts"),
+         "--prog", os.path.join(TEST_DATA_DIR,"textcat3.ppr"),
+         "--proppr"])
+    self.prog = optdict['prog']
+
+  def testTypeInference(self):
+    fun = self.prog.compile(declare.asMode("predict/io"))
+    self.assertEqual(fun.outputType, "label")
 
 if __name__=="__main__":
   if len(sys.argv)==1:

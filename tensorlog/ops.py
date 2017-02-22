@@ -189,20 +189,17 @@ class AssignVectorToVar(Op):
 
 
 class AssignOnehotToVar(Op):
-  """ Assign a one-hot row encoding of a constant to the dst variable.
+  """Assign a one-hot row encoding of a constant to the dst variable.
+  Mode is either assign(var,const) or assign(var,const,type)
   """
   def __init__(self,dst,mode):
     super(AssignOnehotToVar,self).__init__(dst)
     self.mode = mode
-    if self.mode.getArity()==2:
-      assert self.mode.isConst(1),'second argument of assign/2 must be a constant'
-      self.onehotConst = mode.arg(1)
-      self.dstType = None
-    elif self.mode.getArity()==3:
-      self.onehotConst = mode.arg(2)
+    assert self.mode.isConst(1),'second argument of assign/2 must be a constant'
+    self.onehotConst = mode.arg(1)
+    self.dstType = None
+    if self.mode.getArity()==3:
       self.dstType = mode.arg(1)
-    else:
-      assert False, 'invalid assign'
   def __repr__(self):
     return "AssignOnehotToVar(%s,%s)" % (self.dst,self.onehotConst)
   def _ppLHS(self):
