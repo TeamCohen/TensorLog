@@ -31,9 +31,15 @@ class AbstractCrossCompiler(object):
     self.globalsInitialized = None
     logging.debug('AbstractCrossCompiler initialized %.3f Gb' % comline.memusage())
 
-  def initGlobals(self):
+  def setupGlobals(self):
+    self.nullSmoother = {}
     if not self.globalsInitialized:
-      self.nullSmoothing = self.constantVector("_nullSmoothing",self.db.nullMatrix(1)*(1e-5))
+      for typeName in self.db.getTypes():
+        self.nullSmoother[typeName] = self.constantVector("_nullSmoothing",self.db.nullMatrix(numRows=1,typeName=typeName)*(1e-5))
+      if self.db.isTypeless():
+        # 'None' can be used for the default type
+        defaultType = self.db.getTypes()[0]
+        self.nullSmoother[None] = self.nullSmoother[defaultType]
     self.globalsInitialized = True
 
   def allocNamespacer(self):
@@ -88,17 +94,21 @@ class AbstractCrossCompiler(object):
     else:
       return self.ws.getHandleExpr(key)
 
-  def ones(self):
+  def ones(self,typeName):
     """Wraps a call to db.ones() """
-    return self.constantVector('__ones',self.db.ones())
+    return self.constantVector('__ones',self.db.ones(typeName))
 
-  def zeros(self):
+  def zeros(self,typeName):
     """Wraps a call to db.zeros() """
-    return self.constantVector('__zeros',self.db.zeros())
+    return self.constantVector('__zeros',self.db.zeros(numRows=1,typeName=typeName))
 
-  def onehot(self,sym):
-    """Wraps a call to db.onehot() """
-    return self.constantVector(sym,self.db.onehot(sym))
+  def onehot(self,sym,typeName):
+    """Wraps a call to db.ones() """
+    return self.constantVector(sym,self.db.onehot(sym,typeName))
+
+  def preimageOnesType(self,mode):
+    """Wraps a call to db """
+    return self.db.matrixPreimageOnesType(mode)
 
   #
   # compilation
@@ -131,9 +141,9 @@ class AbstractCrossCompiler(object):
     status('cross compilation complete')
 
   def do_compile(self,fun,params):
-    self.initGlobals()
+    self.setupGlobals()
     # build the expression used for inference
-    (self.ws.inferenceArgs,self.ws.inferenceExpr) = self.fun2Expr(fun)
+    (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self.fun2Expr(fun)
     # do any postprocessing needed
     self.finalizeInference()
     # extend the inferenceExpr to also compute loss
@@ -144,10 +154,11 @@ class AbstractCrossCompiler(object):
   #
 
   def fun2Expr(self,fun,sharedInputs=None,depth=0):
-    """Return a pair (inputs, expr) where binding the inputs in, and then
-    evaluating the expression, is semantically equivalent to
+    """Return a triple (inputs, expr, typeName) where binding the inputs in,
+    and then evaluating the expression, is semantically equivalent to
     evaluating the Function fun in tensorlog, given that all the
-    workspace variables are initialized.
+    workspace variables are initialized.  typeName is the outputType
+    of the function.
 
     The sharedInputs is used if you already have created variables
     corresponding to the inputs to this expression.  This is the case
@@ -158,17 +169,18 @@ class AbstractCrossCompiler(object):
     """
 
     if isinstance(fun,funs.SoftmaxFunction):
-      inputs,subExpr = self.fun2Expr(fun.fun,sharedInputs,depth)
-      return inputs,self.softmaxFun2Expr(subExpr)
+      inputs,subExpr,outType = self.fun2Expr(fun.fun,sharedInputs,depth)
+      return inputs,self.softmaxFun2Expr(subExpr,outType),outType
 
     elif isinstance(fun,funs.SumFunction):
       assert(len(fun.funs)>=1)
-      inputs,accum = self.fun2Expr(fun.funs[0],sharedInputs,depth)
+      inputs,accum,outType = self.fun2Expr(fun.funs[0],sharedInputs,depth)
       for f in fun.funs[1:]:
-        (moreInputs,addend) = self.fun2Expr(f,inputs,depth)
+        (moreInputs,addend,accumOutType) = self.fun2Expr(f,inputs,depth)
+        assert accumOutType==outType,"inconsistent types %s vs %s in SumFunction" % (outType,accumOutType)
         assert(len(moreInputs)==len(inputs))
         accum = self.addupExprs(accum,addend)
-      return (inputs,accum)
+      return (inputs,accum,outType)
 
     elif isinstance(fun,funs.OpSeqFunction):
       assert len(fun.opInputs)==1, 'mismatching number of inputs'
@@ -178,8 +190,8 @@ class AbstractCrossCompiler(object):
       seqInputs = []
       if sharedInputs==None:
         # create variables which will be used as inputs
-        for v in fun.opInputs:
-          nspacer[v] = self.createPlaceholder(nspacer.internalName(v),'vector')
+        for v,typeName in zip(fun.opInputs,fun.inputTypes):
+          nspacer[v] = self.createPlaceholder(nspacer.internalName(v),'vector',typeName)
           seqInputs.append(nspacer[v])
       else:
         # copy over the existing inputs to the new namespace
@@ -188,33 +200,34 @@ class AbstractCrossCompiler(object):
           v = fun.opInputs[i]
           nspacer[v] = sharedInputs[i]
           seqInputs.append(nspacer[v])
-      # fill in the theano environment appropriately
+      # implement each op
       for op in fun.ops:
         nspacer[op.dst] = self.op2Expr(nspacer,op,depth)
+        nspacer.varType[op.dst] = op.dstType
       # return the inputs and the expression for the
       # OpSeqFunction's output
-      return (seqInputs, nspacer[fun.ops[-1].dst])
+      return (seqInputs, nspacer[fun.ops[-1].dst], fun.outputType)
 
     elif isinstance(fun,funs.NullFunction):
-      return ([], self.zeros())
+      return ([], self.zeros(fun.outputType), fun.outputType)
 
     else:
       assert False,'cannot cross-compile %r' % fun
 
   def op2Expr(self,nspacer,op,depth):
-    """Extend a namespace with the expression for the output of the operation
+    """ Compute and return an expr for the output of the op
     """
     if isinstance(op,ops.VecMatMulOp):
       return self.vecMatMulExpr(nspacer[op.src], self.matrix(op.matMode,op.transpose))
     elif isinstance(op,ops.AssignPreimageToVar):
-      return self.vecMatMulExpr(self.ones(), self.matrix(op.matMode,True))
+      return self.vecMatMulExpr(self.ones(self.preimageOnesType(op.matMode)), self.matrix(op.matMode,True))
     elif isinstance(op,ops.ComponentwiseVecMulOp):
       return self.componentwiseMulExpr(nspacer[op.src], nspacer[op.src2])
     elif isinstance(op,ops.DefinedPredOp):
-      _,subExpr = self.fun2Expr(op.subfun, [nspacer[op.src]], depth=depth+1)
+      _,subExpr,subExprType = self.fun2Expr(op.subfun, [nspacer[op.src]], depth=depth+1)
       return subExpr
     elif isinstance(op,ops.AssignOnehotToVar):
-      return self.onehot(op.onehotConst)
+      return self.onehot(op.onehotConst,op.dstType)
     elif isinstance(op,ops.AssignVectorToVar):
       return self.vector(op.matMode)
     elif isinstance(op,ops.WeightedVec):
@@ -228,7 +241,8 @@ class AbstractCrossCompiler(object):
 
   # shared variables and placeholders
 
-  def createPlaceholder(self,name,kind):
+  #TOFIX implementations
+  def createPlaceholder(self,name,matOrVec,typeName):
     """Create a placeholder for top-level inputs"""
     assert False, 'abstract method called'
 
@@ -292,7 +306,7 @@ class AbstractCrossCompiler(object):
     """ Return the expression to transpose a matrix """
     assert False, 'abstract method called'
 
-  def softmaxFun2Expr(self,fun):
+  def softmaxFun2Expr(self,fun,typeName):
     """ Return the expression to compute softmax of a function output """
     assert False, 'abstract method called'
 
@@ -364,6 +378,7 @@ class NameSpacer(object):
   def __init__(self,namespaceId):
     self.namespaceId = namespaceId
     self.env = {}
+    self.varType = {}
   def internalName(self,key):
     return 'n%d__%s' % (self.namespaceId,key)
   def __getitem__(self,key):
@@ -383,6 +398,8 @@ class Workspace(object):
     self.inferenceExpr = None
     # list of arguments to inferenceExpr - generated with createPlaceholder
     self.inferenceArgs = None
+    # output type of the inferenceArgs
+    self.inferenceOutputType = None
     # expression used for unregularized loss
     self.dataLossExpr = None
     # additional arguments for computing loss - generated with createPlaceholder

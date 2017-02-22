@@ -21,7 +21,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
         outputs=self.ws.inferenceExpr)
 
   def buildLossExpr(self,params):
-    target_y = self.createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector')
+    target_y = self.createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self.ws.inferenceOutputType)
     self.ws.dataLossArgs = [target_y]
     self.ws.dataLossExpr = (-target_y * self._applyOpToNonzerosOfDense(TT.log,self.ws.inferenceExpr)).mean()
     if params is not None:
@@ -94,7 +94,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
 class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
   """ Use theano's numpy wrappers for everything """
 
-  def createPlaceholder(self,name,kind):
+  def createPlaceholder(self,name,kind,typeName):
     assert kind=='vector'
     result = TT.drow(name)
     return result
@@ -124,8 +124,8 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
   def unwrapUpdate(self,key,up):
     return self.unwrapOutput(up)
 
-  def softmaxFun2Expr(self,subExpr):
-    return self._applyOpToNonzerosOfDense(TNN.nnet.softmax,subExpr+self.nullSmoothing)
+  def softmaxFun2Expr(self,subExpr,typeName):
+    return self._applyOpToNonzerosOfDense(TNN.nnet.softmax,subExpr+self.nullSmoother[typeName])
 
   def transposeMatrixExpr(self,mx):
     return mx.T

@@ -217,14 +217,14 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   # override this so I can use a name scope
   def do_compile(self,fun,params):
     with tf.name_scope("tensorlog"):
-      self.initGlobals()
-      (self.ws.inferenceArgs,self.ws.inferenceExpr) = self.fun2Expr(fun)
+      self.setupGlobals()
+      (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self.fun2Expr(fun)
       self.buildLossExpr(params)
       if self.summaryFile:
         self.summaryMergeAll = tf.summary.merge_all()
 
   def buildLossExpr(self,params):
-    target_y = self.createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector')
+    target_y = self.createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self.ws.inferenceOutputType)
     self.ws.dataLossArgs = [target_y]
     # we want to take the log of the non-zero entries and leave the
     # zero entries alone, so add 1 to all the zero indices, then take
@@ -282,13 +282,13 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
 class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 
-  # TODO types
+  # TOFIX types
   def __init__(self,db,summaryFile=None):
     super(DenseMatDenseMsgCrossCompiler,self).__init__(db,summaryFile=summaryFile)
 
-  def createPlaceholder(self,name,kind):
+  def createPlaceholder(self,name,kind,typeName):
     assert kind=='vector'
-    result = tf.placeholder(tf.float32, shape=[None,self.db.dim()], name="tensorlog/"+name)
+    result = tf.placeholder(tf.float32, shape=[None,self.db.dim(typeName)], name="tensorlog/"+name)
     return result
 
   def insertHandleExpr(self,key,name,val):
@@ -330,14 +330,14 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
     sx.eliminate_zeros()
     return sx
 
-  def softmaxFun2Expr(self,subExpr):
+  def softmaxFun2Expr(self,subExpr,typeName):
     # zeros are actually big numbers for the softmax,
     # so replace them with -20
     subExprReplacing0WithNeg20 = tf.where(
       subExpr>0.0,
       subExpr,
       tf.ones(tf.shape(subExpr), tf.float32)*(-10.0))
-    return tf.nn.softmax(subExprReplacing0WithNeg20 + self.nullSmoothing)
+    return tf.nn.softmax(subExprReplacing0WithNeg20 + self.nullSmoother[typeName])
 
   def transposeMatrixExpr(self,m):
     return tf.transpose(m)

@@ -102,19 +102,24 @@ class Function(object):
 class OpSeqFunction(Function):
     """A function defined by executing a sequence of operators."""
 
-    def __init__(self,opInputs,opOutput,ops,rule=None,outputType=None):
+    def __init__(self,opInputs,opOutput,ops,rule=None,inputTypes=None,outputType=None):
         super(OpSeqFunction,self).__init__()
         self.opInputs = opInputs    #initial bindings to insert in Envir
         self.opOutput = opOutput  #finding bindings which indicate the output
         self.ops = ops
         self.rule = rule #recorded for debug/trace
         self.outputType = outputType
+        if inputTypes is not None:
+          self.inputTypes = inputTypes
+        else:
+          self.inputTypes = [None]*len(self.opInputs)
     def __repr__(self):
         shortOps = '[%r,...,%r]' % (self.ops[0],self.ops[-1])
         return 'OpSeqFunction(%r,%r,%r)' % (self.opInputs,self.opOutput,shortOps)
     def pprintSummary(self):
         rhs = self.opOutput if self.outputType is None else '%s(%s)' % (self.opOutput,self.outputType)
-        return '%s = OpSeqFunction(%r)' % (rhs,self.opInputs)
+        args = map(lambda var,typeName:'%s(%s)'%(var,typeName) if typeName else var, self.opInputs, self.inputTypes)
+        return '%s = OpSeqFunction(%s)' % (rhs,','.join(args))
     def pprintComment(self):
         return str(self.rule) if self.rule else ''
     def _doEval(self,db,values,pad):

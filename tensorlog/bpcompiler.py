@@ -80,6 +80,7 @@ class BPCompiler(object):
     #final outputs of the function associated with performing BP for the mode
     self.output = None
     self.outputType = None
+    self.inputTypes = None
     #inputs of the function associated with performing BP for the mode
     self.inputs = None
     #so we can systematically index goals with an int j, 0<=j<=n
@@ -98,7 +99,7 @@ class BPCompiler(object):
     """
     if not self.compiled:
       self.compile()
-    return funs.OpSeqFunction(self.inputs, self.output, self.ops, self.rule, self.outputType)
+    return funs.OpSeqFunction(self.inputs, self.output, self.ops, self.rule, self.inputTypes, self.outputType)
 
   #
   # debugging tools
@@ -418,6 +419,7 @@ class BPCompiler(object):
     self.output = currentProduct
     self.outputType = self.msgType[currentProduct]
     self.inputs = list(self.goalDict[0].inputs)
+    self.inputTypes = map(lambda v:self.varDict[v].varType, self.inputs)
 
 def _only(c):
   """Return only member of a singleton set, or raise an error if the set's not a singleton."""

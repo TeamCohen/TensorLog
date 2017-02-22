@@ -54,6 +54,9 @@ class MatrixDB(object):
   def isTypeless(self):
     return len(self._stab.keys())==1
 
+  def getTypes(self):
+    return self._stab.keys()
+
   def getDomain(self,functor,arity):
     """ Domain of a predicate """
     return self._type[0][(functor,arity)]
@@ -101,7 +104,6 @@ class MatrixDB(object):
     i = self._stab[typeName].getId(s)
     return scipy.sparse.csr_matrix( ([float(1.0)],([0],[i])), shape=(1,n), dtype='float32')
 
-  # TODO cache these?
   def zeros(self,numRows=1,typeName=None):
     typeName = self._fillDefault(typeName)
     """An all-zeros matrix."""
@@ -157,16 +159,27 @@ class MatrixDB(object):
 
   def matrixPreimage(self,mode):
     """The preimage associated with this mode, eg if mode is p(i,o) then
-    return a row vector equivalent to 1 * M_p^T.  Also returns a row vector
-    for a unary predicate."""
-    assert mode.arity==2, "mode arity for '%s' must be 2" % mode
-    #TODO feels like this could be done more efficiently
-    (functor,arity) = (mode.getFunctor(),mode.getArity())
+    return a row vector equivalent to 1 * M_p^T."""
+    return self.matrixPreimageOnes(mode) * self.matrixPreimageMat(mode)
+
+  def matrixPreimageMat(self,mode):
+    """Return the matrix M such that the preimage associated with
+    this mode is ones*M """
+    return self.matrix(mode,transpose=True)
+
+  def matrixPreimageOnesType(self,mode):
+    """Return the type t such that the preimage associated with
+    this mode is db.ones(typeName=t)*M """
+    functor = mode.getFunctor()
     if self.transposeNeeded(mode,transpose=True):
-      onesType = self.getRange(functor,arity)
+      return self.getRange(functor,2)
     else:
-      onesType = self.getDomain(functor,arity)
-    return self.ones(onesType) * self.matrix(mode,transpose=True)
+      return self.getDomain(functor,2)
+
+  def matrixPreimageOnes(self,mode):
+    """Return the ones vector v such that the preimage associated with
+    this mode is v*M """
+    return self.ones(self.matrixPreimageOnesType(mode))
 
   #
   # handling parameters
