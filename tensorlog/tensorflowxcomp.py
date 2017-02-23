@@ -241,6 +241,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
   def eval(self,rawInputs,wrapped=False):
     inputs = map(self.wrapMsg,rawInputs) if not wrapped else rawInputs
+    assert self.ws.inferenceArgs is not None,'inferenceArgs not set - have you called TensorFlowCrossCompiler.compile() ?'
     bindings = dict(zip(self.ws.inferenceArgs,inputs))
     return self.unwrapOutput(self._evalWithBindings(self.ws.inferenceExpr,bindings))
 

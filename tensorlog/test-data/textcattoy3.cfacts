@@ -80,7 +80,7 @@ hasWord	yc	toy
 hasWord	yc	car
 hasWord	rb2	a
 hasWord	rb2	red
-hasWord	rb2	10
+hasWord	rb2	ten
 hasWord	rb2	speed
 hasWord	rb2	bike
 hasWord	rp	a
@@ -106,7 +106,7 @@ hasWord	wt	trouble
 
 # :- posPair(word,labelWordPair)
 
-posPair	10	10_pos
+posPair	ten	ten_pos
 posPair	7-seater	7-seater_pos
 posPair	IBM	IBM_pos
 posPair	a	a_pos
@@ -165,7 +165,7 @@ posPair	yesterday	yesterday_pos
 
 # :- negPair(word,labelWordPair)
 
-negPair	10	10_neg
+negPair	ten	ten_neg
 negPair	7-seater	7-seater_neg
 negPair	IBM	IBM_neg
 negPair	a	a_neg

@@ -3,6 +3,7 @@ import numpy as np
 import os
 import unittest
 import sys
+import collections
 import tensorflow as tf
 import theano
 
@@ -484,12 +485,13 @@ class TestXCExpt(unittest.TestCase):
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
       xc = compilerClass(optdict['prog'])
-      self.checkXC(xc)
       xc.runExpt(
           prog=optdict['prog'],
           trainData=optdict['trainData'],
           testData=optdict['testData'],
           targetMode=declare.asMode("predict/io"))
+      pbDoc = xc.db.onehot('pb','doc')
+      self.checkXC(xc,pbDoc,{'negPair':114,'posPair':114,'hasWord':58,'weighted':114,'label':4})
 
   def testTCToyIgnoringTypes(self):
     matrixdb.conf.ignore_types = True
@@ -502,19 +504,25 @@ class TestXCExpt(unittest.TestCase):
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
       xc = compilerClass(optdict['prog'])
-      self.checkXC(xc)
       xc.runExpt(
           prog=optdict['prog'],
           trainData=optdict['trainData'],
           testData=optdict['testData'],
           targetMode=declare.asMode("predict/io"))
+      pbDoc = xc.db.onehot('pb')
+      self.checkXC(xc,pbDoc,collections.defaultdict(lambda:190))
 
 
-  def checkXC(self,xc):
+  def checkXC(self,xc,rawInput,expectedCols):
     print 'matrixdb.conf.ignore_types',matrixdb.conf.ignore_types
     db = xc.db
     for (functor,arity),mat in db.matEncoding.items():
       print functor,arity,'shape',mat.shape
+      r,c = mat.shape
+      self.assertEqual(c,expectedCols[functor])
+    ys = xc.eval([rawInput])
+    r,c = ys[0].shape
+    self.assertEqual(c,expectedCols['label'])
 
 if __name__ == "__main__":
   logging.basicConfig(level=logging.INFO)
