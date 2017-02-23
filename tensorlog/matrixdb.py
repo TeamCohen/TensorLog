@@ -218,7 +218,8 @@ class MatrixDB(object):
   # convert from vectors, matrixes to symbols - for i/o and debugging
   #
 
-  def rowAsSymbolDict(self,row,typeName=THING):
+  def rowAsSymbolDict(self,row,typeName=None):
+    if typeName is None: typeName = THING
     result = {}
     coorow = row.tocoo()
     for i in range(len(coorow.data)):
@@ -227,11 +228,12 @@ class MatrixDB(object):
       result[s] = coorow.data[i]
     return result
 
-  def matrixAsSymbolDict(self,m):
+  def matrixAsSymbolDict(self,m,typeName=None):
+    if typeName is None: typeName = THING
     result = {}
     (rows,cols)=m.shape
     for r in range(rows):
-      result[r] = self.rowAsSymbolDict(m.getrow(r))
+      result[r] = self.rowAsSymbolDict(m.getrow(r),typeName=typeName)
     return result
 
   def matrixAsPredicateFacts(self,functor,arity,m,typeName=THING):

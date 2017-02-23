@@ -201,7 +201,8 @@ def softmax(db,mat):
     result = db.nullMatrix(numRows(mat),numCols=numCols(mat))*nullEpsilon + mat
     denseResult,undensifier = densify(result)
     if not (denseResult is None):
-        return undensify(denseSoftmax(denseResult), undensifier)
+        result = undensify(denseSoftmax(denseResult), undensifier)
+        return result
     else:
         def softMaxAlteration(data,lo,hi,unused):
             rowMax = max(data[lo:hi])

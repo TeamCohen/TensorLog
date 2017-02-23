@@ -121,12 +121,12 @@ class Program(object):
         fun = self.function[(mode,0)]
         return fun
 
-    def evalSymbols(self,mode,symbols):
+    def evalSymbols(self,mode,symbols,typeName=None):
         """ After compilation, evaluate a function.  Input is a list of
         symbols that will be converted to onehot vectors, and bound to
         the corresponding input arguments.
         """
-        return self.eval(mode, [self.db.onehot(s) for s in symbols])
+        return self.eval(mode, [self.db.onehot(s,typeName=typeName) for s in symbols])
 
     def eval(self,mode,inputs):
         """ After compilation, evaluate a function.  Input is a list of onehot
@@ -413,10 +413,10 @@ class Interp(object):
         fun = self.prog.function[key]
         print "\n".join(fun.pprint())
 
-    def eval(self,modeSpec,sym):
+    def eval(self,modeSpec,sym,inputType=None,outputType=None):
         mode = declare.asMode(modeSpec)
-        tmp = self.prog.evalSymbols(mode,[sym])
-        result = self.prog.db.rowAsSymbolDict(tmp)
+        tmp = self.prog.evalSymbols(mode,[sym],typeName=inputType)
+        result = self.prog.db.rowAsSymbolDict(tmp,typeName=outputType)
         if (self.numTopEcho):
             top = sorted(map(lambda (key,val):(val,key), result.items()), reverse=True)
             for rank in range(min(len(top),self.numTopEcho)):

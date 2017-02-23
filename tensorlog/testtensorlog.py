@@ -1008,6 +1008,25 @@ class TestTypes(unittest.TestCase):
     for f in [self.db.getRange,self.db.getDomain]:
       self.assertEqual(f('undeclared',2), matrixdb.THING)
 
+  def testTCToyExptTypes(self):
+    optdict,args = comline.parseCommandLine(
+        ["--db", os.path.join(TEST_DATA_DIR,"textcattoy3.cfacts"),
+         "--prog", os.path.join(TEST_DATA_DIR,"textcat3.ppr"),
+         "--trainData", os.path.join(TEST_DATA_DIR,"toytrain.exam"),
+         "--testData", os.path.join(TEST_DATA_DIR,"toytest.exam"),
+         "--proppr"])
+
+    prog = optdict['prog']
+    prog.setAllWeights()
+    expt.Expt({'prog':prog,
+              'trainData':optdict['trainData'],
+              'testData':optdict['testData'],
+               'targetMode':declare.asMode("predict/io")}).run()
+    rawInput = prog.db.onehot('pb','doc')
+    tmp = prog.eval(declare.asMode('predict/io'),[rawInput])
+    viewable = prog.db.rowAsSymbolDict(tmp,'label')
+    self.assertTrue(viewable['pos']>viewable['neg'])
+
 class TestTypeSemantics(unittest.TestCase):
 
   def setUp(self):
