@@ -13,6 +13,9 @@ from tensorlog import expt
 class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
   def __init__(self,db,summaryFile=None):
+    """If summaryFile is provided, save some extra information to pass on
+    to tensorboard.
+    """
     super(TensorFlowCrossCompiler,self).__init__(db)
     self.tfVarsToInitialize = []
     self.summaryFile = summaryFile
@@ -74,12 +77,13 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     """ Train
     """
     self.ensureSessionInitialized()
+    if self.summaryFile:
+      self.summaryWriter = tf.summary.FileWriter(self.summaryFile, self.session.graph)
     def runAndSummarize(fd,i):
       if not self.summaryFile:
         self.session.run([trainStep],feed_dict=fd)
       else:
         (stepSummary, _) = self.session.run([self.summaryMergeAll,trainStep],feed_dict=fd)
-        self.summaryWriter = tf.summary.FileWriter(self.summaryFile, self.session.graph)
         self.summaryWriter.add_summary(stepSummary,i)
 
     trainStep = optimizer.minimize(self.ws.dataLossExpr, var_list=self.ws.getParamVariables())
@@ -386,6 +390,8 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
       for i in range(nRows):
         for j in val.indices[val.indptr[i]:val.indptr[i+1]]:
           sparseIndices.append([i,j])
+      logging.debug('%d sparseIndices for %d x %d relation %s: sparsity %g' %
+                    (len(sparseIndices),nRows,nCols,functor,len(sparseIndices)/float(nRows*nCols)))
       # save the old shape and indices for the scipy matrix so we can
       # reconstruct a scipy matrix in unwrapUpdate.
       self.sparseMatInfo[key] = (val.indices,val.indptr,val.shape)

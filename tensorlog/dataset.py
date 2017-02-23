@@ -258,8 +258,9 @@ class Dataset(object):
         modeKeys = [mode] if mode else self.xDict.keys()
         for mode in modeKeys:
             assert mode in self.yDict, "No mode '%s' in yDict" % mode
-            dx = db.matrixAsSymbolDict(self.xDict[mode])
-            dy = db.matrixAsSymbolDict(self.yDict[mode])
+            functor,arity = mode.getFunctor(),mode.getArity()
+            dx = db.matrixAsSymbolDict(self.xDict[mode],db.getDomain(functor,arity))
+            dy = db.matrixAsSymbolDict(self.yDict[mode],db.getRange(functor,arity))
             theoryPred = mode.functor
             for i in range(max(dx.keys())+1):
                 dix = dx[i]
