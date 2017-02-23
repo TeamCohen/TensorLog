@@ -198,7 +198,7 @@ def softmax(db,mat):
     """ Compute the softmax of each row of a matrix.
     """
     nullEpsilon = -10  # scores for null entity will be exp(nullMatrix)
-    result = repeat(db.nullMatrix(1)*nullEpsilon, numRows(mat)) + mat
+    result = db.nullMatrix(numRows(mat),numCols=numCols(mat))*nullEpsilon + mat
     denseResult,undensifier = densify(result)
     if not (denseResult is None):
         return undensify(denseSoftmax(denseResult), undensifier)

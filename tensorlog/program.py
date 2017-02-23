@@ -126,7 +126,6 @@ class Program(object):
         symbols that will be converted to onehot vectors, and bound to
         the corresponding input arguments.
         """
-        assert self.db.isTypeless(),'cannot evalSymbols on db with declared types'
         return self.eval(mode, [self.db.onehot(s) for s in symbols])
 
     def eval(self,mode,inputs):

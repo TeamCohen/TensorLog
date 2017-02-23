@@ -48,7 +48,9 @@ class MatrixDB(object):
     result.reservedSymbols.add("i")
     result.reservedSymbols.add("o")
     result.reservedSymbols.add(THING)
+    # always insert NULL_ENTITY_NAME first
     result.insert(NULL_ENTITY_NAME)
+    assert result.getId(NULL_ENTITY_NAME)==1
     return result
 
   def isTypeless(self):
@@ -116,13 +118,18 @@ class MatrixDB(object):
     n = self.dim(typeName)
     return scipy.sparse.csr_matrix( ([float(1.0)]*n,([0]*n,[j for j in range(n)])), shape=(1,n), dtype='float32')
 
-  def nullMatrix(self,numRows=1,typeName=None):
+  def nullMatrix(self,numRows=1,typeName=None,numCols=0):
+    """A matrix where every row is a one-hot encoding of the null entity.
+    The number of columns is specified by numCols or by
+    a typeName.  If numCols==0 and typeName==None then
+    use numCols=dim(THING)
+    """
     if typeName is None: typeName = THING
-    n = self.dim(typeName)
-    nullId = self._stab[typeName].getId(NULL_ENTITY_NAME)
+    if numCols==0: numCols = self.dim(typeName)
+    nullId = 1
     return scipy.sparse.csr_matrix( ([float(1.0)]*numRows,
                                      (list(range(numRows)),[nullId]*numRows)),
-                                    shape=(numRows,n),
+                                    shape=(numRows,numCols),
                                     dtype='float32' )
 
   @staticmethod

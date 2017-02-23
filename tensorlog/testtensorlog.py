@@ -838,6 +838,8 @@ class TestExpt(unittest.TestCase):
          "--proppr"])
     optdict['prog'].setFeatureWeights()
     params = {'prog':optdict['prog'],'trainData':optdict['trainData'], 'testData':optdict['testData']}
+    ti = program.Interp(optdict['prog'])
+    ti.list("predict/io")
     return expt.Expt(params).run()
 
 
