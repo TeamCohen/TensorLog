@@ -9,15 +9,16 @@ Next actions:
 
 Bigger steps:
 
- - repackage (see below)???
- - optimize compilation???
- - automatically move program constants into the database and introduce assign clauses when needed?
+ - automatically move program constants into the database and introduce assign clauses when needed??
  - multi-mode training and compilation -- needed for movie app
  - benchmark tests on tensorflow
  - adding tensorflow 'builtins'
  -- p(i,o) -> lambda inputExpression:outputExpression 
  -- p(o)   -> lambda outputExpression 
- - typing for tensorlog?  
+ - snake_case fixes??
+ - repackage (see below)???
+ - optimize compilation???
+ - typing for tensorlog 
  -- note: 10k sample has 3,434 people, 11,819 entities, larger yago has 59,120 people 118,703 entities
     so it's 10x bigger (in message size); 10k sample uses about 15 Gb memory
  -- should look at if sparse matrices are actually being used and monitor where the space is going
@@ -26,8 +27,10 @@ Bigger steps:
  -- cfacts parser allows #declare foo type1 type2 (insist everything typed or nothing, based on config?)
     (see bufferFile/bufferLine in matrixDB -done
  -- matrixDB keeps a symtab for each type -done
- -- bpcompiler infers type of every variable
- -- funs maintains/returns type
+ -- bpcompiler infers type of every variable -done
+ -- funs maintains/returns type -done
+ -- docs -done
+ -- check type inference for sums -done
 
 Overall package structure:
   tensorlog: config, matrixdb, parser, bpcomp(iler), program, funs, ops (-eval and bprop), xcomp

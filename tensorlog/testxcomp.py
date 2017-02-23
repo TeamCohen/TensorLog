@@ -6,6 +6,7 @@ import sys
 import tensorflow as tf
 import theano
 
+from tensorlog import comline
 from tensorlog import dataset
 from tensorlog import declare
 from tensorlog import matrixdb
@@ -467,6 +468,53 @@ class TestXCProPPR(testtensorlog.TestProPPR):
           trainData=dataset.Dataset({mode:X},{mode:Y}),
           testData=dataset.Dataset({mode:TX},{mode:TY}),
           targetMode=mode)
+
+class TestXCExpt(unittest.TestCase):
+
+  #TODO investigate suspiciously identical train/test losses?
+
+  def testTCToyTypes(self):
+    matrixdb.conf.ignore_types = False
+    optdict,args = comline.parseCommandLine(
+        ["--db", os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
+         "--prog", os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"),
+         "--trainData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"),
+         "--testData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"),
+         "--proppr"])
+    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+      xc = compilerClass(optdict['prog'])
+      self.checkXC(xc)
+      xc.runExpt(
+          prog=optdict['prog'],
+          trainData=optdict['trainData'],
+          testData=optdict['testData'],
+          targetMode=declare.asMode("predict/io"))
+
+  def testTCToyIgnoringTypes(self):
+    matrixdb.conf.ignore_types = True
+    optdict,args = comline.parseCommandLine(
+        ["--db", os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
+         "--prog", os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"),
+         "--trainData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"),
+         "--testData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"),
+         "--proppr"])
+    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+      xc = compilerClass(optdict['prog'])
+      self.checkXC(xc)
+      xc.runExpt(
+          prog=optdict['prog'],
+          trainData=optdict['trainData'],
+          testData=optdict['testData'],
+          targetMode=declare.asMode("predict/io"))
+
+
+  def checkXC(self,xc):
+    print 'matrixdb.conf.ignore_types',matrixdb.conf.ignore_types
+    db = xc.db
+    for (functor,arity),mat in db.matEncoding.items():
+      print functor,arity,'shape',mat.shape
 
 if __name__ == "__main__":
   logging.basicConfig(level=logging.INFO)

@@ -153,7 +153,7 @@ class Dataset(object):
             print 'de-serializing dsetFile',dsetFile,'...'
             return Dataset.deserialize(dsetFile)
 
-    # TODO remove - type incompatible
+    # TODO remove or make type-aware
     @staticmethod
     def loadMatrix(db,functorToLearn,functorInDB):
         """Convert a DB matrix containing pairs x,f(x) to training data for a
@@ -161,11 +161,11 @@ class Dataset(object):
         to Y, and and also append a one-hot representation of x to the
         corresponding row of X.
         """
+        assert db.isTypeless(),'cannot run loadMatrix on database with defined types'
         functorToLearn = declare.asMode(functorToLearn)
         xrows = []
         yrows = []
         m = db.matEncoding[(functorInDB,2)].tocoo()
-        assert db.isTypeless(),'cannot run loadMatrix on database with defined types'
         n = db.dim()
         for i in range(len(m.data)):
             x = m.row[i]

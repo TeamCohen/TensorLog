@@ -151,18 +151,17 @@ def mapData(dataFun,mat):
     newdata = dataFun(mat.data)
     return SS.csr_matrix((newdata,mat.indices,mat.indptr), shape=mat.shape, dtype='float32')
 
-#TODO avoid this, it's expensive
 def stack(mats):
     """Vertically stack matrices and return a sparse csr matrix."""
     for m in mats: checkCSR(m)
     return SS.csr_matrix(SS.vstack(mats, dtype='float32'))
 
-def numRows(m): 
+def numRows(m):
     """Number of rows in matrix"""
     checkCSR(m)
     return m.shape[0]
 
-def numCols(m): 
+def numCols(m):
     """Number of colunms in matrix"""
     checkCSR(m)
     return m.shape[1]
@@ -248,8 +247,8 @@ def multiplyByBroadcastRowVec(m,v):
         bv = repeat(v, numRows(m))
         return m.multiply(bv)
 
-#TODO: this is slow - about 2/3 of learning time
 def broadcastAndWeightByRowSum(m1,m2):
+    # this is slow - about 2/3 of learning time
     checkCSR(m1); checkCSR(m2)
     """ Optimized combination of broadcast2 and weightByRowSum operations
     """

@@ -15,8 +15,6 @@ from tensorlog import mutil
 from tensorlog import learn
 from tensorlog import dataset
 
-#TODO iterate, don't make lists
-
 ##############################################################################
 # These functions are defined at the top-level of a module so that
 # they can be sent to worker processes via pickling.

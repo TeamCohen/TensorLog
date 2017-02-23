@@ -78,11 +78,10 @@ class GradAccumulator(object):
                     # for parameters that are matrices, we have one gradient
                     # of the right shape, but it is the sum of the gradients
                     # of the examples in the minibatch
-                    # TODO: check this math
                     self.runningSum[(functor,arity)] = mat * (1.0/self.counter['n'])
             self.reshaped = True
 
-    #TODO only used by adagrad, is this the right place?
+    #TODO only used by adagrad, is this the right place for this?
     def mapData(self,mapFun):
         """Apply some function to every gradient in the accumulator (in place)."""
         result = GradAccumulator()
@@ -277,7 +276,7 @@ class EpochTracer(Tracer):
     def cheap(learner,ctr,**kw):
         """Easy-to-compute status message."""
         EpochTracer.default(learner,ctr,**kw)
-    
+
     @staticmethod
     def default(learner,ctr,**kw):
         """A default status message."""
@@ -427,7 +426,6 @@ class Learner(object):
     # parameter updates
     #
 
-    #TODO remove
     def meanUpdate(self,functor,arity,delta,n,totalN=0):
         #clip the delta vector to avoid exploding gradients
         delta = mutil.mapData(lambda d:NP.clip(d,conf.minGradient,conf.maxGradient), delta)

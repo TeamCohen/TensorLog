@@ -23,24 +23,27 @@ class AbstractCrossCompiler(object):
     self.nextNamespaceId = 0
     # holds output of compilation - subclasses should initialize this
     self.ws = Workspace(self)
-    # pointer back to the program and matrixdb
+    # pointers back to the program and matrixdb
     self.prog = prog
     self.db = prog.db
-    # a constant used to put a little bit of weight on the 'null
-    # entity'
-    self.globalsInitialized = None
+    # when a db is 'typeless', ie all entities are of type
+    # matrixdb.THING, then onlyType is set to THING
+    self.onlyType = None
+    # maps typeName to the vector used to introduce NULL entities,
+    # with low weight, into a vector of type typeName
+    self.nullSmoother = {}
+    # set after vectors are allocated for the nullSmoother's
+    self.globalsSet = None
     logging.debug('AbstractCrossCompiler initialized %.3f Gb' % comline.memusage())
 
   def setupGlobals(self):
-    self.nullSmoother = {}
-    if not self.globalsInitialized:
+    """ Initialize variables used by this cross-compiler object. """
+    if not self.globalsSet:
       for typeName in self.db.getTypes():
-        self.nullSmoother[typeName] = self.constantVector("_nullSmoothing",self.db.nullMatrix(numRows=1,typeName=typeName)*(1e-5))
+        self.nullSmoother[typeName] = self.constantVector("_nullSmoother_"+typeName,self.db.nullMatrix(numRows=1,typeName=typeName)*(1e-5))
       if self.db.isTypeless():
-        # 'None' can be used for the default type
-        defaultType = self.db.getTypes()[0]
-        self.nullSmoother[None] = self.nullSmoother[defaultType]
-    self.globalsInitialized = True
+        self.onlyType = self.db.getTypes()[0]
+      self.globalsSet = True
 
   def allocNamespacer(self):
     """Allocate a new NameSpacer object, which has its own unique namespace. """
@@ -64,7 +67,6 @@ class AbstractCrossCompiler(object):
     key = (matMode.getFunctor(),1)
     if not self.ws.hasHandleExpr(key):
       variable_name = "v__" + matMode.getFunctor()
-      #TODO: should this be sparse? should vector just be diagonal matrices?
       val = self.wrapDBVector(self.db.vector(matMode)) #ignores all but functor for arity 1
       self.ws.insertHandleExpr(key, variable_name, val)
     return self.ws.getHandleExpr(key)
@@ -115,10 +117,10 @@ class AbstractCrossCompiler(object):
   #
 
   def compile(self,funSpec,params=None):
-    """Compile a tensorlog function to theano.  Params are optional, if
-    they are given then also compile gradient of the loss function
-    with respect to these parameters.  Params should be a list of
-    (functor,arity) pairs, and funSpec should be a mode, a
+    """Compile a tensorlog function to target language.  Params are
+    optional - if they are given then also compile gradient of the
+    loss function with respect to these parameters.  Params should be
+    a list of (functor,arity) pairs, and funSpec should be a mode, a
     string encoding a mode, or a funs.Function
     """
     startTime = time.time()
@@ -140,7 +142,25 @@ class AbstractCrossCompiler(object):
     self.do_compile(fun,params)
     status('cross compilation complete')
 
+  # If the db is typeless, then self.onlyType is set to be that type,
+  # otherwise it is None.  If the db is stateless we want to ignore
+  # a function's outputType and inputTypes and replace them with
+  # onlyType
+
+  def wrapOutputType(self,fun):
+    """Replace outputTypes with onlyType for a typeless database.
+    """
+    return self.onlyType or fun.outputType
+
+  def wrapInputTypes(self,fun):
+    """Replace list of inputTypes with list of onlyType for a typeless
+    database.
+    """
+    return [self.onlyType]*len(fun.inputTypes) if self.onlyType else fun.inputTypes
+
   def do_compile(self,fun,params):
+    """Main compilation method.  Can be overridden by subclasses
+    """
     self.setupGlobals()
     # build the expression used for inference
     (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self.fun2Expr(fun)
@@ -150,7 +170,7 @@ class AbstractCrossCompiler(object):
     self.buildLossExpr(params)
 
   #
-  # main compilation algorithm
+  # recursion compilation of function tree
   #
 
   def fun2Expr(self,fun,sharedInputs=None,depth=0):
@@ -190,7 +210,7 @@ class AbstractCrossCompiler(object):
       seqInputs = []
       if sharedInputs==None:
         # create variables which will be used as inputs
-        for v,typeName in zip(fun.opInputs,fun.inputTypes):
+        for v,typeName in zip(fun.opInputs,self.wrapInputTypes(fun)):
           nspacer[v] = self.createPlaceholder(nspacer.internalName(v),'vector',typeName)
           seqInputs.append(nspacer[v])
       else:
@@ -203,13 +223,13 @@ class AbstractCrossCompiler(object):
       # implement each op
       for op in fun.ops:
         nspacer[op.dst] = self.op2Expr(nspacer,op,depth)
-        nspacer.varType[op.dst] = op.dstType
       # return the inputs and the expression for the
       # OpSeqFunction's output
-      return (seqInputs, nspacer[fun.ops[-1].dst], fun.outputType)
+      return (seqInputs, nspacer[fun.opOutput], self.wrapOutputType(fun))
 
     elif isinstance(fun,funs.NullFunction):
-      return ([], self.zeros(fun.outputType), fun.outputType)
+      typeName = self.wrapOutputType(fun)
+      return ([], self.zeros(typeName), typeName)
 
     else:
       assert False,'cannot cross-compile %r' % fun
@@ -241,14 +261,15 @@ class AbstractCrossCompiler(object):
 
   # shared variables and placeholders
 
-  #TOFIX implementations
   def createPlaceholder(self,name,matOrVec,typeName):
     """Create a placeholder for top-level inputs"""
     assert False, 'abstract method called'
 
-  def insertHandleExpr(self,key,expr,val,kind):
-    """Associate a DB object with the given key with an expression in the
-    target language.  The key is a (functor,arity) pair.
+  def insertHandleExpr(self,key,expr,val):
+    """Associate a DB object with the given functor,arity key (and value
+    'val') with an expression in the target language.  The key is a
+    (functor,arity) pair.  See comments for
+    Workspace.insertHandleExpr.
     """
     assert False, 'abstract method called'
 
@@ -374,11 +395,9 @@ class NameSpacer(object):
     to a string 'internalName' (which depends on the string and the
     namespaceId for this object) and indexes by that internal name.
   """
-
   def __init__(self,namespaceId):
     self.namespaceId = namespaceId
     self.env = {}
-    self.varType = {}
   def internalName(self,key):
     return 'n%d__%s' % (self.namespaceId,key)
   def __getitem__(self,key):
@@ -393,7 +412,6 @@ class Workspace(object):
 
     # backpointer to cross-compiler
     self.xcomp = xcomp
-
     # expression used for inference
     self.inferenceExpr = None
     # list of arguments to inferenceExpr - generated with createPlaceholder
@@ -407,18 +425,18 @@ class Workspace(object):
     # gradient of loss expression wrt each parameter
     self.dataLossGradExprs = None
 
-    # the workspace also stores 'handle expressions' for some of the
-    # objects in the tensorlog database.  The DB objects are named, in
-    # tensorlog, by a (functor,arity) pair. DB constants are given
-    # arity zero.  Handle expressions should be inserted by
-    # calling xcomp.insertHandleExpr()
+    # The workspace also caches 'handle expressions' for some of the
+    # objects in the tensorlog database.  The handle expressions are
+    # indexed by a (functor,arity) pair. Handle expressions must be
+    # inserted by calling workspace.insertHandleExpr().
     self._handleExpr = {}
-    # there is some underlying variable with a gradient that is used
-    # in every handle expression - sometimes this is the same as the
-    # handle expression, but not always.  these are indexed by key
+    # For each handle expression, there is some underlying variable
+    # with a gradient that is used.  Often this is the same as the
+    # handle expression, but not always.  These are indexed by
+    # functor,arity key.
     self._handleExprVar = {}
 
-    # parameters to optimize, as a list of keys
+    # parameters to optimize, as a list of functor,arity pairs
     self.params = []
 
   def hasHandleExpr(self,key):

@@ -64,9 +64,6 @@ class Function(object):
         self.id = nextId
         nextId += 1
         for f in self.children():
-            #if hasattr(f,'id'):
-            #    logging.debug("Deduping function %-2d %s" % (f.id,str(f)))
-            #    f=self.dedupeChild(f) # TODO: replace with index
             nextId = f.install(nextId)
         return nextId
 
@@ -105,7 +102,7 @@ class OpSeqFunction(Function):
     def __init__(self,opInputs,opOutput,ops,rule=None,inputTypes=None,outputType=None):
         super(OpSeqFunction,self).__init__()
         self.opInputs = opInputs    #initial bindings to insert in Envir
-        self.opOutput = opOutput  #finding bindings which indicate the output
+        self.opOutput = opOutput    #variable binding which indicate the output
         self.ops = ops
         self.rule = rule #recorded for debug/trace
         self.outputType = outputType
@@ -140,7 +137,7 @@ class OpSeqFunction(Function):
     def children(self):
         return self.ops
     def copy(self):
-        ret = OpSeqFunction(self.opInputs, self.opOutput, [o.copy() for o in self.ops], self.rule)
+        ret = OpSeqFunction(self.opInputs, self.opOutput, [o.copy() for o in self.ops], self.rule, self.inputTypes, self.outputType)
         return ret
 
 class NullFunction(Function):

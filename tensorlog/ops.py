@@ -5,7 +5,6 @@
 #
 
 import logging
-#TODO make util smart about csc/csr
 import scipy.sparse
 
 from tensorlog import opfunutil
@@ -312,7 +311,7 @@ class WeightedVec(Op):
     super(WeightedVec,self).__init__(dst)
     self.weighter = weighter
     self.vec = vec
-    self.src = "[%s,%s]" % (weighter,vec)  #TODO: where is this used?
+    #self.src = "[%s,%s]" % (weighter,vec)  #TODO: remove?
   def __repr__(self):
     return "WeightedVec(%s,%s.sum(),%s)" % (self.dst,self.weighter,self.vec)
   def _ppLHS(self):

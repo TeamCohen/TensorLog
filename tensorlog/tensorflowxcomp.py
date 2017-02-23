@@ -112,7 +112,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
   # higher-level training stuff
 
-  def runExpt(self,prog=None,trainData=None,testData=None, targetMode=None,
+  def runExpt(self,prog=None,trainData=None,testData=None,targetMode=None,
               savedTestPredictions=None,savedTestExamples=None,savedTrainExamples=None,savedModel=None,
               optimizer=None, epochs=10, minibatchSize=0):
     """Similar to tensorlog.expt.Expt().run()
@@ -178,9 +178,9 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     if depth>maxdepth:
       print '...'
     else:
-      print '| '*(depth+1),
+      tab = '| '*(depth+1),
       op = expr.op
-      print 'expr:',expr,'type','op',op.name,'optype',op.type
+      print '%sexpr:' % tab,expr,'type','op',op.name,'optype',op.type
     if not expr in previouslySeen:
       previouslySeen.add(expr)
       for inp in op.inputs:
@@ -282,7 +282,6 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
 class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 
-  # TOFIX types
   def __init__(self,db,summaryFile=None):
     super(DenseMatDenseMsgCrossCompiler,self).__init__(db,summaryFile=summaryFile)
 
@@ -382,8 +381,8 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
       # first convert from scipy csr format of indices,indptr,data to
       # tensorflow's format, where the sparseindices are a 2-D tensor.
       sparseIndices = []
-      n = self.db.dim()
-      for i in range(n):
+      (nRows,nCols) = val.shape
+      for i in range(nRows):
         for j in val.indices[val.indptr[i]:val.indptr[i+1]]:
           sparseIndices.append([i,j])
       # save the old shape and indices for the scipy matrix so we can
@@ -394,10 +393,10 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
       # of the SparseTensor,
       indiceVar = tf.Variable(np.array(sparseIndices), name="%s_indices" % name)
       valueVar = tf.Variable(val.data, name="%s_values" % name)
-      # TODO: the "valueVar+0.0" seems to be necessary to get a non-zero
+      # note: the "valueVar+0.0" seems to be necessary to get a non-zero
       # gradient, but I don't understand why.  w/o this there is no "read"
       # node in for the variable in the graph and the gradient fails
-      self.ws._handleExpr[key] = tf.SparseTensor(indiceVar,valueVar+0.0,[n,n])
+      self.ws._handleExpr[key] = tf.SparseTensor(indiceVar,valueVar+0.0,[nRows,nCols])
       self.ws._handleExprVar[key] = valueVar
       # record the variables that need to be initialized
       self.tfVarsToInitialize.append(indiceVar)
