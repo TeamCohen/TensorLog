@@ -1,36 +1,33 @@
  - export PYTHONPATH=/usr/local/google/home/cohenw/code/TensorLog:$PYTHONPATH
  - live theano add /usr/local/google/home/cohenw/code/Theano
 
-Next actions:
+Katie actions:
 
- - revive debug.py - how can testing this be automated? should I bother? w/ Katie?
  - fix pyparsing
+ - revive debug.py - how can testing this be automated? should I bother? w/ Katie?
  - look at sparse messages in theano-based learner?
+ - look at expt() in theano-based learner
+
+Status:
+ - can now handle large version of dialog-toy, which is 270k facts, typed
+ - can I do it untyped?
 
 Bigger steps:
 
- - automatically move program constants into the database and introduce assign clauses when needed??
  - multi-mode training and compilation -- needed for movie app
+ - automatically move program constants into the database and introduce assign clauses when needed??
  - benchmark tests on tensorflow
+ - why can't I include a product/join? eg, add a built-in and(X1,...,Xn,Y) with
+   mode equal(i,i,...,i,o) which outputs Y as the component-wise product of all the X's?
+   then you could write q(X,Y) :- q1(X,Y1),....,qk(X,Yk),and(Y1,...,Yk,Y)
  - adding tensorflow 'builtins'
+ -- p(i,i,o) -> lambda inputExpression1,inputExpression2:outputExpression 
  -- p(i,o) -> lambda inputExpression:outputExpression 
  -- p(o)   -> lambda outputExpression 
+ -- do you need to do planning to find a valid path? re-ordering?
  - snake_case fixes??
  - repackage (see below)???
  - optimize compilation???
- - typing for tensorlog 
- -- note: 10k sample has 3,434 people, 11,819 entities, larger yago has 59,120 people 118,703 entities
-    so it's 10x bigger (in message size); 10k sample uses about 15 Gb memory
- -- should look at if sparse matrices are actually being used and monitor where the space is going
-
- -- declare.typeDeclaration -done
- -- cfacts parser allows #declare foo type1 type2 (insist everything typed or nothing, based on config?)
-    (see bufferFile/bufferLine in matrixDB -done
- -- matrixDB keeps a symtab for each type -done
- -- bpcompiler infers type of every variable -done
- -- funs maintains/returns type -done
- -- docs -done
- -- check type inference for sums -done
 
 Overall package structure:
   tensorlog: config, matrixdb, parser, bpcomp(iler), program, funs, ops (-eval and bprop), xcomp
