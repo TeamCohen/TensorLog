@@ -101,6 +101,7 @@ def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]
 
 def isUncachefromSrc(s): return s.find("|")>=0
 def getCacheSrcPair(s): return s.split("|")
+def makeCacheSrcPair(s1,s2): return "%s|%s" % (s1,s2)
 
 def parseDatasetSpec(spec,db):
     """Parse a specification for a dataset, see usage() for parseCommandLine"""

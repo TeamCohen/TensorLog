@@ -3,7 +3,6 @@ import time
 
 from tensorlog import comline
 from tensorlog import config
-from tensorlog import comline
 from tensorlog import declare
 from tensorlog import funs
 from tensorlog import ops
@@ -147,17 +146,6 @@ class AbstractCrossCompiler(object):
   # a function's outputType and inputTypes and replace them with
   # onlyType
 
-  def wrapOutputType(self,fun):
-    """Replace outputTypes with onlyType for a typeless database.
-    """
-    return self.onlyType or fun.outputType
-
-  def wrapInputTypes(self,fun):
-    """Replace list of inputTypes with list of onlyType for a typeless
-    database.
-    """
-    return [self.onlyType]*len(fun.inputTypes) if self.onlyType else fun.inputTypes
-
   def do_compile(self,fun,params):
     """Main compilation method.  Can be overridden by subclasses
     """
@@ -170,7 +158,7 @@ class AbstractCrossCompiler(object):
     self.buildLossExpr(params)
 
   #
-  # recursion compilation of function tree
+  # recursive compilation of function tree
   #
 
   def fun2Expr(self,fun,sharedInputs=None,depth=0):
@@ -254,6 +242,17 @@ class AbstractCrossCompiler(object):
       return self.weightedVecExpr(nspacer[op.vec], nspacer[op.weighter])
     else:
       assert False,'cannot cross-compile %r' % op
+
+  def wrapOutputType(self,fun):
+    """Replace outputTypes with onlyType for a typeless database.
+    """
+    return self.onlyType or fun.outputType
+
+  def wrapInputTypes(self,fun):
+    """Replace list of inputTypes with list of onlyType for a typeless
+    database.
+    """
+    return [self.onlyType]*len(fun.inputTypes) if self.onlyType else fun.inputTypes
 
   #
   # subclasses should implement these
