@@ -7,15 +7,13 @@ import os
 import time
 import collections
 import multiprocessing
-import multiprocessing.pool    
+import multiprocessing.pool
 import logging
 import numpy as NP
 
 from tensorlog import mutil
 from tensorlog import learn
 from tensorlog import dataset
-
-#TODO iterate, don't make lists
 
 ##############################################################################
 # These functions are defined at the top-level of a module so that
@@ -220,7 +218,7 @@ class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
             for (functor,arity),grad in totalGradient.items():
                 m0 = self.prog.db.getParameter(functor,arity)
                 m1 = m0 + self.rate * grad
-                m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
+                m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float32').max), m1)
                 self.prog.db.setParameter(functor,arity,m)
 
             # send params to workers

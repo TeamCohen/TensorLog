@@ -16,6 +16,7 @@ import os
 import os.path
 import shutil
 import tempfile
+import scipy
 
 from tensorlog import comline
 from tensorlog import dataset
@@ -79,6 +80,28 @@ class DataBuffer(object):
   def get_y(self):
     assert self.ys, 'no labels inserted for mode %r' % mode
     return mutil.stack(self.ys)
+
+def matrixAsTrainingData(db,functor,arity):
+    """ Convert a matrix containing pairs x,f(x) to training data for a
+    learner.  For each row x with non-zero entries, copy that row
+    to Y, and and also append a one-hot representation of x to the
+    corresponding row of X.
+    """
+    xrows = []
+    yrows = []
+    m = db.matEncoding[(functor,arity)].tocoo()
+    n = db.dim()
+    for i in range(len(m.data)):
+      x = m.row[i]
+      xrows.append(scipy.sparse.csr_matrix( ([float(1.0)],([0],[x])), shape=(1,n) ))
+      rx = m.getrow(x)
+      yrows.append(rx * (float(1.0)/rx.sum()))
+    return mutil.stack(xrows),mutil.stack(yrows)
+
+
+#
+# tests
+#
 
 class TestModeDeclaration(unittest.TestCase):
   """ Test for mode declarations """
@@ -287,7 +310,7 @@ class TestMultiRowOps(unittest.TestCase):
     trainingData = self.db.createPartner()
     trainingData.addLines(td)
     trainSpec = (mode.functor,mode.arity)
-    X,Y = trainingData.matrixAsTrainingData(*trainSpec)
+    X,Y = matrixAsTrainingData(trainingData,*trainSpec)
     learner = learn.OnePredFixedRateGDLearner(prog,epochs=5)
     P0 = learner.predict(mode,X)
 
@@ -548,8 +571,14 @@ class TestProPPR(unittest.TestCase):
         [os.path.join(TEST_DATA_DIR,'textcat.ppr'),
          os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')])
     self.labeledData = self.prog.db.createPartner()
-    self.prog.db.moveToPartner(self.labeledData,'train',2)
-    self.prog.db.moveToPartner(self.labeledData,'test',2)
+    def moveToPartner(db,partner,functor,arity):
+      partner.matEncoding[(functor,arity)] = db.matEncoding[(functor,arity)]
+      if (functor,arity) in db.params:
+        partner.params.add((functor,arity))
+        db.params.remove((functor,arity))
+      del db.matEncoding[(functor,arity)]
+    moveToPartner(self.prog.db,self.labeledData,'train',2)
+    moveToPartner(self.prog.db,self.labeledData,'test',2)
     self.prog.setFeatureWeights()
     self.xsyms,self.X,self.Y = self.loadExamples(
         os.path.join(TEST_DATA_DIR,'textcattoy-train.examples'),
@@ -576,7 +605,9 @@ class TestProPPR(unittest.TestCase):
         'jm': 'huge pile of junk mail bills and catalogs'}
 
   def testDBKeys(self):
-    self.assertTrue(self.prog.db.stab.hasId(matrixdb.NULL_ENTITY_NAME))
+    pass
+    # symbol table is now hidden and more complicated due to types
+    # self.assertTrue(self.prog.db.stab.hasId(matrixdb.NULL_ENTITY_NAME))
 
   def testNativeRow(self):
     for i in range(self.numExamples):
@@ -594,7 +625,7 @@ class TestProPPR(unittest.TestCase):
 
   def testGradMatrix(self):
     data = DataBuffer(self.prog.db)
-    X,Y = self.labeledData.matrixAsTrainingData('train',2)
+    X,Y = matrixAsTrainingData(self.labeledData,'train',2)
     learner = learn.OnePredFixedRateGDLearner(self.prog)
     updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X,Y)
     w = updates[('weighted',1)]
@@ -665,7 +696,7 @@ class TestProPPR(unittest.TestCase):
 
   def testLearn(self):
     mode = declare.ModeDeclaration('predict(i,o)')
-    X,Y = self.labeledData.matrixAsTrainingData('train',2)
+    X,Y = matrixAsTrainingData(self.labeledData,'train',2)
     learner = learn.OnePredFixedRateGDLearner(self.prog,epochs=5)
     P0 = learner.predict(mode,X)
     acc0 = learner.accuracy(Y,P0)
@@ -681,7 +712,7 @@ class TestProPPR(unittest.TestCase):
     self.assertTrue(acc1==1)
     print 'toy train: acc1',acc1,'xent1',xent1
 
-    TX,TY = self.labeledData.matrixAsTrainingData('test',2)
+    TX,TY = matrixAsTrainingData(self.labeledData,'test',2)
     P2 = learner.predict(mode,TX)
     acc2 = learner.accuracy(TY,P2)
     xent2 = learner.crossEntropy(TY,P2,perExample=True)
@@ -782,6 +813,35 @@ class TestExpt(unittest.TestCase):
     prog.db.listing()
     params = {'prog':prog,'trainData':trainData, 'testData':testData }
     return expt.Expt(params).run()
+
+  def testTCToyIgnoringTypes(self):
+    # experiment with type declarations
+    matrixdb.conf.ignore_types = True
+    optdict,args = comline.parseCommandLine(
+        ["--db", os.path.join(TEST_DATA_DIR,"textcattoy3.cfacts"),
+         "--proppr", "--prog", os.path.join(TEST_DATA_DIR,"textcat3.ppr"),
+         "--trainData", os.path.join(TEST_DATA_DIR,"toytrain.exam"),
+         "--testData", os.path.join(TEST_DATA_DIR,"toytest.exam"),
+         "--proppr"])
+    optdict['prog'].setFeatureWeights()
+    params = {'prog':optdict['prog'],'trainData':optdict['trainData'], 'testData':optdict['testData']}
+    return expt.Expt(params).run()
+
+  def testTCToyTypes(self):
+    # experiment with type declarations
+    matrixdb.conf.ignore_types = False
+    optdict,args = comline.parseCommandLine(
+        ["--db", os.path.join(TEST_DATA_DIR,"textcattoy3.cfacts"),
+         "--proppr", "--prog", os.path.join(TEST_DATA_DIR,"textcat3.ppr"),
+         "--trainData", os.path.join(TEST_DATA_DIR,"toytrain.exam"),
+         "--testData", os.path.join(TEST_DATA_DIR,"toytest.exam"),
+         "--proppr"])
+    optdict['prog'].setFeatureWeights()
+    params = {'prog':optdict['prog'],'trainData':optdict['trainData'], 'testData':optdict['testData']}
+    ti = program.Interp(optdict['prog'])
+    ti.list("predict/io")
+    return expt.Expt(params).run()
+
 
   def runMToyExpt1(self):
     db = matrixdb.MatrixDB.uncache(
@@ -894,6 +954,92 @@ class TestMatrixUtils(unittest.TestCase):
       self.assertTrue('william' in di)
       self.assertTrue('poppy' in di)
       self.assertEqual(len(di.keys()), 2)
+
+class TestTypes(unittest.TestCase):
+
+  def setUp(self):
+    self.db = matrixdb.MatrixDB()
+    self.testLines = [
+        '# :- head(triple,entity)\n',
+        '# :- tail(triple,entity)\n',
+        '# :-creator(triple,source)\n',
+        '# :- rel(triple,relation)\n',
+        '\t'.join(['head','rxy','x']) + '\n',
+        '\t'.join(['tail','rxy','y']) + '\n',
+        '\t'.join(['creator','rxy','nyt']) + '\n',
+        '\t'.join(['creator','rxy','fox']) + '\n',
+        '\t'.join(['rel','rxy','r']) + '\n',
+        '\t'.join(['undeclared','a','b']) + '\n',
+    ]
+    self.db.addLines(self.testLines)
+
+  def testSerialization(self):
+    direc = tempfile.mkdtemp()
+    self.db.serialize(direc)
+    # replace the database with round-trip deserialization
+    self.db = matrixdb.MatrixDB.deserialize(direc)
+    self.testStabs()
+    self.testDeclarations()
+
+  def testStabs(self):
+    expectedSymLists = {
+        'source':['__NULL__', 'nyt', 'fox'],
+        'relation':['__NULL__', 'r'],
+        'triple':['__NULL__', 'rxy'],
+        'entity':['__NULL__', 'x', 'y'],
+        matrixdb.THING: ['__NULL__', 'a', 'b']
+    }
+    self.assertEqual(len(expectedSymLists.keys()), len(self.db._stab.keys()))
+    for typeName in expectedSymLists:
+      self.assertTrue(typeName in self.db._stab)
+      actualSymList = self.db._stab[typeName].getSymbolList()
+      self.assertEqual(len(expectedSymLists[typeName]),len(actualSymList))
+      for a,b in zip(expectedSymLists[typeName],actualSymList):
+        self.assertEqual(a,b)
+
+  def testDeclarations(self):
+    for r in ['head','tail']:
+      self.assertEqual(self.db.getDomain(r,2), 'triple')
+      self.assertEqual(self.db.getRange(r,2), 'entity')
+    for r in ['creator','rel']:
+      self.assertEqual(self.db.getDomain(r,2), 'triple')
+    self.assertEqual(self.db.getRange('creator',2), 'source')
+    self.assertEqual(self.db.getRange('rel',2), 'relation')
+    for f in [self.db.getRange,self.db.getDomain]:
+      self.assertEqual(f('undeclared',2), matrixdb.THING)
+
+  def testTCToyExptTypes(self):
+    optdict,args = comline.parseCommandLine(
+        ["--db", os.path.join(TEST_DATA_DIR,"textcattoy3.cfacts"),
+         "--prog", os.path.join(TEST_DATA_DIR,"textcat3.ppr"),
+         "--trainData", os.path.join(TEST_DATA_DIR,"toytrain.exam"),
+         "--testData", os.path.join(TEST_DATA_DIR,"toytest.exam"),
+         "--proppr"])
+
+    prog = optdict['prog']
+    prog.setAllWeights()
+    expt.Expt({'prog':prog,
+              'trainData':optdict['trainData'],
+              'testData':optdict['testData'],
+               'targetMode':declare.asMode("predict/io")}).run()
+    rawInput = prog.db.onehot('pb','doc')
+    tmp = prog.eval(declare.asMode('predict/io'),[rawInput])
+    viewable = prog.db.rowAsSymbolDict(tmp,'label')
+    self.assertTrue(viewable['pos']>viewable['neg'])
+
+class TestTypeSemantics(unittest.TestCase):
+
+  def setUp(self):
+    # load typed version of textcat task
+    optdict,args = comline.parseCommandLine(
+        ["--db", os.path.join(TEST_DATA_DIR,"textcattoy3.cfacts"),
+         "--prog", os.path.join(TEST_DATA_DIR,"textcat3.ppr"),
+         "--proppr"])
+    self.prog = optdict['prog']
+
+  def testTypeInference(self):
+    fun = self.prog.compile(declare.asMode("predict/io"))
+    self.assertEqual(fun.outputType, "label")
 
 if __name__=="__main__":
   if len(sys.argv)==1:

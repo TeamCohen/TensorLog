@@ -18,10 +18,28 @@ from src/test/textcattoy.cfacts:
  label	pos	
  label	neg
 
-An additional column can be added which is a numeric weight (so don't
-use any constant that parses to a number in a cfacts file to avoid
-program confusion.)  A database can be SERIALIZED and should be stored
-in a directory with extension .db.
+The columns are: predicate name, argument 1, and (optionall, for
+binary predicates) argument 2.  An additional column can be added
+which is a numeric weight (so don't use any constant that parses to a
+number in a cfacts file to avoid program confusion - or if you do then
+set matrixdb.conf.allow_weighted_tuples = False.)  You need to group
+facts with the same predicate together.
+
+Typing: You can optionally add type declarations in a cfacts file,
+like this:
+
+# :- predict(doc,label)
+# :- hasWord(doc,word)
+# :- posPair(word,labelWordPair)
+# :- label(label)
+
+This will basically put the constants of type 'doc', 'label', etc in
+different namespaces.  Types are all disjoint. You should either type
+everything or nothing (in the latter case, everything is a default
+type __THING__).
+
+A database can be SERIALIZED and should be stored in a directory with
+extension .db.
 
 A Tensorlog PROGRAM usually has extension .ppr.  Some examples:
 
@@ -33,6 +51,10 @@ A Tensorlog PROGRAM usually has extension .ppr.  Some examples:
  match(R,S) :- lname(R,LR),lmatch(LR,LS),lname(S,LS) {l}.
  match(R,S) :- addr(R,AR),amatch(AR,AS),addr(S,AS) {a}.
 ------------------------------------------------------------------------------
+
+Typing: you can use assign(Var,const,type) to if you're using types: eg,
+
+ predict(X,Pos) :- assign(Pos,pos,label) {all(F): hasWord(X,W),posPair(W,F)}.
 
 If you use the ProPPR-style rule features (in the curly braces) you
 should 
@@ -56,6 +78,10 @@ r3 should only match itself:
  match	r3	r3
  ....
 ----------------------------------------
+
+Typing: if want to use typed database relations the relation (eg
+match) in the exam file should also be typed, so you need a type
+declaration for it in the cfacts file.
 
 A serialized dataset has extension .dset.
 

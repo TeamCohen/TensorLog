@@ -1,12 +1,8 @@
 import sys
 import getopt
 
-#
-# 
-# 
-
 from tensorlog import declare
-from tensorlog import tensorlog
+from tensorlog import comline
 from tensorlog import matrixdb
 
 if __name__ == "__main__":
@@ -24,7 +20,7 @@ if __name__ == "__main__":
         raise
     optdict = dict(optlist)
 
-    db = tensorlog.parseDBSpec(optdict['--db']) if '--db' in optdict else None
+    db = comline.parseDBSpec(optdict['--db']) if '--db' in optdict else None
     if db and (not '--mode' in optdict):
         db.listing()
     elif db and ('--mode' in optdict):
@@ -38,9 +34,8 @@ if __name__ == "__main__":
             usage()
             assert False,'mode should be of the form functor/arity for something in the database'
     elif '--prog' in optdict:
-        prog = tensorlog.parseProgSpec(optdict['--prog'],db,proppr=True)
+        prog = comline.parseProgSpec(optdict['--prog'],db,proppr=True)
         for rid in prog.ruleIds:
             print '\t'.join(['ruleid',rid])
     else:
         usage()
-

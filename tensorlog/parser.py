@@ -9,10 +9,10 @@ from tensorlog import symtab
 #
 # p(X,Y) :- q(X,Z), r(Z,X).         # normal prolog clause
 # p(X,Y,Z) :- .                     # unit clause
-# p(X,Y) :- q(X,Z) {f(Y,X)}.        # normal prolog clause plus a 'feature'  
-# p(X,Y) :- q(X,Z) {f(Y,X),g(Y)}.   # multiple 'features'  
+# p(X,Y) :- q(X,Z) {f(Y,X)}.        # normal prolog clause plus a 'feature'
+# p(X,Y) :- q(X,Z) {f(Y,X),g(Y)}.   # multiple 'features'
 # p(X,Y) :- q(X,Z) {f(W) : g(Y,W)}. # features geberated by a 'findall'
-#                                   #  ie for all solutions of g(Y,W), 
+#                                   #  ie for all solutions of g(Y,W),
 #                                   #  produce a feature f(W)
 #
 # TODO: remove the stuff that's not supported in TensorLog
@@ -200,4 +200,3 @@ class Parser(object):
         except KeyError:
             print 'error near ',lo,'in',file
         return rules
-

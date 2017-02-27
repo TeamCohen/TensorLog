@@ -20,7 +20,7 @@ from tensorlog import declare
 #
 
 class Dataset(object):
-    
+
     def __init__(self,xDict,yDict):
         # dict which maps mode declaration to X matrices for training
         self.xDict = xDict
@@ -91,7 +91,7 @@ class Dataset(object):
 
     #
     # i/o and conversions
-    # 
+    #
 
     def serialize(self,dir):
         """Save the dataset on disk."""
@@ -101,7 +101,7 @@ class Dataset(object):
         dy = dict(map(lambda (k,v):(str(k),v), self.yDict.items()))
         SIO.savemat(os.path.join(dir,"xDict"),dx,do_compression=True)
         SIO.savemat(os.path.join(dir,"yDict"),dy,do_compression=True)
-        
+
     @staticmethod
     def deserialize(dir):
         """Recover a saved dataset."""
@@ -119,7 +119,7 @@ class Dataset(object):
                    d[declare.asMode(stringKey)] = SS.csr_matrix(mat)
         dset = Dataset(xDict,yDict)
         logging.info('deserialized dataset has %d modes and %d non-zeros' % (len(dset.modesToLearn()), dset.size()))
-        return dset           
+        return dset
 
 
     @staticmethod
@@ -153,6 +153,7 @@ class Dataset(object):
             print 'de-serializing dsetFile',dsetFile,'...'
             return Dataset.deserialize(dsetFile)
 
+    # TODO remove or make type-aware
     @staticmethod
     def loadMatrix(db,functorToLearn,functorInDB):
         """Convert a DB matrix containing pairs x,f(x) to training data for a
@@ -160,19 +161,20 @@ class Dataset(object):
         to Y, and and also append a one-hot representation of x to the
         corresponding row of X.
         """
+        assert db.isTypeless(),'cannot run loadMatrix on database with defined types'
         functorToLearn = declare.asMode(functorToLearn)
         xrows = []
         yrows = []
         m = db.matEncoding[(functorInDB,2)].tocoo()
         n = db.dim()
         for i in range(len(m.data)):
-            x = m.row[i]            
+            x = m.row[i]
             xrows.append(SS.csr_matrix( ([1.0],([0],[x])), shape=(1,n) ))
             rx = m.getrow(x)
             yrows.append(rx * (1.0/rx.sum()))
         return Dataset({functorToLearn:mutil.stack(xrows)},{functorToLearn:mutil.stack(yrows)})
 
-    @staticmethod 
+    @staticmethod
     def _parseLine(line,proppr=True):
         #returns mode, x, positive y's where x and ys are symbols
         if not line.strip() or line[0]=='#':
@@ -199,7 +201,6 @@ class Dataset(object):
                     if label=='+':
                         pos.append(my.group(3))
                 return mode,x,pos
-        
 
     @staticmethod
     def loadProPPRExamples(db,fileName):
@@ -232,13 +233,15 @@ class Dataset(object):
                     ysTmp[pred].append(pos)
             logging.info("loading %d predicates from %s..." % (len(xsTmp),fileName))
             for pred in xsTmp.keys():
-                xRows = map(lambda x:db.onehot(x), xsTmp[pred])
+                xType = db.getDomain(pred.getFunctor(),2)
+                xRows = map(lambda x:db.onehot(x,xType), xsTmp[pred])
                 xsResult[pred] = mutil.stack(xRows)
             for pred in ysTmp.keys():
                 def yRow(ys):
-                    accum = db.onehot(ys[0])
+                    yType = db.getRange(pred.getFunctor(),2)
+                    accum = db.onehot(ys[0],yType)
                     for y in ys[1:]:
-                        accum = accum + db.onehot(y)
+                        accum = accum + db.onehot(y,yType)
                     accum = accum * 1.0/len(ys)
                     return accum
                 yRows = map(yRow, ysTmp[pred])
@@ -246,7 +249,6 @@ class Dataset(object):
         dset = Dataset(xsResult,ysResult)
         logging.info('loaded dataset has %d modes and %d non-zeros' % (len(dset.modesToLearn()), dset.size()))
         return dset
-                   
 
     #TODO refactor to also save examples in form: 'functor X Y1
     #... Yk'
@@ -256,8 +258,9 @@ class Dataset(object):
         modeKeys = [mode] if mode else self.xDict.keys()
         for mode in modeKeys:
             assert mode in self.yDict, "No mode '%s' in yDict" % mode
-            dx = db.matrixAsSymbolDict(self.xDict[mode])
-            dy = db.matrixAsSymbolDict(self.yDict[mode])
+            functor,arity = mode.getFunctor(),mode.getArity()
+            dx = db.matrixAsSymbolDict(self.xDict[mode],db.getDomain(functor,arity))
+            dy = db.matrixAsSymbolDict(self.yDict[mode],db.getRange(functor,arity))
             theoryPred = mode.functor
             for i in range(max(dx.keys())+1):
                 dix = dx[i]

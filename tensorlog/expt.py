@@ -84,17 +84,17 @@ class Expt(object):
             def doit():
                 qid=0
                 for mode in testData.modesToLearn():
-                    qid+=Expt.predictionAsProPPRSolutions(savedTestPredictions,mode.functor,prog.db,UP1.getX(mode),UP1.getY(mode),True,qid) 
+                    qid+=Expt.predictionAsProPPRSolutions(savedTestPredictions,mode.functor,prog.db,UP1.getX(mode),UP1.getY(mode),True,qid)
             Expt.timeAction('saving test predictions', doit)
 
         if savedTestExamples:
-            Expt.timeAction('saving test examples', 
+            Expt.timeAction('saving test examples',
                             lambda:testData.saveProPPRExamples(savedTestExamples,prog.db))
 
         if savedTrainExamples:
-            Expt.timeAction('saving train examples', 
+            Expt.timeAction('saving train examples',
                             lambda:trainData.saveProPPRExamples(savedTrainExamples,prog.db))
-                
+
         if savedTestPredictions and savedTestExamples:
             print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' \
                 % (savedTestExamples,savedTestPredictions)
@@ -106,14 +106,14 @@ class Expt(object):
     def predictionAsProPPRSolutions(fileName,theoryPred,db,X,P,append=False,start=0):
         """Print X and P in the ProPPR solutions.txt format."""
         fp = open(fileName,'a' if append else 'w')
-        dx = db.matrixAsSymbolDict(X)
-        dp = db.matrixAsSymbolDict(P)
+        dx = db.matrixAsSymbolDict(X,typeName=db.getDomain(theoryPred,2))
+        dp = db.matrixAsSymbolDict(P,typeName=db.getRange(theoryPred,2))
         n=max(dx.keys())
         for i in range(n+1):
             dix = dx[i]
             dip = dp[i]
             assert len(dix.keys())==1,'X %s row %d is not onehot: %r' % (theoryPred,i,dix)
-            x = dix.keys()[0]    
+            x = dix.keys()[0]
             fp.write('# proved %d\t%s(%s,X1).\t999 msec\n' % (i+1+start,theoryPred,x))
             scoresdPs = reversed(sorted([(py,y) for (y,py) in dip.items()]))
             for (r,(py,y)) in enumerate(scoresdPs):
@@ -142,7 +142,6 @@ class Expt(object):
 
 if __name__=="__main__":
 
-    
     usageLines = [
         'expt-specific options, given after the argument +++:',
         '    --savedModel e      # where e is a filename',

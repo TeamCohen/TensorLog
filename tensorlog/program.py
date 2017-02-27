@@ -83,9 +83,9 @@ class Program(object):
         """ Produce an ops.Function object which implements the predicate definition
         """
         #find the rules which define this predicate/function
-        
+
         if (mode,depth) in self.function:
-            return
+            return self.function[(mode,depth)]
 
         if depth>self.maxDepth:
             self.function[(mode,depth)] = funs.NullFunction(mode)
@@ -101,7 +101,7 @@ class Program(object):
             else:
                 #compute a function that will sum up the values of the
                 #clauses
-                ruleFuns = map(lambda r:bpcompiler.BPCompiler(mode,self,depth,r).getFunction(), predDef)
+                ruleFuns = map(lambda r:bpcompiler.BPCompiler(mode,self,depth,r).getFunction(),predDef)
                 self.function[(mode,depth)] = funs.SumFunction(ruleFuns)
             if depth==0:
                 if self.normalize=='softmax':
@@ -121,12 +121,12 @@ class Program(object):
         fun = self.function[(mode,0)]
         return fun
 
-    def evalSymbols(self,mode,symbols):
+    def evalSymbols(self,mode,symbols,typeName=None):
         """ After compilation, evaluate a function.  Input is a list of
         symbols that will be converted to onehot vectors, and bound to
         the corresponding input arguments.
         """
-        return self.eval(mode, [self.db.onehot(s) for s in symbols])
+        return self.eval(mode, [self.db.onehot(s,typeName=typeName) for s in symbols])
 
     def eval(self,mode,inputs):
         """ After compilation, evaluate a function.  Input is a list of onehot
@@ -142,6 +142,7 @@ class Program(object):
         symbols that will be converted to onehot vectors, and bound to
         the corresponding input arguments.
         """
+        assert self.db.isTypeless(),'cannot evalSymbols on db with declared types'
         return self.evalGrad(mode, [self.db.onehot(s) for s in symbols])
 
     def evalGrad(self,mode,inputs):
@@ -153,10 +154,22 @@ class Program(object):
         fun = self.function[(mode,0)]
         return fun.evalGrad(self.db, inputs)
 
+    def setAllWeights(self):
+        """ Set all parameter weights to a plausible value - mostly useful for proppr programs,
+        where parameters are known. """
+        logging.debug('setting feature weights %.3f Gb' % comline.memusage())
+        self.setFeatureWeights()
+        logging.debug('setting rule weights %.3f Gb' % comline.memusage())
+        self.setRuleWeights()
+
     def setFeatureWeights(self,epsilon=1.0):
+        """ Set feature weights to a plausible value - mostly useful for proppr programs,
+        where parameters are known. """
         logging.warn('trying to call setFeatureWeights on a non-ProPPR program')
 
     def setRuleWeights(self,weights=None,epsilon=1.0):
+        """ Set rule feature weights to a plausible value - mostly useful for proppr programs,
+        where parameters are known. """
         logging.warn('trying to call setFeatureWeights on a non-ProPPR program')
 
     @staticmethod
@@ -203,7 +216,7 @@ class Program(object):
 
 #
 # subclass of Program that corresponds more or less to Proppr....
-# 
+#
 
 class ProPPRProgram(Program):
 
@@ -219,16 +232,23 @@ class ProPPRProgram(Program):
         self.rules.mapRules(self._moveFeaturesToRHS)
         if weights!=None: self.setRuleWeights(weights)
 
-    def setRuleWeights(self,weights=None,epsilon=1.0):
+    def setRuleWeights(self,weights=None,epsilon=1.0,ruleIdPred=None):
         """Set the db predicate 'weighted/1' as a parameter, and initialize it
-        to the given vector.  If no vector is given, default to a
-        sparse vector of all constant rule features. 'weighted/1' is
-        the default parameter used to weight rule-ids features, e.g.,
-        "r" in p(X,Y):-... {r}.
+        to the given vector.  If no vector 'weights' is given, default
+        to a constant vector of epsilon for each rule.  'weighted/1'
+        is the default parameter used to weight rule-ids features,
+        e.g., "r" in p(X,Y):-... {r}.  You can also specify the
+        ruleIds with the name of a unary db relation that holds all
+        the rule ids.
         """
-        if len(self.ruleIds)==0: 
+        if len(self.ruleIds)==0:
             logging.warn('no rule features have been defined')
+        elif ruleIdPred is not None:
+            assert (ruleIdPred,1) in set.matEncoding,'there is no unary predicate called %s' % ruleIdPred
+            self.db.markAsParam("weighted",1)
+            self.db.setParameter(self.vector(declare.asMode('%s(o)' % ruleIdPred)) * epsilon)
         else:
+            assert self.db.isTypeless(), 'cannot setRuleWeights for db with declared types unless ruleIdPred is given'
             self.db.markAsParam("weighted",1)
             if weights==None:
                 weights = self.db.onehot(self.ruleIds[0])
@@ -236,19 +256,19 @@ class ProPPRProgram(Program):
                     weights = weights + self.db.onehot(rid)
             self.db.setParameter("weighted",1,weights*epsilon)
 
-    def getRuleWeights(self):  
+    def getRuleWeights(self):
         """ Return a vector of the weights for a rule """
         return self.db.matEncoding[('weighted',1)]
 
     def setFeatureWeights(self,epsilon=1.0):
-        """ Initialize each feature used in the feature part of a rule, i.e.,
+        """Initialize each feature used in the feature part of a rule, i.e.,
         for all rules annotated by "{foo(F):...}", declare 'foo/1' to
         be a parameter, and initialize it to something plausible.  The
         'something plausible' is based on looking at how the variables
         defining foo are defined, eg for something like "p(X,Y):-
-        ... {posWeight(F):hasWord(X,F)}" the sparse vector of all
-        second arguments of hasWord will be used to initialize
-        posWeight.
+        ... {posWeight(F):hasWord(X,F)}" a constant sparse vector with
+        non-zero weights for all second arguments of hasWord will be
+        used to initialize posWeight.  The constant will be epsilon.
         """
         for paramName,domainModes in self.paramDomains.items():
             weights = self.db.matrixPreimage(domainModes[0])
@@ -256,11 +276,11 @@ class ProPPRProgram(Program):
                 weights = weights + self.db.matrixPreimage(mode)
             weights = weights * 1.0/len(domainModes)
             self.db.setParameter(paramName,1,weights*epsilon)
-            logging.info('parameter %s/1 initialized to %s' % (paramName,"+".join(map(lambda dm:'preimage(%s)' % str(dm), domainModes))))
+            logging.debug('parameter %s/1 initialized to %s' % (paramName,"+".join(map(lambda dm:'preimage(%s)' % str(dm), domainModes))))
         for (paramName,arity) in self.getParams():
             if not self.db.parameterIsSet(paramName,arity):
                 logging.warn("Parameter %s could not be set automatically")
-        logging.info('total parameter size: %d', self.db.parameterSize())
+        logging.debug('total parameter size: %d', self.db.parameterSize())
 
     def setFeatureWeight(self,paramName,arity,weight):
         """ Set a particular parameter weight. """
@@ -278,7 +298,7 @@ class ProPPRProgram(Program):
             assert len(rule0.features)==1,'multiple constant features not supported'
             constFeature = rule0.features[0].functor
             constAsVar = constFeature.upper()
-            rule.rhs.append( matrixdb.assignGoal(constAsVar,constFeature) )
+            rule.rhs.append( parser.Goal(bpcompiler.ASSIGN, [constAsVar,constFeature]) )
             rule.rhs.append( parser.Goal('weighted',[constAsVar]) )
             # record the rule name, ie the constant feature
             self.ruleIds.append(constFeature)
@@ -287,7 +307,7 @@ class ProPPRProgram(Program):
             assert len(rule0.features)==1,'feature generators of the form {a,b: ... } not supported'
             featureLHS = rule0.features[0]
             assert featureLHS.arity==1, 'non-constant features must be of the form {foo(X):-...}'
-            outputVar = featureLHS.args[0] 
+            outputVar = featureLHS.args[0]
             paramName = featureLHS.functor
             for goal in rule0.findall:
                 rule.rhs.append(goal)
@@ -393,10 +413,10 @@ class Interp(object):
         fun = self.prog.function[key]
         print "\n".join(fun.pprint())
 
-    def eval(self,modeSpec,sym):
+    def eval(self,modeSpec,sym,inputType=None,outputType=None):
         mode = declare.asMode(modeSpec)
-        tmp = self.prog.evalSymbols(mode,[sym])
-        result = self.prog.db.rowAsSymbolDict(tmp)
+        tmp = self.prog.evalSymbols(mode,[sym],typeName=inputType)
+        result = self.prog.db.rowAsSymbolDict(tmp,typeName=outputType)
         if (self.numTopEcho):
             top = sorted(map(lambda (key,val):(val,key), result.items()), reverse=True)
             for rank in range(min(len(top),self.numTopEcho)):
@@ -408,6 +428,7 @@ class Interp(object):
         logging.warn('debugger is not available in this environment')
         return
       mode = declare.asMode(modeSpec)
+      assert self.db.isTypeless(),'cannot debug a db with declared types'
       X = self.db.onehot(sym)
       dset = dataset.Dataset({mode:X},{mode:self.db.zeros()})
       debug.Debugger(self.prog,mode,dset,gradient=False).mainloop()
@@ -416,6 +437,7 @@ class Interp(object):
       if not DEBUGGER_AVAILABLE:
         logging.warn('debugger is not available in this environment')
         return
+      assert self.db.isTypeless(),'cannot debug a db with declared types'
       fullDataset = self.testData if test else self.trainData
       if fullDataset==None:
         print 'train/test dataset is not specified on command line?'
@@ -425,7 +447,7 @@ class Interp(object):
         debug.Debugger(self.prog,mode,dset,gradient=True).mainloop()
 
 #
-# sample main: python tensorlog.py test/fam.cfacts 'rel(i,o)' 'rel(X,Y):-spouse(X,Y).' william
+# sample main
 #
 
 if __name__ == "__main__":
