@@ -126,12 +126,11 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     for compilerClass in TESTED_COMPILERS:
       #cross-compile the function
       xc = compilerClass(prog)
-      xc.compile(mode_string)
       # evaluate the function and get the output y
-      xc.show()
+      #xc.show()
       print '== performing eval with',compilerClass,'=='
-      ys = xc.eval([prog.db.onehot(input_symbol)])
-      y = ys[0]
+      inferenceFun = xc.inferenceFunction(mode_string)
+      y = inferenceFun(prog.db.onehot(input_symbol))
       # theano output will a be (probably dense) message, so
       # just compare that maximal elements from these two dicts
       # are the same
@@ -284,17 +283,19 @@ class TestXCGrad(testtensorlog.TestGrad):
   def xgrad_check(self,rule_strings,mode_string,params,xyPairs,expected):
     rules = testtensorlog.rules_from_strings(rule_strings)
     prog = program.Program(db=self.db,rules=rules)
+    prog.db.clearParamMarkings()
+    for (functor,arity) in params:
+      prog.db.markAsParam(functor,arity)
     for x,ys in xyPairs:
       data = testtensorlog.DataBuffer(self.db)
       data.add_data_symbols(x,ys)
       for compilerClass in TESTED_COMPILERS:
         xc = compilerClass(prog)
-        xc.compile(mode_string,params)
-        result = xc.eval([data.get_x()])
-        loss = xc.evalDataLoss([data.get_x()],data.get_y())
-        updates = xc.evalDataLossGrad([data.get_x()],data.get_y())
+        print 'grad check for compiler',xc.__class__
+        gradFun = xc.dataLossGradFunction(mode_string)
         updates_with_string_keys = {}
-        for (functor,arity),up in zip(params,updates):
+        paramsWithUpdates =  gradFun(data.get_x(),data.get_y())
+        for (functor,arity),up in paramsWithUpdates:
           upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
           for fact,grad_of_fact in upDict.items():
             # need to flip for cross-compilers
@@ -307,7 +308,8 @@ class TestXCProPPR(testtensorlog.TestProPPR):
     super(TestXCProPPR,self).setUp()
 
   def evalxc(self,xc,input):
-    rawPred = xc.eval([input])
+    inferenceFun = xc.inferenceFunction('predict/io')
+    rawPred = inferenceFun(input)
     # trim small numbers to zero
     pred = mutil.mapData(lambda d:np.clip((d - 1e-5),0.00,9999.99), rawPred)
     pred.eliminate_zeros()
@@ -317,7 +319,6 @@ class TestXCProPPR(testtensorlog.TestProPPR):
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
       xc = compilerClass(self.prog)
-      xc.compile(self.mode)
       for i in range(self.numExamples):
         pred = self.evalxc(xc, self.X.getrow(i))
         d = self.prog.db.rowAsSymbolDict(pred)
@@ -329,7 +330,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
       xc = compilerClass(self.prog)
-      xc.compile(self.mode)
+      xc.ensureCompiled(self.mode)
       pred = self.prog.eval(self.mode,[self.X])
       d0 = self.prog.db.matrixAsSymbolDict(pred)
       for i,d in d0.items():
@@ -345,9 +346,11 @@ class TestXCProPPR(testtensorlog.TestProPPR):
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
       xc = compilerClass(self.prog)
-      xc.compile(self.mode,[('weighted',1)])
-      updates = xc.evalDataLossGrad([X],Y)
-      w = updates[0]
+      self.prog.db.markAsParam('weighted',1)
+      #xc.compile(self.mode)
+      gradFun = xc.dataLossGradFunction('predict/io')
+      updates = gradFun(X,Y)
+      paramKey,w = updates[0]
       # w is different from the w in the corresponding testtensorlog test,
       # which is a crossEntropy gradient for each example, but it should have
       # opposite directions
@@ -415,31 +418,36 @@ class TestXCProPPR(testtensorlog.TestProPPR):
         xc = compilerClass(self.prog,compilerClass.__name__+".summary")
       else:
         xc = compilerClass(self.prog)
-      xc.compile(self.mode, [('weighted',1)])
+      self.prog.db.markAsParam('weighted',1)
 
-      loss0 = xc.evalDataLoss([X],Y)
+      lossFun = xc.dataLossFunction('predict/io')
+      #TOFIX clean up
+      #xc.compile('predict/io')
+      #loss0 = xc.evalDataLoss([X],Y)
+      loss0 = lossFun(X,Y)
       print 'initial train data loss',loss0
       TX,TY = testtensorlog.matrixAsTrainingData(self.labeledData,'test',2)
-      loss1 = xc.evalDataLoss([TX],TY)
+      #loss1 = xc.evalDataLoss([TX],TY)
+      loss1 = xc.evalDataLoss(TX,TY)
       print 'initial test data loss',loss1
-      acc0 = xc.accuracy(X,Y)
+      acc0 = xc.accuracy('predict/io',X,Y)
       print 'initial train accuracy',acc0
-      acc1 = xc.accuracy(TX,TY)
+      acc1 = xc.accuracy('predict/io',TX,TY)
       print 'initial test accuracy',acc1
 
       print 'params to optimize',xc.ws.params
-      print 'vars to optimize',map(lambda key:xc.ws.getHandleExprVariable(key).name, xc.ws.params)
+      print 'vars to optimize',map(lambda key:xc.ws._getHandleExprVariable(key).name, xc.ws.params)
 
       optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
       xc.optimizeDataLoss(optimizer, X, Y, epochs=20)
 
-      loss2 = xc.evalDataLoss([X],Y)
+      loss2 = lossFun(X,Y)
       print 'final train data loss',loss2
-      loss3 = xc.evalDataLoss([TX],TY)
+      loss3 = lossFun(TX,TY)
       print 'final test data loss',loss3
-      acc2 = xc.accuracy(X,Y)
+      acc2 = xc.accuracy('predict/io',X,Y)
       print 'final train accuracy',acc2
-      acc3 = xc.accuracy(TX,TY)
+      acc3 = xc.accuracy('predict/io',TX,TY)
       print 'final test accuracy',acc3
 
       self.assertTrue(acc2>acc0)

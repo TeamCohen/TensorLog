@@ -1,3 +1,4 @@
+
  - export PYTHONPATH=/usr/local/google/home/cohenw/code/TensorLog:$PYTHONPATH
  - live theano add /usr/local/google/home/cohenw/code/Theano
 
@@ -46,7 +47,7 @@ Overall package structure:
     .tf: tensorflowxcomp
   or maybe just stick a bunch of stuff in tlg.native: native.learn, ...
 
-Proposed API -  _ means python object or else argument of comline.parseFOO
+Proposed simple -  _ means python object or else argument of comline.parseFOO
   - tlg.Compiler(
 	target='tensorflow',
     	program= _    
@@ -55,17 +56,20 @@ Proposed API -  _ means python object or else argument of comline.parseFOO
       	regularizer= ...
       	summaryFile=...)
 
- Should sort out declarations for parameters - maybe ':- trainable(functor,arity)'
- and add some sort of initializer mechanism
+Next actions:
 
+ sort out declarations for parameters - maybe ':- trainable(functor,arity)',
+ add, in compile, default to marked params - maybe add some sort of initializer mechanism
+
+ cache and lazy evaluation
   (args,expr) = compiler.loss("mode")
   (args,expr) = compiler.unregularizedLoss("mode")
   (args,expr) = compiler.inference("mode")
   compiler.pprint("mode",...) = print abstract tensorlog function
 
-  # maybe also lossFunction, etc that return python functions, with optional kw args
-  # for stuff like session, and that optionally wrap/don't wrap the 
-  # inputs and outputs as scipy.
+ # maybe also lossFunction, etc that return python functions, with optional kw args
+ # for stuff like session, and that optionally wrap/don't wrap the 
+ # inputs and outputs as scipy.
 
   typeName = compiler.wrapInput(stringOrIntOrOneHOt,typeName)
   typeName = compiler.wrapOutput(typeName)

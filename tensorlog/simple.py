@@ -24,4 +24,8 @@ def compiler(target='tensorflow',db=None,prog=None,rule_features=False,summary_f
     assert False,'cannot convert %r to a program' % prog
 
   if target=='tensorflow':
-    result = tensorflowxcomp.SparseMatDenseMsgCrossCompiler(db, summaryFile=summary_file)
+    result = tensorflowxcomp.SparseMatDenseMsgCrossCompiler(prog, summaryFile=summary_file)
+  elif target=='theano':
+    result = theanoxcomp.SparseMatDenseMsgCrossCompiler(prog)
+  else:
+    assert False,'illegal target %r: valid targets are "tensorflow" and "theano"' % target
