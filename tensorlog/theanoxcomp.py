@@ -42,6 +42,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
 
   def _exprListAsUpdateFunction(self,args,exprList,wrapInputs,unwrapOutputs):
     pyfunReturningList = theano.function(inputs=args, outputs=exprList)
+    # TOFIX make this take a list as the argument not X,Y
     def closure(X,Y):
       inputs = map(self._wrapMsg,[X,Y]) if wrapInputs else [X,Y]
       rawUpdates = pyfunReturningList(*inputs)

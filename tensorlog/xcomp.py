@@ -50,6 +50,7 @@ class AbstractCrossCompiler(object):
     mode = self.ensureCompiled(mode)
     return self._wsDict[mode].inferenceArgs, self._wsDict[mode].inferenceExpr
 
+  # TOFIX document functions as taking single arg which might be a list
   def inferenceFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
     args,expr = self.inference(mode)
     return self._asFunction(args,expr,wrapInputs,unwrapOutputs)
@@ -71,6 +72,7 @@ class AbstractCrossCompiler(object):
     return self._wsDict[mode].dataLossArgs, self._wsDict[mode].dataLossGradExprs
 
   def dataLossGradFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
+    # TOFIX [X,Y] -> list of args
     args,exprList = self.dataLossGrad(mode)
     return self._exprListAsUpdateFunction(args,exprList,wrapInputs,unwrapOutputs)
 

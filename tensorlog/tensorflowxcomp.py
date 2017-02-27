@@ -89,7 +89,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     trainStep = optimizer.minimize(self.ws.dataLossExpr, var_list=self.getParamVariables(mode))
     self.ensureSessionInitialized()
     if not minibatchSize:
-      fd = self.getFeedDict(X,Y,wrapped)
+      fd = self.getFeedDict(mode,X,Y,wrapped)
       for i in range(epochs):
         runAndSummarize(fd,i)
     else:
@@ -97,7 +97,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
       dset = dataset.Dataset({targetMode:X1},{targetMode:Y1})
       for i in range(epochs):
         for mode,miniX,miniY in dset.minibatchIterator(batchsize=minibatchSize):
-          fd = self.getFeedDict(miniX,miniY,wrapped=False)
+          fd = self.getFeedDict(mode,miniX,miniY,wrapped=False)
           runAndSummarize(fd,i)
 
   def accuracy(self,mode,X,Y,wrapped=False):
@@ -140,15 +140,15 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     TX,TY = self._ensureWrapped(TX,TY,False)
 
     lossFun = self.dataLossFunction(targetMode,wrapInputs=False,unwrapOutputs=False)
-    def printLoss(msg,X,Y): print msg,lossFun(X,Y)
-    def printAccuracy(msg,X,Y): print msg,self.accuracy(X,Y,wrapped=True)
+    def printLoss(msg,X,Y): print msg,lossFun((X,Y))
+    def printAccuracy(msg,X,Y): print msg,self.accuracy(targetMode,X,Y,wrapped=True)
 
     expt.Expt.timeAction('computing train loss',lambda:printLoss('initial train loss',X,Y))
     expt.Expt.timeAction('computing test loss',lambda:printLoss('initial test loss',TX,TY))
     expt.Expt.timeAction('computing train accuracy',lambda:printAccuracy('initial train accuracy',X,Y))
     expt.Expt.timeAction('computing test accuracy',lambda:printAccuracy('initial test accuracy',TX,TY))
 
-    expt.Expt.timeAction('training', lambda:self.optimizeDataLoss(optimizer,X,Y,epochs=epochs,minibatchSize=minibatchSize,wrapped=True))
+    expt.Expt.timeAction('training', lambda:self.optimizeDataLoss(targetMode,optimizer,X,Y,epochs=epochs,minibatchSize=minibatchSize,wrapped=True))
 
     expt.Expt.timeAction('computing train loss',lambda:printLoss('final train loss',X,Y))
     expt.Expt.timeAction('computing test loss',lambda:printLoss('final test loss',TX,TY))

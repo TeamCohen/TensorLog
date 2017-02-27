@@ -424,11 +424,11 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       #TOFIX clean up
       #xc.compile('predict/io')
       #loss0 = xc.evalDataLoss([X],Y)
-      loss0 = lossFun(X,Y)
+      loss0 = lossFun((X,Y))
       print 'initial train data loss',loss0
       TX,TY = testtensorlog.matrixAsTrainingData(self.labeledData,'test',2)
       #loss1 = xc.evalDataLoss([TX],TY)
-      loss1 = xc.evalDataLoss(TX,TY)
+      loss1 = lossFun((TX,TY))
       print 'initial test data loss',loss1
       acc0 = xc.accuracy('predict/io',X,Y)
       print 'initial train accuracy',acc0
@@ -439,11 +439,11 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       print 'vars to optimize',map(lambda key:xc.ws._getHandleExprVariable(key).name, xc.ws.params)
 
       optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
-      xc.optimizeDataLoss(optimizer, X, Y, epochs=20)
+      xc.optimizeDataLoss('predict/io', optimizer, X, Y, epochs=20)
 
-      loss2 = lossFun(X,Y)
+      loss2 = lossFun((X,Y))
       print 'final train data loss',loss2
-      loss3 = lossFun(TX,TY)
+      loss3 = lossFun((TX,TY))
       print 'final test data loss',loss3
       acc2 = xc.accuracy('predict/io',X,Y)
       print 'final train accuracy',acc2
@@ -499,7 +499,7 @@ class TestXCExpt(unittest.TestCase):
           testData=optdict['testData'],
           targetMode=declare.asMode("predict/io"))
       pbDoc = xc.db.onehot('pb','doc')
-      self.checkXC(xc,pbDoc,{'negPair':114,'posPair':114,'hasWord':58,'weighted':114,'label':4})
+      self.checkXC(xc,'predict/io',pbDoc,{'negPair':114,'posPair':114,'hasWord':58,'weighted':114,'label':4})
 
   def testTCToyIgnoringTypes(self):
     matrixdb.conf.ignore_types = True
@@ -518,18 +518,19 @@ class TestXCExpt(unittest.TestCase):
           testData=optdict['testData'],
           targetMode=declare.asMode("predict/io"))
       pbDoc = xc.db.onehot('pb')
-      self.checkXC(xc,pbDoc,collections.defaultdict(lambda:190))
+      self.checkXC(xc,'predict/io',pbDoc,collections.defaultdict(lambda:190))
 
 
-  def checkXC(self,xc,rawInput,expectedCols):
+  def checkXC(self,xc,mode,rawInput,expectedCols):
     print 'matrixdb.conf.ignore_types',matrixdb.conf.ignore_types
     db = xc.db
     for (functor,arity),mat in db.matEncoding.items():
       print functor,arity,'shape',mat.shape
       r,c = mat.shape
       self.assertEqual(c,expectedCols[functor])
-    ys = xc.eval([rawInput])
-    r,c = ys[0].shape
+    inferenceFun = xc.inferenceFunction(mode)
+    y = inferenceFun(rawInput)
+    r,c = y.shape
     self.assertEqual(c,expectedCols['label'])
 
 if __name__ == "__main__":
