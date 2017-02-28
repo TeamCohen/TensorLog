@@ -57,7 +57,7 @@ scorex = outs[0]  #the actual score vector for x
 # something simple to try differentiating
 toyLoss = B.sp_sum(scorex,sparse_grad=True)
 print 'gradToyLoss...'
-gradToyLoss = T.grad(toyLoss, p.getParams())
+gradToyLoss = T.grad(toyLoss, p.getParamList())
 
 
 #
@@ -87,7 +87,4 @@ print 'loss on example 0:',lossFunResult[0]
 #
 
 print 'gradLoss...'
-gradLoss = T.grad(loss, p.getParams())
-
-
-
+gradLoss = T.grad(loss, p.getParamList())

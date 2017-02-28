@@ -294,7 +294,7 @@ class TestXCGrad(testtensorlog.TestGrad):
         print 'grad check for compiler',xc.__class__
         gradFun = xc.dataLossGradFunction(mode_string)
         updates_with_string_keys = {}
-        paramsWithUpdates =  gradFun(data.get_x(),data.get_y())
+        paramsWithUpdates =  gradFun((data.get_x(),data.get_y()))
         for (functor,arity),up in paramsWithUpdates:
           upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
           for fact,grad_of_fact in upDict.items():
@@ -349,7 +349,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       self.prog.db.markAsParam('weighted',1)
       #xc.compile(self.mode)
       gradFun = xc.dataLossGradFunction('predict/io')
-      updates = gradFun(X,Y)
+      updates = gradFun((X,Y))
       paramKey,w = updates[0]
       # w is different from the w in the corresponding testtensorlog test,
       # which is a crossEntropy gradient for each example, but it should have
@@ -421,13 +421,9 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       self.prog.db.markAsParam('weighted',1)
 
       lossFun = xc.dataLossFunction('predict/io')
-      #TOFIX clean up
-      #xc.compile('predict/io')
-      #loss0 = xc.evalDataLoss([X],Y)
       loss0 = lossFun((X,Y))
       print 'initial train data loss',loss0
       TX,TY = testtensorlog.matrixAsTrainingData(self.labeledData,'test',2)
-      #loss1 = xc.evalDataLoss([TX],TY)
       loss1 = lossFun((TX,TY))
       print 'initial test data loss',loss1
       acc0 = xc.accuracy('predict/io',X,Y)
@@ -435,8 +431,8 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       acc1 = xc.accuracy('predict/io',TX,TY)
       print 'initial test accuracy',acc1
 
-      print 'params to optimize',xc.ws.params
-      print 'vars to optimize',map(lambda key:xc.ws._getHandleExprVariable(key).name, xc.ws.params)
+      print 'params to optimize',xc.prog.getParamList()
+      print 'vars to optimize',xc.getParamVariables('predict/io')
 
       optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
       xc.optimizeDataLoss('predict/io', optimizer, X, Y, epochs=20)
@@ -500,6 +496,17 @@ class TestXCExpt(unittest.TestCase):
           targetMode=declare.asMode("predict/io"))
       pbDoc = xc.db.onehot('pb','doc')
       self.checkXC(xc,'predict/io',pbDoc,{'negPair':114,'posPair':114,'hasWord':58,'weighted':114,'label':4})
+      # some checks on the output of pprint
+      lines = xc.pprint('predict/io')
+      self.assertTrue(lines[0].find("SoftMaxFunction") >= 0)
+      self.assertTrue(lines[1].find("SumFunction") >= 0)
+      self.assertEqual(len(lines), 16)
+      # some checks on misc xcomp API
+      self.assertEqual(xc.inferenceOutputType('predict/io'),'label')
+      pbId = xc.asSymbolId('pb',typeName='doc')
+      pbSym = xc.asSymbol(pbId,typeName='doc')
+      self.assertEqual(pbSym,'pb')
+      self.assertEqual(xc.asSymbolId('this does not appear in the data',typeName='doc'), -1)
 
   def testTCToyIgnoringTypes(self):
     matrixdb.conf.ignore_types = True

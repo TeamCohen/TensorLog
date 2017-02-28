@@ -221,15 +221,15 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   #
 
   # override this so I can use a name scope
-  def _doCompile(self,fun):
+  def _doCompile(self,fun,mode):
     with tf.name_scope("tensorlog"):
       self._setupGlobals()
       (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self._fun2Expr(fun)
-      self._buildLossExpr()
+      self._buildLossExpr(mode)
       if self.summaryFile:
         self.summaryMergeAll = tf.summary.merge_all()
 
-  def _buildLossExpr(self):
+  def _buildLossExpr(self,mode):
     target_y = self._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self.ws.inferenceOutputType)
     self.ws.dataLossArgs = self.ws.inferenceArgs + [target_y]
     # we want to take the log of the non-zero entries and leave the
@@ -240,10 +240,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
         self.ws.inferenceExpr,
         tf.ones(tf.shape(self.ws.inferenceExpr), tf.float32))
     self.ws.dataLossExpr = tf.reduce_sum(-target_y * tf.log(inferenceReplacing0With1))
-    # need to keep this in a canonical order
-    self.ws.params = list(self.db.params)
-    paramVars = map(lambda p:self.ws._getHandleExprVariable(p), self.db.params)
-    self.ws.dataLossGradExprs = tf.gradients(self.ws.dataLossExpr,paramVars)
+    self.ws.dataLossGradExprs = tf.gradients(self.ws.dataLossExpr,self.getParamVariables(mode))
 
   def _asFunction(self,args,expr,wrapInputs,unwrapOutputs):
     def closure(rawInputs,session=None):
@@ -260,8 +257,8 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     return closure
 
   def _exprListAsUpdateFunction(self,args,exprList,wrapInputs,unwrapOutputs):
-    def closure(X,Y,session=None):
-      inputs = map(self._wrapMsg,[X,Y]) if wrapInputs else [X,Y]
+    def closure(rawInputs,session=None):
+      inputs = map(self._wrapMsg,rawInputs) if wrapInputs else rawInputs
       bindings = dict(zip(args, inputs))
       if session is None:
         self.ensureSessionInitialized()
@@ -271,34 +268,11 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
         with session.as_default():
           rawUpdates = [expr.eval(feed_dict=bindings) for expr in exprList]
       if unwrapOutputs:
-        return map(lambda key,rawUpdate:(key,self._unwrapUpdate(key,rawUpdate)), self.ws.params, rawUpdates)
+        return map(lambda key,rawUpdate:(key,self._unwrapUpdate(key,rawUpdate)), self.prog.getParamList(), rawUpdates)
       else:
-        return zip(self.ws.params, rawUpdates)
+        return zip(self.prog.getParamList(), rawUpdates)
     return closure
 
-#  def eval(self,rawInputs,wrapped=False):
-#    inputs = map(self._wrapMsg,rawInputs) if not wrapped else rawInputs
-#    assert self.ws.inferenceArgs is not None,'inferenceArgs not set - have you called TensorFlowCrossCompiler.compile() ?'
-#    bindings = dict(zip(self.ws.inferenceArgs,inputs))
-#    return self._unwrapOutput(self._evalWithBindings(self.ws.inferenceExpr,bindings))
-#
-#  def evalDataLoss(self,rawInputs,rawTarget,wrapped=False):
-#    inputs = map(self._wrapMsg, rawInputs) if not wrapped else rawInputs
-#    target = self._wrapMsg(rawTarget) if not wrapped else rawTarget
-#    bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs, inputs+[target]))
-#    return self._unwrapOutput(self._evalWithBindings(self.ws.dataLossExpr,bindings))
-#
-#  def evalDataLossGrad(self,rawInputs,rawTarget,wrapped=False):
-#    inputs = map(self._wrapMsg, rawInputs) if not wrapped else rawInputs
-#    target = self._wrapMsg(rawTarget) if not wrapped else rawTarget
-#    bindings = dict(zip(self.ws.inferenceArgs+self.ws.dataLossArgs, inputs+[target]))
-#    rawUpdates = [self._evalWithBindings(expr,bindings) for expr in self.ws.dataLossGradExprs]
-#    return map(lambda key,rawUpdate:self._unwrapUpdate(key,rawUpdate), self.ws.params, rawUpdates)
-#
-#  def _evalWithBindings(self,expr,bindings):
-#    self.ensureSessionInitialized()
-#    with self.session.as_default():
-#      return expr.eval(feed_dict=bindings)
 
   def show(self,verbose=0):
     """ Print a summary of current workspace to stdout """

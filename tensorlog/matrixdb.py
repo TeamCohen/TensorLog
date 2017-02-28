@@ -34,7 +34,8 @@ class MatrixDB(object):
     #matEncoding[(functor,arity)] encodes predicate as a matrix
     self.matEncoding = {}
     # mark which matrices are 'parameters' by (functor,arity) pair
-    self.params = set()
+    self.paramSet = set()
+    self.paramList = []
     # buffer initialization: see startBuffers()
     self._buf = None
     # type information - indexed by (functor,arity) pair
@@ -193,30 +194,49 @@ class MatrixDB(object):
   #
 
   def isParameter(self,mode):
-    return (mode.functor,mode.arity) in self.params
+    return (mode.functor,mode.arity) in self.paramSet
 
   def markAsParam(self,functor,arity):
     """ Mark a predicate as a parameter """
-    self.params.add((functor,arity))
+    if (functor,arity) not in self.paramSet:
+      self.paramSet.add((functor,arity))
+      self.paramList.append((functor,arity))
 
   def clearParamMarkings(self):
     """ Clear previously marked parameters"""
-    self.params = set()
+    self.paramSet = set()
+    self.paramList = []
 
   def getParameter(self,functor,arity):
-    assert (functor,arity) in self.params,'%s/%d not a parameter' % (functor,arity)
+    assert (functor,arity) in self.paramSet,'%s/%d not a parameter' % (functor,arity)
     return self.matEncoding[(functor,arity)]
 
-  def parameterIsSet(self,functor,arity):
+  def parameterIsInitialized(self,functor,arity):
     return (functor,arity) in self.matEncoding
 
   def setParameter(self,functor,arity,replacement):
-    assert (functor,arity) in self.params,'%s/%d not a parameter' % (functor,arity)
+    assert (functor,arity) in self.paramSet,'%s/%d not a parameter' % (functor,arity)
     self.matEncoding[(functor,arity)] = replacement
 
   #
   # convert from vectors, matrixes to symbols - for i/o and debugging
   #
+
+  def asSymbol(self,symbolId,typeName=None):
+    """ Convert a typed integer id to a symbol
+    """
+    if typeName is None: typeName = THING
+    return self._stab[typeName].getSymbol(symbolId)
+
+  def asSymbolId(self,symbol,typeName=None):
+    """ Convert a typed symbol to an integer id
+    """
+    if typeName is None: typeName = THING
+    stab = self._stab[typeName]
+    if stab.hasId(symbol):
+      return stab.getId(symbol)
+    else:
+      return -1
 
   def rowAsSymbolDict(self,row,typeName=None):
     if typeName is None: typeName = THING
@@ -276,7 +296,7 @@ class MatrixDB(object):
     return sum(map(lambda m:m.nnz, self.matEncoding.values()))
 
   def parameterSize(self):
-    return sum([m.nnz for  ((fun,arity),m) in self.matEncoding.items() if (fun,arity) in self.params])
+    return sum([m.nnz for  ((fun,arity),m) in self.matEncoding.items() if (fun,arity) in self.paramSet])
 
   def createPartner(self):
     """Create a 'partner' datavase, which shares the same symbol table,

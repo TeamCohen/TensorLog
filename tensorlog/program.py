@@ -121,6 +121,10 @@ class Program(object):
         fun = self.function[(mode,0)]
         return fun
 
+    def getParamList(self):
+        """ Return a set of (functor,arity) pairs corresponding to the parameters """
+        return self.db.paramList
+
     def evalSymbols(self,mode,symbols,typeName=None):
         """ After compilation, evaluate a function.  Input is a list of
         symbols that will be converted to onehot vectors, and bound to
@@ -277,8 +281,8 @@ class ProPPRProgram(Program):
             weights = weights * 1.0/len(domainModes)
             self.db.setParameter(paramName,1,weights*epsilon)
             logging.debug('parameter %s/1 initialized to %s' % (paramName,"+".join(map(lambda dm:'preimage(%s)' % str(dm), domainModes))))
-        for (paramName,arity) in self.getParams():
-            if not self.db.parameterIsSet(paramName,arity):
+        for (paramName,arity) in self.getParamList():
+            if not self.db.parameterIsInitialized(paramName,arity):
                 logging.warn("Parameter %s could not be set automatically")
         logging.debug('total parameter size: %d', self.db.parameterSize())
 
@@ -286,10 +290,6 @@ class ProPPRProgram(Program):
         """ Set a particular parameter weight. """
         self.db.markAsParam(paramName,arity)
         self.db.setParameter(paramName,arity,weight)
-
-    def getParams(self):
-        """ Return a set of (functor,arity) pairs corresponding to the parameters """
-        return self.db.params
 
     def _moveFeaturesToRHS(self,rule0):
         rule = parser.Rule(rule0.lhs, rule0.rhs)

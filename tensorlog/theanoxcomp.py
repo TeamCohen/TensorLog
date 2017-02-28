@@ -15,22 +15,11 @@ from tensorlog import xcomp
 
 class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
 
-  def _buildLossExpr(self):
+  def _buildLossExpr(self,mode):
     target_y = self._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self.ws.inferenceOutputType)
     self.ws.dataLossArgs = self.ws.inferenceArgs + [target_y]
     self.ws.dataLossExpr = (-target_y * self._applyOpToNonzerosOfDense(TT.log,self.ws.inferenceExpr)).mean()
-    # need to keep this in a canonical order
-    self.ws.params = list(self.db.params)
-    paramVars = map(lambda p:self.ws._getHandleExprVariable(p), self.ws.params)
-    self.ws.dataLossGradExprs = theano.grad(self.ws.dataLossExpr, paramVars)
-    #finalize
-#    self.ws.dataLossFun = theano.function(
-#        inputs=(self.ws.inferenceArgs + self.ws.dataLossArgs),
-#        outputs=self.ws.dataLossExpr)
-#    if self.ws.params:
-#      self.ws.dataLossGradFun = theano.function(
-#          inputs=(self.ws.inferenceArgs + self.ws.dataLossArgs),
-#          outputs=self.ws.dataLossGradExprs)
+    self.ws.dataLossGradExprs = theano.grad(self.ws.dataLossExpr, self.getParamVariables(mode))
 
   def _asFunction(self,args,expr,wrapInputs,unwrapOutputs):
     pyfun = theano.function(inputs=args, outputs=expr)
@@ -42,43 +31,15 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
 
   def _exprListAsUpdateFunction(self,args,exprList,wrapInputs,unwrapOutputs):
     pyfunReturningList = theano.function(inputs=args, outputs=exprList)
-    # TOFIX make this take a list as the argument not X,Y
-    def closure(X,Y):
-      inputs = map(self._wrapMsg,[X,Y]) if wrapInputs else [X,Y]
+    def closure(rawInputs):
+      inputs = map(self._wrapMsg,rawInputs) if wrapInputs else rawInputs
       rawUpdates = pyfunReturningList(*inputs)
       if unwrapOutputs:
-        result = map(lambda key,rawUpdate:(key,self._unwrapUpdate(key,rawUpdate)), self.ws.params, rawUpdates)
+        result = map(lambda key,rawUpdate:(key,self._unwrapUpdate(key,rawUpdate)), self.prog.getParamList(), rawUpdates)
         return result
       else:
-        return zip(self.ws.params, rawUpdates)
+        return zip(self.getParamList(), rawUpdates)
     return closure
-
-  #
-  # evaluators
-  #
-
-#  def eval(self,rawInputs):
-#    inputs = map(self._wrapMsg,rawInputs)
-#    return self._unwrapOutputs(self.ws.inferenceFun(*inputs))
-#
-#  def evalDataLoss(self,rawInputs,rawTarget):
-#    # the loss depends on the rawInputs, which will usually be
-#    # [x,target_y] and the parameters, which here are
-#    # passed in as (pred,arity) keys
-#    inputs = map(self._wrapMsg, rawInputs)
-#    target = self._wrapMsg(rawTarget)
-#    formalArgs = inputs + [target]
-#    return self.unwrapOutput(self.ws.dataLossFun(*formalArgs))
-#
-#  def evalDataLossGrad(self,rawInputs,rawTarget):
-#    # the loss depends on the rawInputs, which will usually be
-#    # [x,target_y] and the parameters, which here are
-#    # passed in as (pred,arity) keys
-#    inputs = map(self._wrapMsg, rawInputs)
-#    target = self._wrapMsg(rawTarget)
-#    formalArgs = inputs + [target]
-#    rawUpdates = self.ws.dataLossGradFun(*formalArgs)
-#    return map(lambda key,rawUpdate:self._unwrapUpdate(key,rawUpdate), self.ws.params, rawUpdates)
 
   def _insertHandleExpr(self,key,name,val):
     self.ws._handleExpr[key] = self.ws._handleExprVar[key] = theano.shared(val, name=name)

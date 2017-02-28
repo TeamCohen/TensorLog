@@ -61,7 +61,7 @@ Next actions:
  sort out declarations for parameters - maybe ':- trainable(functor,arity)',
  add, in compile, default to marked params - maybe add some sort of initializer mechanism
 
- cache and lazy evaluation
+ cache and lazy evaluation -DONE
   (args,expr) = compiler.loss("mode")
   (args,expr) = compiler.unregularizedLoss("mode")
   (args,expr) = compiler.inference("mode")
@@ -71,19 +71,8 @@ Next actions:
  # for stuff like session, and that optionally wrap/don't wrap the 
  # inputs and outputs as scipy.
 
-  typeName = compiler.wrapInput(stringOrIntOrOneHOt,typeName)
-  typeName = compiler.wrapOutput(typeName)
-  typeName = compiler.inferenceOutputType("mode")
-  string = compiler.getSymbol(TypeName,int)
-  dict = compiler.msgAsDict(TypeName,int)
-  [dict,...] = compiler.msgsAsDictList(TypeName,int)
-
-  underlying objects for compilation-based tasks
-  - matrixdb.MatrixDB
-  - declare.ModeDeclaration, Typedeclaration -- simplify or hide
-  - program.Program, ProPPRProgram, Interp
-  - hidden: funs.*, ops.*, expt.*, parser.*, learn.* plearn.* symtab.*, 
-  - dataset.Dataset 
+  typeName = compiler.wrapInput(stringOrIntOrOneHot,typeName) -need test
+  typeName = compiler.wrapOutput(typeName) - need test
 
 Question->query idea
 

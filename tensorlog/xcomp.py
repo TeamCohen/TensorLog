@@ -50,10 +50,21 @@ class AbstractCrossCompiler(object):
     mode = self.ensureCompiled(mode)
     return self._wsDict[mode].inferenceArgs, self._wsDict[mode].inferenceExpr
 
-  # TOFIX document functions as taking single arg which might be a list
   def inferenceFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
+    """Returns a python function which performs inference for the function
+    defined by that mode.  The function takes a single argument X,
+    which can be a row vector or a minibatch, and outputs a matrix
+    with the same number of rows as X, and the number of columns
+    appropriate for the output type of the mode.
+    """
     args,expr = self.inference(mode)
     return self._asFunction(args,expr,wrapInputs,unwrapOutputs)
+
+  def inferenceOutputType(self,mode):
+    """ The type associated with the output of a tensorlog function.
+    """
+    mode = self.ensureCompiled(mode)
+    return self._wsDict[mode].tensorlogFun.outputType
 
   def dataLoss(self,mode):
     """ Returns (args,dataLossExpr) """
@@ -61,20 +72,57 @@ class AbstractCrossCompiler(object):
     return self._wsDict[mode].dataLossArgs, self._wsDict[mode].dataLossExpr
 
   def dataLossFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
+    """Returns a python function which compute the unregularized loss for
+    the function defined by that mode, relative to target outputs Y.
+    The function takes a single argument which is a list of (X,Y).
+    """
     args,expr = self.dataLoss(mode)
     return self._asFunction(args,expr,wrapInputs,unwrapOutputs)
 
   def dataLossGrad(self,mode):
     """Returns (args,[dataLossGrad1,....,dataLossGradn]), where each grad
-    is the gradient of one of the parameters
+    is the gradient of one of the parameters.The order of the grads
+    is the same as the parameters.
     """
     mode = self.ensureCompiled(mode)
     return self._wsDict[mode].dataLossArgs, self._wsDict[mode].dataLossGradExprs
 
   def dataLossGradFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
-    # TOFIX [X,Y] -> list of args
+    """Returns a python function which performs inference for the function
+    defined by that mode.  The function takes a single argument which
+    is a list of (X,Y).
+    """
     args,exprList = self.dataLossGrad(mode)
     return self._exprListAsUpdateFunction(args,exprList,wrapInputs,unwrapOutputs)
+
+  #
+  # forwarded to the underlying database, or appropriate subclass
+  # routine
+  #
+
+  def asSymbol(self,symbolId,typeName=None):
+    """ Convert a typed integer id to a symbol
+    """
+    return self.db.asSymbol(symbolId,typeName=typeName)
+
+  def asSymbolId(self,symbol,typeName=None):
+    """ Convert a typed symbol to an integer id
+    """
+    return self.db.asSymbolId(symbol,typeName=typeName)
+
+  def wrapInput(self,x):
+    """ Convert scipy matrix to required input format
+    """
+    return self._wrapMsg(x)
+
+  def unwrapOutput(self,y):
+    """ Convert output to scipy matrix
+    """
+    return self._wrapOutput(y)
+
+  #
+  # used in inferenceFunction, dataLossFunction, etc
+  #
 
   def _asFunction(self,args,expr,wrapInputs,unwrapOutputs):
     """Return a python function which implements the expression,
@@ -92,9 +140,10 @@ class AbstractCrossCompiler(object):
     assert False,'abstract method called'
 
   def getParamVariables(self,mode):
-    """ Convenience method to find variables corresponding to paramaters """
+    # TOFIX probly doesn't work if params are not used
+    """ Find variables corresponding to paramaters """
     mode = self.ensureCompiled(mode)
-    return map(lambda key:self._wsDict[mode]._getHandleExprVariable(key), self._wsDict[mode].params)
+    return map(lambda key:self._wsDict[mode]._getHandleExprVariable(key), self.prog.getParamList())
 
   def pprint(self,mode):
     """Return list of lines in a pretty-print of the underlying, pre-compilation function.
@@ -102,9 +151,11 @@ class AbstractCrossCompiler(object):
       print "\n".join(xcompiler.pprint("predict/io"))
     """
     mode = self.ensureCompiled(mode)
-    return self.tensorlogFun.pprint()
+    return self._wsDict[mode].tensorlogFun.pprint()
 
   def getWorkspace(self,mode):
+    """ Return the workspace associated with a mode
+    """
     mode = self.ensureCompiled(mode)
     return self._wsDict[mode]
 
@@ -190,18 +241,18 @@ class AbstractCrossCompiler(object):
       status('calling compile')
       fun = self.ws.tensorlogFun = self.prog.compile(mode)
       status('tensorlog compilation complete')
-      self._doCompile(fun)
+      self._doCompile(fun,mode)
       status('tensorlog->tensorflow compilation complete')
     return mode
 
-  def _doCompile(self,fun):
+  def _doCompile(self,fun,mode):
     """Main compilation method.  Can be overridden by subclasses
     """
     self._setupGlobals()
     # build the expression used for inference
     (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self._fun2Expr(fun)
     # extend the inferenceExpr to also compute loss
-    self._buildLossExpr()
+    self._buildLossExpr(mode)
 
   def _setupGlobals(self):
     """ Initialize variables used by this cross-compiler object. """
@@ -407,33 +458,15 @@ class AbstractCrossCompiler(object):
    compute any gradients that are needed. """
    assert False, 'abstract method called'
 
-  def eval(self,rawInputs):
-    """ Evaluate the inference expression.
-    """
-    assert False, 'abstract method called'
-
-  def evalDataLoss(self,rawInputs,rawTarget):
-    """Evaluate the unregularized loss of the data.  rawInputs will
-    usually be [x,target_y] plus the parameters, and parameters are
-    passed in in as (pred,arity) pairs.
-    """
-    assert False, 'abstract method called'
-
-  def evalDataLossGrad(self,rawInputs,rawTarget):
-    """Evaluate the gradient of the unregularized loss of the data.
-    Inputs are the same as for evalDataLoss.
-    """
-    assert False, 'abstract method called'
-
   def exportAllLearnedParams(self):
     """Replace the parameter values in self.prog.db with the values that
     have been learned.
     """
-    for key in self.ws.params:
-      functor,arity = key
-      newVal = self.getLearnedParam(key)
+    for (functor,arity) in self.prog.getParamList():
+      newVal = self.getLearnedParam((functor,arity))
       self.db.setParameter(functor,arity,newVal)
 
+  # TOFIX implement for theano
   def getLearnedParam(self,key):
     """Replace the parameter values in self.prog.db with the value that
     was learned for this parameter.
@@ -489,9 +522,6 @@ class Workspace(object):
     # functor,arity key.
     self._handleExprVar = {}
 
-    # parameters to optimize, as a list of functor,arity pairs
-    self.params = []
-
   def _hasHandleExpr(self,key):
     """ Check if a handle expression has been assigned to this key """
     return key in self._handleExpr
@@ -512,4 +542,4 @@ class Workspace(object):
 
   def _getParamVariables(self):
     """ Convenience method to find variables corresponding to paramaters """
-    return map(lambda key:self._getHandleExprVariable(key), self.params)
+    return map(lambda key:self._getHandleExprVariable(key), self.xcomp.prog.getParamList())
