@@ -37,6 +37,16 @@ class AbstractCrossCompiler(object):
     self._nullSmoother = {}
     # set after vectors are allocated for the nullSmoother's
     self._globalsSet = None
+    # Cache 'handle expressions' for some of the objects in the
+    # tensorlog database.  The handle expressions are indexed by a
+    # (functor,arity) pair. Handle expressions must be inserted by
+    # calling insertHandleExpr().
+    self._handleExpr = {}
+    # For each handle expression, there is some underlying variable
+    # with a gradient that is used.  Often this is the same as the
+    # handle expression, but not always.  These are indexed by
+    # functor,arity key.
+    self._handleExprVar = {}
     logging.debug('AbstractCrossCompiler initialized %.3f Gb' % comline.memusage())
 
   #
@@ -52,13 +62,15 @@ class AbstractCrossCompiler(object):
 
   def inferenceFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
     """Returns a python function which performs inference for the function
-    defined by that mode.  The function takes a single argument X,
-    which can be a row vector or a minibatch, and outputs a matrix
-    with the same number of rows as X, and the number of columns
-    appropriate for the output type of the mode.
+    defined by that mode.  The function takes a length-one tuple
+    containing one argument X, which can be a row vector or a
+    minibatch, and outputs a matrix with the same number of rows as X,
+    and the number of columns appropriate for the output type of the
+    mode.
     """
     args,expr = self.inference(mode)
-    return self._asFunction(args,expr,wrapInputs,unwrapOutputs)
+    assert len(args)==1
+    return self._asOneInputFunction(args[0],expr,wrapInputs,unwrapOutputs)
 
   def inferenceOutputType(self,mode):
     """ The type associated with the output of a tensorlog function.
@@ -77,7 +89,8 @@ class AbstractCrossCompiler(object):
     The function takes a single argument which is a list of (X,Y).
     """
     args,expr = self.dataLoss(mode)
-    return self._asFunction(args,expr,wrapInputs,unwrapOutputs)
+    assert len(args)==2
+    return self._asTwoInputFunction(args[0],args[1],expr,wrapInputs,unwrapOutputs)
 
   def dataLossGrad(self,mode):
     """Returns (args,[dataLossGrad1,....,dataLossGradn]), where each grad
@@ -93,7 +106,8 @@ class AbstractCrossCompiler(object):
     is a list of (X,Y).
     """
     args,exprList = self.dataLossGrad(mode)
-    return self._exprListAsUpdateFunction(args,exprList,wrapInputs,unwrapOutputs)
+    assert len(args)==2
+    return self._exprListAsUpdateFunction(args[0],args[1],exprList,wrapInputs,unwrapOutputs)
 
   #
   # forwarded to the underlying database, or appropriate subclass
@@ -124,11 +138,15 @@ class AbstractCrossCompiler(object):
   # used in inferenceFunction, dataLossFunction, etc
   #
 
-  def _asFunction(self,args,expr,wrapInputs,unwrapOutputs):
+  def _asOneInputFunction(self,arg1,expr,wrapInputs,unwrapOutputs):
     """Return a python function which implements the expression,
-    optionally 'wrapping' the inputs and outputs.  If inputs are
+    optionally 'wrapping' the input and outputs.  If inputs are
     wrapped passing in scipy sparse matrices is ok.  If outputs are
     unwrapped then output will be scipy sparse matrices."""
+    assert False,'abstract method called'
+
+  def _asTwoInputFunction(self,arg1,arg2,expr,wrapInputs,unwrapOutputs):
+    """Analogous to _asOneInputFunction but takes two inputs"""
     assert False,'abstract method called'
 
   def _exprListAsUpdateFunction(self,args,exprList,params,wrapInputs,unwrapOutputs):
@@ -141,9 +159,9 @@ class AbstractCrossCompiler(object):
 
   def getParamVariables(self,mode):
     # TOFIX probly doesn't work if params are not used
-    """ Find variables corresponding to paramaters """
+    """ Find variables corresponding to parameters """
     mode = self.ensureCompiled(mode)
-    return map(lambda key:self._wsDict[mode]._getHandleExprVariable(key), self.prog.getParamList())
+    return map(lambda key:self._handleExprVar[key], self.prog.getParamList())
 
   def pprint(self,mode):
     """Return list of lines in a pretty-print of the underlying, pre-compilation function.
@@ -159,6 +177,10 @@ class AbstractCrossCompiler(object):
     mode = self.ensureCompiled(mode)
     return self._wsDict[mode]
 
+  def _getParamVariables(self):
+    """ Convenience method to find variables corresponding to paramaters """
+    return map(lambda key:self._handleExprVar[key], self.xcomp.prog.getParamList())
+
   #
   # these all define the interface to the database.  instead of
   # returning a constant matrix M, they will return a 'handle
@@ -173,20 +195,20 @@ class AbstractCrossCompiler(object):
     """
     assert matMode.arity==1
     key = (matMode.getFunctor(),1)
-    if not self.ws._hasHandleExpr(key):
+    if not key in self._handleExpr:
       variable_name = "v__" + matMode.getFunctor()
       val = self._wrapDBVector(self.db.vector(matMode)) #ignores all but functor for arity 1
-      self.ws._insertHandleExpr(key, variable_name, val)
-    return self.ws._getHandleExpr(key)
+      self._insertHandleExpr(key, variable_name, val)
+    return self._handleExpr[key]
 
   def _constantVector(self, variable_name, val):
     """ Wrap a call to db.onehot(), db.zeros(), etc.
     """
     key = (variable_name,0)
-    if not self.ws._hasHandleExpr(key):
+    if not key in self._handleExpr:
       wrapped_val = self._wrapDBVector(val)
-      self.ws._insertHandleExpr(key, variable_name, wrapped_val)
-    return self.ws._getHandleExpr(key)
+      self._insertHandleExpr(key, variable_name, wrapped_val)
+    return self._handleExpr[key]
 
   def _matrix(self,matMode,transpose=False):
     """ Wraps a call to db.matrix()
@@ -195,14 +217,14 @@ class AbstractCrossCompiler(object):
     assert matMode.arity==2
     key = (matMode.getFunctor(),2)
     canonicalMode = declare.asMode( "%s(i,o)" % matMode.getFunctor())
-    if not self.ws._hasHandleExpr(key):
+    if not key in self._handleExpr:
       variable_name = "M__" + matMode.getFunctor()
       val = self._wrapDBMatrix(self.db.matrix(canonicalMode,False))
-      self.ws._insertHandleExpr(key, variable_name, val)
+      self._insertHandleExpr(key, variable_name, val)
     if self.db.transposeNeeded(matMode,transpose):
-      return self._transposeMatrixExpr(self.ws._getHandleExpr(key))
+      return self._transposeMatrixExpr(self._handleExpr[key])
     else:
-      return self.ws._getHandleExpr(key)
+      return self._handleExpr[key]
 
   def _ones(self,typeName):
     """Wraps a call to db.ones() """
@@ -510,36 +532,3 @@ class Workspace(object):
     self.dataLossArgs = None
     # gradient of loss expression wrt each parameter
     self.dataLossGradExprs = None
-
-    # The workspace also caches 'handle expressions' for some of the
-    # objects in the tensorlog database.  The handle expressions are
-    # indexed by a (functor,arity) pair. Handle expressions must be
-    # inserted by calling workspace.insertHandleExpr().
-    self._handleExpr = {}
-    # For each handle expression, there is some underlying variable
-    # with a gradient that is used.  Often this is the same as the
-    # handle expression, but not always.  These are indexed by
-    # functor,arity key.
-    self._handleExprVar = {}
-
-  def _hasHandleExpr(self,key):
-    """ Check if a handle expression has been assigned to this key """
-    return key in self._handleExpr
-
-  def _getHandleExpr(self,key):
-    """return the handle expression for a matrixdb relation """
-    return self._handleExpr[key]
-
-  def _getHandleExprVariable(self,key):
-    """Return the variable whose gradient is used to adjust the expression
-    for a matrixdb relation """
-    return self._handleExprVar[key]
-
-  def _insertHandleExpr(self, key, varName, val):
-    """Insert a new handle expression, by delegation to the containing
-    cross-compiler """
-    self.xcomp._insertHandleExpr(key,varName,val)
-
-  def _getParamVariables(self):
-    """ Convenience method to find variables corresponding to paramaters """
-    return map(lambda key:self._getHandleExprVariable(key), self.xcomp.prog.getParamList())

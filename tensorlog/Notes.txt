@@ -58,21 +58,8 @@ Proposed simple -  _ means python object or else argument of comline.parseFOO
 
 Next actions:
 
- sort out declarations for parameters - maybe ':- trainable(functor,arity)', - done
- add, in compile, default to marked params - maybe add some sort of initializer mechanism
-
- cache and lazy evaluation -DONE
-  (args,expr) = compiler.loss("mode")
-  (args,expr) = compiler.unregularizedLoss("mode")
-  (args,expr) = compiler.inference("mode")
-  compiler.pprint("mode",...) = print abstract tensorlog function
-
- # maybe also lossFunction, etc that return python functions, with optional kw args
- # for stuff like session, and that optionally wrap/don't wrap the 
- # inputs and outputs as scipy.
-
-  typeName = compiler.wrapInput(stringOrIntOrOneHot,typeName) -need test
-  typeName = compiler.wrapOutput(typeName) - need test
+   - upload dialog-toy
+   - start on toy for provenance
 
 Question->query idea
 

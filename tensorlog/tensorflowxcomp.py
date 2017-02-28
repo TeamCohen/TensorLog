@@ -58,18 +58,19 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   def getInputName(self,mode):
     """ String key for the input placeholder
     """
-    assert len(self.ws.inferenceArgs)==1
-    return self.ws.inferenceArgs[0].name
+    assert len(self._wsDict[mode].inferenceArgs)==1
+    return self._wsDict[mode].inferenceArgs[0].name
 
   def getTargetName(self,mode):
     """ String key for the target-output placeholder
     """
-    assert len(self.ws.dataLossArgs)==2
-    return self.ws.dataLossArgs[-1].name
+    assert len(self._wsDict[mode].dataLossArgs)==2
+    return self._wsDict[mode].dataLossArgs[-1].name
 
   def getFeedDict(self,mode,X,Y,wrapped=False):
     """ Create a feed dictionary for training based on X and Y
     """
+    mode = self.ensureCompiled(mode)
     (X,Y) = self._ensureWrapped(X,Y,wrapped)
     return { self.getInputName(mode):X, self.getTargetName(mode):Y }
 
@@ -101,14 +102,14 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
           runAndSummarize(fd,i)
 
   def accuracy(self,mode,X,Y,wrapped=False):
-    # TODO advance to AbstractCrossCompiler?
     """ Return accuracy of a model on a test set
     """
-    X,Y = self._ensureWrapped(X,Y,wrapped)
-    fd = self.getFeedDict(mode,X,Y,wrapped=True)
-    Y_ = self.getWorkspace(mode).inferenceExpr
-    Y = self.getWorkspace(mode).dataLossArgs[-1]
-    correct_prediction = tf.equal(tf.argmax(Y,1), tf.argmax(Y_,1))
+    mode = self.ensureCompiled(mode)
+    Xval,trueYVal = self._ensureWrapped(X,Y,wrapped)
+    trueY = tf.placeholder(tf.float32, shape=trueYVal.shape, name="tensorlog/trueY")
+    fd = { self.getInputName(mode):Xval, trueY.name:trueYVal }
+    (_, Y_) = self.inference(mode)
+    correct_prediction = tf.equal(tf.argmax(trueY,1), tf.argmax(Y_,1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     self.ensureSessionInitialized()
     with self.session.as_default():
@@ -140,7 +141,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     TX,TY = self._ensureWrapped(TX,TY,False)
 
     lossFun = self.dataLossFunction(targetMode,wrapInputs=False,unwrapOutputs=False)
-    def printLoss(msg,X,Y): print msg,lossFun((X,Y))
+    def printLoss(msg,X,Y): print msg,lossFun(X,Y)
     def printAccuracy(msg,X,Y): print msg,self.accuracy(targetMode,X,Y,wrapped=True)
 
     expt.Expt.timeAction('computing train loss',lambda:printLoss('initial train loss',X,Y))
@@ -160,8 +161,8 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
       expt.Expt.timeAction('saving trained model', lambda:prog.db.serialize(savedModel))
 
     def savePredictions(fileName):
-      inferenceFun = self.inferenceFunction(mode,wrapInput=False,wrapOutput=False)
-      Y_ = inferenceFunction(TX)
+      inferenceFun = self.inferenceFunction(targetMode,wrapInputs=False,unwrapOutputs=True)
+      Y_ = inferenceFun(TX)
       # Y_ is unwrapped, but need to get unwrapped version of TX from testData
       expt.Expt.predictionAsProPPRSolutions(fileName,targetMode.functor,prog.db,testData.getX(targetMode),Y_)
 
@@ -242,24 +243,26 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     self.ws.dataLossExpr = tf.reduce_sum(-target_y * tf.log(inferenceReplacing0With1))
     self.ws.dataLossGradExprs = tf.gradients(self.ws.dataLossExpr,self.getParamVariables(mode))
 
-  def _asFunction(self,args,expr,wrapInputs,unwrapOutputs):
-    def closure(rawInputs,session=None):
-       inputs = map(self._wrapMsg,rawInputs) if wrapInputs else rawInputs
-       bindings = dict(zip(args, inputs))
-       if session is None:
-         self.ensureSessionInitialized()
-         with self.session.as_default():
-           tmp = expr.eval(feed_dict=bindings)
-       else:
-         with session.as_default():
-           tmp = expr.eval(feed_dict=bindings)
-       return self._unwrapOutput(tmp) if unwrapOutputs else tmp
+  def _asOneInputFunction(self,arg1,expr,wrapInputs,unwrapOutputs):
+    def closure(rawInput1,session=None):
+      input1 = self._wrapMsg(rawInput1) if wrapInputs else rawInput1
+      bindings = {arg1:input1}
+      return self._callAndUnwrap(expr,bindings,unwrapOutputs,session)
     return closure
 
-  def _exprListAsUpdateFunction(self,args,exprList,wrapInputs,unwrapOutputs):
-    def closure(rawInputs,session=None):
-      inputs = map(self._wrapMsg,rawInputs) if wrapInputs else rawInputs
-      bindings = dict(zip(args, inputs))
+  def _asTwoInputFunction(self,arg1,arg2,expr,wrapInputs,unwrapOutputs):
+    def closure(rawInput1,rawInput2,session=None):
+      input1 = self._wrapMsg(rawInput1) if wrapInputs else rawInput1
+      input2 = self._wrapMsg(rawInput2) if wrapInputs else rawInput2
+      bindings = {arg1:input1,arg2:input2}
+      return self._callAndUnwrap(expr,bindings,unwrapOutputs,session)
+    return closure
+
+  def _exprListAsUpdateFunction(self,arg1,arg2,exprList,wrapInputs,unwrapOutputs):
+    def closure(rawInput1,rawInput2,session=None):
+      input1 = self._wrapMsg(rawInput1) if wrapInputs else rawInput1
+      input2 = self._wrapMsg(rawInput2) if wrapInputs else rawInput2
+      bindings = {arg1:input1,arg2:input2}
       if session is None:
         self.ensureSessionInitialized()
         with self.session.as_default():
@@ -273,6 +276,16 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
         return zip(self.prog.getParamList(), rawUpdates)
     return closure
 
+  def _callAndUnwrap(self,expr,bindings,unwrapOutputs,session):
+    # helper for _asXInputFunction's
+    if session is None:
+      self.ensureSessionInitialized()
+      with self.session.as_default():
+        tmp = expr.eval(feed_dict=bindings)
+    else:
+      with session.as_default():
+        tmp = expr.eval(feed_dict=bindings)
+    return self._unwrapOutput(tmp) if unwrapOutputs else tmp
 
   def show(self,verbose=0):
     """ Print a summary of current workspace to stdout """
@@ -284,7 +297,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   def getLearnedParam(self,key):
     self.ensureSessionInitialized()
     with self.session.as_default():
-      varVal = self.ws._handleExprVar[key].eval()
+      varVal = self._handleExprVar[key].eval()
     # same logic works for param values as param updates
     return self._unwrapUpdate(key, varVal)
 
@@ -307,7 +320,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
     # instead?
     v = tf.Variable(val, name="tensorlog/"+name)
     self.tfVarsToInitialize.append(v)
-    self.ws._handleExpr[key] = self.ws._handleExprVar[key] = v
+    self._handleExpr[key] = self._handleExprVar[key] = v
     self.summarize(name,v)
 
   def summarize(self,name,v):
@@ -383,7 +396,7 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
       # vectors are dense so they are just stored as Variables
       v = tf.Variable(val, name="tensorlog/"+name)
       self.tfVarsToInitialize.append(v)
-      self.ws._handleExpr[key] = self.ws._handleExprVar[key] = v
+      self._handleExpr[key] = self._handleExprVar[key] = v
       self.summarize(name,v)
     else:
       # matrixes are sparse so we need to convert them into
@@ -410,8 +423,8 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
       # note: the "valueVar+0.0" seems to be necessary to get a non-zero
       # gradient, but I don't understand why.  w/o this there is no "read"
       # node in for the variable in the graph and the gradient fails
-      self.ws._handleExpr[key] = tf.SparseTensor(indiceVar,valueVar+0.0,[nRows,nCols])
-      self.ws._handleExprVar[key] = valueVar
+      self._handleExpr[key] = tf.SparseTensor(indiceVar,valueVar+0.0,[nRows,nCols])
+      self._handleExprVar[key] = valueVar
       # record the variables that need to be initialized
       self.tfVarsToInitialize.append(indiceVar)
       self.tfVarsToInitialize.append(valueVar)
@@ -419,7 +432,7 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
       self.summarize("%s_value" % name,valueVar)
 
   def _unwrapUpdate(self,key,up):
-    # we will optimize by updating the ws._handleExprVar's, which are,
+    # we will optimize by updating the _handleExprVar's, which are,
     # for a SparseTensor, the value expressions.  to check gradients
     # and such we will need to convert the value updates to tensorlog
     # sparse matrix updates.

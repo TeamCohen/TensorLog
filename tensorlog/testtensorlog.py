@@ -855,7 +855,18 @@ class TestExpt(unittest.TestCase):
     prog = program.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData}
-    return expt.Expt(params).run()
+    result = expt.Expt(params).run()
+#    for mode in testData.modesToLearn():
+#      X = testData.getX(mode)
+#      Y = testData.getY(mode)
+#      Y_ = prog.eval(mode,[X])
+#      print 'mode',mode
+#      dX = db.matrixAsSymbolDict(X)
+#      dY = db.matrixAsSymbolDict(Y)
+#      dY_ = db.matrixAsSymbolDict(Y_)
+#      for i in sorted(dX.keys()):
+#        print i,'X',dX[i],'Y',dY[i],'Y_',sorted(dY_[i].items(),key=lambda (key,val):-val)
+    return result
 
   def runMToyExpt2(self):
     db = matrixdb.MatrixDB.uncache(
@@ -865,9 +876,7 @@ class TestExpt(unittest.TestCase):
         self.cacheFile('mtoy-train.dset'),db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = program.ProPPRProgram.load(
-        [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
-        db=db)
+    prog = program.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':learn.FixedRateSGDLearner(prog)}
     return expt.Expt(params).run()
@@ -880,9 +889,7 @@ class TestExpt(unittest.TestCase):
         self.cacheFile('mtoy-train.dset'),db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = program.ProPPRProgram.load(
-        [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
-        db=db)
+    prog = program.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':plearn.ParallelAdaGradLearner(prog)}
     return expt.Expt(params).run()

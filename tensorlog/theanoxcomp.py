@@ -21,19 +21,29 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     self.ws.dataLossExpr = (-target_y * self._applyOpToNonzerosOfDense(TT.log,self.ws.inferenceExpr)).mean()
     self.ws.dataLossGradExprs = theano.grad(self.ws.dataLossExpr, self.getParamVariables(mode))
 
-  def _asFunction(self,args,expr,wrapInputs,unwrapOutputs):
-    pyfun = theano.function(inputs=args, outputs=expr)
-    def closure(rawInputs):
-       inputs = map(self._wrapMsg,rawInputs) if wrapInputs else rawInputs
-       tmp = pyfun(*inputs)[0]
+  def _asOneInputFunction(self,arg1,expr,wrapInputs,unwrapOutputs):
+    pyfun = theano.function(inputs=[arg1], outputs=expr)
+    def closure(rawInput1):
+       input1 = self._wrapMsg(rawInput1) if wrapInputs else rawInput1
+       tmp = pyfun(input1)[0]
        return self._unwrapOutput(tmp) if unwrapOutputs else tmp
     return closure
 
-  def _exprListAsUpdateFunction(self,args,exprList,wrapInputs,unwrapOutputs):
-    pyfunReturningList = theano.function(inputs=args, outputs=exprList)
-    def closure(rawInputs):
-      inputs = map(self._wrapMsg,rawInputs) if wrapInputs else rawInputs
-      rawUpdates = pyfunReturningList(*inputs)
+  def _asTwoInputFunction(self,arg1,arg2,expr,wrapInputs,unwrapOutputs):
+    pyfun = theano.function(inputs=[arg1,arg2], outputs=expr)
+    def closure(rawInput1,rawInput2):
+      input1 = self._wrapMsg(rawInput1) if wrapInputs else rawInput1
+      input2 = self._wrapMsg(rawInput2) if wrapInputs else rawInput2
+      tmp = pyfun(input1,input2)[0]
+      return self._unwrapOutput(tmp) if unwrapOutputs else tmp
+    return closure
+
+  def _exprListAsUpdateFunction(self,arg1,arg2,exprList,wrapInputs,unwrapOutputs):
+    pyfunReturningList = theano.function(inputs=[arg1,arg2], outputs=exprList)
+    def closure(rawInput1,rawInput2):
+      input1 = self._wrapMsg(rawInput1) if wrapInputs else rawInput1
+      input2 = self._wrapMsg(rawInput2) if wrapInputs else rawInput2
+      rawUpdates = pyfunReturningList(input1,input2)
       if unwrapOutputs:
         result = map(lambda key,rawUpdate:(key,self._unwrapUpdate(key,rawUpdate)), self.prog.getParamList(), rawUpdates)
         return result
@@ -42,7 +52,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     return closure
 
   def _insertHandleExpr(self,key,name,val):
-    self.ws._handleExpr[key] = self.ws._handleExprVar[key] = theano.shared(val, name=name)
+    self._handleExpr[key] = self._handleExprVar[key] = theano.shared(val, name=name)
 
   def _applyOpToNonzerosOfDense(self,op,expr):
     # useful subroutine

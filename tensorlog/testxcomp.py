@@ -294,7 +294,7 @@ class TestXCGrad(testtensorlog.TestGrad):
         print 'grad check for compiler',xc.__class__
         gradFun = xc.dataLossGradFunction(mode_string)
         updates_with_string_keys = {}
-        paramsWithUpdates =  gradFun((data.get_x(),data.get_y()))
+        paramsWithUpdates =  gradFun(data.get_x(),data.get_y())
         for (functor,arity),up in paramsWithUpdates:
           upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
           for fact,grad_of_fact in upDict.items():
@@ -349,7 +349,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       self.prog.db.markAsParameter('weighted',1)
       #xc.compile(self.mode)
       gradFun = xc.dataLossGradFunction('predict/io')
-      updates = gradFun((X,Y))
+      updates = gradFun(X,Y)
       paramKey,w = updates[0]
       # w is different from the w in the corresponding testtensorlog test,
       # which is a crossEntropy gradient for each example, but it should have
@@ -377,10 +377,10 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       self.prog.db.markAsParameter('weighted',1)
 
       lossFun = xc.dataLossFunction('predict/io')
-      loss0 = lossFun((X,Y))
+      loss0 = lossFun(X,Y)
       print 'initial train data loss',loss0
       TX,TY = testtensorlog.matrixAsTrainingData(self.labeledData,'test',2)
-      loss1 = lossFun((TX,TY))
+      loss1 = lossFun(TX,TY)
       print 'initial test data loss',loss1
       acc0 = xc.accuracy('predict/io',X,Y)
       print 'initial train accuracy',acc0
@@ -393,9 +393,9 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
       xc.optimizeDataLoss('predict/io', optimizer, X, Y, epochs=20)
 
-      loss2 = lossFun((X,Y))
+      loss2 = lossFun(X,Y)
       print 'final train data loss',loss2
-      loss3 = lossFun((TX,TY))
+      loss3 = lossFun(TX,TY)
       print 'final test data loss',loss3
       acc2 = xc.accuracy('predict/io',X,Y)
       print 'final train accuracy',acc2
@@ -507,33 +507,37 @@ class TestMultiModeXC(unittest.TestCase):
         self.db, os.path.join(testtensorlog.TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     self.prog.setAllWeights()
 
-  def notestIt(self):
+  def testIt(self):
     self.assertTrue(self.dset.modesToLearn() > 1)
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
-      print 'compilerClass',compilerClass
       xc = compilerClass(self.prog)
       # compile everything
       for mode in self.dset.modesToLearn():
         xc.ensureCompiled(mode)
       # check the variables
-      for mode in self.dset.modesToLearn():
-        print 'vars for mode',str(mode),map(lambda x:x.name, xc.getParamVariables(mode))
-      # learning
       optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
       session = tf.Session()
       session.run(tf.global_variables_initializer())
-      for i in range(5): #epochs
+      # set up for training
+      trainStep = {}
+      for mode in self.dset.modesToLearn():
+        (dataLossArgs,dataLossExpr) = xc.dataLoss(mode)
+        trainStep[mode] = optimizer.minimize(dataLossExpr, var_list=xc.getParamVariables(mode))
+      # train
+      for i in range(2): #epochs
         for mode in self.dset.modesToLearn():
-          print 'mode',mode
           X = self.dset.getX(mode)
           Y = self.dset.getY(mode)
-          (_,dataLossExpr) = xc.dataLoss(mode)
-          trainStep = optimizer.minimize(dataLossExpr, var_list=xc.getParamVariables(mode))
           fd = xc.getFeedDict(mode,X,Y,wrapped=False)
-          session.run([trainStep],feed_dict=fd)
-#        inferenceFun = xc.inferenceFunction(mode)
-#        Y_ = inferenceFun(X,session)
+          session.run(trainStep[mode],feed_dict=fd)
+      # test
+      for mode in self.dset.modesToLearn():
+        X = self.dset.getX(mode)
+        Y = self.dset.getY(mode)
+        Y_ = xc.inferenceFunction(mode)(X)
+        acc = xc.accuracy(mode,X,Y)
+        print 'mode',mode,'acc',acc
 
 
 if __name__ == "__main__":
