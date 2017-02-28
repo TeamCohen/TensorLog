@@ -24,6 +24,7 @@ conf.ignore_types = False;         conf.help.ignore_types = 'Ignore type declara
 
 NULL_ENTITY_NAME = '__NULL__'  #name of null entity, which is returned when a proof fails
 THING = '__THING__'            #name of default type
+TRAINABLE_DECLARATION_FUNCTOR = 'trainable'
 
 class MatrixDB(object):
   """ A logical database implemented with sparse matrices """
@@ -197,12 +198,16 @@ class MatrixDB(object):
     return (mode.functor,mode.arity) in self.paramSet
 
   def markAsParam(self,functor,arity):
+    logging.warn('MatrixDB.markAsParam is deprecated - use markAsParameter')
+    self.markAsParameter(functor,arity)
+
+  def markAsParameter(self,functor,arity):
     """ Mark a predicate as a parameter """
     if (functor,arity) not in self.paramSet:
       self.paramSet.add((functor,arity))
       self.paramList.append((functor,arity))
 
-  def clearParamMarkings(self):
+  def clearParameterMarkings(self):
     """ Clear previously marked parameters"""
     self.paramSet = set()
     self.paramList = []
@@ -256,20 +261,22 @@ class MatrixDB(object):
       result[r] = self.rowAsSymbolDict(m.getrow(r),typeName=typeName)
     return result
 
-  def matrixAsPredicateFacts(self,functor,arity,m,typeName=THING):
+  def matrixAsPredicateFacts(self,functor,arity,m):
     result = {}
     m1 = scipy.sparse.coo_matrix(m)
+    typeName1 = self.getArgType(functor,arity,0)
     if arity==2:
+      typeName2 = self.getArgType(functor,arity,1)
       for i in range(len(m1.data)):
-        a = self._stab[typeName].getSymbol(m1.row[i])
-        b = self._stab[typeName].getSymbol(m1.col[i])
+        a = self._stab[typeName1].getSymbol(m1.row[i])
+        b = self._stab[typeName2].getSymbol(m1.col[i])
         w = m1.data[i]
         result[parser.Goal(functor,[a,b])] = w
     else:
       assert arity==1,"Arity (%d) must be 1 or 2" % arity
       for i in range(len(m1.data)):
         assert m1.row[i]==0, "Expected 0 at m1.row[%d]" % i
-        b = self._stab[typeName].getSymbol(m1.col[i])
+        b = self._stab[typeName1].getSymbol(m1.col[i])
         w = m1.data[i]
         result[parser.Goal(functor,[b])] = w
     return result
@@ -393,13 +400,20 @@ class MatrixDB(object):
         return float(0.0)
 
     line = line.strip()
+
     if not line: return
     if line.startswith('#'):
       # look for a type declaration
       place = line.find(':-')
       if place>=0:
         decl = declare.TypeDeclaration(line[place+len(':-'):].strip())
-        self.addTypeDeclaration(decl,filename,k)
+        if decl.getFunctor()==TRAINABLE_DECLARATION_FUNCTOR and decl.getArity()==2 and (decl.arg(1) in ['1','2']):
+          # declaration is trainable(foo,1) or trainable(foo,2)
+          trainableFunctor = decl.arg(0)
+          trainableArity = int(decl.arg(1))
+          self.markAsParameter(trainableFunctor,trainableArity)
+        else:
+          self.addTypeDeclaration(decl,filename,k)
       return
 
     # buffer the parts of the line, which can be have either 1 or 2
@@ -529,21 +543,6 @@ class MatrixDB(object):
       db.addFile(f)
     logging.info('loaded database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
     return db
-
-class MatrixParseError(Exception):
-  def __init__(self,msg):
-    self.msg = msg
-  def __str__(self):
-    return str(self.msg)
-
-class MatrixFileError(Exception):
-  def __init__(self,fname,line,p):
-    self.filename=fname
-    self.parseError=p
-    self.line=line
-  def __str__(self):
-    return "on line %d of %s: %s" % (self.line,self.filename,str(self.parseError))
-
 
 #
 # test main

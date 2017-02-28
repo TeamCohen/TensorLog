@@ -283,9 +283,9 @@ class TestXCGrad(testtensorlog.TestGrad):
   def xgrad_check(self,rule_strings,mode_string,params,xyPairs,expected):
     rules = testtensorlog.rules_from_strings(rule_strings)
     prog = program.Program(db=self.db,rules=rules)
-    prog.db.clearParamMarkings()
+    prog.db.clearParameterMarkings()
     for (functor,arity) in params:
-      prog.db.markAsParam(functor,arity)
+      prog.db.markAsParameter(functor,arity)
     for x,ys in xyPairs:
       data = testtensorlog.DataBuffer(self.db)
       data.add_data_symbols(x,ys)
@@ -346,7 +346,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
       xc = compilerClass(self.prog)
-      self.prog.db.markAsParam('weighted',1)
+      self.prog.db.markAsParameter('weighted',1)
       #xc.compile(self.mode)
       gradFun = xc.dataLossGradFunction('predict/io')
       updates = gradFun((X,Y))
@@ -362,50 +362,6 @@ class TestXCProPPR(testtensorlog.TestProPPR):
 
   def testMultiLearn1(self):
     pass
-#  def testMultiLearn1(self):
-#    mode = declare.ModeDeclaration('predict(i,o)')
-#    dset = dataset.Dataset.loadExamples(
-#        self.prog.db,
-#        os.path.join(TEST_DATA_DIR,"toytrain.examples"),
-#        proppr=True)
-#    for mode in dset.modesToLearn():
-#      X = dset.getX(mode)
-#      Y = dset.getY(mode)
-#      print mode
-#      print "\tX "+mutil.pprintSummary(X)
-#      print "\tY "+mutil.pprintSummary(Y)
-#
-#    learner = learn.FixedRateGDLearner(self.prog,epochs=5)
-#    P0 = learner.datasetPredict(dset)
-#    acc0 = learner.datasetAccuracy(dset,P0)
-#    xent0 = learner.datasetCrossEntropy(dset,P0)
-#    print 'toy train: acc0',acc0,'xent1',xent0
-#
-#    learner.train(dset)
-#
-#    P1 = learner.datasetPredict(dset)
-#    acc1 = learner.datasetAccuracy(dset,P1)
-#    xent1 = learner.datasetCrossEntropy(dset,P1)
-#    print 'toy train: acc1',acc1,'xent1',xent1
-#
-#    self.assertTrue(acc0<acc1)
-#    self.assertTrue(xent0>xent1)
-#    self.assertTrue(acc1==1)
-#
-#    Udset = dataset.Dataset.loadExamples(
-#        self.prog.db,
-#        os.path.join(TEST_DATA_DIR,"toytest.examples"),
-#        proppr=True)
-#
-#    P2 = learner.datasetPredict(Udset)
-#    acc2 = learner.datasetAccuracy(Udset,P2)
-#    xent2 = learner.datasetCrossEntropy(Udset,P2)
-#    print 'toy test: acc2',acc2,'xent2',xent2
-#
-#    self.assertTrue(acc2==1)
-#    ##
-#
-#
 
   def testLearn(self):
     mode = declare.ModeDeclaration('predict(i,o)')
@@ -418,7 +374,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
         xc = compilerClass(self.prog,compilerClass.__name__+".summary")
       else:
         xc = compilerClass(self.prog)
-      self.prog.db.markAsParam('weighted',1)
+      self.prog.db.markAsParameter('weighted',1)
 
       lossFun = xc.dataLossFunction('predict/io')
       loss0 = lossFun((X,Y))
@@ -539,6 +495,46 @@ class TestXCExpt(unittest.TestCase):
     y = inferenceFun(rawInput)
     r,c = y.shape
     self.assertEqual(c,expectedCols['label'])
+
+class TestMultiModeXC(unittest.TestCase):
+
+  def setUp(self):
+    self.db = matrixdb.MatrixDB.loadFile(
+        os.path.join(testtensorlog.TEST_DATA_DIR,'matchtoy.cfacts'))
+    self.prog = program.ProPPRProgram.load(
+        [os.path.join(testtensorlog.TEST_DATA_DIR,"matchtoy.ppr")],db=self.db)
+    self.dset = dataset.Dataset.loadExamples(
+        self.db, os.path.join(testtensorlog.TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
+    self.prog.setAllWeights()
+
+  def notestIt(self):
+    self.assertTrue(self.dset.modesToLearn() > 1)
+    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+      print 'compilerClass',compilerClass
+      xc = compilerClass(self.prog)
+      # compile everything
+      for mode in self.dset.modesToLearn():
+        xc.ensureCompiled(mode)
+      # check the variables
+      for mode in self.dset.modesToLearn():
+        print 'vars for mode',str(mode),map(lambda x:x.name, xc.getParamVariables(mode))
+      # learning
+      optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+      session = tf.Session()
+      session.run(tf.global_variables_initializer())
+      for i in range(5): #epochs
+        for mode in self.dset.modesToLearn():
+          print 'mode',mode
+          X = self.dset.getX(mode)
+          Y = self.dset.getY(mode)
+          (_,dataLossExpr) = xc.dataLoss(mode)
+          trainStep = optimizer.minimize(dataLossExpr, var_list=xc.getParamVariables(mode))
+          fd = xc.getFeedDict(mode,X,Y,wrapped=False)
+          session.run([trainStep],feed_dict=fd)
+#        inferenceFun = xc.inferenceFunction(mode)
+#        Y_ = inferenceFun(X,session)
+
 
 if __name__ == "__main__":
   logging.basicConfig(level=logging.INFO)

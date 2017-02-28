@@ -164,7 +164,7 @@ if __name__=="__main__":
         paramSpecs = optdict['--params'].split(",")
         for spec in paramSpecs:
             functor,arity = spec.split("/")
-            optdict['db'].markAsParam(functor,int(arity))
+            optdict['db'].markAsParameter(functor,int(arity))
     optdict['prog'].setFeatureWeights(epsilon=weightEpsilon)
     optdict['prog'].setRuleWeights(epsilon=weightEpsilon)
     learner = None

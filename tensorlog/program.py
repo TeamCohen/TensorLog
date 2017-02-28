@@ -249,11 +249,11 @@ class ProPPRProgram(Program):
             logging.warn('no rule features have been defined')
         elif ruleIdPred is not None:
             assert (ruleIdPred,1) in set.matEncoding,'there is no unary predicate called %s' % ruleIdPred
-            self.db.markAsParam("weighted",1)
+            self.db.markAsParameter("weighted",1)
             self.db.setParameter(self.vector(declare.asMode('%s(o)' % ruleIdPred)) * epsilon)
         else:
             assert self.db.isTypeless(), 'cannot setRuleWeights for db with declared types unless ruleIdPred is given'
-            self.db.markAsParam("weighted",1)
+            self.db.markAsParameter("weighted",1)
             if weights==None:
                 weights = self.db.onehot(self.ruleIds[0])
                 for rid in self.ruleIds[1:]:
@@ -288,7 +288,7 @@ class ProPPRProgram(Program):
 
     def setFeatureWeight(self,paramName,arity,weight):
         """ Set a particular parameter weight. """
-        self.db.markAsParam(paramName,arity)
+        self.db.markAsParameter(paramName,arity)
         self.db.setParameter(paramName,arity,weight)
 
     def _moveFeaturesToRHS(self,rule0):
@@ -313,7 +313,7 @@ class ProPPRProgram(Program):
                 rule.rhs.append(goal)
             rule.rhs.append( parser.Goal(paramName,[outputVar]) )
             # record the feature predicate 'foo' as a parameter
-            if self.db: self.db.markAsParam(paramName,1)
+            if self.db: self.db.markAsParameter(paramName,1)
             # record the domain of the predicate
             for goal in rule0.findall:
                 if outputVar in goal.args:

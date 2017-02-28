@@ -555,9 +555,9 @@ class TestGrad(unittest.TestCase):
     for x,ys in xyPairs:
       data.add_data_symbols(x,ys)
     #mark params: should be pairs (functor,arity)
-    prog.db.clearParamMarkings()
+    prog.db.clearParameterMarkings()
     for functor,arity in params:
-      prog.db.markAsParam(functor,arity)
+      prog.db.markAsParameter(functor,arity)
     #compute gradient
     learner = learn.OnePredFixedRateGDLearner(prog)
     updates = learner.crossEntropyGrad(mode,data.get_x(),data.get_y())
@@ -573,9 +573,10 @@ class TestProPPR(unittest.TestCase):
     self.labeledData = self.prog.db.createPartner()
     def moveToPartner(db,partner,functor,arity):
       partner.matEncoding[(functor,arity)] = db.matEncoding[(functor,arity)]
-      if (functor,arity) in db.params:
+      if (functor,arity) in self.prog.getParamList():
         partner.params.add((functor,arity))
-        db.params.remove((functor,arity))
+        db.paramSet.remove((functor,arity))
+        db.paramList.remove((functor,arity))
       del db.matEncoding[(functor,arity)]
     moveToPartner(self.prog.db,self.labeledData,'train',2)
     moveToPartner(self.prog.db,self.labeledData,'test',2)
@@ -1040,6 +1041,30 @@ class TestTypeSemantics(unittest.TestCase):
   def testTypeInference(self):
     fun = self.prog.compile(declare.asMode("predict/io"))
     self.assertEqual(fun.outputType, "label")
+
+class TestTrainableDeclarations(unittest.TestCase):
+
+  def testIt(self):
+    db = matrixdb.MatrixDB()
+    db.addLines([
+        "# :- trainable(w1,1)\n",
+        "# :- trainable(w2,2)\n",
+        "# :- trainable(a,b)\n",
+        "# :- w1(word)\n",
+        "# :- w2(word,word)\n",
+        "\t".join(["w1","hello"])+"\n",
+        "\t".join(["w2","hello","there"])+"\n"
+        ])
+    print 'params',db.paramList
+    self.assertTrue(db.isParameter(declare.asMode("w1(i)")))
+    self.assertTrue(db.isParameter(declare.asMode("w2(i,i)")))
+    self.assertFalse(db.isParameter(declare.asMode("trainable(i,i)")))
+    w1 = db.matrixAsPredicateFacts('w1',1,db.getParameter('w1',1))
+    w2 = db.matrixAsPredicateFacts('w2',2,db.getParameter('w2',2))
+    self.assertTrue(len(w1.keys())==1)
+    self.assertTrue(str(w1.keys()[0])=="w1(hello)")
+    self.assertTrue(len(w2.keys())==1)
+    self.assertTrue(str(w2.keys()[0])=="w2(hello,there)")
 
 if __name__=="__main__":
   if len(sys.argv)==1:

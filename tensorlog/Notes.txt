@@ -58,7 +58,7 @@ Proposed simple -  _ means python object or else argument of comline.parseFOO
 
 Next actions:
 
- sort out declarations for parameters - maybe ':- trainable(functor,arity)',
+ sort out declarations for parameters - maybe ':- trainable(functor,arity)', - done
  add, in compile, default to marked params - maybe add some sort of initializer mechanism
 
  cache and lazy evaluation -DONE

@@ -220,14 +220,14 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   # standard xcomp interface
   #
 
-  # override this so I can use a name scope
+  # TOFIX - clean up
+  # override this so I can mess with summaryFiles
   def _doCompile(self,fun,mode):
-    with tf.name_scope("tensorlog"):
-      self._setupGlobals()
-      (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self._fun2Expr(fun)
-      self._buildLossExpr(mode)
-      if self.summaryFile:
-        self.summaryMergeAll = tf.summary.merge_all()
+    self._setupGlobals()
+    (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self._fun2Expr(fun)
+    self._buildLossExpr(mode)
+    if self.summaryFile:
+      self.summaryMergeAll = tf.summary.merge_all()
 
   def _buildLossExpr(self,mode):
     target_y = self._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self.ws.inferenceOutputType)
@@ -305,7 +305,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
   def _insertHandleExpr(self,key,name,val):
     # TODO this machinery is a lot like get_variable, can I use that
     # instead?
-    v = tf.Variable(val, name=name)
+    v = tf.Variable(val, name="tensorlog/"+name)
     self.tfVarsToInitialize.append(v)
     self.ws._handleExpr[key] = self.ws._handleExprVar[key] = v
     self.summarize(name,v)
@@ -381,7 +381,7 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     (functor,arity) = key
     if arity<2:
       # vectors are dense so they are just stored as Variables
-      v = tf.Variable(val, name=name)
+      v = tf.Variable(val, name="tensorlog/"+name)
       self.tfVarsToInitialize.append(v)
       self.ws._handleExpr[key] = self.ws._handleExprVar[key] = v
       self.summarize(name,v)
@@ -405,8 +405,8 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
       # create the handle expression, and save a link back to the
       # underlying varable which will be optimized, ie., the 'values'
       # of the SparseTensor,
-      indiceVar = tf.Variable(np.array(sparseIndices), name="%s_indices" % name)
-      valueVar = tf.Variable(val.data, name="%s_values" % name)
+      indiceVar = tf.Variable(np.array(sparseIndices), name="tensorlog/%s_indices" % name)
+      valueVar = tf.Variable(val.data, name="tensorlog/%s_values" % name)
       # note: the "valueVar+0.0" seems to be necessary to get a non-zero
       # gradient, but I don't understand why.  w/o this there is no "read"
       # node in for the variable in the graph and the gradient fails
