@@ -144,6 +144,8 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       ys = xc.eval([prog.db.onehot(input_symbol)])
       y = ys[0]
       actual = self.db.rowAsSymbolDict(y)
+      ytl=None
+      if compare: ytl=prog.evalSymbols(declare.ModeDeclaration(mode_string),[input_symbol])
       print 'expected',expected_result_dict
       print 'actual',self._removeZeros(actual)
       if compare: print 'actualTL',self.db.rowAsSymbolDict(ytl)
@@ -309,7 +311,7 @@ class TestXCGrad(testtensorlog.TestGrad):
       data.add_data_symbols(x,ys)
       for compilerClass in TESTED_COMPILERS:
         xc = compilerClass(prog)
-        xc.compile(tlogFun,params)
+        xc.compile(mode_string,params)
         
         learner = learnxc.XLearner(prog,xc)
         updates = learner.crossEntropyGrad(mode,data.get_x(),data.get_y())
@@ -319,7 +321,7 @@ class TestXCGrad(testtensorlog.TestGrad):
           upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
           print 'upDict',upDict
           for fact,grad_of_fact in upDict.items():
-            updates_with_string_keys[str(fact)] = grad_of_fact
+            updates_with_string_keys[str(fact)] = -grad_of_fact
         self.check_directions(updates_with_string_keys,expected)
     
 
