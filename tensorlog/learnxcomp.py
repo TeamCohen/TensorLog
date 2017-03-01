@@ -17,7 +17,7 @@ class XLearner(object):
     #if not pad: pad = opfunutil.Scratchpad() 
     result = self.xc.eval([X])[0]
     return result
-  def crossEntropy(Y,P,perExample=False):
+  def crossEntropy(self,Y,P,perExample=False):
     """Compute cross entropy some predications relative to some labels."""
     if perExample: return self.xc.dataLossFun([Y,P])
     else: assert 'No per example xe yet' #return self.xe_all([Y,P])

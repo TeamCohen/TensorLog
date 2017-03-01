@@ -308,7 +308,7 @@ class TestXCGrad(testtensorlog.TestGrad):
       data = testtensorlog.DataBuffer(self.db)
       data.add_data_symbols(x,ys)
       for compilerClass in TESTED_COMPILERS:
-        xc = compilerClass(prog.db)
+        xc = compilerClass(prog)
         xc.compile(tlogFun,params)
         
         learner = learnxc.XLearner(prog,xc)
