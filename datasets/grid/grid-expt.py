@@ -187,5 +187,26 @@ if __name__=="__main__":
         #ops.conf.long_trace = True
         ops.conf.max_trace = True
         expt.Expt(params).run()
+        
+        for dep,compilerClass in CROSS_COMPILE:
+          try:
+            import dep
+            
+            tlogFun = prog.compile(mode)
+            xc = compilerClass(prog.db)
+            xc.compile(tlogFun,params)
+            
+            learner = learnxc.XLearner(prog,xc)
+            
+            params = {'prog':prog,
+                      'trainData':trainData, 'testData':testData,
+                      'savedTestPredictions':'tmp-cache/test.solutions.txt',
+                      'savedTestExamples':'tmp-cache/test.examples',
+                      'learner':learner,
+            }
+            expt.Expt(params).run()
+          except:
+            pass
+        
         if False and NETWORKX:
             visualizeLearned(db,n)
