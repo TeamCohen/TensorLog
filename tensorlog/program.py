@@ -348,7 +348,7 @@ class Interp(object):
         print "ti.list(foo): foo can be a compiled function, eg \"foo/io\", a predicate definition, eg"
         print "              \"foo/2\", or a database predicate, also specified as \"foo/2\"."
         print "ti.list():    list everything."
-        print "ti.eval(\"functor/mode\",\"c\"): evaluate a function on a database constant c"
+        print "ti.eval(\"functor/mode\",\"c\",inputType=type1,outputType=type2): evaluate a function on a database constant c"
         if DEBUGGER_AVAILABLE:
           print "ti.debug(\"functor/mode\",\"c\"): debug the corresponding eval command"
           print "ti.debugDset(\"functor/mode\"[,test=True]): run debugger on a dataset"

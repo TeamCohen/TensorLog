@@ -1,4 +1,3 @@
-
  - export PYTHONPATH=/usr/local/google/home/cohenw/code/TensorLog:$PYTHONPATH
  - live theano add /usr/local/google/home/cohenw/code/Theano
 
@@ -13,6 +12,8 @@ Little jobs:
  - regularizers for cross compilation
  - output types as typename/id
  - clean up tensorflow/tensorlog interfaces, eg wrapping
+ - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
+
 
 Bigger steps:
 

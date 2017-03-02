@@ -117,13 +117,15 @@ def parseDBSpec(spec):
     """Parse a specification for a database, see usage() for parseCommandLine"""
     if isUncachefromSrc(spec):
         cache,src = getCacheSrcPair(spec)
-        return matrixdb.MatrixDB.uncache(cache,src)
+        result = matrixdb.MatrixDB.uncache(cache,src)
     elif spec.endswith(".db"):
-        return matrixdb.MatrixDB.deserialize(spec)
+        result = matrixdb.MatrixDB.deserialize(spec)
     elif spec.endswith(".cfacts"):
-        return matrixdb.MatrixDB.loadFile(spec)
+        result = matrixdb.MatrixDB.loadFile(spec)
     else:
         assert False,'illegal --db spec %s' %spec
+    result.checkTyping()
+    return result
 
 def parseProgSpec(spec,db,proppr=False):
     """Parse a specification for a Tensorlog program,, see usage() for parseCommandLine"""

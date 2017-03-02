@@ -22,8 +22,13 @@ conf = config.Config()
 conf.allow_weighted_tuples = True; conf.help.allow_weighted_tuples = 'Allow last column of cfacts file to be a weight for the fact'
 conf.ignore_types = False;         conf.help.ignore_types = 'Ignore type declarations'
 
-NULL_ENTITY_NAME = '__NULL__'  #name of null entity, which is returned when a proof fails
-THING = '__THING__'            #name of default type
+#name of null entity, which is returned when a proof fails
+NULL_ENTITY_NAME = '__NULL__'
+#name of out-of-vocabulary marker entity
+OOV_ENTITY_NAME = '__OOV__'
+#name of default type
+THING = '__THING__'
+#functor in declarations of trainable relations, eg trainable(posWeight,1)
 TRAINABLE_DECLARATION_FUNCTOR = 'trainable'
 
 class MatrixDB(object):
@@ -50,10 +55,23 @@ class MatrixDB(object):
     result.reservedSymbols.add("i")
     result.reservedSymbols.add("o")
     result.reservedSymbols.add(THING)
-    # always insert NULL_ENTITY_NAME first
+    # always insert special entity names first
     result.insert(NULL_ENTITY_NAME)
     assert result.getId(NULL_ENTITY_NAME)==1
+    result.insert(OOV_ENTITY_NAME)
     return result
+
+  def checkTyping(self,strict=False):
+    if self.isTypeless():
+      logging.info('untyped matrixDB passed checkTyping')
+    else:
+      for i,d in enumerate(self._type):
+        for (functor,arity),typeName in d.items():
+          if typeName==THING:
+            logging.warn('matrixDB relation %s/%d has no type declared for argument %d' % (functor,arity,i+1))
+            if strict: assert False,'inconsistent use of types'
+          else:
+            logging.info('matrixDB relation %s/%d argument %d type %s' % (functor,arity,i+1,typeName))
 
   def isTypeless(self):
     return len(self._stab.keys())==1
@@ -100,9 +118,11 @@ class MatrixDB(object):
     """Number of constants in the database, and dimension of all the vectors/matrices."""
     return self._stab[typeName].getMaxId() + 1
 
-  def onehot(self,s,typeName=None):
+  def onehot(self,s,typeName=None,outOfVocabularySymbolsAllowed=False):
     typeName = self._fillDefault(typeName)
     """A onehot row representation of a symbol."""
+    if outOfVocabularySymbolsAllowed and not self._stab[typeName].hasId(s):
+        return self.onehot(OOV_ENTITY_NAME,typeName)
     assert self._stab[typeName].hasId(s),'constant %s (type %s) not in db' % (s,typeName)
     n = self.dim(typeName)
     i = self._stab[typeName].getId(s)
