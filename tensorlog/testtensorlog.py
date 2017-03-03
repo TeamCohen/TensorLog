@@ -991,11 +991,11 @@ class TestTypes(unittest.TestCase):
 
   def testStabs(self):
     expectedSymLists = {
-        'source':['__NULL__', 'nyt', 'fox'],
-        'relation':['__NULL__', 'r'],
-        'triple':['__NULL__', 'rxy'],
-        'entity':['__NULL__', 'x', 'y'],
-        matrixdb.THING: ['__NULL__', 'a', 'b']
+        'source':['__NULL__', '__OOV__', 'nyt', 'fox'],
+        'relation':['__NULL__', '__OOV__', 'r'],
+        'triple':['__NULL__', '__OOV__', 'rxy'],
+        'entity':['__NULL__', '__OOV__', 'x', 'y'],
+        matrixdb.THING: ['__NULL__', '__OOV__', 'a', 'b']
     }
     self.assertEqual(len(expectedSymLists.keys()), len(self.db._stab.keys()))
     for typeName in expectedSymLists:

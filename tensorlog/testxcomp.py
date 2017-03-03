@@ -432,8 +432,6 @@ class TestXCProPPR(testtensorlog.TestProPPR):
 
 class TestXCExpt(unittest.TestCase):
 
-  #TODO investigate suspiciously identical train/test losses?
-
   def testTCToyTypes(self):
     matrixdb.conf.ignore_types = False
     optdict,args = comline.parseCommandLine(
@@ -451,7 +449,7 @@ class TestXCExpt(unittest.TestCase):
           testData=optdict['testData'],
           targetMode=declare.asMode("predict/io"))
       pbDoc = xc.db.onehot('pb','doc')
-      self.checkXC(xc,'predict/io',pbDoc,{'negPair':114,'posPair':114,'hasWord':58,'weighted':114,'label':4})
+      self.checkXC(xc,'predict/io',pbDoc,{'negPair':115,'posPair':115,'hasWord':59,'weighted':115,'label':5})
       # some checks on the output of pprint
       lines = xc.pprint('predict/io')
       self.assertTrue(lines[0].find("SoftMaxFunction") >= 0)
@@ -481,7 +479,7 @@ class TestXCExpt(unittest.TestCase):
           testData=optdict['testData'],
           targetMode=declare.asMode("predict/io"))
       pbDoc = xc.db.onehot('pb')
-      self.checkXC(xc,'predict/io',pbDoc,collections.defaultdict(lambda:190))
+      self.checkXC(xc,'predict/io',pbDoc,collections.defaultdict(lambda:191))
 
 
   def checkXC(self,xc,mode,rawInput,expectedCols):
