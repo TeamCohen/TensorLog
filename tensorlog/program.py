@@ -6,15 +6,18 @@
 import sys
 import logging
 import collections
+import numpy as np
 
 from tensorlog import bpcompiler
 from tensorlog import comline
 from tensorlog import declare
 from tensorlog import funs
 from tensorlog import matrixdb
+from tensorlog import mutil
 from tensorlog import opfunutil
 from tensorlog import parser
 
+VERSION = '1.3.0'
 
 # externally visible changes:
 #
@@ -119,6 +122,11 @@ class Program(object):
     def getParamList(self):
         """ Return a set of (functor,arity) pairs corresponding to the parameters """
         return self.db.paramList
+
+    def getFunction(self,mode):
+        """ Return the compiled function for a mode """
+        if (mode,0) not in self.function: self.compile(mode)
+        return self.function[(mode,0)]
 
     def evalSymbols(self,mode,symbols,typeName=None):
         """ After compilation, evaluate a function.  Input is a list of
@@ -253,6 +261,7 @@ class ProPPRProgram(Program):
                 weights = self.db.onehot(self.ruleIds[0])
                 for rid in self.ruleIds[1:]:
                     weights = weights + self.db.onehot(rid)
+                weights = mutil.mapData(lambda d:np.clip(d,0.0,1.0), weights)
             self.db.setParameter("weighted",1,weights*epsilon)
 
     def getRuleWeights(self):
@@ -274,6 +283,7 @@ class ProPPRProgram(Program):
             for mode in domainModes[1:]:
                 weights = weights + self.db.matrixPreimage(mode)
             weights = weights * 1.0/len(domainModes)
+            weights = mutil.mapData(lambda d:np.clip(d,0.0,1.0), weights)
             self.db.setParameter(paramName,1,weights*epsilon)
             logging.debug('parameter %s/1 initialized to %s' % (paramName,"+".join(map(lambda dm:'preimage(%s)' % str(dm), domainModes))))
         for (paramName,arity) in self.getParamList():

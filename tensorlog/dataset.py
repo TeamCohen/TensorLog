@@ -238,7 +238,7 @@ class Dataset(object):
                 xsResult[pred] = mutil.stack(xRows)
             for pred in ysTmp.keys():
                 def yRow(ys):
-                  assert len(ys)>0, 'empty output list for an example'
+                  assert len(ys)>0, 'empty output list for example %s %s in file %s' % (pred,x,fileName)
                   yType = db.getRange(pred.getFunctor(),2)
                   accum = db.onehot(ys[0],yType,outOfVocabularySymbolsAllowed=True)
                   for y in ys[1:]:
