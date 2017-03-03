@@ -23,6 +23,7 @@ from tensorlog import dataset
 from tensorlog import declare
 from tensorlog import expt
 from tensorlog import funs
+from tensorlog import interp
 from tensorlog import learn
 from tensorlog import matrixdb
 from tensorlog import mutil
@@ -124,7 +125,7 @@ class TestInterp(unittest.TestCase):
         ["--db", os.path.join(TEST_DATA_DIR,"textcattoy.cfacts"),
          "--prog", os.path.join(TEST_DATA_DIR,"textcat.ppr"),
          "--proppr"])
-    self.ti = program.Interp(optdict['prog'])
+    self.ti = interp.Interp(optdict['prog'])
     self.ti.prog.setFeatureWeights()
 
   def test_list(self):
@@ -839,7 +840,7 @@ class TestExpt(unittest.TestCase):
          "--proppr"])
     optdict['prog'].setFeatureWeights()
     params = {'prog':optdict['prog'],'trainData':optdict['trainData'], 'testData':optdict['testData']}
-    ti = program.Interp(optdict['prog'])
+    ti = interp.Interp(optdict['prog'])
     ti.list("predict/io")
     return expt.Expt(params).run()
 
