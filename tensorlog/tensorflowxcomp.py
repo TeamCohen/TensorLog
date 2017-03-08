@@ -298,7 +298,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
   def insertHandleExpr(self,key,name,val):
     # TODO this machinery is a lot like get_variable, can I use that
     # instead?
-    v = tf.Variable(val, name=name)
+    v = tf.Variable(val, name=name, dtype=tf.float32)
     self.tfVarsToInitialize.append(v)
     self.ws._handleExpr[key] = self.ws._handleExprVar[key] = v
     self.summarize(name,v)
@@ -374,7 +374,7 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     (functor,arity) = key
     if arity<2:
       # vectors are dense so they are just stored as Variables
-      v = tf.Variable(val, name=name)
+      v = tf.Variable(val, name=name, dtype=tf.float32)
       self.tfVarsToInitialize.append(v)
       self.ws._handleExpr[key] = self.ws._handleExprVar[key] = v
       self.summarize(name,v)
@@ -398,8 +398,8 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
       # create the handle expression, and save a link back to the
       # underlying varable which will be optimized, ie., the 'values'
       # of the SparseTensor,
-      indiceVar = tf.Variable(np.array(sparseIndices), name="%s_indices" % name)
-      valueVar = tf.Variable(val.data, name="%s_values" % name)
+      indiceVar = tf.Variable(np.array(sparseIndices), name="%s_indices" % name, dtype=tf.int64)
+      valueVar = tf.Variable(val.data, name="%s_values" % name, dtype=tf.float32)
       # note: the "valueVar+0.0" seems to be necessary to get a non-zero
       # gradient, but I don't understand why.  w/o this there is no "read"
       # node in for the variable in the graph and the gradient fails
