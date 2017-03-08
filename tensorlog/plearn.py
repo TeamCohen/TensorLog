@@ -129,7 +129,7 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
         """" Broadcast the new parameters to the subprocesses """
         paramDict = dict(
             ((functor,arity),self.prog.db.getParameter(functor,arity))
-            for (functor,arity) in self.prog.db.params)
+            for (functor,arity) in self.prog.db.paramList)
         #send one _doAcceptNewParams task to each worker. warning:
         # this seems to work fine....but it is not guaranteed to
         # work from the API, but
@@ -205,7 +205,7 @@ class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
                 totalGradient[(functor,arity)] = grad.multiply(ratePerParam[(functor,arity)])
 
             self.regularizer.regularizeParams(self.prog,totalN)
-            for (functor,arity) in self.prog.db.params:
+            for (functor,arity) in self.prog.db.paramList:
                 m = self.prog.db.getParameter(functor,arity)
                 print 'reg',functor,'/',arity,'m shape',m.shape
                 if (functor,arity) in totalGradient.keys():

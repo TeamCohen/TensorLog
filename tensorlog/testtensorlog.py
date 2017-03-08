@@ -23,6 +23,7 @@ from tensorlog import dataset
 from tensorlog import declare
 from tensorlog import expt
 from tensorlog import funs
+from tensorlog import interp
 from tensorlog import learn
 from tensorlog import matrixdb
 from tensorlog import mutil
@@ -124,7 +125,7 @@ class TestInterp(unittest.TestCase):
         ["--db", os.path.join(TEST_DATA_DIR,"textcattoy.cfacts"),
          "--prog", os.path.join(TEST_DATA_DIR,"textcat.ppr"),
          "--proppr"])
-    self.ti = program.Interp(optdict['prog'])
+    self.ti = interp.Interp(optdict['prog'])
     self.ti.prog.setFeatureWeights()
 
   def test_list(self):
@@ -555,9 +556,9 @@ class TestGrad(unittest.TestCase):
     for x,ys in xyPairs:
       data.add_data_symbols(x,ys)
     #mark params: should be pairs (functor,arity)
-    prog.db.clearParamMarkings()
+    prog.db.clearParameterMarkings()
     for functor,arity in params:
-      prog.db.markAsParam(functor,arity)
+      prog.db.markAsParameter(functor,arity)
     #compute gradient
     learner = learn.OnePredFixedRateGDLearner(prog)
     updates = learner.crossEntropyGrad(mode,data.get_x(),data.get_y())
@@ -573,9 +574,10 @@ class TestProPPR(unittest.TestCase):
     self.labeledData = self.prog.db.createPartner()
     def moveToPartner(db,partner,functor,arity):
       partner.matEncoding[(functor,arity)] = db.matEncoding[(functor,arity)]
-      if (functor,arity) in db.params:
+      if (functor,arity) in self.prog.getParamList():
         partner.params.add((functor,arity))
-        db.params.remove((functor,arity))
+        db.paramSet.remove((functor,arity))
+        db.paramList.remove((functor,arity))
       del db.matEncoding[(functor,arity)]
     moveToPartner(self.prog.db,self.labeledData,'train',2)
     moveToPartner(self.prog.db,self.labeledData,'test',2)
@@ -838,7 +840,7 @@ class TestExpt(unittest.TestCase):
          "--proppr"])
     optdict['prog'].setFeatureWeights()
     params = {'prog':optdict['prog'],'trainData':optdict['trainData'], 'testData':optdict['testData']}
-    ti = program.Interp(optdict['prog'])
+    ti = interp.Interp(optdict['prog'])
     ti.list("predict/io")
     return expt.Expt(params).run()
 
@@ -854,7 +856,18 @@ class TestExpt(unittest.TestCase):
     prog = program.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData}
-    return expt.Expt(params).run()
+    result = expt.Expt(params).run()
+#    for mode in testData.modesToLearn():
+#      X = testData.getX(mode)
+#      Y = testData.getY(mode)
+#      Y_ = prog.eval(mode,[X])
+#      print 'mode',mode
+#      dX = db.matrixAsSymbolDict(X)
+#      dY = db.matrixAsSymbolDict(Y)
+#      dY_ = db.matrixAsSymbolDict(Y_)
+#      for i in sorted(dX.keys()):
+#        print i,'X',dX[i],'Y',dY[i],'Y_',sorted(dY_[i].items(),key=lambda (key,val):-val)
+    return result
 
   def runMToyExpt2(self):
     db = matrixdb.MatrixDB.uncache(
@@ -864,9 +877,7 @@ class TestExpt(unittest.TestCase):
         self.cacheFile('mtoy-train.dset'),db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = program.ProPPRProgram.load(
-        [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
-        db=db)
+    prog = program.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':learn.FixedRateSGDLearner(prog)}
     return expt.Expt(params).run()
@@ -879,9 +890,7 @@ class TestExpt(unittest.TestCase):
         self.cacheFile('mtoy-train.dset'),db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = program.ProPPRProgram.load(
-        [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
-        db=db)
+    prog = program.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':plearn.ParallelAdaGradLearner(prog)}
     return expt.Expt(params).run()
@@ -983,11 +992,11 @@ class TestTypes(unittest.TestCase):
 
   def testStabs(self):
     expectedSymLists = {
-        'source':['__NULL__', 'nyt', 'fox'],
-        'relation':['__NULL__', 'r'],
-        'triple':['__NULL__', 'rxy'],
-        'entity':['__NULL__', 'x', 'y'],
-        matrixdb.THING: ['__NULL__', 'a', 'b']
+        'source':['__NULL__', '__OOV__', 'nyt', 'fox'],
+        'relation':['__NULL__', '__OOV__', 'r'],
+        'triple':['__NULL__', '__OOV__', 'rxy'],
+        'entity':['__NULL__', '__OOV__', 'x', 'y'],
+        matrixdb.THING: ['__NULL__', '__OOV__', 'a', 'b']
     }
     self.assertEqual(len(expectedSymLists.keys()), len(self.db._stab.keys()))
     for typeName in expectedSymLists:
@@ -1040,6 +1049,30 @@ class TestTypeSemantics(unittest.TestCase):
   def testTypeInference(self):
     fun = self.prog.compile(declare.asMode("predict/io"))
     self.assertEqual(fun.outputType, "label")
+
+class TestTrainableDeclarations(unittest.TestCase):
+
+  def testIt(self):
+    db = matrixdb.MatrixDB()
+    db.addLines([
+        "# :- trainable(w1,1)\n",
+        "# :- trainable(w2,2)\n",
+        "# :- trainable(a,b)\n",
+        "# :- w1(word)\n",
+        "# :- w2(word,word)\n",
+        "\t".join(["w1","hello"])+"\n",
+        "\t".join(["w2","hello","there"])+"\n"
+        ])
+    print 'params',db.paramList
+    self.assertTrue(db.isParameter(declare.asMode("w1(i)")))
+    self.assertTrue(db.isParameter(declare.asMode("w2(i,i)")))
+    self.assertFalse(db.isParameter(declare.asMode("trainable(i,i)")))
+    w1 = db.matrixAsPredicateFacts('w1',1,db.getParameter('w1',1))
+    w2 = db.matrixAsPredicateFacts('w2',2,db.getParameter('w2',2))
+    self.assertTrue(len(w1.keys())==1)
+    self.assertTrue(str(w1.keys()[0])=="w1(hello)")
+    self.assertTrue(len(w2.keys())==1)
+    self.assertTrue(str(w2.keys()[0])=="w2(hello,there)")
 
 if __name__=="__main__":
   if len(sys.argv)==1:

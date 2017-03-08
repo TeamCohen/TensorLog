@@ -234,16 +234,17 @@ class Dataset(object):
             logging.info("loading %d predicates from %s..." % (len(xsTmp),fileName))
             for pred in xsTmp.keys():
                 xType = db.getDomain(pred.getFunctor(),2)
-                xRows = map(lambda x:db.onehot(x,xType), xsTmp[pred])
+                xRows = map(lambda x:db.onehot(x,xType,outOfVocabularySymbolsAllowed=True), xsTmp[pred])
                 xsResult[pred] = mutil.stack(xRows)
             for pred in ysTmp.keys():
                 def yRow(ys):
-                    yType = db.getRange(pred.getFunctor(),2)
-                    accum = db.onehot(ys[0],yType)
-                    for y in ys[1:]:
-                        accum = accum + db.onehot(y,yType)
-                    accum = accum * 1.0/len(ys)
-                    return accum
+                  assert len(ys)>0, 'empty output list for an example'
+                  yType = db.getRange(pred.getFunctor(),2)
+                  accum = db.onehot(ys[0],yType,outOfVocabularySymbolsAllowed=True)
+                  for y in ys[1:]:
+                    accum = accum + db.onehot(y,yType,outOfVocabularySymbolsAllowed=True)
+                  accum = accum * 1.0/len(ys)
+                  return accum
                 yRows = map(yRow, ysTmp[pred])
                 ysResult[pred] = mutil.stack(yRows)
         dset = Dataset(xsResult,ysResult)

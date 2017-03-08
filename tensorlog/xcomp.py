@@ -3,10 +3,11 @@ import time
 
 from tensorlog import comline
 from tensorlog import config
-from tensorlog import comline
 from tensorlog import declare
 from tensorlog import funs
 from tensorlog import ops
+
+# TOFIX move params from ws to xcompiler
 
 TRAINING_TARGET_VARNAME = '_target_y'
 
@@ -20,36 +21,165 @@ class AbstractCrossCompiler(object):
     # used to represent OpSeqFunction intermediate values don't clash.
     # namespaces are defined by integer ids, and we allocate a new one
     # for every distinct OpSeqFunction that gets compiled.
-    self.nextNamespaceId = 0
-    # holds output of compilation - subclasses should initialize this
-    self.ws = Workspace(self)
+    self._nextNamespaceId = 0
+    # holds outputs of compilation, indexed by mode
+    self._wsDict = {}
+    # holds output of current compilation process
+    self.ws = None
     # pointers back to the program and matrixdb
     self.prog = prog
     self.db = prog.db
     # when a db is 'typeless', ie all entities are of type
-    # matrixdb.THING, then onlyType is set to THING
-    self.onlyType = None
+    # matrixdb.THING, then _onlyType is set to THING
+    self._onlyType = None
     # maps typeName to the vector used to introduce NULL entities,
     # with low weight, into a vector of type typeName
-    self.nullSmoother = {}
+    self._nullSmoother = {}
     # set after vectors are allocated for the nullSmoother's
-    self.globalsSet = None
+    self._globalsSet = None
+    # Cache 'handle expressions' for some of the objects in the
+    # tensorlog database.  The handle expressions are indexed by a
+    # (functor,arity) pair. Handle expressions must be inserted by
+    # calling insertHandleExpr().
+    self._handleExpr = {}
+    # For each handle expression, there is some underlying variable
+    # with a gradient that is used.  Often this is the same as the
+    # handle expression, but not always.  These are indexed by
+    # functor,arity key.
+    self._handleExprVar = {}
     logging.debug('AbstractCrossCompiler initialized %.3f Gb' % comline.memusage())
 
-  def setupGlobals(self):
-    """ Initialize variables used by this cross-compiler object. """
-    if not self.globalsSet:
-      for typeName in self.db.getTypes():
-        self.nullSmoother[typeName] = self.constantVector("_nullSmoother_"+typeName,self.db.nullMatrix(numRows=1,typeName=typeName)*(1e-5))
-      if self.db.isTypeless():
-        self.onlyType = self.db.getTypes()[0]
-      self.globalsSet = True
+  #
+  # external UI
+  #
+  # TODO: add regularizers, loss
+  # put the params in order!
 
-  def allocNamespacer(self):
-    """Allocate a new NameSpacer object, which has its own unique namespace. """
-    result = NameSpacer(self.nextNamespaceId)
-    self.nextNamespaceId += 1
-    return result
+  def inference(self,mode):
+    """ Returns (args,inferenceExpr) """
+    mode = self.ensureCompiled(mode)
+    return self._wsDict[mode].inferenceArgs, self._wsDict[mode].inferenceExpr
+
+  def inferenceFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
+    """Returns a python function which performs inference for the function
+    defined by that mode.  The function takes a length-one tuple
+    containing one argument X, which can be a row vector or a
+    minibatch, and outputs a matrix with the same number of rows as X,
+    and the number of columns appropriate for the output type of the
+    mode.
+    """
+    args,expr = self.inference(mode)
+    assert len(args)==1
+    return self._asOneInputFunction(args[0],expr,wrapInputs,unwrapOutputs)
+
+  def inferenceOutputType(self,mode):
+    """ The type associated with the output of a tensorlog function.
+    """
+    mode = self.ensureCompiled(mode)
+    return self._wsDict[mode].tensorlogFun.outputType
+
+  def dataLoss(self,mode):
+    """ Returns (args,dataLossExpr) """
+    mode = self.ensureCompiled(mode)
+    return self._wsDict[mode].dataLossArgs, self._wsDict[mode].dataLossExpr
+
+  def dataLossFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
+    """Returns a python function which compute the unregularized loss for
+    the function defined by that mode, relative to target outputs Y.
+    The function takes a single argument which is a list of (X,Y).
+    """
+    args,expr = self.dataLoss(mode)
+    assert len(args)==2
+    return self._asTwoInputFunction(args[0],args[1],expr,wrapInputs,unwrapOutputs)
+
+  def dataLossGrad(self,mode):
+    """Returns (args,[dataLossGrad1,....,dataLossGradn]), where each grad
+    is the gradient of one of the parameters.The order of the grads
+    is the same as the parameters.
+    """
+    mode = self.ensureCompiled(mode)
+    return self._wsDict[mode].dataLossArgs, self._wsDict[mode].dataLossGradExprs
+
+  def dataLossGradFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
+    """Returns a python function which performs inference for the function
+    defined by that mode.  The function takes a single argument which
+    is a list of (X,Y).
+    """
+    args,exprList = self.dataLossGrad(mode)
+    assert len(args)==2
+    return self._exprListAsUpdateFunction(args[0],args[1],exprList,wrapInputs,unwrapOutputs)
+
+  #
+  # forwarded to the underlying database, or appropriate subclass
+  # routine
+  #
+
+  def asSymbol(self,symbolId,typeName=None):
+    """ Convert a typed integer id to a symbol
+    """
+    return self.db.asSymbol(symbolId,typeName=typeName)
+
+  def asSymbolId(self,symbol,typeName=None):
+    """ Convert a typed symbol to an integer id
+    """
+    return self.db.asSymbolId(symbol,typeName=typeName)
+
+  def wrapInput(self,x):
+    """ Convert scipy matrix to required input format
+    """
+    return self._wrapMsg(x)
+
+  def unwrapOutput(self,y):
+    """ Convert output to scipy matrix
+    """
+    return self._wrapOutput(y)
+
+  #
+  # used in inferenceFunction, dataLossFunction, etc
+  #
+
+  def _asOneInputFunction(self,arg1,expr,wrapInputs,unwrapOutputs):
+    """Return a python function which implements the expression,
+    optionally 'wrapping' the input and outputs.  If inputs are
+    wrapped passing in scipy sparse matrices is ok.  If outputs are
+    unwrapped then output will be scipy sparse matrices."""
+    assert False,'abstract method called'
+
+  def _asTwoInputFunction(self,arg1,arg2,expr,wrapInputs,unwrapOutputs):
+    """Analogous to _asOneInputFunction but takes two inputs"""
+    assert False,'abstract method called'
+
+  def _exprListAsUpdateFunction(self,args,exprList,params,wrapInputs,unwrapOutputs):
+    """Similar to _exprListAsUpdateFunction, but returns a python function
+    which returns a list of pairs (key,update), mapping parameter
+    'keys' -- i.e., functor,arity pairs -- to updates of those
+    parameters.
+    """
+    assert False,'abstract method called'
+
+  def getParamVariables(self,mode):
+    # TOFIX probly doesn't work if params are not used
+    """ Find variables corresponding to parameters """
+    mode = self.ensureCompiled(mode)
+    return map(lambda key:self._handleExprVar[key], self.prog.getParamList())
+
+  def pprint(self,mode):
+    """Return list of lines in a pretty-print of the underlying, pre-compilation function.
+    To actual display these, use something like
+      print "\n".join(xcompiler.pprint("predict/io"))
+    """
+    mode = self.ensureCompiled(mode)
+    return self._wsDict[mode].tensorlogFun.pprint()
+
+  def getWorkspace(self,mode):
+    """ Return the workspace associated with a mode
+    """
+    mode = self.ensureCompiled(mode)
+    return self._wsDict[mode]
+
+  def _getParamVariables(self):
+    """ Convenience method to find variables corresponding to paramaters """
+    return map(lambda key:self._handleExprVar[key], self.xcomp.prog.getParamList())
 
   #
   # these all define the interface to the database.  instead of
@@ -60,55 +190,55 @@ class AbstractCrossCompiler(object):
   # based on that variable (eg its transpose)
   #
 
-  def vector(self, matMode):
+  def _vector(self, matMode):
     """ Wraps a call to db.vector()
     """
     assert matMode.arity==1
     key = (matMode.getFunctor(),1)
-    if not self.ws.hasHandleExpr(key):
+    if not key in self._handleExpr:
       variable_name = "v__" + matMode.getFunctor()
-      val = self.wrapDBVector(self.db.vector(matMode)) #ignores all but functor for arity 1
-      self.ws.insertHandleExpr(key, variable_name, val)
-    return self.ws.getHandleExpr(key)
+      val = self._wrapDBVector(self.db.vector(matMode)) #ignores all but functor for arity 1
+      self._insertHandleExpr(key, variable_name, val)
+    return self._handleExpr[key]
 
-  def constantVector(self, variable_name, val):
+  def _constantVector(self, variable_name, val):
     """ Wrap a call to db.onehot(), db.zeros(), etc.
     """
     key = (variable_name,0)
-    if not self.ws.hasHandleExpr(key):
-      wrapped_val = self.wrapDBVector(val)
-      self.ws.insertHandleExpr(key, variable_name, wrapped_val)
-    return self.ws.getHandleExpr(key)
+    if not key in self._handleExpr:
+      wrapped_val = self._wrapDBVector(val)
+      self._insertHandleExpr(key, variable_name, wrapped_val)
+    return self._handleExpr[key]
 
-  def matrix(self,matMode,transpose=False):
+  def _matrix(self,matMode,transpose=False):
     """ Wraps a call to db.matrix()
     """
     # cache an expression for the un-transposed version of the matrix
     assert matMode.arity==2
     key = (matMode.getFunctor(),2)
     canonicalMode = declare.asMode( "%s(i,o)" % matMode.getFunctor())
-    if not self.ws.hasHandleExpr(key):
+    if not key in self._handleExpr:
       variable_name = "M__" + matMode.getFunctor()
-      val = self.wrapDBMatrix(self.db.matrix(canonicalMode,False))
-      self.ws.insertHandleExpr(key, variable_name, val)
+      val = self._wrapDBMatrix(self.db.matrix(canonicalMode,False))
+      self._insertHandleExpr(key, variable_name, val)
     if self.db.transposeNeeded(matMode,transpose):
-      return self.transposeMatrixExpr(self.ws.getHandleExpr(key))
+      return self._transposeMatrixExpr(self._handleExpr[key])
     else:
-      return self.ws.getHandleExpr(key)
+      return self._handleExpr[key]
 
-  def ones(self,typeName):
+  def _ones(self,typeName):
     """Wraps a call to db.ones() """
-    return self.constantVector('__ones',self.db.ones(typeName))
+    return self._constantVector('__ones',self.db.ones(typeName))
 
-  def zeros(self,typeName):
+  def _zeros(self,typeName):
     """Wraps a call to db.zeros() """
-    return self.constantVector('__zeros',self.db.zeros(numRows=1,typeName=typeName))
+    return self._constantVector('__zeros',self.db.zeros(numRows=1,typeName=typeName))
 
-  def onehot(self,sym,typeName):
+  def _onehot(self,sym,typeName):
     """Wraps a call to db.ones() """
-    return self.constantVector(sym,self.db.onehot(sym,typeName))
+    return self._constantVector(sym,self.db.onehot(sym,typeName))
 
-  def preimageOnesType(self,mode):
+  def _preimageOnesType(self,mode):
     """Wraps a call to db """
     return self.db.matrixPreimageOnesType(mode)
 
@@ -116,64 +246,51 @@ class AbstractCrossCompiler(object):
   # compilation
   #
 
-  def compile(self,funSpec,params=None):
-    """Compile a tensorlog function to target language.  Params are
-    optional - if they are given then also compile gradient of the
-    loss function with respect to these parameters.  Params should be
-    a list of (functor,arity) pairs, and funSpec should be a mode, a
-    string encoding a mode, or a funs.Function
+  def ensureCompiled(self,mode):
+    """Compile a tensorlog function to target language, and cache the
+    result.  Returns the canonical name of the mode (which can be a
+    string of a declare.ModeDeclaration) that points to the compiled
+    workspace.
     """
-    startTime = time.time()
-    def status(msg): logging.info('%s time %.3f sec mem %.3f Gb' % (msg,time.time()-startTime,comline.memusage()))
 
-    if isinstance(funSpec,declare.ModeDeclaration):
-      status('tensorlog compiling %s' % funSpec)
-      fun = self.prog.compile(funSpec)
-    elif isinstance(funSpec,str):
-      status('tensorlog compiling %s' % funSpec)
-      fun = self.prog.compile(declare.asMode(funSpec))
-    elif isinstance(funSpec,funs.Function):
-      fun = funSpec
-    else:
-      assert False,'invalid function spec %r' % funSpec
-    assert fun is not None
-    status('tensorlog compilation complete')
+    if isinstance(mode,str): mode = declare.asMode(mode)
+    assert isinstance(mode,declare.ModeDeclaration), 'invalid mode %r' % mode
 
-    self.do_compile(fun,params)
-    status('cross compilation complete')
+    if mode not in self._wsDict:
+      self.ws = self._wsDict[mode] = Workspace(self)
+      startTime = time.time()
+      def status(msg): logging.info('%s time %.3f sec mem %.3f Gb' % (msg,time.time()-startTime,comline.memusage()))
+      status('calling compile')
+      fun = self.ws.tensorlogFun = self.prog.compile(mode)
+      status('tensorlog compilation complete')
+      self._doCompile(fun,mode)
+      status('tensorlog->tensorflow compilation complete')
+    return mode
 
-  # If the db is typeless, then self.onlyType is set to be that type,
-  # otherwise it is None.  If the db is stateless we want to ignore
-  # a function's outputType and inputTypes and replace them with
-  # onlyType
-
-  def wrapOutputType(self,fun):
-    """Replace outputTypes with onlyType for a typeless database.
-    """
-    return self.onlyType or fun.outputType
-
-  def wrapInputTypes(self,fun):
-    """Replace list of inputTypes with list of onlyType for a typeless
-    database.
-    """
-    return [self.onlyType]*len(fun.inputTypes) if self.onlyType else fun.inputTypes
-
-  def do_compile(self,fun,params):
+  def _doCompile(self,fun,mode):
     """Main compilation method.  Can be overridden by subclasses
     """
-    self.setupGlobals()
+    self._setupGlobals()
     # build the expression used for inference
-    (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self.fun2Expr(fun)
-    # do any postprocessing needed
-    self.finalizeInference()
+    (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self._fun2Expr(fun)
     # extend the inferenceExpr to also compute loss
-    self.buildLossExpr(params)
+    self._buildLossExpr(mode)
+
+  def _setupGlobals(self):
+    """ Initialize variables used by this cross-compiler object. """
+    if not self._globalsSet:
+      for typeName in self.db.getTypes():
+        self._nullSmoother[typeName] = self._constantVector("_nullSmoother_"+typeName,self.db.nullMatrix(numRows=1,typeName=typeName)*(1e-5))
+      if self.db.isTypeless():
+        self._onlyType = self.db.getTypes()[0]
+      self._globalsSet = True
+
 
   #
-  # recursion compilation of function tree
+  # recursive compilation of function tree
   #
 
-  def fun2Expr(self,fun,sharedInputs=None,depth=0):
+  def _fun2Expr(self,fun,sharedInputs=None,depth=0):
     """Return a triple (inputs, expr, typeName) where binding the inputs in,
     and then evaluating the expression, is semantically equivalent to
     evaluating the Function fun in tensorlog, given that all the
@@ -189,29 +306,30 @@ class AbstractCrossCompiler(object):
     """
 
     if isinstance(fun,funs.SoftmaxFunction):
-      inputs,subExpr,outType = self.fun2Expr(fun.fun,sharedInputs,depth)
-      return inputs,self.softmaxFun2Expr(subExpr,outType),outType
+      inputs,subExpr,outType = self._fun2Expr(fun.fun,sharedInputs,depth)
+      return inputs,self._softmaxFun2Expr(subExpr,outType),outType
 
     elif isinstance(fun,funs.SumFunction):
       assert(len(fun.funs)>=1)
-      inputs,accum,outType = self.fun2Expr(fun.funs[0],sharedInputs,depth)
+      inputs,accum,outType = self._fun2Expr(fun.funs[0],sharedInputs,depth)
       for f in fun.funs[1:]:
-        (moreInputs,addend,accumOutType) = self.fun2Expr(f,inputs,depth)
+        (moreInputs,addend,accumOutType) = self._fun2Expr(f,inputs,depth)
         assert accumOutType==outType,"inconsistent types %s vs %s in SumFunction" % (outType,accumOutType)
         assert(len(moreInputs)==len(inputs))
-        accum = self.addupExprs(accum,addend)
+        accum = self._addupExprs(accum,addend)
       return (inputs,accum,outType)
 
     elif isinstance(fun,funs.OpSeqFunction):
       assert len(fun.opInputs)==1, 'mismatching number of inputs'
-      # nspacer maps variables from the OpSeqFunction's environment to
-      # subexpressions
-      nspacer = self.allocNamespacer()
+      # allocate a new nspacer, which maps variables from the
+      # OpSeqFunction's environment to subexpressions
+      nspacer = NameSpacer(self._nextNamespaceId)
+      self._nextNamespaceId += 1
       seqInputs = []
       if sharedInputs==None:
         # create variables which will be used as inputs
-        for v,typeName in zip(fun.opInputs,self.wrapInputTypes(fun)):
-          nspacer[v] = self.createPlaceholder(nspacer.internalName(v),'vector',typeName)
+        for v,typeName in zip(fun.opInputs,self._wrapInputTypes(fun)):
+          nspacer[v] = self._createPlaceholder(nspacer.internalName(v),'vector',typeName)
           seqInputs.append(nspacer[v])
       else:
         # copy over the existing inputs to the new namespace
@@ -222,38 +340,54 @@ class AbstractCrossCompiler(object):
           seqInputs.append(nspacer[v])
       # implement each op
       for op in fun.ops:
-        nspacer[op.dst] = self.op2Expr(nspacer,op,depth)
+        nspacer[op.dst] = self._op2Expr(nspacer,op,depth)
       # return the inputs and the expression for the
       # OpSeqFunction's output
-      return (seqInputs, nspacer[fun.opOutput], self.wrapOutputType(fun))
+      return (seqInputs, nspacer[fun.opOutput], self._wrapOutputType(fun))
 
     elif isinstance(fun,funs.NullFunction):
-      typeName = self.wrapOutputType(fun)
-      return ([], self.zeros(typeName), typeName)
+      typeName = self._wrapOutputType(fun)
+      return ([], self._zeros(typeName), typeName)
 
     else:
       assert False,'cannot cross-compile %r' % fun
 
-  def op2Expr(self,nspacer,op,depth):
+  def _op2Expr(self,nspacer,op,depth):
     """ Compute and return an expr for the output of the op
     """
     if isinstance(op,ops.VecMatMulOp):
-      return self.vecMatMulExpr(nspacer[op.src], self.matrix(op.matMode,op.transpose))
+      return self._vecMatMulExpr(nspacer[op.src], self._matrix(op.matMode,op.transpose))
     elif isinstance(op,ops.AssignPreimageToVar):
-      return self.vecMatMulExpr(self.ones(self.preimageOnesType(op.matMode)), self.matrix(op.matMode,True))
+      return self._vecMatMulExpr(self._ones(self._preimageOnesType(op.matMode)), self._matrix(op.matMode,True))
     elif isinstance(op,ops.ComponentwiseVecMulOp):
-      return self.componentwiseMulExpr(nspacer[op.src], nspacer[op.src2])
+      return self._componentwiseMulExpr(nspacer[op.src], nspacer[op.src2])
     elif isinstance(op,ops.DefinedPredOp):
-      _,subExpr,subExprType = self.fun2Expr(op.subfun, [nspacer[op.src]], depth=depth+1)
+      _,subExpr,subExprType = self._fun2Expr(op.subfun, [nspacer[op.src]], depth=depth+1)
       return subExpr
     elif isinstance(op,ops.AssignOnehotToVar):
-      return self.onehot(op.onehotConst,op.dstType)
+      return self._onehot(op.onehotConst,op.dstType)
     elif isinstance(op,ops.AssignVectorToVar):
-      return self.vector(op.matMode)
+      return self._vector(op.matMode)
     elif isinstance(op,ops.WeightedVec):
-      return self.weightedVecExpr(nspacer[op.vec], nspacer[op.weighter])
+      return self._weightedVecExpr(nspacer[op.vec], nspacer[op.weighter])
     else:
       assert False,'cannot cross-compile %r' % op
+
+  # If the db is typeless, then self.onlyType is set to be that type,
+  # otherwise it is None.  If the db is stateless we want to ignore
+  # a function's outputType and inputTypes and replace them with
+  # onlyType
+
+  def _wrapOutputType(self,fun):
+    """Replace outputTypes with _onlyType for a typeless database.
+    """
+    return self._onlyType or fun.outputType
+
+  def _wrapInputTypes(self,fun):
+    """Replace list of inputTypes with list of onlyType for a typeless
+    database.
+    """
+    return [self._onlyType]*len(fun.inputTypes) if self._onlyType else fun.inputTypes
 
   #
   # subclasses should implement these
@@ -261,11 +395,11 @@ class AbstractCrossCompiler(object):
 
   # shared variables and placeholders
 
-  def createPlaceholder(self,name,matOrVec,typeName):
+  def _createPlaceholder(self,name,matOrVec,typeName):
     """Create a placeholder for top-level inputs"""
     assert False, 'abstract method called'
 
-  def insertHandleExpr(self,key,expr,val):
+  def _insertHandleExpr(self,key,expr,val):
     """Associate a DB object with the given functor,arity key (and value
     'val') with an expression in the target language.  The key is a
     (functor,arity) pair.  See comments for
@@ -275,40 +409,35 @@ class AbstractCrossCompiler(object):
 
   # i/o
 
-  def wrapMsg(self,vec):
+  def _wrapMsg(self,vec):
     """ Convert a message/query vector in tensorlog's default
     representation (scipy sparse vector/matrix) to the target language
     """
     assert False, 'abstract method called'
 
-  def wrapDBVector(self,vec):
+  def _wrapDBVector(self,vec):
     """ Convert a vector from the DB into athe target language """
     assert False, 'abstract method called'
 
-  def wrapDBMatrix(self,mat):
+  def _wrapDBMatrix(self,mat):
     """Convert a matrix from the DB into the target language """
     assert False, 'abstract method called'
 
-  def unwrapOutputs(self,targetLanguageOutputs):
+  def _unwrapOutputs(self,targetLanguageOutputs):
     """ Convert a list of outputs produced by the target language to a
     tensorlog output (a scipy sparse vector/matrix)
     """
     return map(lambda v:self.unwrapOutput(v), targetLanguageOutputs)
 
-  def unwrapOutput(self,targetLanguageOutputs):
+  def _unwrapOutput(self,targetLanguageOutputs):
     """ Convert an output produced by the target language to a
     tensorlog output (a scipy sparse vector/matrix)
     """
     assert False,'abstract method called'
 
-  def unwrapUpdate(self,key,up):
+  def _unwrapUpdate(self,key,up):
     """ Convert updates for a parameter to generated by the target
     language to tensorlog's expected representation for updates.
-    """
-    assert False,'abstract method called'
-
-  def unwrapParameterValue(self,key,val):
-    """ Convert the value of learned parameter to tensorlog's format
     """
     assert False,'abstract method called'
 
@@ -318,70 +447,48 @@ class AbstractCrossCompiler(object):
   #
 
   # this works for most targets
-  def addupExprs(self,accum,addend):
+  def _addupExprs(self,accum,addend):
     """ Return an expression for the sum of two subexpressions.
     """
     return accum+addend
 
-  def transposeMatrixExpr(self,m):
+  def _transposeMatrixExpr(self,m):
     """ Return the expression to transpose a matrix """
     assert False, 'abstract method called'
 
-  def softmaxFun2Expr(self,fun,typeName):
+  def _softmaxFun2Expr(self,fun,typeName):
     """ Return the expression to compute softmax of a function output """
     assert False, 'abstract method called'
 
-  def vecMatMulExpr(self,v,m):
+  def _vecMatMulExpr(self,v,m):
     """ Vector-matrix dot product """
     assert False, 'abstract method called'
 
-  def componentwiseMulExpr(self,v1,v2):
+  def _componentwiseMulExpr(self,v1,v2):
     """ Component-wise multiplication """
     assert False, 'abstract method called'
 
-  def weightedVecExpr(self,vec,weighter):
+  def _weightedVecExpr(self,vec,weighter):
     """ Special operation used in tensorlog: component-wise multiply the
     vector with column sum of the weighter. """
     assert False, 'abstract method called'
 
-  def finalizeInference(self):
-    """ Any additional bookkeeping needed after inference expression is constructed. """
-    assert False, 'abstract method called'
-
-  def buildLossExpr(self,params):
+  def _buildLossExpr(self,params):
    """Subroutine to extend the inference expression with all the stuff
    relating to loss. This is run after finalizeInference, so it
    assumes inference expression is constructed.  This also will
    compute any gradients that are needed. """
    assert False, 'abstract method called'
 
-  def eval(self,rawInputs):
-    """ Evaluate the inference expression.
-    """
-    assert False, 'abstract method called'
-
-  def evalDataLoss(self,rawInputs,rawTarget):
-    """Evaluate the unregularized loss of the data.  rawInputs will
-    usually be [x,target_y] plus the parameters, and parameters are
-    passed in in as (pred,arity) pairs.
-    """
-    assert False, 'abstract method called'
-
-  def evalDataLossGrad(self,rawInputs,rawTarget):
-    """Evaluate the gradient of the unregularized loss of the data.
-    Inputs are the same as for evalDataLoss.
-    """
-    assert False, 'abstract method called'
-
   def exportAllLearnedParams(self):
     """Replace the parameter values in self.prog.db with the values that
     have been learned.
     """
-    for key in self.ws.params:
-      functor,arity = key
-      newVal = self.getLearnedParam(key)
+    for (functor,arity) in self.prog.getParamList():
+      newVal = self.getLearnedParam((functor,arity))
       self.db.setParameter(functor,arity,newVal)
 
+  # TOFIX implement for theano
   def getLearnedParam(self,key):
     """Replace the parameter values in self.prog.db with the value that
     was learned for this parameter.
@@ -409,9 +516,10 @@ class Workspace(object):
   """ Holds information created in cross-compilation.
   """
   def __init__(self,xcomp):
-
     # backpointer to cross-compiler
     self.xcomp = xcomp
+    # tensorlog function that will be cross-compiled
+    self.tensorlogFun = None
     # expression used for inference
     self.inferenceExpr = None
     # list of arguments to inferenceExpr - generated with createPlaceholder
@@ -424,39 +532,3 @@ class Workspace(object):
     self.dataLossArgs = None
     # gradient of loss expression wrt each parameter
     self.dataLossGradExprs = None
-
-    # The workspace also caches 'handle expressions' for some of the
-    # objects in the tensorlog database.  The handle expressions are
-    # indexed by a (functor,arity) pair. Handle expressions must be
-    # inserted by calling workspace.insertHandleExpr().
-    self._handleExpr = {}
-    # For each handle expression, there is some underlying variable
-    # with a gradient that is used.  Often this is the same as the
-    # handle expression, but not always.  These are indexed by
-    # functor,arity key.
-    self._handleExprVar = {}
-
-    # parameters to optimize, as a list of functor,arity pairs
-    self.params = []
-
-  def hasHandleExpr(self,key):
-    """ Check if a handle expression has been assigned to this key """
-    return key in self._handleExpr
-
-  def getHandleExpr(self,key):
-    """return the handle expression for a matrixdb relation """
-    return self._handleExpr[key]
-
-  def getHandleExprVariable(self,key):
-    """Return the variable whose gradient is used to adjust the expression
-    for a matrixdb relation """
-    return self._handleExprVar[key]
-
-  def insertHandleExpr(self, key, varName, val):
-    """Insert a new handle expression, by delegation to the containing
-    cross-compiler """
-    self.xcomp.insertHandleExpr(key,varName,val)
-
-  def getParamVariables(self):
-    """ Convenience method to find variables corresponding to paramaters """
-    return map(lambda key:self.getHandleExprVariable(key), self.params)

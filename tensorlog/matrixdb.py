@@ -22,8 +22,14 @@ conf = config.Config()
 conf.allow_weighted_tuples = True; conf.help.allow_weighted_tuples = 'Allow last column of cfacts file to be a weight for the fact'
 conf.ignore_types = False;         conf.help.ignore_types = 'Ignore type declarations'
 
-NULL_ENTITY_NAME = '__NULL__'  #name of null entity, which is returned when a proof fails
-THING = '__THING__'            #name of default type
+#name of null entity, which is returned when a proof fails
+NULL_ENTITY_NAME = '__NULL__'
+#name of out-of-vocabulary marker entity
+OOV_ENTITY_NAME = '__OOV__'
+#name of default type
+THING = '__THING__'
+#functor in declarations of trainable relations, eg trainable(posWeight,1)
+TRAINABLE_DECLARATION_FUNCTOR = 'trainable'
 
 class MatrixDB(object):
   """ A logical database implemented with sparse matrices """
@@ -34,7 +40,8 @@ class MatrixDB(object):
     #matEncoding[(functor,arity)] encodes predicate as a matrix
     self.matEncoding = {}
     # mark which matrices are 'parameters' by (functor,arity) pair
-    self.params = set()
+    self.paramSet = set()
+    self.paramList = []
     # buffer initialization: see startBuffers()
     self._buf = None
     # type information - indexed by (functor,arity) pair
@@ -48,10 +55,23 @@ class MatrixDB(object):
     result.reservedSymbols.add("i")
     result.reservedSymbols.add("o")
     result.reservedSymbols.add(THING)
-    # always insert NULL_ENTITY_NAME first
+    # always insert special entity names first
     result.insert(NULL_ENTITY_NAME)
     assert result.getId(NULL_ENTITY_NAME)==1
+    result.insert(OOV_ENTITY_NAME)
     return result
+
+  def checkTyping(self,strict=False):
+    if self.isTypeless():
+      logging.info('untyped matrixDB passed checkTyping')
+    else:
+      for i,d in enumerate(self._type):
+        for (functor,arity),typeName in d.items():
+          if typeName==THING:
+            logging.warn('matrixDB relation %s/%d has no type declared for argument %d' % (functor,arity,i+1))
+            if strict: assert False,'inconsistent use of types'
+          else:
+            logging.info('matrixDB relation %s/%d argument %d type %s' % (functor,arity,i+1,typeName))
 
   def isTypeless(self):
     return len(self._stab.keys())==1
@@ -98,9 +118,11 @@ class MatrixDB(object):
     """Number of constants in the database, and dimension of all the vectors/matrices."""
     return self._stab[typeName].getMaxId() + 1
 
-  def onehot(self,s,typeName=None):
+  def onehot(self,s,typeName=None,outOfVocabularySymbolsAllowed=False):
     typeName = self._fillDefault(typeName)
     """A onehot row representation of a symbol."""
+    if outOfVocabularySymbolsAllowed and not self._stab[typeName].hasId(s):
+        return self.onehot(OOV_ENTITY_NAME,typeName)
     assert self._stab[typeName].hasId(s),'constant %s (type %s) not in db' % (s,typeName)
     n = self.dim(typeName)
     i = self._stab[typeName].getId(s)
@@ -193,30 +215,53 @@ class MatrixDB(object):
   #
 
   def isParameter(self,mode):
-    return (mode.functor,mode.arity) in self.params
+    return (mode.functor,mode.arity) in self.paramSet
 
   def markAsParam(self,functor,arity):
-    """ Mark a predicate as a parameter """
-    self.params.add((functor,arity))
+    logging.warn('MatrixDB.markAsParam is deprecated - use markAsParameter')
+    self.markAsParameter(functor,arity)
 
-  def clearParamMarkings(self):
+  def markAsParameter(self,functor,arity):
+    """ Mark a predicate as a parameter """
+    if (functor,arity) not in self.paramSet:
+      self.paramSet.add((functor,arity))
+      self.paramList.append((functor,arity))
+
+  def clearParameterMarkings(self):
     """ Clear previously marked parameters"""
-    self.params = set()
+    self.paramSet = set()
+    self.paramList = []
 
   def getParameter(self,functor,arity):
-    assert (functor,arity) in self.params,'%s/%d not a parameter' % (functor,arity)
+    assert (functor,arity) in self.paramSet,'%s/%d not a parameter' % (functor,arity)
     return self.matEncoding[(functor,arity)]
 
-  def parameterIsSet(self,functor,arity):
+  def parameterIsInitialized(self,functor,arity):
     return (functor,arity) in self.matEncoding
 
   def setParameter(self,functor,arity,replacement):
-    assert (functor,arity) in self.params,'%s/%d not a parameter' % (functor,arity)
+    assert (functor,arity) in self.paramSet,'%s/%d not a parameter' % (functor,arity)
     self.matEncoding[(functor,arity)] = replacement
 
   #
   # convert from vectors, matrixes to symbols - for i/o and debugging
   #
+
+  def asSymbol(self,symbolId,typeName=None):
+    """ Convert a typed integer id to a symbol
+    """
+    if typeName is None: typeName = THING
+    return self._stab[typeName].getSymbol(symbolId)
+
+  def asSymbolId(self,symbol,typeName=None):
+    """ Convert a typed symbol to an integer id
+    """
+    if typeName is None: typeName = THING
+    stab = self._stab[typeName]
+    if stab.hasId(symbol):
+      return stab.getId(symbol)
+    else:
+      return -1
 
   def rowAsSymbolDict(self,row,typeName=None):
     if typeName is None: typeName = THING
@@ -244,20 +289,22 @@ class MatrixDB(object):
       result[r] = self.rowAsSymbolDict(m.getrow(r),typeName=typeName)
     return result
 
-  def matrixAsPredicateFacts(self,functor,arity,m,typeName=THING):
+  def matrixAsPredicateFacts(self,functor,arity,m):
     result = {}
     m1 = scipy.sparse.coo_matrix(m)
+    typeName1 = self.getArgType(functor,arity,0)
     if arity==2:
+      typeName2 = self.getArgType(functor,arity,1)
       for i in range(len(m1.data)):
-        a = self._stab[typeName].getSymbol(m1.row[i])
-        b = self._stab[typeName].getSymbol(m1.col[i])
+        a = self._stab[typeName1].getSymbol(m1.row[i])
+        b = self._stab[typeName2].getSymbol(m1.col[i])
         w = m1.data[i]
         result[parser.Goal(functor,[a,b])] = w
     else:
       assert arity==1,"Arity (%d) must be 1 or 2" % arity
       for i in range(len(m1.data)):
         assert m1.row[i]==0, "Expected 0 at m1.row[%d]" % i
-        b = self._stab[typeName].getSymbol(m1.col[i])
+        b = self._stab[typeName1].getSymbol(m1.col[i])
         w = m1.data[i]
         result[parser.Goal(functor,[b])] = w
     return result
@@ -284,7 +331,7 @@ class MatrixDB(object):
     return sum(map(lambda m:m.nnz, self.matEncoding.values()))
 
   def parameterSize(self):
-    return sum([m.nnz for  ((fun,arity),m) in self.matEncoding.items() if (fun,arity) in self.params])
+    return sum([m.nnz for  ((fun,arity),m) in self.matEncoding.items() if (fun,arity) in self.paramSet])
 
   def createPartner(self):
     """Create a 'partner' datavase, which shares the same symbol table,
@@ -381,13 +428,20 @@ class MatrixDB(object):
         return float(0.0)
 
     line = line.strip()
+
     if not line: return
     if line.startswith('#'):
       # look for a type declaration
       place = line.find(':-')
       if place>=0:
         decl = declare.TypeDeclaration(line[place+len(':-'):].strip())
-        self.addTypeDeclaration(decl,filename,k)
+        if decl.getFunctor()==TRAINABLE_DECLARATION_FUNCTOR and decl.getArity()==2 and (decl.arg(1) in ['1','2']):
+          # declaration is trainable(foo,1) or trainable(foo,2)
+          trainableFunctor = decl.arg(0)
+          trainableArity = int(decl.arg(1))
+          self.markAsParameter(trainableFunctor,trainableArity)
+        else:
+          self.addTypeDeclaration(decl,filename,k)
       return
 
     # buffer the parts of the line, which can be have either 1 or 2
@@ -517,21 +571,6 @@ class MatrixDB(object):
       db.addFile(f)
     logging.info('loaded database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
     return db
-
-class MatrixParseError(Exception):
-  def __init__(self,msg):
-    self.msg = msg
-  def __str__(self):
-    return str(self.msg)
-
-class MatrixFileError(Exception):
-  def __init__(self,fname,line,p):
-    self.filename=fname
-    self.parseError=p
-    self.line=line
-  def __str__(self):
-    return "on line %d of %s: %s" % (self.line,self.filename,str(self.parseError))
-
 
 #
 # test main

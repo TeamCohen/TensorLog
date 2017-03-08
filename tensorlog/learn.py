@@ -566,16 +566,16 @@ class L2Regularizer(Regularizer):
 
     def __init__(self,regularizationConstant=0.01):
         self.regularizationConstant = regularizationConstant
-    
+
     def regularizeParams(self,prog,n):
-        for functor,arity in prog.db.params:
+        for functor,arity in prog.getParamList():
             m0 = prog.db.getParameter(functor,arity)
             m1 = m0 * (1.0 - self.regularizationConstant)
             prog.db.setParameter(functor,arity,m1)
 
     def regularizationCost(self,prog):
         result = 0
-        for functor,arity in prog.db.params:
+        for functor,arity in prog.getParamList():
             m = prog.db.getParameter(functor,arity)
             result += (m.data * m.data).sum()
         return result*self.regularizationConstant

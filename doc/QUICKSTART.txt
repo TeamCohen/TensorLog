@@ -38,6 +38,11 @@ different namespaces.  Types are all disjoint. You should either type
 everything or nothing (in the latter case, everything is a default
 type __THING__).
 
+You can also mark a DB predicate as a parameter with a declaration with
+a line like
+
+# :- trainable(posWeight,1)
+
 A database can be SERIALIZED and should be stored in a directory with
 extension .db.
 

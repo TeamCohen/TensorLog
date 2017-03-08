@@ -7,6 +7,14 @@ Next actions:
  - fix pyparsing
  - look at sparse messages in theano-based learner?
 
+Little jobs:
+ - interp.helpConfig()
+ - regularizers for cross compilation
+ - output types as typename/id
+ - clean up tensorflow/tensorlog interfaces, eg wrapping
+ - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
+
+
 Bigger steps:
 
  - automatically move program constants into the database and introduce assign clauses when needed??
@@ -38,6 +46,21 @@ Overall package structure:
     .native: mutil, autodiff (eval and bprop), learn, plearn, putil, dataset
     .th: theanoxcomp
     .tf: tensorflowxcomp
+  or maybe just stick a bunch of stuff in tlg.native: native.learn, ...
+
+Proposed simple -  _ means python object or else argument of comline.parseFOO
+  - tlg.Compiler(
+	target='tensorflow',
+    	program= _    
+      	type_declarations= _
+      	db= _,
+      	regularizer= ...
+      	summaryFile=...)
+
+Next actions:
+
+   - upload dialog-toy
+   - start on toy for provenance
 
 Question->query idea
 
