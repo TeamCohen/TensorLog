@@ -17,6 +17,7 @@ from tensorlog import learn
 from tensorlog import mutil
 from tensorlog import parser
 from tensorlog import program
+from tensorlog import simple
 from tensorlog import testtensorlog
 from tensorlog import theanoxcomp
 from tensorlog import tensorflowxcomp
@@ -453,13 +454,13 @@ class TestXCExpt(unittest.TestCase):
           testData=optdict['testData'],
           targetMode=declare.asMode("predict/io"))
 
+      # check trainability
       for (functor,arity) in xc.db.matEncoding:
         v = xc.parameterFromDBToVariable(functor,arity)
         if v is not None:
           vIsTrainable = (v in tf.trainable_variables())
           vIsParameter = ((functor,arity) in xc.db.paramSet)
           self.assertEqual(vIsTrainable,vIsParameter)
-
 
       pbDoc = xc.db.onehot('pb','doc')
       self.checkXC(xc,'predict/io',pbDoc,{'negPair':115,'posPair':115,'hasWord':59,'weighted':115,'label':5})
@@ -549,6 +550,37 @@ class TestMultiModeXC(unittest.TestCase):
         Y_ = xc.inferenceFunction(mode)(X)
         acc = xc.accuracy(mode,X,Y)
         print 'mode',mode,'acc',acc
+
+class TestSimple(unittest.TestCase):
+
+  def testIt(self):
+    tlog = simple.Compiler(
+        db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
+        prog=os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"))
+    trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
+    testData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"))
+    mode = trainData.keys()[0]
+    TX,TY = trainData[mode]
+    UX,UY = testData[mode]
+    inference = tlog.inference(mode)
+    trueY = tf.placeholder(tf.float32, shape=UY.shape, name='tensorlog/trueY')
+    correct = tf.equal(tf.argmax(trueY,1), tf.argmax(inference,1))
+    accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+    test_batch_fd = {tlog.input_placeholder_name(mode):UX, trueY.name:UY}
+    loss = tlog.loss(mode)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+    train_step = optimizer.minimize(loss)
+    train_batch_fd = {tlog.input_placeholder_name(mode):TX, tlog.target_output_placeholder_name(mode):TY}
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
+    acc0 = session.run(accuracy, feed_dict=test_batch_fd)
+    print 'initial accuracy',acc0
+    self.assertTrue(acc0<0.6)
+    for i in range(10):
+      session.run(train_step, feed_dict=train_batch_fd)
+    acc1 = session.run(accuracy, feed_dict=test_batch_fd)
+    print 'final accuracy',acc1
+    self.assertTrue(acc1>=0.9)
 
 
 if __name__ == "__main__":

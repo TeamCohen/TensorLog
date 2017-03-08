@@ -1,4 +1,5 @@
 import logging
+import os.path
 
 from tensorlog import comline
 from tensorlog import declare
