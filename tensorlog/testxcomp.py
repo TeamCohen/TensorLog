@@ -23,11 +23,13 @@ from tensorlog import learnxcomp as learnxc
 from tensorlog import tensorflowxcomp
 
 
+tf.logging.set_verbosity(tf.logging.WARN)
+
 TESTED_COMPILERS = [
   theanoxcomp.DenseMatDenseMsgCrossCompiler,
   theanoxcomp.SparseMatDenseMsgCrossCompiler,
-  tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-  tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
+#  tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+#  tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
 ]
 
 SAVE_SUMMARIES = False
@@ -576,6 +578,6 @@ if __name__ == "__main__":
     if len(sys.argv)==1:
         unittest.main()
     else:
-        foo=TestXCGrad('test_if')
+        foo=TestXCGrad()
         foo.setUp()
         bar=foo.test_if()

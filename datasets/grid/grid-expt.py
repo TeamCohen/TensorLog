@@ -21,6 +21,7 @@ from tensorlog import ops
 from tensorlog import expt
 from tensorlog import learn
 from tensorlog import plearn
+from tensorlog import learnxcomp as learnxc
 
 # results july 14
 #
@@ -36,6 +37,14 @@ from tensorlog import plearn
 #
 
 EDGE_WEIGHT = 0.2
+CROSS_COMPILE = []
+
+try:
+    from tensorlog import theanoxcomp
+    CROSS_COMPILE.append(theanoxcomp.DenseMatDenseMsgCrossCompiler)
+    CROSS_COMPILE.append(theanoxcomp.SparseMatDenseMsgCrossCompiler)
+except:
+    pass
 
 def nodeName(i,j): 
     return '%d,%d' % (i,j)
@@ -188,13 +197,9 @@ if __name__=="__main__":
         ops.conf.max_trace = True
         expt.Expt(params).run()
         
-        for dep,compilerClass in CROSS_COMPILE:
-          try:
-            import dep
-            
-            tlogFun = prog.compile(mode)
-            xc = compilerClass(prog.db)
-            xc.compile(tlogFun,params)
+        for compilerClass in CROSS_COMPILE:
+            xc = compilerClass(prog)
+            xc.compile('path/io',[('edge',2)])
             
             learner = learnxc.XLearner(prog,xc)
             
@@ -205,8 +210,6 @@ if __name__=="__main__":
                       'learner':learner,
             }
             expt.Expt(params).run()
-          except:
-            pass
         
         if False and NETWORKX:
             visualizeLearned(db,n)

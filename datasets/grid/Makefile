@@ -1,4 +1,4 @@
-expt.log:
+expt.log: setup
 	python grid-expt.py acc 16 > expt.log
 
 actual.txt: expt.log
@@ -7,6 +7,9 @@ actual.txt: expt.log
 
 check: actual.txt
 	diff -y actual.txt expected.txt || true
+
+setup:
+	mkdir -p inputs tmp-cache
 
 test:
 	python grid-expt.py time 16
