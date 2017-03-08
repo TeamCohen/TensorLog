@@ -1,3 +1,5 @@
+# (C) William W. Cohen and Carnegie Mellon University, 2017
+
 import logging
 import time
 
@@ -6,8 +8,6 @@ from tensorlog import config
 from tensorlog import declare
 from tensorlog import funs
 from tensorlog import ops
-
-# TOFIX move params from ws to xcompiler
 
 TRAINING_TARGET_VARNAME = '_target_y'
 
@@ -53,7 +53,6 @@ class AbstractCrossCompiler(object):
   # external UI
   #
   # TODO: add regularizers, loss
-  # put the params in order!
 
   def inference(self,mode):
     """ Returns (args,inferenceExpr) """
@@ -163,6 +162,12 @@ class AbstractCrossCompiler(object):
     mode = self.ensureCompiled(mode)
     return map(lambda key:self._handleExprVar[key], self.prog.getParamList())
 
+  def parameterFromDBToExpr(self,functor,arity):
+    return self._handleExpr.get((functor,arity))
+
+  def parameterFromDBToVariable(self,functor,arity):
+    return self._handleExprVar.get((functor,arity))
+
   def pprint(self,mode):
     """Return list of lines in a pretty-print of the underlying, pre-compilation function.
     To actual display these, use something like
@@ -196,6 +201,7 @@ class AbstractCrossCompiler(object):
     assert matMode.arity==1
     key = (matMode.getFunctor(),1)
     if not key in self._handleExpr:
+      assert (matMode.functor,1) in self.db.matEncoding, 'DB does not contain a value for %s' % str(matMode)
       variable_name = "v__" + matMode.getFunctor()
       val = self._wrapDBVector(self.db.vector(matMode)) #ignores all but functor for arity 1
       self._insertHandleExpr(key, variable_name, val)
@@ -218,6 +224,7 @@ class AbstractCrossCompiler(object):
     key = (matMode.getFunctor(),2)
     canonicalMode = declare.asMode( "%s(i,o)" % matMode.getFunctor())
     if not key in self._handleExpr:
+      assert (matMode.functor,2) in self.db.matEncoding, 'DB does not contain a value for %s' % str(matMode)
       variable_name = "M__" + matMode.getFunctor()
       val = self._wrapDBMatrix(self.db.matrix(canonicalMode,False))
       self._insertHandleExpr(key, variable_name, val)

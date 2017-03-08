@@ -1,3 +1,5 @@
+# (C) William W. Cohen and Carnegie Mellon University, 2017
+
 import logging
 import numpy as np
 import os
@@ -20,9 +22,11 @@ from tensorlog import theanoxcomp
 from tensorlog import tensorflowxcomp
 
 
+# note: with all compilers tested, these tests now take about 5-6min, ouch
+
 TESTED_COMPILERS = [
-  theanoxcomp.DenseMatDenseMsgCrossCompiler,
-  theanoxcomp.SparseMatDenseMsgCrossCompiler,
+#  theanoxcomp.DenseMatDenseMsgCrossCompiler,
+#  theanoxcomp.SparseMatDenseMsgCrossCompiler,
   tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
   tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
 ]

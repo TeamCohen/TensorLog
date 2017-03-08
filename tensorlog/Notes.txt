@@ -4,21 +4,20 @@
 Next actions:
 
  - revive debug.py - how can testing this be automated? should I bother? w/ Katie?
- - fix pyparsing
  - look at sparse messages in theano-based learner?
 
 Little jobs:
+ - robust parsing of programs - figure out if it's proppr format or not? make rules weights optional?
  - interp.helpConfig()
  - regularizers for cross compilation
  - output types as typename/id
- - clean up tensorflow/tensorlog interfaces, eg wrapping
+ - clean up tensorflow/tensorlog interfaces, eg wrapping: simple
  - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
-
 
 Bigger steps:
 
  - automatically move program constants into the database and introduce assign clauses when needed??
- - multi-mode training and compilation -- needed for movie app
+ - multi-mode training and compilation -- needed for movie app - need testing
  - benchmark tests on tensorflow
  - adding tensorflow 'builtins'
  -- p(i,o) -> lambda inputExpression:outputExpression 
@@ -26,7 +25,7 @@ Bigger steps:
  - snake_case fixes??
  - repackage (see below)???
  - optimize compilation???
- - typing for tensorlog 
+ - typing for tensorlog -done
  -- note: 10k sample has 3,434 people, 11,819 entities, larger yago has 59,120 people 118,703 entities
     so it's 10x bigger (in message size); 10k sample uses about 15 Gb memory
  -- should look at if sparse matrices are actually being used and monitor where the space is going
@@ -50,7 +49,7 @@ Overall package structure:
 
 Proposed simple -  _ means python object or else argument of comline.parseFOO
   - tlg.Compiler(
-	target='tensorflow',
+        compilerClass=_ | trget='tensorflow',
     	program= _    
       	type_declarations= _
       	db= _,
@@ -60,7 +59,6 @@ Proposed simple -  _ means python object or else argument of comline.parseFOO
 Next actions:
 
    - upload dialog-toy
-   - start on toy for provenance
 
 Question->query idea
 

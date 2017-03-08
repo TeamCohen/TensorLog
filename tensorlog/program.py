@@ -251,6 +251,7 @@ class ProPPRProgram(Program):
         if len(self.ruleIds)==0:
             logging.warn('no rule features have been defined')
         elif ruleIdPred is not None:
+            # TODO check this stuff
             assert (ruleIdPred,1) in set.matEncoding,'there is no unary predicate called %s' % ruleIdPred
             self.db.markAsParameter("weighted",1)
             self.db.setParameter(self.vector(declare.asMode('%s(o)' % ruleIdPred)) * epsilon)

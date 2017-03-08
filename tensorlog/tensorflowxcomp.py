@@ -61,7 +61,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     assert len(self._wsDict[mode].inferenceArgs)==1
     return self._wsDict[mode].inferenceArgs[0].name
 
-  def getTargetName(self,mode):
+  def getTargetOutputName(self,mode):
     """ String key for the target-output placeholder
     """
     assert len(self._wsDict[mode].dataLossArgs)==2
@@ -72,7 +72,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     """
     mode = self.ensureCompiled(mode)
     (X,Y) = self._ensureWrapped(X,Y,wrapped)
-    return { self.getInputName(mode):X, self.getTargetName(mode):Y }
+    return { self.getInputName(mode):X, self.getTargetOutputName(mode):Y }
 
   def optimizeDataLoss(self,mode,optimizer,X,Y,epochs=1,minibatchSize=0,wrapped=False):
     """ Train

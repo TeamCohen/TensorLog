@@ -1,8 +1,5 @@
 TODO: 
 
- - clean up weightEpsilon
-
-
  - check y - p vs p - y in tensorlog (and gradient sign)
  - check family dataset
  - check subfunction reuse in grid

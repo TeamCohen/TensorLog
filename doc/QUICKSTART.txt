@@ -63,7 +63,11 @@ Typing: you can use assign(Var,const,type) to if you're using types: eg,
 
 If you use the ProPPR-style rule features (in the curly braces) you
 should 
- - make sure any constants appearing there are in the database
+ - make sure any constants appearing there are in the database.
+ If you make these all appear in the database as arguments to the
+ unary predicate 'weighted' then program.setRuleWeights() will
+ operate properly by default.  If you use another unary predicate
+ you need to specify it in as an argument to program.setRuleWeights.
  - load the rule file as 'proppr' format, which is NOT the default.
 There's no serialized form of a program.  
 
