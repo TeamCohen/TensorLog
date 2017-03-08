@@ -452,6 +452,15 @@ class TestXCExpt(unittest.TestCase):
           trainData=optdict['trainData'],
           testData=optdict['testData'],
           targetMode=declare.asMode("predict/io"))
+
+      for (functor,arity) in xc.db.matEncoding:
+        v = xc.parameterFromDBToVariable(functor,arity)
+        if v is not None:
+          vIsTrainable = (v in tf.trainable_variables())
+          vIsParameter = ((functor,arity) in xc.db.paramSet)
+          self.assertEqual(vIsTrainable,vIsParameter)
+
+
       pbDoc = xc.db.onehot('pb','doc')
       self.checkXC(xc,'predict/io',pbDoc,{'negPair':115,'posPair':115,'hasWord':59,'weighted':115,'label':5})
       # some checks on the output of pprint
