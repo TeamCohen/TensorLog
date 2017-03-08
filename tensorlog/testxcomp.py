@@ -4,7 +4,10 @@ import os
 import unittest
 import sys
 import collections
-import tensorflow as tf
+try:
+  import tensorflow as tf
+except:
+  tf=None
 import theano
 
 from tensorlog import comline
@@ -22,8 +25,8 @@ from tensorlog import ops
 from tensorlog import learnxcomp as learnxc
 from tensorlog import tensorflowxcomp
 
-
-tf.logging.set_verbosity(tf.logging.WARN)
+if tf:
+  tf.logging.set_verbosity(tf.logging.WARN)
 
 TESTED_COMPILERS = [
   theanoxcomp.DenseMatDenseMsgCrossCompiler,

@@ -7,11 +7,11 @@ import funs
 
 #theano.config.exception_verbosity='high'
 
-class XLearner(object):
-  def __init__(self,tlprog,xc=None,compilerClass=X.DenseMatDenseMsgCrossCompiler):
+class XLearner(L.Learner):
+  def __init__(self,prog,xc=None,compilerClass=X.DenseMatDenseMsgCrossCompiler,regularizer=None,tracer=None,epochTracer=None):
+    super(XLearner,self).__init__(prog,regularizer=regularizer,tracer=tracer,epochTracer=epochTracer)
     if xc: self.xc = xc
-    else: self.xc = compilerClass(tlprog.db)
-    self.prog = tlprog
+    else: self.xc = compilerClass(prog.db)
   def predict(self,mode,X,pad=None):
     """Make predictions on a data matrix associated with the given mode."""
     #if not pad: pad = opfunutil.Scratchpad() 
@@ -27,33 +27,11 @@ class XLearner(object):
     scratchpad is passed in, then intermediate results of the
     gradient computation will be saved on that scratchpad.
     """
-    #if not pad: pad = opfunutil.Scratchpad()
-
-    # More detail: in learning we use a softmax normalization
-    # followed immediately by a crossEntropy loss, which has a
-    # simple derivative when combined - see
-    # http://peterroelants.github.io/posts/neural_network_implementation_intermezzo02/
-    # So in doing backprop, you don't call backprop on the outer
-    # function, instead you compute the initial delta of P-Y, the
-    # derivative for the loss of the (softmax o crossEntropy)
-    # function, and it pass that delta down to the inner function
-    # for softMax
-
-    # do the prediction, saving intermediate outputs on the scratchpad
-    predictFun = self.prog.getPredictFunction(mode)
-    assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
-    #P = self.predict(mode,X,pad)
-
-    # compute gradient
-    #paramGrads = L.GradAccumulator()
-    #TODO assert rowSum(Y) = all ones - that's assumed here in
-    #initial delta of Y-P
-    #xc.fun.backprop(Y-P,paramGrads,pad)
     paramGrads = self.xc.evalDataLossGrad(X,Y)
-
-    # the tracer function may output status, and may also write
-    # information to the counters in paramGrads
-    #self.tracer(self,paramGrads,Y,P,**tracerArgs)
-
     return paramGrads
+  def applyUpdate(self, paramGrads, rate):
+    assert "Cross-compilers don't apply updates"
+  def meanUpdate(self, functor, arity, delta, n, totalN=0):
+    assert "Cross-compilers don't do mean updates"
+  
         

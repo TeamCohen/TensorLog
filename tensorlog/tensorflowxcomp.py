@@ -3,12 +3,15 @@ import os
 import numpy as np
 import scipy.sparse as ss
 import tensorflow as tf
+import time
 
 from tensorlog import comline
 from tensorlog import funs
 from tensorlog import ops
 from tensorlog import xcomp
 from tensorlog import expt
+from tensorlog import learnxcomp
+from tensorlog import dataset
 
 class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
@@ -439,3 +442,17 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     mT = tf.sparse_transpose(m)
     vT = tf.transpose(v)
     return tf.transpose(tf.sparse_tensor_dense_matmul(mT,vT))
+
+
+class FixedRateGDLearner(learnxcomp.XLearner):
+    """ A gradient descent learner.
+    """
+
+    def __init__(self,prog,xc=None,compilerClass=DenseMatDenseMsgCrossCompiler,epochs=20,rate=0.1,regularizer=None,tracer=None,epochTracer=None):
+        super(FixedRateGDLearner,self).__init__(prog,regularizer=regularizer,tracer=tracer,epochTracer=epochTracer)
+        self.epochs=epochs
+        self.rate=rate
+        self.optimizer = tf.train.GradientDescentOptimizer(learning_rate=rate)
+    
+    def train(self,X,Y):
+        self.xc.optimizeDataLoss(self.optimizer,X,Y,epochs=self.epochs)
