@@ -56,6 +56,8 @@ class ModeDeclaration(AbstractDeclaration):
         return self.arg(i)=='o'
     def isConst(self,i):
         return not self.isInput(i) and not self.isOutput(i)
+    def __str__(self):
+        return self.functor + "/" + "".join(self.prototype.args)
 
 class TypeDeclaration(AbstractDeclaration):
     """Declare allowed types for a goal, eg hasWord(doc,word).

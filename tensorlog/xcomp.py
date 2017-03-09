@@ -529,16 +529,16 @@ class AbstractCrossCompiler(object):
    compute any gradients that are needed. """
    assert False, 'abstract method called'
 
-  def exportAllLearnedParams(self):
+  def exportAllLearnedParams(self,session=None):
     """Replace the parameter values in self.prog.db with the values that
     have been learned.
     """
     for (functor,arity) in self.prog.getParamList():
-      newVal = self.getLearnedParam((functor,arity))
+      newVal = self.getLearnedParam((functor,arity),session)
       self.db.setParameter(functor,arity,newVal)
 
   # TOFIX implement for theano
-  def getLearnedParam(self,key):
+  def getLearnedParam(self,key,session=None):
     """Replace the parameter values in self.prog.db with the value that
     was learned for this parameter.
     """

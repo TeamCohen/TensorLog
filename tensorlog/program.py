@@ -168,6 +168,7 @@ class Program(object):
         self.setFeatureWeights()
         logging.debug('setting rule weights %.3f Gb' % comline.memusage())
         self.setRuleWeights()
+        self.db.checkTyping()
 
     def setFeatureWeights(self,epsilon=1.0):
         """ Set feature weights to a plausible value - mostly useful for proppr programs,
@@ -251,7 +252,7 @@ class ProPPRProgram(Program):
         if len(self.ruleIds)==0:
             logging.warn('no rule features have been defined')
         elif ruleIdPred is not None:
-            # TODO check this stuff
+            # TODO check this stuff and add type inference!
             assert (ruleIdPred,1) in set.matEncoding,'there is no unary predicate called %s' % ruleIdPred
             self.db.markAsParameter("weighted",1)
             self.db.setParameter(self.vector(declare.asMode('%s(o)' % ruleIdPred)) * epsilon)
@@ -280,13 +281,24 @@ class ProPPRProgram(Program):
         used to initialize posWeight.  The constant will be epsilon.
         """
         for paramName,domainModes in self.paramDomains.items():
+            # we also need to infer a type for the parameter....
+            def typeOfWeights(mode):
+                for i in range(mode.arity):
+                    if mode.isInput(i):
+                        return self.db.getArgType(mode.functor,mode.arity,i)
+                assert False
             weights = self.db.matrixPreimage(domainModes[0])
+            weightType = typeOfWeights(domainModes[0])
             for mode in domainModes[1:]:
                 weights = weights + self.db.matrixPreimage(mode)
+                assert typeOfWeights(mode)==weightType, 'feature weights have incompatible types: derived from %s and %s' % (mode,domainModes[0])
             weights = weights * 1.0/len(domainModes)
             weights = mutil.mapData(lambda d:np.clip(d,0.0,1.0), weights)
             self.db.setParameter(paramName,1,weights*epsilon)
+            decl = declare.TypeDeclaration(parser.Goal(paramName,[weightType]))
+            self.db.addTypeDeclaration(decl,'<autoseting parameters>',-1)
             logging.debug('parameter %s/1 initialized to %s' % (paramName,"+".join(map(lambda dm:'preimage(%s)' % str(dm), domainModes))))
+            logging.debug('type declaration for %s/1 is %s' % (paramName,decl))
         for (paramName,arity) in self.getParamList():
             if not self.db.parameterIsInitialized(paramName,arity):
                 logging.warn("Parameter %s could not be set automatically")

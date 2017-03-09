@@ -87,6 +87,12 @@ class Compiler(object):
     else:
       assert False,'illegal target %r: valid targets are "tensorflow" and "theano"' % target
 
+  def proofcount(mode):
+    """ An expression for the inference associated with a mode
+    """
+    args,expr = self.xc.proofCount(declare.asMode(mode))
+    return expr
+
   def inference(self,mode):
     """ An expression for the inference associated with a mode
     """
@@ -106,7 +112,10 @@ class Compiler(object):
 
   #
   # needed for building feed_dicts for training/testing tensorflow
-  # TOFIX - can I get these from the arguments to loss, inference?
+  #
+  # note - you could also get the input placeholder from the args
+  # returned by xc.inference and the output placeholder from
+  # xcomp.TRAINING_TARGET_VARNAME
   #
 
   def input_placeholder_name(self,mode):
@@ -125,21 +134,21 @@ class Compiler(object):
   # needed if you don't want to autoset the parameters stored in tensorlog's db
   #
 
-  def param_list(self):
+  def db_param_list(self):
     """ Identifiers for trainable tensorlog DB relations. """
     return self.prog.getParamList()
 
-  def param_is_set(self,param_id):
+  def db_param_is_set(self,param_id):
     """ Test to see if a parameter relation has a value. """
     (functor,arity) = param_id
     return self.db.parameterIsInitialized(functor,arity)
 
-  def get_param_value(self,param_id):
+  def get_db_param_value(self,param_id):
     """ Get the value of a parameter relation has a value. """
     (functor,arity) = param_id
     return self.db.getParameter(functor,arity)
 
-  def set_param_value(self,param_id,value):
+  def set_db_param_value(self,param_id,value):
     """Set the value of a parameter relation.  You can only usefully set a
     param BEFORE you start doing inference or training. This is
     because the value is stored in the tensorlog database first, then,
@@ -151,10 +160,20 @@ class Compiler(object):
     self.db.setParameter(functor,arity,value)
 
   #
-  # expose other useful routines
+  # useful after learning or for checkpointing
   #
 
-  def _mode_as_string(self,mode): return mode.getFunctor() + "/" + "".join(mode.arg(i) for i in range(mode.getArity()))
+  def set_all_db_params_to_learned_values(self,session):
+    """ Set all trainable parameter relations to their learned values
+    """
+    self.xc.exportAllLearnedParams(session=session)
+
+  def serialize_db(self,dir_name):
+    self.db.serialize(dir_name)
+
+  #
+  # expose other useful routines
+  #
 
   def load_dataset(self,dataset_spec):
     """Return a dictionary where keys are strings defining tensorlog
@@ -183,7 +202,7 @@ class Compiler(object):
     # dictionary mapping strings like "p/io" to X,Y pairs, where X and
     # Y are wrapped inputs.
     def wrapped_xy_pair(mode): return (self.xc.wrapInput(dset.getX(mode)), self.xc.wrapInput(dset.getY(mode)))
-    return dict((self._mode_as_string(mode),wrapped_xy_pair(mode)) for mode in dset.modesToLearn())
+    return dict((str(mode),wrapped_xy_pair(mode)) for mode in dset.modesToLearn())
 
   def minibatches(self,dataset_dict,batch_size=100,shuffle_first=True):
     """Yields a series of pairs (mode,(X,Y)) where X and Y are a
@@ -197,4 +216,4 @@ class Compiler(object):
       y_dict[mode] = self.xc.unwrapInput(y)
       dset = dataset.Dataset(x_dict,y_dict)
     for mode,bx,by in dset.minibatchIterator(batchSize=batch_size,shuffleFirst=shuffle_first):
-      yield self._mode_as_string(mode),(self.xc.wrapInput(bx),self.xc.wrapInput(by))
+      yield str(mode),(self.xc.wrapInput(bx),self.xc.wrapInput(by))

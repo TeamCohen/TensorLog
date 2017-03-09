@@ -6,6 +6,7 @@ import os
 import unittest
 import sys
 import collections
+import tempfile
 import tensorflow as tf
 import theano
 
@@ -136,15 +137,15 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       print '== performing eval with',compilerClass,'=='
       inferenceFun = xc.inferenceFunction(mode_string)
       y = inferenceFun(prog.db.onehot(input_symbol))
+      print 'input',xc.getInputName(mode_string),'args,fun =',xc.inference(mode_string)
       # theano output will a be (probably dense) message, so
       # just compare that maximal elements from these two dicts
       # are the same
       actual_result_dict = self.db.rowAsSymbolDict(y)
       self.check_maxes_in_dicts(actual_result_dict, expected_result_dict)
+      # check it's normalized
       l1_error = abs(sum(actual_result_dict.values()) - 1.0)
       self.assertTrue( l1_error < 0.0001)
-
-
       # also test proofCountFun
       proofCountFun = xc.proofCountFunction(mode_string)
       pc = proofCountFun(prog.db.onehot(input_symbol))
@@ -596,6 +597,31 @@ class TestSimple(unittest.TestCase):
     acc1 = session.run(accuracy, feed_dict=test_batch_fd)
     print 'final accuracy',acc1
     self.assertTrue(acc1>=0.9)
+    # test a round-trip serialization
+    # saves the db
+    cacheDir = tempfile.mkdtemp()
+    db_file = os.path.join(cacheDir,'simple.db')
+    tlog.set_all_db_params_to_learned_values(session)
+    tlog.serialize_db(db_file)
+    # load everything into a new graph and don't reset the learned params
+    new_graph = tf.Graph()
+    with new_graph.as_default():
+      tlog2 = simple.Compiler(
+          db=db_file,
+          prog=os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"),
+          autoset_db_params=False)
+      # reconstruct the accuracy measure
+      inference2 = tlog2.inference(mode)
+      trueY2 = tf.placeholder(tf.float32, shape=UY.shape, name='tensorlog/trueY2')
+      correct2 = tf.equal(tf.argmax(trueY2,1), tf.argmax(inference2,1))
+      accuracy2 = tf.reduce_mean(tf.cast(correct2, tf.float32))
+      # eval accuracy in a new session
+      session2 = tf.Session()
+      session2.run(tf.global_variables_initializer())
+      test_batch_fd2 = {tlog2.input_placeholder_name(mode):UX, trueY2.name:UY}
+      acc3 = session2.run(accuracy2, feed_dict=test_batch_fd2)
+      print 'accuracy after round-trip serialization',acc3
+      self.assertTrue(acc3>=0.9)
 
   def testMinibatch(self):
     tlog = simple.Compiler(

@@ -393,6 +393,7 @@ class MatrixDB(object):
       if not stringKey.startswith('__'):
         db.matEncoding[eval(stringKey)] = scipy.sparse.csr_matrix(mat)
     logging.info('deserialized database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
+    db.checkTyping()
     return db
 
   @staticmethod

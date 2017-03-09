@@ -58,12 +58,14 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   def getInputName(self,mode):
     """ String key for the input placeholder
     """
+    mode = self.ensureCompiled(mode)
     assert len(self._wsDict[mode].inferenceArgs)==1
     return self._wsDict[mode].inferenceArgs[0].name
 
   def getTargetOutputName(self,mode):
     """ String key for the target-output placeholder
     """
+    mode = self.ensureCompiled(mode)
     assert len(self._wsDict[mode].dataLossArgs)==2
     return self._wsDict[mode].dataLossArgs[-1].name
 
@@ -290,10 +292,14 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     if verbose>=1:
       TensorFlowCrossCompiler.pprintExpr(self.ws.inferenceExpr)
 
-  def getLearnedParam(self,key):
-    self.ensureSessionInitialized()
-    with self.session.as_default():
-      varVal = self._handleExprVar[key].eval()
+  def getLearnedParam(self,key,session=None):
+    if session is None:
+      self.ensureSessionInitialized()
+      with self.session.as_default():
+        varVal = self._handleExprVar[key].eval()
+    else:
+      with session.as_default():
+        varVal = self._handleExprVar[key].eval()
     # same logic works for param values as param updates
     return self._unwrapUpdate(key, varVal)
 

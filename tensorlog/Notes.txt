@@ -8,13 +8,12 @@ Next actions (KR):
 
 Next actions (WC):
  - simple
- -- simple.compiler.minibatches(dataset_dict) - test
  -- provenance/synthetic/simple-expt.py -- test
  -- l1-regularization on synthetic/simple-expt.py and real-data expt
- -- feed_dict cleanup
  -- exporting parameters back to database
 
 Little jobs:
+ - cleanup sessions in tensorflowxcomp
  - cleanup modes? should they always be written pred/io, and i,o no longer be reserved words?
  - robust parsing of programs - figure out if it's proppr format or not? make rules weights optional?
  - interp.helpConfig()
