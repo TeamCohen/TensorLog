@@ -221,12 +221,8 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   # standard xcomp interface
   #
 
-  # TOFIX - clean up
-  # override this so I can mess with summaryFiles
-  def _doCompile(self,fun,mode):
-    self._setupGlobals()
-    (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self._fun2Expr(fun)
-    self._buildLossExpr(mode)
+  def _finalizeCompile(self,mode):
+    #TODO does this work for multi-mode compilation?
     if self.summaryFile:
       self.summaryMergeAll = tf.summary.merge_all()
 

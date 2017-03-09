@@ -1,23 +1,33 @@
  - export PYTHONPATH=/usr/local/google/home/cohenw/code/TensorLog:$PYTHONPATH
  - live theano add /usr/local/google/home/cohenw/code/Theano
 
-Next actions:
+Next actions (KR):
 
  - revive debug.py - how can testing this be automated? should I bother? w/ Katie?
  - look at sparse messages in theano-based learner?
 
+Next actions (WC):
+ - simple
+ -- simple.compiler.minibatches(dataset_dict) - test
+ -- provenance/synthetic/simple-expt.py -- test
+ -- l1-regularization on synthetic/simple-expt.py and real-data expt
+ -- feed_dict cleanup
+ -- exporting parameters back to database
+
 Little jobs:
+ - cleanup modes? should they always be written pred/io, and i,o no longer be reserved words?
  - robust parsing of programs - figure out if it's proppr format or not? make rules weights optional?
  - interp.helpConfig()
- - regularizers for cross compilation
  - output types as typename/id
- - clean up tensorflow/tensorlog interfaces, eg wrapping: simple
  - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
 
-Bigger steps:
+Semantics:
+ - tensorlog compiler compiles p_io(x) to v=softmax(proofcount(y|x,db,prog,theta))
+ - alternative: make proofcount(y|x) the a core output, and configure inference schemes
+   on top of this -- either in compiler or just in tensorflow
 
- - automatically move program constants into the database and introduce assign clauses when needed??
- - multi-mode training and compilation -- needed for movie app - need testing
+Bigger steps:
+ - automatically move program constants into the database and introduce assign clauses when needed?? -nah
  - benchmark tests on tensorflow
  - adding tensorflow 'builtins'
  -- p(i,o) -> lambda inputExpression:outputExpression 

@@ -52,7 +52,6 @@ class AbstractCrossCompiler(object):
   #
   # external UI
   #
-  # TODO: add regularizers, loss
 
   def inference(self,mode):
     """ Returns (args,inferenceExpr) """
@@ -72,6 +71,29 @@ class AbstractCrossCompiler(object):
     return self._asOneInputFunction(args[0],expr,wrapInputs,unwrapOutputs)
 
   def inferenceOutputType(self,mode):
+    """ The type associated with the output of a tensorlog function.
+    """
+    mode = self.ensureCompiled(mode)
+    return self._wsDict[mode].tensorlogFun.outputType
+
+  def proofCount(self,mode):
+    """ Returns (args,proofCountExpr) """
+    mode = self.ensureCompiled(mode)
+    return self._wsDict[mode].proofCountArgs, self._wsDict[mode].proofCountExpr
+
+  def proofCountFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
+    """Returns a python function which performs counts proofs for the
+    queries defined by that mode.  The function takes a length-one
+    tuple containing one argument X, which can be a row vector or a
+    minibatch, and outputs a matrix with the same number of rows as X,
+    and the number of columns appropriate for the output type of the
+    mode.
+    """
+    args,expr = self.proofCount(mode)
+    assert len(args)==1
+    return self._asOneInputFunction(args[0],expr,wrapInputs,unwrapOutputs)
+
+  def proofCountOutputType(self,mode):
     """ The type associated with the output of a tensorlog function.
     """
     mode = self.ensureCompiled(mode)
@@ -127,6 +149,12 @@ class AbstractCrossCompiler(object):
     """ Convert scipy matrix to required input format
     """
     return self._wrapMsg(x)
+
+  def unwrapInput(self,x):
+    """Inverts wrapInput.  Override this only if inputs and outputs are
+    in a different format.
+    """
+    return self._unwrapOutput(x)
 
   def unwrapOutput(self,y):
     """ Convert output to scipy matrix
@@ -279,9 +307,23 @@ class AbstractCrossCompiler(object):
     """
     self._setupGlobals()
     # build the expression used for inference
-    (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self._fun2Expr(fun)
+    if isinstance(fun,funs.SoftmaxFunction):
+      # proofCountExpr is the what we apply the softmax normalization to
+      (self.ws.proofCountArgs,self.ws.proofCountExpr,self.ws.proofCountOutputType) = self._fun2Expr(fun.fun)
+      self.ws.inferenceExpr = self._softmaxFun2Expr(self.ws.proofCountExpr,self.ws.proofCountOutputType)
+      self.ws.inferenceArgs = self.ws.proofCountArgs
+      self.ws.inferenceOutputType = self.ws.proofCountOutputType
+    else:
+      logging.warn('cannot recover proofCount expression for mode %s -  is it not softmax normalized?' % str(mode))
+      (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self._fun2Expr(fun)
     # extend the inferenceExpr to also compute loss
     self._buildLossExpr(mode)
+    self._finalizeCompile(mode)
+
+  def _finalizeCompile(self,mode):
+    """ Hook function called after _doCompile
+    """
+    pass
 
   def _setupGlobals(self):
     """ Initialize variables used by this cross-compiler object. """
@@ -292,24 +334,24 @@ class AbstractCrossCompiler(object):
         self._onlyType = self.db.getTypes()[0]
       self._globalsSet = True
 
-
   #
   # recursive compilation of function tree
   #
 
   def _fun2Expr(self,fun,sharedInputs=None,depth=0):
-    """Return a triple (inputs, expr, typeName) where binding the inputs in,
-    and then evaluating the expression, is semantically equivalent to
-    evaluating the Function fun in tensorlog, given that all the
-    workspace variables are initialized.  typeName is the outputType
-    of the function.
+    """Convert a tensorlog funs.Function() to an expression in the target
+    language.  Return a triple (inputs, expr, typeName) where binding
+    the inputs in, and then evaluating the expression, is semantically
+    equivalent to evaluating the Function fun in tensorlog, given that
+    all the workspace variables are initialized.  typeName is the
+    outputType of the function.
 
     The sharedInputs is used if you already have created variables
     corresponding to the inputs to this expression.  This is the case
     when you have a SumFunction: all the subexpressions share the same
     inputs.
 
-    Depth is the depth of recursion
+    Depth is the depth of recursion.
     """
 
     if isinstance(fun,funs.SoftmaxFunction):
@@ -527,15 +569,15 @@ class Workspace(object):
     self.xcomp = xcomp
     # tensorlog function that will be cross-compiled
     self.tensorlogFun = None
-    # expression used for inference
+    # expression for proof counts for (output|input), with args and output type
+    self.proofCountExpr = None
+    self.proofCountArgs = None #list of placeholders
+    self.proofCountOutputType = None
+    # expression used for inference, with args and output type
     self.inferenceExpr = None
-    # list of arguments to inferenceExpr - generated with createPlaceholder
     self.inferenceArgs = None
-    # output type of the inferenceArgs
     self.inferenceOutputType = None
-    # expression used for unregularized loss
+    # expression used for unregularized loss, with args and output type
     self.dataLossExpr = None
-    # additional arguments for computing loss - generated with createPlaceholder
     self.dataLossArgs = None
-    # gradient of loss expression wrt each parameter
     self.dataLossGradExprs = None

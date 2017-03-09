@@ -79,6 +79,7 @@ class Compiler(object):
       assert False,'cannot convert %r to a program' % prog
 
     # parse the target argument
+    self.target = target
     if target=='tensorflow':
       self.xc = tensorflowxcomp.SparseMatDenseMsgCrossCompiler(self.prog, summaryFile=summary_file)
     elif target=='theano':
@@ -87,42 +88,64 @@ class Compiler(object):
       assert False,'illegal target %r: valid targets are "tensorflow" and "theano"' % target
 
   def inference(self,mode):
+    """ An expression for the inference associated with a mode
+    """
     args,expr = self.xc.inference(declare.asMode(mode))
     return expr
 
   def loss(self,mode):
+    """ An expression for the unregularized loss associated with a mode
+    """
     args,expr = self.xc.dataLoss(declare.asMode(mode))
     return expr
 
-  def param_variables(self,mode):
+  def trainable_db_variables(self,mode):
+    """ The trainable variables associated with the tensorlog database
+    """
     return self.xc.getParamVariables(declare.asMode(mode))
 
   #
-  # needed for training tensorflow compilers
+  # needed for building feed_dicts for training/testing tensorflow
+  # TOFIX - can I get these from the arguments to loss, inference?
   #
 
-  def param_list(self):
-    return self.prog.getParamList()
-
   def input_placeholder_name(self,mode):
+    """ For tensorflow, the placeholder associated with the input to this function.
+    """
+    assert self.target == 'tensorflow'
     return self.xc.getInputName(declare.asMode(mode))
 
   def target_output_placeholder_name(self,mode):
+    """ For tensorflow, the placeholder associated with the output to this function.
+    """
+    assert self.target == 'tensorflow'
     return self.xc.getTargetOutputName(declare.asMode(mode))
 
   #
   # needed if you don't want to autoset the parameters stored in tensorlog's db
   #
 
-  def param_is_initialized(self,param_id):
+  def param_list(self):
+    """ Identifiers for trainable tensorlog DB relations. """
+    return self.prog.getParamList()
+
+  def param_is_set(self,param_id):
+    """ Test to see if a parameter relation has a value. """
     (functor,arity) = param_id
     return self.db.parameterIsInitialized(functor,arity)
 
   def get_param_value(self,param_id):
+    """ Get the value of a parameter relation has a value. """
     (functor,arity) = param_id
     return self.db.getParameter(functor,arity)
 
   def set_param_value(self,param_id,value):
+    """Set the value of a parameter relation.  You can only usefully set a
+    param BEFORE you start doing inference or training. This is
+    because the value is stored in the tensorlog database first, then,
+    when an inference or loss function is generated, the value will be
+    used as the initializer for a variable.
+    """
     (functor,arity) = param_id
     assert self.xc.parameterFromDBToExpr(functor,arity) is None,'too late to reset value for %r - it has already been used in the compiler'
     self.db.setParameter(functor,arity,value)
@@ -130,6 +153,8 @@ class Compiler(object):
   #
   # expose other useful routines
   #
+
+  def _mode_as_string(self,mode): return mode.getFunctor() + "/" + "".join(mode.arg(i) for i in range(mode.getArity()))
 
   def load_dataset(self,dataset_spec):
     """Return a dictionary where keys are strings defining tensorlog
@@ -157,6 +182,19 @@ class Compiler(object):
     # convert to something bereft of tensorlog data structures: a
     # dictionary mapping strings like "p/io" to X,Y pairs, where X and
     # Y are wrapped inputs.
-    def mode_as_string(mode): return mode.getFunctor() + "/" + "".join(mode.arg(i) for i in range(mode.getArity()))
     def wrapped_xy_pair(mode): return (self.xc.wrapInput(dset.getX(mode)), self.xc.wrapInput(dset.getY(mode)))
-    return dict((mode_as_string(mode),wrapped_xy_pair(mode)) for mode in dset.modesToLearn())
+    return dict((self._mode_as_string(mode),wrapped_xy_pair(mode)) for mode in dset.modesToLearn())
+
+  def minibatches(self,dataset_dict,batch_size=100,shuffle_first=True):
+    """Yields a series of pairs (mode,(X,Y)) where X and Y are a
+    minibatch suitable for training the function designated by mode.
+    """
+    x_dict = {}
+    y_dict = {}
+    for mode_str,(x,y) in dataset_dict.items():
+      mode = declare.asMode(mode_str)
+      x_dict[mode] = self.xc.unwrapInput(x)
+      y_dict[mode] = self.xc.unwrapInput(y)
+      dset = dataset.Dataset(x_dict,y_dict)
+    for mode,bx,by in dset.minibatchIterator(batchSize=batch_size,shuffleFirst=shuffle_first):
+      yield self._mode_as_string(mode),(self.xc.wrapInput(bx),self.xc.wrapInput(by))

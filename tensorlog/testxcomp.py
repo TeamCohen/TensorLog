@@ -139,7 +139,21 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       # theano output will a be (probably dense) message, so
       # just compare that maximal elements from these two dicts
       # are the same
-      self.check_maxes_in_dicts(self.db.rowAsSymbolDict(y), expected_result_dict)
+      actual_result_dict = self.db.rowAsSymbolDict(y)
+      self.check_maxes_in_dicts(actual_result_dict, expected_result_dict)
+      l1_error = abs(sum(actual_result_dict.values()) - 1.0)
+      self.assertTrue( l1_error < 0.0001)
+
+
+      # also test proofCountFun
+      proofCountFun = xc.proofCountFunction(mode_string)
+      pc = proofCountFun(prog.db.onehot(input_symbol))
+      # theano output will a be (probably dense) message, so
+      # just compare that maximal elements from these two dicts
+      # are the same
+      pc_result_dict = self.db.rowAsSymbolDict(pc)
+      if len(pc_result_dict)>0:
+        self.check_maxes_in_dicts(pc_result_dict, expected_result_dict)
       print '== eval checks passed =='
 
   def check_maxes_in_dicts(self,actual,expected):
@@ -553,7 +567,7 @@ class TestMultiModeXC(unittest.TestCase):
 
 class TestSimple(unittest.TestCase):
 
-  def testIt(self):
+  def testBatch(self):
     tlog = simple.Compiler(
         db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
         prog=os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"))
@@ -577,7 +591,40 @@ class TestSimple(unittest.TestCase):
     print 'initial accuracy',acc0
     self.assertTrue(acc0<0.6)
     for i in range(10):
+      print 'epoch',i+1
       session.run(train_step, feed_dict=train_batch_fd)
+    acc1 = session.run(accuracy, feed_dict=test_batch_fd)
+    print 'final accuracy',acc1
+    self.assertTrue(acc1>=0.9)
+
+  def testMinibatch(self):
+    tlog = simple.Compiler(
+        db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
+        prog=os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"))
+    trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
+    testData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"))
+    mode = trainData.keys()[0]
+    UX,UY = testData[mode]
+    inference = tlog.inference(mode)
+    trueY = tf.placeholder(tf.float32, shape=UY.shape, name='tensorlog/trueY')
+    correct = tf.equal(tf.argmax(trueY,1), tf.argmax(inference,1))
+    accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+    test_batch_fd = {tlog.input_placeholder_name(mode):UX, trueY.name:UY}
+    loss = tlog.loss(mode)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+    train_step = optimizer.minimize(loss)
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
+    acc0 = session.run(accuracy, feed_dict=test_batch_fd)
+    print 'initial accuracy',acc0
+    self.assertTrue(acc0<0.6)
+    for i in range(10):
+      print 'epoch',i+1,
+      for mode,(TX,TY) in tlog.minibatches(trainData,batch_size=2):
+        print '.',
+        train_minibatch_fd = {tlog.input_placeholder_name(mode):TX, tlog.target_output_placeholder_name(mode):TY}
+        session.run(train_step, feed_dict=train_minibatch_fd)
+      print 'epoch',i+1,'finished'
     acc1 = session.run(accuracy, feed_dict=test_batch_fd)
     print 'final accuracy',acc1
     self.assertTrue(acc1>=0.9)
