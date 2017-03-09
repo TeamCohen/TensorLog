@@ -923,6 +923,27 @@ class TestDataset(unittest.TestCase):
   def testLoadExamples(self):
     self.checkMatchExamples(os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'), proppr=False)
 
+  def testNormalize(self):
+    def totalRowWeightOfY():
+      famDB = matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'fam.cfacts'))
+      dset = dataset.Dataset.loadExamples(famDB,os.path.join(TEST_DATA_DIR,'fam.exam'))
+      mode = dset.modesToLearn()[0]
+      Y = dset.getY(mode)
+      return Y.sum(axis=1)
+    saved_config = dataset.conf.normalize_outputs
+    dataset.conf.normalize_outputs = False
+    s = totalRowWeightOfY()
+    nrows,ncols = s.shape
+    self.assertEqual(nrows,4)
+    expected = [2.0, 1.0, 2.0, 2.0]
+    for i in range(nrows):
+      self.assertEqual(s[i,0], expected[i])
+    dataset.conf.normalize_outputs = True
+    s = totalRowWeightOfY()
+    for i in range(nrows):
+      self.assertEqual(s[i,0], 1.0)
+    dataset.conf.normalize_outputs = saved_config
+
   def checkMatchExamples(self,filename,proppr):
     dset = dataset.Dataset.loadExamples(self.db,filename,proppr=proppr)
     modes = dset.modesToLearn()
