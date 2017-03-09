@@ -17,7 +17,7 @@ from tensorlog import mutil
 from tensorlog import opfunutil
 from tensorlog import parser
 
-VERSION = '1.3.0'
+VERSION = '1.3.1'
 
 # externally visible changes:
 #
@@ -45,6 +45,8 @@ VERSION = '1.3.0'
 #    parameter declarations:     # :- trainable(posWeight,1)
 #    OOV marker for test/train .exam files
 #    interp.Interp split off from program
+# version 1.3.1:
+#     simple.Compiler() fleshed out and tested for tensorflow
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'

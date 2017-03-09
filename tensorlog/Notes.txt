@@ -10,9 +10,9 @@ Next actions (WC):
  - simple
  -- provenance/synthetic/simple-expt.py -- test
  -- l1-regularization on synthetic/simple-expt.py and real-data expt
- -- exporting parameters back to database
 
 Little jobs:
+ - tests and etc for {id} features.  Should I have these? they are just {weighted(R1): assign(R1,r1,ruleid_t)}
  - cleanup sessions in tensorflowxcomp
  - cleanup modes? should they always be written pred/io, and i,o no longer be reserved words?
  - robust parsing of programs - figure out if it's proppr format or not? make rules weights optional?
