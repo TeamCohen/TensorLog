@@ -111,6 +111,12 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
   def _unwrapUpdate(self,key,up):
     return self._unwrapOutput(up)
 
+  def _unwrapDBVector(self,key,vec):
+    return self._unwrapOutput(vec)
+
+  def _unwrapDBMatrix(self,key,mat):
+    return self._unwrapOutput(vec)
+
   def _softmaxFun2Expr(self,subExpr,typeName):
     return self._applyOpToNonzerosOfDense(TNN.nnet.softmax,subExpr+self._nullSmoother[typeName])
 

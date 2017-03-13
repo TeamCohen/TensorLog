@@ -95,15 +95,18 @@ class MatrixDB(object):
     if conf.ignore_types:
       logging.info('ignoring type declaration %s at %s:%d' % (str(decl),filename,lineno))
     else:
-      errorMsg = '%s:%d:  multiple declarations for %s/%d' % (filename,lineno,decl.functor,decl.arity)
-      assert (decl.functor,decl.arity) not in self._type[0], errorMsg
       logging.info('type declaration %s at %s:%d' % (str(decl),filename,lineno))
       key = (decl.functor,decl.arity)
       for j in range(decl.arity):
         typeName = decl.getType(j)
-        if typeName not in self._stab:
-          self._stab[typeName] = self._safeSymbTab()
-        self._type[j][key] = typeName
+        if key in self._type[j] and self._type[j][key] != typeName:
+          errorMsg = '%s:%d:  %s/%d argument %d declared as both type %s and %s' \
+                      % (filename,lineno,decl.functor,decl.arity,j,typeName,self._type[j][key])
+          assert False, errorMsg
+        else:
+          if typeName not in self._stab:
+            self._stab[typeName] = self._safeSymbTab()
+          self._type[j][key] = typeName
 
   #
   # retrieve matrixes, vectors, etc

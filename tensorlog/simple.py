@@ -87,7 +87,7 @@ class Compiler(object):
     else:
       assert False,'illegal target %r: valid targets are "tensorflow" and "theano"' % target
 
-  def proofcount(mode):
+  def proof_count(self,mode):
     """ An expression for the inference associated with a mode
     """
     args,expr = self.xc.proofCount(declare.asMode(mode))
@@ -129,6 +129,12 @@ class Compiler(object):
     """
     assert self.target == 'tensorflow'
     return self.xc.getTargetOutputName(declare.asMode(mode))
+
+  def target_output_placeholder(self,mode):
+    """ For tensorflow, the placeholder associated with the output to this function.
+    """
+    assert self.target == 'tensorflow'
+    return self.xc.getTargetOutputPlaceholder(declare.asMode(mode))
 
   #
   # needed if you don't want to autoset the parameters stored in tensorlog's db

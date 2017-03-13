@@ -43,7 +43,7 @@ class AbstractCrossCompiler(object):
     # calling insertHandleExpr().
     self._handleExpr = {}
     # For each handle expression, there is some underlying variable
-    # with a gradient that is used.  Often this is the same as the
+    # with a gradient that is optimized.  Often this is the same as the
     # handle expression, but not always.  These are indexed by
     # functor,arity key.
     self._handleExprVar = {}
@@ -160,6 +160,12 @@ class AbstractCrossCompiler(object):
     """ Convert output to scipy matrix
     """
     return self._wrapOutput(y)
+
+  def unwrapParam(self,y):
+    """ Convert output to scipy matrix
+    """
+    return self._unwrapOutput(x)
+
 
   #
   # used in inferenceFunction, dataLossFunction, etc
@@ -472,11 +478,13 @@ class AbstractCrossCompiler(object):
     """Convert a matrix from the DB into the target language """
     assert False, 'abstract method called'
 
-  def _unwrapOutputs(self,targetLanguageOutputs):
-    """ Convert a list of outputs produced by the target language to a
-    tensorlog output (a scipy sparse vector/matrix)
-    """
-    return map(lambda v:self.unwrapOutput(v), targetLanguageOutputs)
+  def _unwrapDBVector(self,key,vec):
+    """ Convert a vector from the target language into the format used by the tensorlog DB """
+    assert False, 'abstract method called'
+
+  def _unwrapDBMatrix(self,key,mat):
+    """ Convert a matrix from the target language into the format used by the tensorlog DB """
+    assert False, 'abstract method called'
 
   def _unwrapOutput(self,targetLanguageOutputs):
     """ Convert an output produced by the target language to a

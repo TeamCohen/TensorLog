@@ -7,7 +7,9 @@ Next actions (KR):
  - look at sparse messages in theano-based learner?
 
 Next actions (WC):
- - simple
+ - simple: 
+ -- serialization doesn't work in provenance/synthetic/simple-expt?
+ -- regularization doesn't work well with reparameterization
  -- provenance/synthetic/simple-expt.py -- test
  -- l1-regularization on synthetic/simple-expt.py and real-data expt
 
@@ -19,6 +21,7 @@ Little jobs:
  - interp.helpConfig()
  - output types as typename/id
  - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
+ - move testability code to subclass "testabletensorflowxcompiler"
 
 Semantics:
  - tensorlog compiler compiles p_io(x) to v=softmax(proofcount(y|x,db,prog,theta))
@@ -29,8 +32,12 @@ Bigger steps:
  - automatically move program constants into the database and introduce assign clauses when needed?? -nah
  - benchmark tests on tensorflow
  - adding tensorflow 'builtins'
- -- p(i,o) -> lambda inputExpression:outputExpression 
- -- p(o)   -> lambda outputExpression 
+ -- bpcompiler: 
+ --- code is mostly ready, based on BuiltInIOOp, just need to add a "virtual op" type.
+ --- need to worry about checking modes, and multiple inputs
+ -- xcomp virtualDB: maps modes to 
+ --- p(i,o) -> lambda inputExpression:outputExpression 
+ --- p(o)   -> lambda outputExpression 
  - snake_case fixes??
  - repackage (see below)???
  - optimize compilation???
