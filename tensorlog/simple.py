@@ -105,10 +105,22 @@ class Compiler(object):
     args,expr = self.xc.dataLoss(declare.asMode(mode))
     return expr
 
-  def trainable_db_variables(self,mode):
-    """ The trainable variables associated with the tensorlog database
+  def trainable_db_variables(self,mode,for_optimization=False):
+    """Return a list of expressions associated with predicates marked as
+    parameters/trainable in the tensorlog database.  If
+    for_optimization==True then return the underlying variables that
+    are optimized, otherwise return expressions computing values that
+    correspond most closely to the parameters.
+
+    Eg, if a weight vector V is reparameterized by passing it through
+    an softplus, so V=softplus(V0) is used in the proof_count
+    expression, then for_optimization==True will return V0, and
+    for_optimization==False will return V.
     """
-    return self.xc.getParamVariables(declare.asMode(mode))
+    if for_optimization:
+      return self.xc.getParamVariables(declare.asMode(mode))
+    else:
+      return self.xc.getParamHandles(declare.asMode(mode))
 
   #
   # needed for building feed_dicts for training/testing tensorflow

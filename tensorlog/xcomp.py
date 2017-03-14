@@ -194,12 +194,25 @@ class AbstractCrossCompiler(object):
     assert False,'abstract method called'
 
   def getParamVariables(self,mode):
-    # TOFIX probly doesn't work if params are not used
-    """Find target-language variables corresponding to parameters.  These
-    are the variables that will be optimized in learning.
+    """Find target-language variables that are optimized to set the DB
+    parameters.  These are the variables that will be optimized in
+    learning.  Eg, if a weight vector V is reparameterized by passing
+    it through an softplus, this will be the underlying variable V0
+    such that softplus(V0)=V.
     """
     mode = self.ensureCompiled(mode)
     return map(lambda key:self._handleExprVar[key], self.prog.getParamList())
+
+  def getParamHandles(self,mode):
+    """Find target-language variables corresponding to DB parameters.
+    These are the variables that store or compute the values that
+    correspond most closely to the parameters. Eg, if a weight vector
+    V is reparameterized by passing it through an softplus, this will
+    be the variable V such that V=softplus(V0), where V0 is optimized
+    in learning.
+    """
+    mode = self.ensureCompiled(mode)
+    return map(lambda key:self._handleExpr[key], self.prog.getParamList())
 
   def parameterFromDBToExpr(self,functor,arity):
     return self._handleExpr.get((functor,arity))
