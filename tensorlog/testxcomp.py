@@ -27,10 +27,10 @@ from tensorlog import tensorflowxcomp
 # note: with all compilers tested, these tests now take about 5-6min, ouch
 
 TESTED_COMPILERS = [
-#  theanoxcomp.DenseMatDenseMsgCrossCompiler,
-#  theanoxcomp.SparseMatDenseMsgCrossCompiler,
-  tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-  tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
+    # theanoxcomp.DenseMatDenseMsgCrossCompiler,
+    # theanoxcomp.SparseMatDenseMsgCrossCompiler,
+    tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+    tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
 ]
 
 SAVE_SUMMARIES = False
@@ -137,7 +137,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       print '== performing eval with',compilerClass,'=='
       inferenceFun = xc.inferenceFunction(mode_string)
       y = inferenceFun(prog.db.onehot(input_symbol))
-      print 'input',xc.getInputName(mode_string),'args,fun =',xc.inference(mode_string)
+      # print 'input',xc.getInputName(mode_string),'args,fun =',xc.inference(mode_string)
       # theano output will a be (probably dense) message, so
       # just compare that maximal elements from these two dicts
       # are the same

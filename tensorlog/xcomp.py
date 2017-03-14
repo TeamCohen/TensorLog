@@ -9,6 +9,9 @@ from tensorlog import declare
 from tensorlog import funs
 from tensorlog import ops
 
+conf = config.Config()
+conf.reparameterizeMatrices = True; conf.help.reparameterizeMatrices = 'pass parameter matrices through a softplus to make keep them positive'
+
 TRAINING_TARGET_VARNAME = '_target_y'
 
 class AbstractCrossCompiler(object):
@@ -192,7 +195,9 @@ class AbstractCrossCompiler(object):
 
   def getParamVariables(self,mode):
     # TOFIX probly doesn't work if params are not used
-    """ Find variables corresponding to parameters """
+    """Find target-language variables corresponding to parameters.  These
+    are the variables that will be optimized in learning.
+    """
     mode = self.ensureCompiled(mode)
     return map(lambda key:self._handleExprVar[key], self.prog.getParamList())
 
