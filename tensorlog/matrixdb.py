@@ -301,7 +301,13 @@ class MatrixDB(object):
         assert m1.row[i]==0, "Expected 0 at m1.row[%d]" % i
         b = self._stab[typeName1].getSymbol(m1.col[i])
         w = m1.data[i]
-        result[parser.Goal(functor,[b])] = w
+        if b==None:
+          if i==0 and w<1e-10:
+            logging.warn('ignoring low weight %g placed on index 0 for type %s in predicate %s' % (w,typeName1,functor))
+          else:
+            assert False,'cannot find symbol on fact with weight %g for index %d for type %s in predicate %s' % (w,i,typeName1,functor)
+        if b is not None:
+          result[parser.Goal(functor,[b])] = w
     return result
 
   #
