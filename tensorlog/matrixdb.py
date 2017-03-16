@@ -576,6 +576,7 @@ class MatrixDB(object):
 
 #
 # test main
+# --s serialize foo.cfacts foo.db
 #
 
 if __name__ == "__main__":

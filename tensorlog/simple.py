@@ -194,6 +194,9 @@ class Compiler(object):
   #
 
   def load_dataset(self,dataset_spec):
+    return self.load_small_dataset(dataset_spec)
+
+  def load_small_dataset(self,dataset_spec):
     """Return a dictionary where keys are strings defining tensorlog
     functions - e.g., answer/io - and the values are pairs (X,Y) where
     X is a matrix that can be used as a batch input to the inference
@@ -216,22 +219,62 @@ class Compiler(object):
         will be loaded, parsed, and serialized in foo.dset for later.
     """
     dset = comline.parseDatasetSpec(dataset_spec,self.db)
+    m = dset.modesToLearn()[0]
     # convert to something bereft of tensorlog data structures: a
     # dictionary mapping strings like "p/io" to X,Y pairs, where X and
     # Y are wrapped inputs.
     def wrapped_xy_pair(mode): return (self.xc.wrapInput(dset.getX(mode)), self.xc.wrapInput(dset.getY(mode)))
     return dict((str(mode),wrapped_xy_pair(mode)) for mode in dset.modesToLearn())
 
-  def minibatches(self,dataset_dict,batch_size=100,shuffle_first=True):
-    """Yields a series of pairs (mode,(X,Y)) where X and Y are a
-    minibatch suitable for training the function designated by mode.
+  def modes_to_learn(self,dataset_obj):
+    if isinstance(dataset_obj,dict):
+      return dataset_obj.keys()
+    elif isinstance(dataset_obj,dataset.Dataset):
+      return dataset_obj.modesToLearn()
+    else:
+      assert False,'illegal dataset object %r' % dataset_obj
+
+  def minibatches(self,dataset_obj,batch_size=100,shuffle_first=True):
+    """Yields a series of pairs (mode,(X,Y)) where X and Y are a minibatch
+    suitable for training the function designated by mode.  Input is
+    something returned by load_small_dataset or load_big_dataset.
     """
-    x_dict = {}
-    y_dict = {}
-    for mode_str,(x,y) in dataset_dict.items():
-      mode = declare.asMode(mode_str)
-      x_dict[mode] = self.xc.unwrapInput(x)
-      y_dict[mode] = self.xc.unwrapInput(y)
-      dset = dataset.Dataset(x_dict,y_dict)
-    for mode,bx,by in dset.minibatchIterator(batchSize=batch_size,shuffleFirst=shuffle_first):
-      yield str(mode),(self.xc.wrapInput(bx),self.xc.wrapInput(by))
+    if isinstance(dataset_obj,dict):
+      dataset_dict = dataset_obj
+      x_dict = {}
+      y_dict = {}
+      for mode_str,(x,y) in dataset_dict.items():
+        mode = declare.asMode(mode_str)
+        x_dict[mode] = self.xc.unwrapInput(x)
+        y_dict[mode] = self.xc.unwrapInput(y)
+        dset = dataset.Dataset(x_dict,y_dict)
+      for mode,bx,by in dset.minibatchIterator(batchSize=batch_size,shuffleFirst=shuffle_first):
+        yield str(mode),(self.xc.wrapInput(bx),self.xc.wrapInput(by))
+    elif isinstance(dataset_obj, dataset.Dataset):
+      dset = dataset_obj
+      for mode,bx,by in dset.minibatchIterator(batchSize=batch_size,shuffleFirst=shuffle_first):
+        yield str(mode),(self.xc.wrapInput(bx),self.xc.wrapInput(by))
+    else:
+      assert False,'illegal dataset object %r' % dataset_obj
+
+  def load_big_dataset(self,dataset_spec,verbose=True):
+    """Return a dataset object, which can be used as the first argument to
+    tlog.minibatches to cycle through the examples.
+
+    Args:
+
+      dataset_spec: a string specifying a tensorlog.dataset.Dataset.
+    See documents for load_small_dataset.
+    """
+
+    dset = comline.parseDatasetSpec(dataset_spec,self.db)
+    for m in dset.modesToLearn():
+      x = dset.getX(m)
+      y = dset.getY(m)
+      (rx,cx) = x.shape
+      (ry,cy) = y.shape
+      def rows_per_gigabyte(c): return (1024.0*1024.0*1024.0) / (c*4.0)
+      sm = str(m)
+      print 'mode %s: X is sparse %d x %d matrix (about %.1f rows/Gb)' % (sm,rx,cx,rows_per_gigabyte(cx))
+      print 'mode %s: Y is sparse %d x %d matrix (about %.1f rows/Gb)' % (sm,ry,cy,rows_per_gigabyte(cy))
+    return dset
