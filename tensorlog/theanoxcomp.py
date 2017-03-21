@@ -10,7 +10,7 @@ import numpy as NP
 
 from tensorlog import funs
 from tensorlog import ops
-
+from tensorlog import dataset
 from tensorlog import xcomp
 
 class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
@@ -60,7 +60,25 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     newData = op(TSB.csm_data(sparseExpr)).flatten()
     newSparse = TS.CSR(newData, TSB.csm_indices(sparseExpr), TSB.csm_indptr(sparseExpr), TSB.csm_shape(sparseExpr))
     return TSB.dense_from_sparse(newSparse)
+  
+  def optimizeDataLoss(self,mode,optimizer,X,Y,epochs=1,minibatchSize=0,wrapped=False):
+    def runAndSummarize(fd,i):
+      #self.session.run([trainStep],feed_dict=fd)
+      pass
 
+    trainStep = optimizer.minimize(self.ws.dataLossExpr, var_list=self.getParamVariables(mode))
+    if not minibatchSize:
+      fd = self.getFeedDict(mode,X,Y,wrapped)
+      for i in range(epochs):
+        runAndSummarize(fd,i)
+    else:
+      X1,Y1 = self._ensureUnwrapped(X,Y,wrapped)
+      dset = dataset.Dataset({mode:X1},{mode:Y1})
+      for i in range(epochs):
+        for mode,miniX,miniY in dset.minibatchIterator(batchsize=minibatchSize):
+          fd = self.getFeedDict(mode,miniX,miniY,wrapped=False)
+          runAndSummarize(fd,i)
+  
   def show(self,verbose=0):
     """ print a summary of current workspace to stdout """
     print 'inferenceArgs',self.ws.inferenceArgs
@@ -137,3 +155,27 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
 
   def _vecMatMulExpr(self,v,m):
     return TSB.structured_dot(v,m)
+
+###############################################################################
+# learning
+###############################################################################
+
+class Optimizer(object):
+  def __init__(self):
+    pass
+  def minimize(self,expr,var_list=[]):
+    """Return a training step for optimizing expr with respect to var_list.
+    """
+    assert False,'abstract method called'
+
+class SGD(Optimizer):
+  def __init__(self,learning_rate):
+    super(SGD,self).__init__()
+    self.learning_rate = learning_rate
+    self.x_batch=TT.matrix('X')
+    self.y_batch=TT.vector('Y')
+  def minimize(self, expr, var_list=[]):
+    dloss = TT.grad(expr, var_list)
+    updates = [(v, v - self.learning_rate * dloss) for v in var_list]
+    trainStep = theano.function([self.x_batch,self.y_batch], expr, updates=updates)
+    

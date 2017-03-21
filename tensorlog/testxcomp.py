@@ -359,13 +359,21 @@ class TestXCGrad(testtensorlog.TestGrad):
         self.check_directions(updates_with_string_keys,expected)
     self.learnxc_check(rule_strings,mode_string,params,xyPairs,expected)
 
+#examine=[tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+#                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]
+examine=[theanoxcomp.DenseMatDenseMsgCrossCompiler,
+         theanoxcomp.SparseMatDenseMsgCrossCompiler]
 class TestXCProPPR(testtensorlog.TestProPPR):
 
   def setUp(self):
     super(TestXCProPPR,self).setUp()
+    
+  def debug(self):
+    return self
 
   def evalxc(self,xc,input):
     inferenceFun = xc.inferenceFunction('predict/io')
+    print inferenceFun
     rawPred = inferenceFun(input)
     # trim small numbers to zero
     pred = mutil.mapData(lambda d:np.clip((d - 1e-5),0.00,9999.99), rawPred)
@@ -373,9 +381,8 @@ class TestXCProPPR(testtensorlog.TestProPPR):
     return pred
 
   def testNativeRow(self):
-    if not tf: return
-    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+    #if not tf: return
+    for compilerClass in TESTED_COMPILERS:
       xc = compilerClass(self.prog)
       for i in range(self.numExamples):
         pred = self.evalxc(xc, self.X.getrow(i))
@@ -385,9 +392,8 @@ class TestXCProPPR(testtensorlog.TestProPPR):
 
   def testNativeMatrix(self):
 
-    if not tf: return
-    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+    #if not tf: return
+    for compilerClass in TESTED_COMPILERS:
       xc = compilerClass(self.prog)
       xc.ensureCompiled(self.mode)
       pred = self.prog.eval(self.mode,[self.X])
@@ -608,6 +614,6 @@ if __name__ == "__main__":
     if len(sys.argv)==1:
         unittest.main()
     else:
-        foo=TestXCGrad()
+        foo=TestXCProPPR('debug')
         foo.setUp()
-        bar=foo.test_if()
+        bar=foo.debug()
