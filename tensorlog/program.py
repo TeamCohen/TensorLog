@@ -315,13 +315,16 @@ class ProPPRProgram(Program):
         rule = parser.Rule(rule0.lhs, rule0.rhs)
         if not rule0.findall:
             #parsed format is {f1,f2,...} but we only support {f1}
-            assert len(rule0.features)==1,'multiple constant features not supported'
-            constFeature = rule0.features[0].functor
-            constAsVar = constFeature.upper()
-            rule.rhs.append( parser.Goal(bpcompiler.ASSIGN, [constAsVar,constFeature]) )
-            rule.rhs.append( parser.Goal('weighted',[constAsVar]) )
-            # record the rule name, ie the constant feature
-            self.ruleIds.append(constFeature)
+            if rule0.features is None:
+              logging.warn('this rule has no features: %s' % str(rule))
+            else:
+              assert len(rule0.features)==1,'multiple constant features not supported'
+              constFeature = rule0.features[0].functor
+              constAsVar = constFeature.upper()
+              rule.rhs.append( parser.Goal(bpcompiler.ASSIGN, [constAsVar,constFeature]) )
+              rule.rhs.append( parser.Goal('weighted',[constAsVar]) )
+              # record the rule name, ie the constant feature
+              self.ruleIds.append(constFeature)
         else:
             #format is {foo(F):-...}
             assert len(rule0.features)==1,'feature generators of the form {a,b: ... } not supported'
@@ -330,7 +333,8 @@ class ProPPRProgram(Program):
             outputVar = featureLHS.args[0]
             paramName = featureLHS.functor
             for goal in rule0.findall:
-                rule.rhs.append(goal)
+                if goal.arity!=0 and goal.functor!='true':
+                  rule.rhs.append(goal)
             rule.rhs.append( parser.Goal(paramName,[outputVar]) )
             # record the feature predicate 'foo' as a parameter
             if self.db: self.db.markAsParameter(paramName,1)

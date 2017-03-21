@@ -187,6 +187,7 @@ class Compiler(object):
     self.xc.exportAllLearnedParams(session=session)
 
   def serialize_db(self,dir_name):
+    """Save a serialized, quick-to-load version of the database."""
     self.db.serialize(dir_name)
 
   #
@@ -194,6 +195,7 @@ class Compiler(object):
   #
 
   def load_dataset(self,dataset_spec):
+    """Same as load_small_dataset, for backwards compatibility. """
     return self.load_small_dataset(dataset_spec)
 
   def load_small_dataset(self,dataset_spec):
@@ -201,6 +203,10 @@ class Compiler(object):
     functions - e.g., answer/io - and the values are pairs (X,Y) where
     X is a matrix that can be used as a batch input to the inference
     function, and Y is a matrix that is the desired output.
+
+    Note that X is 'unwrapped', which may make it much larger.  If
+    this exceeds memory Python usually just crashes.  In this case you
+    should use load_big_dataset instead.
 
     Args:
 
@@ -227,6 +233,10 @@ class Compiler(object):
     return dict((str(mode),wrapped_xy_pair(mode)) for mode in dset.modesToLearn())
 
   def modes_to_learn(self,dataset_obj):
+    """List the functions that can be learned from this dataset_obj,
+    where dataset_obj is returned from load_small_dataset or
+    load_big_dataset.
+    """
     if isinstance(dataset_obj,dict):
       return dataset_obj.keys()
     elif isinstance(dataset_obj,dataset.Dataset):
@@ -259,7 +269,8 @@ class Compiler(object):
 
   def load_big_dataset(self,dataset_spec,verbose=True):
     """Return a dataset object, which can be used as the first argument to
-    tlog.minibatches to cycle through the examples.
+    tlog.minibatches to cycle through the examples.  The object is an
+    instance of tensorlog.dataset.Dataset.
 
     Args:
 
