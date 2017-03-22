@@ -17,8 +17,6 @@ Little jobs:
  - tests and etc for {id} features.  Should I have these? they are just {weighted(R1): assign(R1,r1,ruleid_t)}
  - cleanup sessions in tensorflowxcomp
  - cleanup modes? should they always be written pred/io, and i,o no longer be reserved words?
- - robust parsing of programs - figure out if it's proppr format or not? make rules weights optional?
- - interp.helpConfig()
  - output types as typename/id
  - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
  - move testability code to subclass "testabletensorflowxcompiler"
