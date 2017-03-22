@@ -17,7 +17,7 @@ from tensorlog import mutil
 from tensorlog import opfunutil
 from tensorlog import parser
 
-VERSION = '1.3.1'
+VERSION = '1.3.1a'
 
 # externally visible changes:
 #
@@ -47,7 +47,7 @@ VERSION = '1.3.1'
 #    interp.Interp split off from program
 # version 1.3.1:
 #     simple.Compiler() fleshed out and tested for tensorflow
-# version 1.3.2:
+# version 1.3.1a:
 #     AbstractCrossCompiler.possibleOps() added
 
 DEFAULT_MAXDEPTH=10
