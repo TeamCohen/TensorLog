@@ -47,6 +47,8 @@ VERSION = '1.3.1'
 #    interp.Interp split off from program
 # version 1.3.1:
 #     simple.Compiler() fleshed out and tested for tensorflow
+# version 1.3.2:
+#     AbstractCrossCompiler.possibleOps() added
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
