@@ -701,6 +701,47 @@ class TestSimple(unittest.TestCase):
     print 'final accuracy',acc1
     self.assertTrue(acc1>=0.9)
 
+class TestUserDefPreds(unittest.TestCase):
+
+  def test1(self):
+    db = matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"))
+    print 'db is typeless',db.isTypeless()
+    userDefs = program.UserDefinitions()
+    userDefs.define('udp1/io', lambda x:x, outputType='label')
+    prog = program.ProPPRProgram.loadRules(os.path.join(testtensorlog.TEST_DATA_DIR,"textcat4.ppr"),db=db,userDefs=userDefs)
+    prog.setAllWeights()
+    mode = declare.asMode("predict/io")
+    prog.compile(mode)
+    fun = prog.function[(mode,0)]
+    print "\n".join(fun.pprint())
+    tlog = simple.Compiler(db=db, prog=prog)
+
+    trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
+    testData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"))
+    mode = trainData.keys()[0]
+    TX,TY = trainData[mode]
+    UX,UY = testData[mode]
+    inference = tlog.inference(mode)
+    trueY = tf.placeholder(tf.float32, shape=UY.shape, name='tensorlog/trueY')
+    correct = tf.equal(tf.argmax(trueY,1), tf.argmax(inference,1))
+    accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+    test_batch_fd = {tlog.input_placeholder_name(mode):UX, trueY.name:UY}
+    loss = tlog.loss(mode)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+    train_step = optimizer.minimize(loss)
+    train_batch_fd = {tlog.input_placeholder_name(mode):TX, tlog.target_output_placeholder_name(mode):TY}
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
+    acc0 = session.run(accuracy, feed_dict=test_batch_fd)
+    print 'initial accuracy',acc0
+    self.assertTrue(acc0<0.6)
+    for i in range(10):
+      print 'epoch',i+1
+      session.run(train_step, feed_dict=train_batch_fd)
+    acc1 = session.run(accuracy, feed_dict=test_batch_fd)
+    print 'final accuracy',acc1
+    self.assertTrue(acc1>=0.9)
+
 
 if __name__ == "__main__":
   logging.basicConfig(level=logging.INFO)

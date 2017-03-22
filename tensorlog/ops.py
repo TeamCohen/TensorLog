@@ -20,11 +20,6 @@ conf.check_nan = True;   conf.help.check_overflow =  "Check if output of each op
 conf.pprintMaxdepth=0;   conf.help.pprintMaxdepth =  "Controls op.pprint() output"
 
 
-# identify built in i/o operators
-
-def isBuiltinIOOp(mode):
-  return mode.functor=='printf'
-
 class Op(opfunutil.OperatorOrFunction):
   """Sort of like a function but side-effects an environment.  More
   specifically, this is the tensorlog encoding for matrix-db
@@ -243,7 +238,7 @@ class VecMatMulOp(Op):
       # exactly one of these transpositions happen, not two or
       # zero
       transposeUpdate = env.db.transposeNeeded(self.matMode,self.transpose)
-      if transposeUpdate: 
+      if transposeUpdate:
         update = update.transpose()
         update = scipy.sparse.csr_matrix(update)
       # finally save the update
@@ -253,35 +248,25 @@ class VecMatMulOp(Op):
   def copy(self):
     return VecMatMulOp(self.dst,self.src,self.matMode,self.transpose)
 
-# TODO remove?
-class BuiltInIOOp(Op):
-  """Built-in special op, like printf(src,dst), with one input and one
-  output variable.
+class UserDefinedPred(Op):
+  """Call out to a user-defined predicate.  These are currently only
+  supported in cross-compilation.
   """
-  def __init__(self,dst,src,matMode):
-    super(BuiltInIOOp,self).__init__(dst)
+  def __init__(self,dst,src,mode,dstType=None):
+    super(UserDefinedPred,self).__init__(dst)
     self.src = src
-    self.matMode = matMode
+    self.mode = mode
+    self.dstType = dstType
   def __repr__(self):
-    return "BuiltInIOOp(%r,%r,%s)" % (self.dst,self.src,self.matMode)
+    return "BuiltInOp(%r,%r,%s)" % (self.dst,self.src,self.mode)
   def _ppLHS(self):
-    return "buitin_%s(%s)" % (self.matMode.functor,self.src)
+    return "UserDefined{%s}(%s)" % (str(self.mode),self.src)
   def _doEval(self,env,pad):
-    assert self.matMode.functor=='printf',"matMode functor '%s' not supported (printf only)" % self.matMode.functor
-    d = env.db.matrixAsSymbolDict(env[self.src])
-    print '= %s->%s' % (self.msgFrom,self.msgTo),
-    if len(d.keys())==1:
-      print d[0]
-    else:
-      print
-      for k in d:
-        print '= row',k,'=>',d[k]
-    env[self.dst] = env[self.src]
+    assert False,'UserDefinedPred only supported in cross-compilation'
   def _doBackprop(self,env,gradAccum,pad):
-    env.delta[self.src] = env.delta[self.dst]
+    assert False,'UserDefinedPred only supported in cross-compilation'
   def copy(self):
-    return BuiltInIOOp(self.dst,self.src,self.matMode)
-
+    return UserDefinedPred(self.dst,self.src,self.mode)
 
 class ComponentwiseVecMulOp(Op):
   """ Computes dst = src*Diag(src2), i.e., the component-wise product of

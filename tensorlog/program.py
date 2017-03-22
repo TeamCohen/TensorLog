@@ -61,12 +61,13 @@ DEFAULT_NORMALIZE='softmax'
 
 class Program(object):
 
-    def __init__(self, db=None, rules=parser.RuleCollection(), calledFromProPPRProgram=False):
+    def __init__(self, db=None, rules=parser.RuleCollection(), userDefs=None, calledFromProPPRProgram=False):
         self.db = db
         self.function = {}
         self.rules = rules
         self.maxDepth = DEFAULT_MAXDEPTH
         self.normalize = DEFAULT_NORMALIZE
+        self.userDefs = userDefs if (userDefs is not None) else UserDefinitions()
         # check the rules aren't proppr formatted
         def checkRule(r):
             assert not r.features, 'for rules with {} features, specify --proppr: %s' % str(r)
@@ -185,35 +186,6 @@ class Program(object):
         logging.warn('trying to call setFeatureWeights on a non-ProPPR program')
 
     @staticmethod
-    def _load(fileNames,db=None):
-        ruleFiles = [f for f in fileNames if f.endswith(".ppr") or f.endswith(".tlog")]
-        dbFiles = [f for f in fileNames if f.endswith(".db")]
-        factFiles = [f for f in fileNames if f.endswith(".cfacts")]
-        assert (not dbFiles) or (not factFiles), 'cannot combine a serialized database and .cfacts files'
-        assert (not dbFiles) or (len(dbFiles)==1), 'cannot combine multiple serialized databases'
-        assert db or dbFiles or factFiles,'no db specified'
-        assert ruleFiles,'no rules specified'
-        rules = parser.Parser.parseFile(ruleFiles[0])
-        for f in ruleFiles[1:]:
-            rules = parser.Parser.parseFile(f,rules)
-        if dbFiles:
-            db = matrixdb.MatrixDB.deserialize(dbFiles[0])
-        if factFiles:
-            db = matrixdb.MatrixDB()
-            for f in factFiles:
-                logging.debug("starting %s" % f)
-                db.addFile(f)
-                logging.debug("finished %s" % f)
-        return (db,rules)
-
-    @staticmethod
-    #TODO: deprecate
-    def load(fileNames,db=None):
-        if not db: (db,rules) = Program._load(fileNames)
-        else: (dummy,rules) = Program._load(fileNames,db=db)
-        return Program(db=db,rules=rules)
-
-    @staticmethod
     def _loadRules(fileNames):
         ruleFiles = fileNames.split(":")
         rules = parser.Parser.parseFile(ruleFiles[0])
@@ -222,8 +194,8 @@ class Program(object):
         return rules
 
     @staticmethod
-    def loadRules(fileNames,db):
-        return Program(db,Program._loadRules(fileNames))
+    def loadRules(fileNames,db,userDefs=None):
+        return Program(db,Program._loadRules(fileNames),userDefs=userDefs)
 
 
 #
@@ -232,8 +204,8 @@ class Program(object):
 
 class ProPPRProgram(Program):
 
-    def __init__(self, db=None, rules=parser.RuleCollection(), weights=None):
-        super(ProPPRProgram,self).__init__(db=db, rules=rules, calledFromProPPRProgram=True)
+    def __init__(self, db=None, rules=parser.RuleCollection(), weights=None, userDefs=None):
+        super(ProPPRProgram,self).__init__(db=db, rules=rules, userDefs=userDefs, calledFromProPPRProgram=True)
         # dictionary mapping parameter name to list of modes that can
         # be used to determine possible non-zero values for the
         # parameters
@@ -242,6 +214,7 @@ class ProPPRProgram(Program):
         self.ruleIds = []
         #expand the syntactic sugar used by ProPPR
         self.rules.mapRules(self._moveFeaturesToRHS)
+        # set weights if they are given
         if weights!=None: self.setRuleWeights(weights)
 
     def setRuleWeights(self,weights=None,epsilon=1.0,ruleIdPred=None):
@@ -254,7 +227,7 @@ class ProPPRProgram(Program):
         the rule ids.
         """
         if len(self.ruleIds)==0:
-            logging.warn('no rule features have been defined')
+            pass
         elif ruleIdPred is not None:
             # TODO check this stuff and add type inference!
             assert (ruleIdPred,1) in set.matEncoding,'there is no unary predicate called %s' % ruleIdPred
@@ -300,7 +273,7 @@ class ProPPRProgram(Program):
             weights = mutil.mapData(lambda d:np.clip(d,0.0,1.0), weights)
             self.db.setParameter(paramName,1,weights*epsilon)
             decl = declare.TypeDeclaration(parser.Goal(paramName,[weightType]))
-            self.db.addTypeDeclaration(decl,'<autoseting parameters>',-1)
+            self.db.addTypeDeclaration(decl,'<autosetting parameters>',-1)
             logging.debug('parameter %s/1 initialized to %s' % (paramName,"+".join(map(lambda dm:'preimage(%s)' % str(dm), domainModes))))
             logging.debug('type declaration for %s/1 is %s' % (paramName,decl))
         for (paramName,arity) in self.getParamList():
@@ -350,13 +323,42 @@ class ProPPRProgram(Program):
                         self.paramDomains[paramName].append(paramMode)
         return rule
 
-    #TODO: deprecate
     @staticmethod
-    def load(fileNames,db=None):
-        if not db: (db,rules) = Program._load(fileNames)
-        else: (dummy,rules) = Program._load(fileNames,db=db)
-        return ProPPRProgram(db=db,rules=rules)
+    def loadRules(fileNames,db,userDefs=None):
+        return ProPPRProgram(db=db,rules=Program._loadRules(fileNames),userDefs=userDefs)
 
-    @staticmethod
-    def loadRules(fileNames,db):
-        return ProPPRProgram(db=db,rules=Program._loadRules(fileNames))
+class UserDefinitions(object):
+  """Holds a collection of user-defined predicates, defined for a
+  particular cross-compiler.  Currently predicates must be binary so
+  the modes are p/io or p/oi.
+  """
+
+  def __init__(self):
+    self.defs = {}
+    self.defOutputTypes = {}
+
+  def define(self,mode,definition,outputType=None):
+    """Define the function associated with a mode.  The definition is a
+    function f(x), which inputs a subexpression defining the input,
+    and the output is an expression which defines the output.
+    outputType, if given, is the type of the output.
+    """
+    m = declare.asMode(mode)
+    self.defs[m] = definition
+    self.defOutputTypes[m] = outputType
+
+  def isDefined(self,mode):
+    """ Returns true if this mode corresponds to a user-defined predicate
+    """
+    return (mode in self.defs)
+
+  def definition(self,mode):
+    """Returns the definition of the mode, ie a function f(x) which maps a
+    subexpression to the output.
+    """
+    return self.defs[mode]
+
+  def outputType(self,mode):
+    """Returns the type of the function output.
+    """
+    return self.defOutputTypes[mode]

@@ -21,11 +21,6 @@ Little jobs:
  - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
  - move testability code to subclass "testabletensorflowxcompiler"
 
-Semantics:
- - tensorlog compiler compiles p_io(x) to v=softmax(proofcount(y|x,db,prog,theta))
- - alternative: make proofcount(y|x) the a core output, and configure inference schemes
-   on top of this -- either in compiler or just in tensorflow
-
 Bigger steps:
  - automatically move program constants into the database and introduce assign clauses when needed?? -nah
  - benchmark tests on tensorflow
@@ -36,22 +31,9 @@ Bigger steps:
  -- xcomp virtualDB: maps modes to 
  --- p(i,o) -> lambda inputExpression:outputExpression 
  --- p(o)   -> lambda outputExpression 
- - snake_case fixes??
+ - snake_case fixes in testing????
  - repackage (see below)???
  - optimize compilation???
- - typing for tensorlog -done
- -- note: 10k sample has 3,434 people, 11,819 entities, larger yago has 59,120 people 118,703 entities
-    so it's 10x bigger (in message size); 10k sample uses about 15 Gb memory
- -- should look at if sparse matrices are actually being used and monitor where the space is going
-
- -- declare.typeDeclaration -done
- -- cfacts parser allows #declare foo type1 type2 (insist everything typed or nothing, based on config?)
-    (see bufferFile/bufferLine in matrixDB -done
- -- matrixDB keeps a symtab for each type -done
- -- bpcompiler infers type of every variable -done
- -- funs maintains/returns type -done
- -- docs -done
- -- check type inference for sums -done
 
 Overall package structure:
   tensorlog: config, matrixdb, parser, bpcomp(iler), program, funs, ops (-eval and bprop), xcomp

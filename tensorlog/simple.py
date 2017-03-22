@@ -62,7 +62,7 @@ class Compiler(object):
 
     # parse the db argument
     if isinstance(db,matrixdb.MatrixDB):
-      pass
+      self.db = db
     elif isinstance(db,str):
       self.db = comline.parseDBSpec(db)
     else:
@@ -70,13 +70,15 @@ class Compiler(object):
 
     # parse the program argument
     if isinstance(prog,program.Program):
-      pass
+      self.prog = prog
     elif isinstance(prog,str):
       self.prog = comline.parseProgSpec(prog,self.db,proppr=rule_features)
-      if autoset_db_params:
-        self.prog.setAllWeights()
     else:
       assert False,'cannot convert %r to a program' % prog
+
+    # set weights
+    if autoset_db_params:
+      self.prog.setAllWeights()
 
     # parse the target argument
     self.target = target

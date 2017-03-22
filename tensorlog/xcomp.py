@@ -464,6 +464,9 @@ class AbstractCrossCompiler(object):
       return self._vecMatMulExpr(nspacer[op.src], self._matrix(op.matMode,op.transpose))
     elif isinstance(op,ops.AssignPreimageToVar):
       return self._vecMatMulExpr(self._ones(self._preimageOnesType(op.matMode)), self._matrix(op.matMode,True))
+    elif isinstance(op,ops.UserDefinedPred):
+      userDefinition = self.prog.userDefs.definition(op.mode)
+      return userDefinition(nspacer[op.src])
     elif isinstance(op,ops.ComponentwiseVecMulOp):
       return self._componentwiseMulExpr(nspacer[op.src], nspacer[op.src2])
     elif isinstance(op,ops.DefinedPredOp):

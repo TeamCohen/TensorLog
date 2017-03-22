@@ -231,7 +231,13 @@ class BPCompiler(object):
       gin = self.goalDict[i]
       functor = self.goals[i].functor
       arity = self.goals[i].arity
-      if functor == ASSIGN and arity==3:
+      mode = self.toMode(i)
+      if self.tensorlogProg.userDefs.isDefined(mode):
+        for j in range(arity):
+          if mode.isOutput(j):
+            vj = self.goals[i].args[j]
+            self.varDict[vj].varType = self.tensorlogProg.userDefs.outputType(mode)
+      elif functor == ASSIGN and arity==3:
         # goal is assign(Var,constantValue,type)
         self.varDict[self.goals[i].args[0]].varType = self.goals[i].args[2]
       elif functor != ASSIGN:
@@ -322,8 +328,9 @@ class BPCompiler(object):
           return msgName
         else:
           fx = msgVar2Goal(_only(gin.inputs),j,traceDepth+1) #ask for the message forward from the input to goal j
-          if ops.isBuiltinIOOp(mode):
-            addOp(ops.BuiltInIOOp(msgName,fx,mode), traceDepth,j,v)
+          if (self.tensorlogProg.userDefs.isDefined(mode)):
+            outType =self.tensorlogProg.userDefs.outputType(mode)
+            addOp(ops.UserDefinedPred(msgName,fx,mode,dstType=outType), traceDepth,j,v)
           elif not gin.definedPred:
             addOp(ops.VecMatMulOp(msgName,fx,mode), traceDepth,j,v)
           else:
@@ -349,7 +356,6 @@ class BPCompiler(object):
             assert len(gin.outputs)==1, 'need single output from %s' % self.goals[j]
             #this variable now is connected to the main chain
             self.varDict[_only(gin.outputs)].connected = True
-            assert not ops.isBuiltinIOOp(mode), 'can _only use built in io operators where inputs and outputs are used'
             assert not gin.definedPred, 'subpredicates must generate an output which is used downstream'
             addOp(ops.AssignPreimageToVar(msgName,mode,self.msgType[msgName]), traceDepth,j,v)
           else:
