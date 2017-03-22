@@ -409,8 +409,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
     learner = learn.OnePredFixedRateGDLearner(self.prog)
     updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X,Y)
     w0 = updates[('weighted',1)].sum(axis=0)
-    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+    for compilerClass in TESTED_COMPILERS:
       xc = compilerClass(self.prog)
       self.prog.db.markAsParameter('weighted',1)
       #xc.compile(self.mode)
@@ -433,8 +432,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
     if not tf: return
     mode = declare.ModeDeclaration('predict(i,o)')
     X,Y = testtensorlog.matrixAsTrainingData(self.labeledData,'train',2)
-    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+    for compilerClass in TESTED_COMPILERS:
       self.prog.setRuleWeights()
       self.prog.setFeatureWeights()
       if SAVE_SUMMARIES:
@@ -617,3 +615,7 @@ if __name__ == "__main__":
         foo=TestXCProPPR('debug')
         foo.setUp()
         bar=foo.debug()
+        xc = TESTED_COMPILERS[0](bar.prog)
+        inferenceFun = xc.inferenceFunction('predict/io')
+        pred = bar.evalxc(xc, bar.X.getrow(0))
+        d = bar.prog.db.rowAsSymbolDict(pred)

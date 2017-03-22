@@ -40,9 +40,14 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
 
   def _exprListAsUpdateFunction(self,arg1,arg2,exprList,wrapInputs,unwrapOutputs):
     pyfunReturningList = theano.function(inputs=[arg1,arg2], outputs=exprList)
+    print "arg1",arg1
+    print "arg2",arg2
     def closure(rawInput1,rawInput2):
       input1 = self._wrapMsg(rawInput1) if wrapInputs else rawInput1
       input2 = self._wrapMsg(rawInput2) if wrapInputs else rawInput2
+      print "arg1",rawInput1.shape
+      print "arg2",rawInput2.shape
+      #print theano.printing.debugprint(pyfunReturningList)
       rawUpdates = pyfunReturningList(input1,input2)
       if unwrapOutputs:
         result = map(lambda key,rawUpdate:(key,self._unwrapUpdate(key,rawUpdate)), self.prog.getParamList(), rawUpdates)
@@ -130,7 +135,15 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
     return self._unwrapOutput(up)
 
   def _softmaxFun2Expr(self,subExpr,typeName):
-    return self._applyOpToNonzerosOfDense(TNN.nnet.softmax,subExpr+self._nullSmoother[typeName])
+    # _applyTopToNonzerosOfDense overweights the null element by at least 0.05,
+    # more than our desired margin of error. Fussing with the null smoothing didn't
+    # help. 
+    # tf doesn't have this problem -- it uses a -20 mask on the zero values.
+    # in theano this would be something like -20*TT.isclose(subExpr,TT.zeros_like(subExpr))
+    # but TT.isclose() is slow, so we use TT.exp(-s^2) as a faster approximation and 
+    # cross our fingers and toes we don't have anything important in 0<s<1
+    return TNN.nnet.softmax(subExpr+self._nullSmoother[typeName]-20*TT.exp(-subExpr*subExpr))
+    #return self._applyOpToNonzerosOfDense(TNN.nnet.softmax,subExpr+self._nullSmoother[typeName])
 
   def _transposeMatrixExpr(self,mx):
     return mx.T
@@ -178,4 +191,5 @@ class SGD(Optimizer):
     dloss = TT.grad(expr, var_list)
     updates = [(v, v - self.learning_rate * dloss) for v in var_list]
     trainStep = theano.function([self.x_batch,self.y_batch], expr, updates=updates)
+
     
