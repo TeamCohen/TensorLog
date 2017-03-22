@@ -7,11 +7,11 @@ Next actions (KR):
  - look at sparse messages in theano-based learner?
 
 Next actions (WC):
- - simple: 
- -- serialization doesn't work in provenance/synthetic/simple-expt?
- -- regularization doesn't work well with reparameterization
- -- provenance/synthetic/simple-expt.py -- test
- -- l1-regularization on synthetic/simple-expt.py and real-data expt
+ - { .... } autoweight setting doesn't work for "p(X,Y) :- ... { wy(Y):true }".
+ - fan's stuff:
+   -- from _op2Expr, construct 
+    possibleOps( input=a, inputTypename=t) - list of (op, type)
+    possibleOps( inputs=[a,..], inputTypenames=[t...]) - list of (op, type) that use pairs of inputs
 
 Little jobs:
  - tests and etc for {id} features.  Should I have these? they are just {weighted(R1): assign(R1,r1,ruleid_t)}

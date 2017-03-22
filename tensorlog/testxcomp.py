@@ -450,6 +450,52 @@ class TestXCProPPR(testtensorlog.TestProPPR):
           testData=dataset.Dataset({mode:TX},{mode:TY}),
           targetMode=mode)
 
+class TestXCOpGen(unittest.TestCase):
+
+  # TODO tests for other xcompilers?
+  def testTCToyTypes(self):
+    matrixdb.conf.ignore_types = False
+    tlog = simple.Compiler(
+        db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
+        prog=os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"))
+    trainData = tlog.load_small_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
+    mode = trainData.keys()[0]
+    docs,labels = trainData[mode]
+    xc = tlog.get_cross_compiler()
+    ops = xc.possibleOps(docs,'doc')
+    print 'doc ops',ops
+    self.assertTrue(len(ops)==1)
+    (words,wordType) = ops[0]
+    self.assertTrue(wordType=='word')
+    ops = xc.possibleOps(words,'word')
+    self.assertTrue(len(ops)==3)
+    pairs = None
+    for (expr,exprType) in ops:
+      if exprType=='labelWordPair':
+        pairs = expr
+        break
+    self.assertTrue(pairs is not None)
+    ops = xc.possibleOps(pairs,'labelWordPair')
+    self.assertTrue(len(ops)==2)
+    for (expr,exprType) in ops:
+      self.assertTrue(exprType=='word')
+
+  def testTCToyIgnoringTypes(self):
+    matrixdb.conf.ignore_types = True
+    tlog = simple.Compiler(
+        db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
+        prog=os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"))
+    trainData = tlog.load_small_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
+    mode = trainData.keys()[0]
+    docs,labels = trainData[mode]
+    xc = tlog.get_cross_compiler()
+    ops = xc.possibleOps(docs)
+    binary_predicates = [functor for (functor,arity) in tlog.db.matEncoding if arity==2]
+    self.assertTrue(len(ops) == len(binary_predicates)*2)
+    for x in ops:
+      # ops should just be tensors
+      self.assertFalse(isinstance(x,tuple))
+
 class TestXCExpt(unittest.TestCase):
 
   def testTCToyTypes(self):

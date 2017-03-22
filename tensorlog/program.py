@@ -319,6 +319,7 @@ class ProPPRProgram(Program):
               logging.warn('this rule has no features: %s' % str(rule))
             else:
               assert len(rule0.features)==1,'multiple constant features not supported'
+              assert rule0.features[0].arity==0, '{foo(A,...)} not allowed, use {foo(A,...):true}'
               constFeature = rule0.features[0].functor
               constAsVar = constFeature.upper()
               rule.rhs.append( parser.Goal(bpcompiler.ASSIGN, [constAsVar,constFeature]) )

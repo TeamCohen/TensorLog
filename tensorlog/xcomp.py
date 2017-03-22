@@ -7,6 +7,7 @@ from tensorlog import comline
 from tensorlog import config
 from tensorlog import declare
 from tensorlog import funs
+from tensorlog import matrixdb
 from tensorlog import ops
 
 conf = config.Config()
@@ -169,6 +170,37 @@ class AbstractCrossCompiler(object):
     """
     return self._unwrapOutput(x)
 
+
+  def possibleOps(self,subExpr,typeName=None):
+    """If a typeName is specified, then return a (expr,type) pairs, where
+    each expression performs one primitive tensorlog operation on the
+    subExpr given as input, and type is the name of the type for the
+    resulting subExpr.
+
+    If the typeName is NONE,
+
+    """
+    # TODO add multiple-input and zero-input operations
+    if typeName is None:
+      typeName = matrixdb.THING
+      assert self.db.isTypeless(),'if database has types declared, you must specify the type of the input to possibleOps'
+    result = []
+    for (functor,arity) in self.db.matEncoding:
+      if arity==2:
+        mode = declare.asMode("%s(i,o)" % functor)
+        if self.db.getDomain(functor,arity)==typeName:
+          op = self._vecMatMulExpr(subExpr, self._matrix(mode,transpose=False))
+          if self.db.isTypeless():
+            result.append(op)
+          else:
+            result.append((op,self.db.getRange(functor,arity)))
+        if self.db.getRange(functor,arity)==typeName:
+          op = self._vecMatMulExpr(subExpr, self._matrix(mode,transpose=True))
+          if self.db.isTypeless():
+            result.append(op)
+          else:
+            result.append((op,self.db.getDomain(functor,arity)))
+    return result
 
   #
   # used in inferenceFunction, dataLossFunction, etc

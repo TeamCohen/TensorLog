@@ -87,6 +87,15 @@ class Compiler(object):
     else:
       assert False,'illegal target %r: valid targets are "tensorflow" and "theano"' % target
 
+  def get_cross_compiler(self):
+    return self.xc
+
+  def get_program(self):
+    return self.prog
+
+  def get_database(self):
+    return self.db
+
   def proof_count(self,mode):
     """ An expression for the inference associated with a mode
     """
