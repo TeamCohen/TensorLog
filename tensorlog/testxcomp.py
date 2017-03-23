@@ -702,52 +702,52 @@ class TestSimple(unittest.TestCase):
     print 'final accuracy',acc1
     self.assertTrue(acc1>=0.9)
 
-class TestUserDefPreds(unittest.TestCase):
+class TestPlugins(unittest.TestCase):
 
   def test_identity_io(self):
     ruleStrings = ['predict(X,Y) :- assign(Pos,pos,label),udp1(Pos,Y) {weighted(F): hasWord(X,W),posPair(W,F)}.',
                    'predict(X,Y) :- assign(Neg,neg,label),udp1(Neg,Y) {weighted(F): hasWord(X,W),negPair(W,F)}.']
-    userDefs = program.UserDefinitions()
-    userDefs.define('udp1/io', lambda x:x, lambda inputType:'label')
-    self.check_learning_with_udp(ruleStrings,userDefs)
+    plugins = program.Plugins()
+    plugins.define('udp1/io', lambda x:x, lambda inputType:'label')
+    self.check_learning_with_udp(ruleStrings,plugins)
 
   def test_identity_oi(self):
     ruleStrings = ['predict(X,Y) :- assign(Pos,pos,label),udp2(Y,Pos) {weighted(F): hasWord(X,W),posPair(W,F)}.',
                    'predict(X,Y) :- assign(Neg,neg,label),udp2(Y,Neg) {weighted(F): hasWord(X,W),negPair(W,F)}.']
-    userDefs = program.UserDefinitions()
-    userDefs.define('udp2/oi', lambda x:x, lambda inputType:'label')
-    self.check_learning_with_udp(ruleStrings,userDefs)
+    plugins = program.Plugins()
+    plugins.define('udp2/oi', lambda x:x, lambda inputType:'label')
+    self.check_learning_with_udp(ruleStrings,plugins)
 
   def test_double_io1(self):
     ruleStrings = ['predict(X,Y) :- assign(Pos,pos,label),udp3(Pos,Y) {weighted(F): hasWord(X,W),posPair(W,F)}.',
                    'predict(X,Y) :- assign(Neg,neg,label),udp3(Neg,Y) {weighted(F): hasWord(X,W),negPair(W,F)}.']
-    userDefs = program.UserDefinitions()
-    userDefs.define('udp3/io', lambda x:2*x, lambda inputType:'label')
-    self.check_learning_with_udp(ruleStrings,userDefs)
+    plugins = program.Plugins()
+    plugins.define('udp3/io', lambda x:2*x, lambda inputType:'label')
+    self.check_learning_with_udp(ruleStrings,plugins)
 
   def test_double_io2(self):
     ruleStrings = ['predict(X,Pos) :- assign(Pos,pos,label) {weighted(F): hasWord(X,W),double(W,W2),posPair(W2,F)}.',
                    'predict(X,Neg) :- assign(Neg,neg,label) {weighted(F2): hasWord(X,W),negPair(W,F),double(F,F2)}.']
-    userDefs = program.UserDefinitions()
-    userDefs.define('double/io', lambda x:2*x, lambda inputType:inputType)
-    self.check_learning_with_udp(ruleStrings,userDefs)
+    plugins = program.Plugins()
+    plugins.define('double/io', lambda x:2*x, lambda inputType:inputType)
+    self.check_learning_with_udp(ruleStrings,plugins)
 
   # TOFIX needs some work to pass
   # - you can't do polytree BP with multiple inputs
   # - so there's not a simple fix
   # - probably do this: (1) treat inputs to leftmost userDef as outputs (2) run message-passing for those outputs
-  # (3) add the user def operator (4) repeat .... (5) when there are no more userDefs
+  # (3) add the user def operator (4) repeat .... (5) when there are no more plugins
   def notest_isect_iio(self):
     bpcompiler.conf.trace = True
     ruleStrings = ['predict(X,Y) :- hasWord(X,W),posPair(W,P1),negPair(W,P2),isect(P1,P2,Y).']
-    userDefs = program.UserDefinitions()
-    userDefs.define('isect/iio', lambda x1,x2:x1*x2, lambda t1,t2:t1)
-    self.check_learning_with_udp(ruleStrings,userDefs)
+    plugins = program.Plugins()
+    plugins.define('isect/iio', lambda x1,x2:x1*x2, lambda t1,t2:t1)
+    self.check_learning_with_udp(ruleStrings,plugins)
 
-  def check_learning_with_udp(self,ruleStrings,userDefs):
+  def check_learning_with_udp(self,ruleStrings,plugins):
     db = matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"))
     rules = testtensorlog.rules_from_strings(ruleStrings)
-    prog = program.ProPPRProgram(rules=rules,db=db,userDefs=userDefs)
+    prog = program.ProPPRProgram(rules=rules,db=db,plugins=plugins)
     prog.setAllWeights()
     mode = declare.asMode("predict/io")
     prog.compile(mode)

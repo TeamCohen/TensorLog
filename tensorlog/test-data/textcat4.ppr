@@ -1,0 +1,5 @@
+# test user-defined predicates
+
+predict(X,Y) :- assign(Pos,pos,label),udp1(Pos,Y) {weighted(F): hasWord(X,W),posPair(W,F)}.
+predict(X,Y) :- assign(Neg,neg,label),udp1(Neg,Y) {weighted(F): hasWord(X,W),negPair(W,F)}.
+

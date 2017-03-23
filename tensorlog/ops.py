@@ -248,25 +248,25 @@ class VecMatMulOp(Op):
   def copy(self):
     return VecMatMulOp(self.dst,self.src,self.matMode,self.transpose)
 
-class UserDefinedPred(Op):
+class CallPlugin(Op):
   """Call out to a user-defined predicate.  These are currently only
   supported in cross-compilation.
   """
   def __init__(self,dst,srcs,mode,dstType=None):
-    super(UserDefinedPred,self).__init__(dst)
+    super(CallPlugin,self).__init__(dst)
     self.srcs = srcs
     self.mode = mode
     self.dstType = dstType
   def __repr__(self):
     return "BuiltInOp(%r,%r,%s)" % (self.dst,",".join(self.srcs),self.mode)
   def _ppLHS(self):
-    return "UserDefined{%s}(%s)" % (str(self.mode),",".join(self.srcs))
+    return "CallPlugin{%s}(%s)" % (str(self.mode),",".join(self.srcs))
   def _doEval(self,env,pad):
-    assert False,'UserDefinedPred only supported in cross-compilation'
+    assert False,'CallPlugin only supported in cross-compilation'
   def _doBackprop(self,env,gradAccum,pad):
-    assert False,'UserDefinedPred only supported in cross-compilation'
+    assert False,'CallPlugin only supported in cross-compilation'
   def copy(self):
-    return UserDefinedPred(self.dst,self.srcs,self.mode)
+    return CallPlugin(self.dst,self.srcs,self.mode)
 
 class ComponentwiseVecMulOp(Op):
   """ Computes dst = src*Diag(src2), i.e., the component-wise product of

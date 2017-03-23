@@ -61,13 +61,13 @@ DEFAULT_NORMALIZE='softmax'
 
 class Program(object):
 
-    def __init__(self, db=None, rules=parser.RuleCollection(), userDefs=None, calledFromProPPRProgram=False):
+    def __init__(self, db=None, rules=parser.RuleCollection(), plugins=None, calledFromProPPRProgram=False):
         self.db = db
         self.function = {}
         self.rules = rules
         self.maxDepth = DEFAULT_MAXDEPTH
         self.normalize = DEFAULT_NORMALIZE
-        self.userDefs = userDefs if (userDefs is not None) else UserDefinitions()
+        self.plugins = plugins if (plugins is not None) else Plugins()
         # check the rules aren't proppr formatted
         def checkRule(r):
             assert not r.features, 'for rules with {} features, specify --proppr: %s' % str(r)
@@ -194,8 +194,8 @@ class Program(object):
         return rules
 
     @staticmethod
-    def loadRules(fileNames,db,userDefs=None):
-        return Program(db,Program._loadRules(fileNames),userDefs=userDefs)
+    def loadRules(fileNames,db,plugins=None):
+        return Program(db,Program._loadRules(fileNames),plugins=plugins)
 
 
 #
@@ -204,8 +204,8 @@ class Program(object):
 
 class ProPPRProgram(Program):
 
-    def __init__(self, db=None, rules=parser.RuleCollection(), weights=None, userDefs=None):
-        super(ProPPRProgram,self).__init__(db=db, rules=rules, userDefs=userDefs, calledFromProPPRProgram=True)
+    def __init__(self, db=None, rules=parser.RuleCollection(), weights=None, plugins=None):
+        super(ProPPRProgram,self).__init__(db=db, rules=rules, plugins=plugins, calledFromProPPRProgram=True)
         # dictionary mapping parameter name to list of modes that can
         # be used to determine possible non-zero values for the
         # parameters
@@ -355,10 +355,10 @@ class ProPPRProgram(Program):
         return rule
 
     @staticmethod
-    def loadRules(fileNames,db,userDefs=None):
-        return ProPPRProgram(db=db,rules=Program._loadRules(fileNames),userDefs=userDefs)
+    def loadRules(fileNames,db,plugins=None):
+        return ProPPRProgram(db=db,rules=Program._loadRules(fileNames),plugins=plugins)
 
-class UserDefinitions(object):
+class Plugins(object):
   """Holds a collection of user-defined predicates, defined for a
   particular cross-compiler.  Currently predicates must be binary so
   the modes are p/io or p/oi.
@@ -385,7 +385,7 @@ class UserDefinitions(object):
 
   def isDefined(self,mode=None,functor=None,arity=None):
     """Returns true if this mode, or functor/arity pair, corresponds to a
-    user-defined predicate
+    user-defined predicate.
     """
     if mode is not None:
       assert (functor is None and arity is None)
@@ -401,6 +401,6 @@ class UserDefinitions(object):
     return self.outputFun[mode]
 
   def outputType(self,mode,inputTypes):
-    """Returns the type of the function output.
+    """Returns a function that maps the input types to the output types.
     """
     return apply(self.outputTypeFun[mode],inputTypes)

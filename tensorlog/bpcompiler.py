@@ -182,7 +182,7 @@ class BPCompiler(object):
         assert goal.arity>=1 and goal.arity<=3, "Bad arity in rhs goal '%s'" % goal
       else:
         #TOFIX: multiple input user-defs would need this relaxation
-        #elif not self.tensorlogProg.userDefs.isDefined(functor=goal.functor, arity=goal.arity):
+        #elif not self.tensorlogProg.plugins.isDefined(functor=goal.functor, arity=goal.arity):
         assert goal.arity>=1 and goal.arity<=2, "Bad arity in rhs goal '%s'" % goal
 
   def inferFlow(self):
@@ -247,11 +247,11 @@ class BPCompiler(object):
       functor = self.goals[i].functor
       arity = self.goals[i].arity
       mode = self.toMode(i)
-      if self.tensorlogProg.userDefs.isDefined(mode):
+      if self.tensorlogProg.plugins.isDefined(mode):
         for j in range(arity):
           if mode.isOutput(j):
             vj = self.goals[i].args[j]
-            self.varDict[vj].varType = self.tensorlogProg.userDefs.outputType(mode,self.collectInputTypes(i))
+            self.varDict[vj].varType = self.tensorlogProg.plugins.outputType(mode,self.collectInputTypes(i))
       elif functor == ASSIGN and arity==3:
         # goal is assign(Var,constantValue,type)
         self.varDict[self.goals[i].args[0]].varType = self.goals[i].args[2]
@@ -358,13 +358,13 @@ class BPCompiler(object):
           return msgName
         else:
           # figure out how to forward message from inputs to outputs
-          if (self.tensorlogProg.userDefs.isDefined(mode)):
+          if (self.tensorlogProg.plugins.isDefined(mode)):
             fxs = []
             for vIn in gin.inputs:
               vMsg = msgVar2Goal(vIn,j,traceDepth+1)
               fxs.append(vMsg)
-            outType = self.tensorlogProg.userDefs.outputType(mode,self.collectInputTypes(j))
-            addOp(ops.UserDefinedPred(msgName,fxs,mode,dstType=outType), traceDepth,j,v)
+            outType = self.tensorlogProg.plugins.outputType(mode,self.collectInputTypes(j))
+            addOp(ops.CallPlugin(msgName,fxs,mode,dstType=outType), traceDepth,j,v)
           else:
             fx = msgVar2Goal(_only(gin.inputs),j,traceDepth+1) #ask for the message forward from the input to goal j
             if not gin.definedPred:
@@ -410,7 +410,7 @@ class BPCompiler(object):
       gin = self.goalDict[j]
       #variables have one outputOf, but possily many inputTo
       #connections. Information  propagates back from things the
-      #variables are inputTo, unless those goals are UserDefinedPred's.
+      #variables are inputTo, unless those goals are CallPlugin's.
       vNeighbors = [j2 for j2 in [vin.outputOf]+list(vin.inputTo) if j2!=j]
       if conf.trace: print '%smsg from %s to %d, vNeighbors=%r' % ('| '*traceDepth,v,j,vNeighbors)
       assert len(vNeighbors),'variables should have >=1 neighbor but %s has none: %d' % (v,j)
