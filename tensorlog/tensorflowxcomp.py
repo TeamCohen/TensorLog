@@ -32,11 +32,6 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
   # low-level training stuff
 
-  def _ensureWrapped(self,X,Y,wrapped):
-    return (X,Y) if wrapped else (self._wrapMsg(X),self._wrapMsg(Y))
-
-  def _ensureUnwrapped(self,X,Y,wrapped):
-    return (X,Y) if not wrapped else (self._unwrapOutput(X),self._unwrapOutput(Y))
 
   def setSession(self,session=None):
     """ Insert a session for the
@@ -318,7 +313,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
     result = tf.placeholder(tf.float32, shape=[None,self.db.dim(typeName)], name="tensorlog/"+name)
     return result
 
-  def _insertHandleExpr(self,key,name,val):
+  def _insertHandleExpr(self,key,name,val,broadcast=False):
     # TODO this machinery is a lot like get_variable, can I use that
     # instead?
     v = tf.Variable(val, name="tensorlog/"+name, dtype=tf.float32)
@@ -469,10 +464,10 @@ class FixedRateGDLearner(learnxcomp.XLearner):
     """
 
     def __init__(self,prog,xc=None,compilerClass=DenseMatDenseMsgCrossCompiler,epochs=20,rate=0.1,regularizer=None,tracer=None,epochTracer=None):
-        super(FixedRateGDLearner,self).__init__(prog,regularizer=regularizer,tracer=tracer,epochTracer=epochTracer)
+        super(FixedRateGDLearner,self).__init__(prog,xc,compilerClass=compilerClass,regularizer=regularizer,tracer=tracer,epochTracer=epochTracer)
         self.epochs=epochs
         self.rate=rate
         self.optimizer = tf.train.GradientDescentOptimizer(learning_rate=rate)
     
-    def train(self,X,Y):
-        self.xc.optimizeDataLoss(self.optimizer,X,Y,epochs=self.epochs)
+    def train(self,mode,X,Y):
+        self.xc.optimizeDataLoss(mode,self.optimizer,X,Y,epochs=self.epochs)

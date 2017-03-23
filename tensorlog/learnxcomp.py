@@ -8,7 +8,7 @@ class XLearner(L.Learner):
   def predict(self,mode,X,pad=None):
     """Make predictions on a data matrix associated with the given mode."""
     inferenceFun = self.xc.inferenceFunction(mode)
-    result = inferenceFun([X])
+    result = inferenceFun(X)
     return result
   def crossEntropyGrad(self,mode,X,Y,tracerArgs={},pad=None):
     """Compute the parameter gradient associated with softmax
