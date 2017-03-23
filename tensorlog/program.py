@@ -248,6 +248,36 @@ class ProPPRProgram(Program):
         return self.db.matEncoding[('weighted',1)]
 
     def setFeatureWeights(self,epsilon=1.0):
+        def possibleModes(rule):
+            # cycle through all possible modes
+            f = rule.lhs.functor
+            a = rule.lhs.arity
+            for k in range(a):
+                io = ['i']*a
+                io[k] = 'o'
+                yield declare.asMode("%s/%s" % (f,"".join(io)))
+        if self.db.isTypeless():
+            self._setFeatureWeightsForTypelessDB(epsilon=epsilon)
+        else:
+            inferredParamType = {}
+            # don't assume types for weights have been declared
+            for rule in self.rules:
+                for m in possibleModes(rule):
+                    varTypes = bpcompiler.BPCompiler(m,self,0,rule).inferredTypes()
+                    for goal in rule.rhs:
+                        if goal.arity==1 and (goal.functor,goal.arity) in self.db.paramSet:
+                            newType = varTypes.get(goal.args[0])
+                            decl = declare.TypeDeclaration(parser.Goal(goal.functor,[newType]))
+                            self.db.addTypeDeclaration(decl,'<autosetting parameters>',-1)
+            for (functor,arity) in self.db.paramList:
+                if arity==1:
+                    typename = self.db.getArgType(functor,arity,0)
+                    self.db.setParameter(functor,arity,self.db.ones(typename)*epsilon)
+                else:
+                    logging.warn('cannot set weights of matrix parameter %s/%d automatically',functor,arity)
+
+
+    def _setFeatureWeightsForTypelessDB(self,epsilon=1.0):
         """Initialize each feature used in the feature part of a rule, i.e.,
         for all rules annotated by "{foo(F):...}", declare 'foo/1' to
         be a parameter, and initialize it to something plausible.  The
@@ -314,13 +344,14 @@ class ProPPRProgram(Program):
             rule.rhs.append( parser.Goal(paramName,[outputVar]) )
             # record the feature predicate 'foo' as a parameter
             if self.db: self.db.markAsParameter(paramName,1)
-            # record the domain of the predicate
-            for goal in rule0.findall:
-                if outputVar in goal.args:
-                    k = goal.args.index(outputVar)
-                    if goal.arity==2:
-                        paramMode = declare.asMode("%s/io" % goal.functor) if k==0 else declare.asMode("%s/oi" % goal.functor)
-                        self.paramDomains[paramName].append(paramMode)
+            if self.db.isTypeless():
+                # record the domain of the predicate that will be used as a feature in parameters
+                for goal in rule0.findall:
+                    if outputVar in goal.args:
+                      k = goal.args.index(outputVar)
+                      if goal.arity==2:
+                          paramMode = declare.asMode("%s/io" % goal.functor) if k==0 else declare.asMode("%s/oi" % goal.functor)
+                          self.paramDomains[paramName].append(paramMode)
         return rule
 
     @staticmethod
@@ -334,31 +365,31 @@ class UserDefinitions(object):
   """
 
   def __init__(self):
-    self.defs = {}
-    self.defOutputTypes = {}
+    self.outputFun = {}
+    self.outputTypeFun = {}
 
-  def define(self,mode,definition,outputType=None):
+  def define(self,mode,outputFun,outputTypeFun=None):
     """Define the function associated with a mode.  The definition is a
     function f(x), which inputs a subexpression defining the input,
     and the output is an expression which defines the output.
     outputType, if given, is the type of the output.
     """
     m = declare.asMode(mode)
-    self.defs[m] = definition
-    self.defOutputTypes[m] = outputType
+    self.outputFun[m] = outputFun
+    self.outputTypeFun[m] = outputTypeFun
 
   def isDefined(self,mode):
     """ Returns true if this mode corresponds to a user-defined predicate
     """
-    return (mode in self.defs)
+    return (mode in self.outputFun)
 
   def definition(self,mode):
     """Returns the definition of the mode, ie a function f(x) which maps a
     subexpression to the output.
     """
-    return self.defs[mode]
+    return self.outputFun[mode]
 
-  def outputType(self,mode):
+  def outputType(self,mode,inputTypes):
     """Returns the type of the function output.
     """
-    return self.defOutputTypes[mode]
+    return apply(self.outputTypeFun[mode],inputTypes)

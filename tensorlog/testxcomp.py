@@ -574,8 +574,8 @@ class TestMultiModeXC(unittest.TestCase):
   def setUp(self):
     self.db = matrixdb.MatrixDB.loadFile(
         os.path.join(testtensorlog.TEST_DATA_DIR,'matchtoy.cfacts'))
-    self.prog = program.ProPPRProgram.load(
-        [os.path.join(testtensorlog.TEST_DATA_DIR,"matchtoy.ppr")],db=self.db)
+    self.prog = program.ProPPRProgram.loadRules(
+        os.path.join(testtensorlog.TEST_DATA_DIR,"matchtoy.ppr"),db=self.db)
     self.dset = dataset.Dataset.loadExamples(
         self.db, os.path.join(testtensorlog.TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     self.prog.setAllWeights()
@@ -703,12 +703,38 @@ class TestSimple(unittest.TestCase):
 
 class TestUserDefPreds(unittest.TestCase):
 
-  def test1(self):
-    db = matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"))
-    print 'db is typeless',db.isTypeless()
+  def test_identity_io(self):
+    ruleStrings = ['predict(X,Y) :- assign(Pos,pos,label),udp1(Pos,Y) {weighted(F): hasWord(X,W),posPair(W,F)}.',
+                   'predict(X,Y) :- assign(Neg,neg,label),udp1(Neg,Y) {weighted(F): hasWord(X,W),negPair(W,F)}.']
     userDefs = program.UserDefinitions()
-    userDefs.define('udp1/io', lambda x:x, outputType='label')
-    prog = program.ProPPRProgram.loadRules(os.path.join(testtensorlog.TEST_DATA_DIR,"textcat4.ppr"),db=db,userDefs=userDefs)
+    userDefs.define('udp1/io', lambda x:x, lambda inputType:'label')
+    self.check_learning_with_udp(ruleStrings,userDefs)
+
+  def test_identity_oi(self):
+    ruleStrings = ['predict(X,Y) :- assign(Pos,pos,label),udp2(Y,Pos) {weighted(F): hasWord(X,W),posPair(W,F)}.',
+                   'predict(X,Y) :- assign(Neg,neg,label),udp2(Y,Neg) {weighted(F): hasWord(X,W),negPair(W,F)}.']
+    userDefs = program.UserDefinitions()
+    userDefs.define('udp2/oi', lambda x:x, lambda inputType:'label')
+    self.check_learning_with_udp(ruleStrings,userDefs)
+
+  def test_double_io1(self):
+    ruleStrings = ['predict(X,Y) :- assign(Pos,pos,label),udp3(Pos,Y) {weighted(F): hasWord(X,W),posPair(W,F)}.',
+                   'predict(X,Y) :- assign(Neg,neg,label),udp3(Neg,Y) {weighted(F): hasWord(X,W),negPair(W,F)}.']
+    userDefs = program.UserDefinitions()
+    userDefs.define('udp3/io', lambda x:2*x, lambda inputType:'label')
+    self.check_learning_with_udp(ruleStrings,userDefs)
+
+  def test_double_io2(self):
+    ruleStrings = ['predict(X,Pos) :- assign(Pos,pos,label) {weighted(F): hasWord(X,W),double(W,W2),posPair(W2,F)}.',
+                   'predict(X,Neg) :- assign(Neg,neg,label) {weighted(F2): hasWord(X,W),negPair(W,F),double(F,F2)}.']
+    userDefs = program.UserDefinitions()
+    userDefs.define('double/io', lambda x:2*x, lambda inputType:inputType)
+    self.check_learning_with_udp(ruleStrings,userDefs)
+
+  def check_learning_with_udp(self,ruleStrings,userDefs):
+    db = matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"))
+    rules = testtensorlog.rules_from_strings(ruleStrings)
+    prog = program.ProPPRProgram(rules=rules,db=db,userDefs=userDefs)
     prog.setAllWeights()
     mode = declare.asMode("predict/io")
     prog.compile(mode)

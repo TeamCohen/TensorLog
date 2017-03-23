@@ -76,20 +76,26 @@ class MatrixDB(object):
   def isTypeless(self):
     return len(self._stab.keys())==1
 
+  def declaredType(self,functor,arity):
+    return (functor,arity) in self._type[0]
+
   def getTypes(self):
     return self._stab.keys()
 
-  def getDomain(self,functor,arity):
+  def getDomain(self,functor,arity,frozen=False):
     """ Domain of a predicate """
-    return self._type[0][(functor,arity)]
+    return self.getArgType(functor,arity,0)
 
-  def getRange(self,functor,arity):
+  def getRange(self,functor,arity,frozen=False):
     """ Range of a predicate """
-    return self._type[1][(functor,arity)]
+    return self.getArgType(functor,arity,1)
 
-  def getArgType(self,functor,arity,i):
+  def getArgType(self,functor,arity,i,frozen=False):
     """ Type associated with argument i of a predicate"""
-    return self._type[i][(functor,arity)]
+    if not frozen:
+      return self._type[i][(functor,arity)]
+    else:
+      return self._type[i].get((functor,arity),THING)
 
   def addTypeDeclaration(self,decl,filename,lineno):
     if conf.ignore_types:
@@ -174,7 +180,8 @@ class MatrixDB(object):
     transpose of M_p.
     """
     assert mode.arity==2,'arity of '+str(mode) + ' is wrong: ' + str(mode.arity)
-    assert (mode.functor,mode.arity) in self.matEncoding,"can't find matrix for %s" % str(mode)
+    assert (mode.functor,mode.arity) in self.matEncoding, \
+           "can't find matrix for %s: is this defined in the program or database?" % str(mode)
     if not self.transposeNeeded(mode,transpose):
       result = self.matEncoding[(mode.functor,mode.arity)]
     else:

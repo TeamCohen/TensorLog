@@ -96,12 +96,12 @@ class Rule(object):
 
 class RuleCollection(object):
     """A set of prolog rules, indexed by functor and arity."""
-    
+
     def __init__(self):
         self.index = collections.defaultdict(list)
-    
+
     def _key(self,g):
-        return '%s/%d' % (g.functor,g.arity) 
+        return '%s/%d' % (g.functor,g.arity)
 
     def add(self,r):
         key = self._key(r.lhs)
@@ -115,13 +115,18 @@ class RuleCollection(object):
 
     def mapRules(self,mapfun):
         for key in self.index:
-            self.index[key] = map(mapfun, self.index[key]) 
+            self.index[key] = map(mapfun, self.index[key])
 
     def listing(self):
         for key in self.index:
             print'% rules for',key
             for r in self.index[key]:
                 print r
+
+    def __iter__(self):
+        for key in self.index:
+            for r in self.index[key]:
+                yield r
 
 ##############################################################################
 ## the parser
