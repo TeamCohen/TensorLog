@@ -7,11 +7,8 @@ Next actions (KR):
  - look at sparse messages in theano-based learner?
 
 Next actions (WC):
- - { .... } autoweight setting doesn't work for "p(X,Y) :- ... { wy(Y):true }".
- - fan's stuff:
-   -- from _op2Expr, construct 
-    possibleOps( input=a, inputTypename=t) - list of (op, type)
-    possibleOps( inputs=[a,..], inputTypenames=[t...]) - list of (op, type) that use pairs of inputs
+ - clean up autoweighting for rule weights and types - done?
+ - get rid of typeless option?
 
 Little jobs:
  - tests and etc for {id} features.  Should I have these? they are just {weighted(R1): assign(R1,r1,ruleid_t)}
@@ -20,17 +17,22 @@ Little jobs:
  - output types as typename/id
  - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
  - move testability code to subclass "testabletensorflowxcompiler"
+ - move "native" code to tensorlog.native
+ - lazy DB/program compilation - should be able to load a program w/o DB, and have
+   declarations in the program
+ - proppr defaults
 
 Bigger steps:
  - automatically move program constants into the database and introduce assign clauses when needed?? -nah
  - benchmark tests on tensorflow
- - adding tensorflow 'builtins'
+ - adding tensorflow 'builtins' - maybe called user defined PRIMITIVES?
  -- bpcompiler: 
- --- code is mostly ready, based on BuiltInIOOp, just need to add a "virtual op" type.
- --- need to worry about checking modes, and multiple inputs
+ --- code is mostly ready, based on BuiltInIOOp, just need to add a "virtual op" type. - DONE
+ --- need to worry about checking modes, and multiple inputs -DONE
  -- xcomp virtualDB: maps modes to 
- --- p(i,o) -> lambda inputExpression:outputExpression 
- --- p(o)   -> lambda outputExpression 
+ --- p(i,o) -> lambda inputExpression:outputExpression - DONE
+ --- p(o)   -> lambda outputExpression  - DONE
+ -- udp listing in interp?
  - snake_case fixes in testing????
  - repackage (see below)???
  - optimize compilation???

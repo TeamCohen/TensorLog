@@ -365,6 +365,7 @@ class UserDefinitions(object):
   """
 
   def __init__(self):
+    self.definedFunctorArity = {}
     self.outputFun = {}
     self.outputTypeFun = {}
 
@@ -377,11 +378,21 @@ class UserDefinitions(object):
     m = declare.asMode(mode)
     self.outputFun[m] = outputFun
     self.outputTypeFun[m] = outputTypeFun
+    key = (m.functor,m.arity)
+    if key not in self.definedFunctorArity:
+      self.definedFunctorArity[key] = []
+    self.definedFunctorArity[key].append(m)
 
-  def isDefined(self,mode):
-    """ Returns true if this mode corresponds to a user-defined predicate
+  def isDefined(self,mode=None,functor=None,arity=None):
+    """Returns true if this mode, or functor/arity pair, corresponds to a
+    user-defined predicate
     """
-    return (mode in self.outputFun)
+    if mode is not None:
+      assert (functor is None and arity is None)
+      return (mode in self.outputFun)
+    else:
+      assert (functor is not None and arity is not None)
+      return (functor,arity) in self.definedFunctorArity
 
   def definition(self,mode):
     """Returns the definition of the mode, ie a function f(x) which maps a

@@ -10,6 +10,7 @@ import tempfile
 import tensorflow as tf
 import theano
 
+from tensorlog import bpcompiler
 from tensorlog import comline
 from tensorlog import dataset
 from tensorlog import declare
@@ -729,6 +730,18 @@ class TestUserDefPreds(unittest.TestCase):
                    'predict(X,Neg) :- assign(Neg,neg,label) {weighted(F2): hasWord(X,W),negPair(W,F),double(F,F2)}.']
     userDefs = program.UserDefinitions()
     userDefs.define('double/io', lambda x:2*x, lambda inputType:inputType)
+    self.check_learning_with_udp(ruleStrings,userDefs)
+
+  # TOFIX needs some work to pass
+  # - you can't do polytree BP with multiple inputs
+  # - so there's not a simple fix
+  # - probably do this: (1) treat inputs to leftmost userDef as outputs (2) run message-passing for those outputs
+  # (3) add the user def operator (4) repeat .... (5) when there are no more userDefs
+  def notest_isect_iio(self):
+    bpcompiler.conf.trace = True
+    ruleStrings = ['predict(X,Y) :- hasWord(X,W),posPair(W,P1),negPair(W,P2),isect(P1,P2,Y).']
+    userDefs = program.UserDefinitions()
+    userDefs.define('isect/iio', lambda x1,x2:x1*x2, lambda t1,t2:t1)
     self.check_learning_with_udp(ruleStrings,userDefs)
 
   def check_learning_with_udp(self,ruleStrings,userDefs):

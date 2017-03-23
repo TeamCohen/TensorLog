@@ -46,7 +46,7 @@ class MatrixDB(object):
     self._buf = None
     # type information - indexed by (functor,arity) pair
     # defaulting to 'THING'
-    self._type = [ collections.defaultdict(lambda:THING),  collections.defaultdict(lambda:THING) ]
+    self._type = collections.defaultdict( lambda:collections.defaultdict(lambda:THING) )
 
   def _safeSymbTab(self):
     """ Symbol table with reserved words 'i', 'o', and 'any'
@@ -65,7 +65,7 @@ class MatrixDB(object):
     if self.isTypeless():
       logging.info('untyped matrixDB passed checkTyping')
     else:
-      for i,d in enumerate(self._type):
+      for i,d in enumerate(self._type.values()):
         for (functor,arity),typeName in d.items():
           if typeName==THING:
             logging.warn('matrixDB relation %s/%d has no type declared for argument %d' % (functor,arity,i+1))
