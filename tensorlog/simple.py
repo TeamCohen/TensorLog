@@ -1,11 +1,13 @@
 import logging
 import os.path
 
+from tensorlog import bpcompiler
 from tensorlog import comline
 from tensorlog import declare
 from tensorlog import dataset
 from tensorlog import funs
 from tensorlog import matrixdb
+from tensorlog import parser
 from tensorlog import program
 from tensorlog import tensorflowxcomp
 from tensorlog import theanoxcomp
@@ -71,6 +73,10 @@ class Compiler(object):
     # parse the program argument
     if isinstance(prog,program.Program):
       self.prog = prog
+    elif isinstance(prog,Builder):
+      self.prog = program.Program(db=self.db, rules=prog.rules)
+    elif isinstance(prog,parser.RuleCollection):
+      self.prog = program.Program(db=self.db, rules=prog)
     elif isinstance(prog,str):
       self.prog = comline.parseProgSpec(prog,self.db,proppr=rule_features)
     else:
@@ -300,3 +306,130 @@ class Compiler(object):
       print 'mode %s: X is sparse %d x %d matrix (about %.1f rows/Gb)' % (sm,rx,cx,rows_per_gigabyte(cx))
       print 'mode %s: Y is sparse %d x %d matrix (about %.1f rows/Gb)' % (sm,ry,cy,rows_per_gigabyte(cy))
     return dset
+
+class Builder(object):
+  """
+  Supports construction of programs within python, using the
+  following sort of syntax.
+
+    b = Builder()
+    X,Y,Z = b.variables("X Y Z")
+    aunt,parent,sister,wife = b.predicates("aunt parent sister wife")
+    uncle = b.predicate("uncle")
+
+    b += aunt(X,Y) <= parent(X,Z),sister(Z,Y)
+    b += aunt(X,Y) <= uncle(X,Z),wife(Z,Y)
+
+  Or, with 'control features'
+
+  """
+
+  def __init__(self):
+    self.rules = parser.RuleCollection()
+
+  @staticmethod
+  def variables(space_sep_variable_names):
+    return space_sep_variable_names.split()
+
+  @staticmethod
+  def rule_id(type_name,rule_id):
+    return Builder.rule_ids(type_name,rule_id)[0]
+
+  @staticmethod
+  def rule_ids(type_name,space_sep_rule_ids):
+    def goal_builder(rule_id):
+      var_name = rule_id[0].upper()+rule_id[1:]
+      return GoalListWrapper([
+          parser.Goal(bpcompiler.ASSIGN,[var_name,rule_id,type_name]),
+          parser.Goal('weight',[var_name])])
+    return map(goal_builder, space_sep_rule_ids.split())
+
+  @staticmethod
+  def variable(variable_name):
+    return Builder.variables(variable_name)[0]
+
+  @staticmethod
+  def predicate(predicate_name):
+    return Builder.predicates(predicate_name)[0]
+
+  @staticmethod
+  def predicates(space_sep_predicate_names):
+    def goal_builder(pred_name):
+      def builder(*args):
+        return GoalListWrapper([parser.Goal(pred_name,args)])
+      return builder
+    return map(goal_builder,space_sep_predicate_names.split())
+
+  def __iadd__(self,other):
+    error_msg = 'syntax error: %s += %s' % (str(self),str(other))
+    if isinstance(other,parser.Rule):
+      self.rules.add(other)
+    elif isinstance(other,tuple):
+      first = other[0]
+      for r in other[1:]:
+        assert isinstance(r,GoalListWrapper),error_msg
+        first.rhs += r.goals
+      self.rules.add(first)
+    return self
+
+class GoalListWrapper(object):
+
+  def __init__(self,goals):
+    self.goals = goals
+
+  def __str__(self):
+    return " & ".join(map(str,self.goals))
+
+  def __and__(self,other):
+    return GoalListWrapper(self.goals + other.goals)
+
+  def __or__(self,other):
+    return GoalListWrapper(other.goals + self.goals)
+
+  def __floordiv__(self,other):
+    return GoalListWrapper(self.goals + GoalListWrapper._flatten_goals(other))
+
+  def __le__(self,other):
+    assert len(self.goals)==1,'syntax error for %s <= %s' % (str(self),str(other))
+    return parser.Rule(self.goals[0],GoalListWrapper._flatten_goals(other))
+
+  @staticmethod
+  def _flatten_goals(other):
+    if isinstance(other,tuple):
+      return reduce(lambda x,y:x+y, map(lambda glw:glw.goals, other))
+    else:
+      return other.goals
+
+if __name__ == "__main__":
+  b = Builder()
+  X,Y,Z = b.variables("X Y Z")
+  aunt,parent,sister,wife = b.predicates("aunt parent sister wife")
+  uncle = b.predicate("uncle")
+
+  b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y)
+  b += aunt(X,Y) <= parent(X,Z) & sister(Z,Y)
+
+  r1 = b.rule_id("ruleid_t","r1")
+  r2 = b.rule_id("ruleid_t","r2")
+  b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // r1
+  b += aunt(X,Y) <= parent(X,Z) & sister(Z,Y) // r2
+
+  feature,description = b.predicates("feature description")
+  weight = b.predicate("weight")
+  F = b.variable("F")
+  D = b.variable("D")
+  b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // (weight(F) | description(X,D) & feature(X,F))
+
+  b.rules.listing()
+
+  b = Builder()
+
+  b += aunt(X,Y) <= uncle(X,Z), wife(Z,Y)
+  b += aunt(X,Y) <= parent(X,Z), sister(Z,Y)
+
+  b += aunt(X,Y) <= uncle(X,Z), wife(Z,Y) // (r1)
+  b += aunt(X,Y) <= parent(X,Z), sister(Z,Y) // (r2)
+
+  b += aunt(X,Y) <= uncle(X,Z), wife(Z,Y) // (weight(F) | description(X,D),feature(X,F))
+
+  b.rules.listing()

@@ -1,3 +1,4 @@
+Random howto:
  - export PYTHONPATH=/usr/local/google/home/cohenw/code/TensorLog:$PYTHONPATH
  - live theano add /usr/local/google/home/cohenw/code/Theano
 
@@ -6,36 +7,27 @@ Next actions (KR):
  - revive debug.py - how can testing this be automated? should I bother? w/ Katie?
  - look at sparse messages in theano-based learner?
 
-Next actions (WC):
- - clean up autoweighting for rule weights and types - done?
- - get rid of typeless option?
-
-Little jobs:
- - tests and etc for {id} features.  Should I have these? they are just {weighted(R1): assign(R1,r1,ruleid_t)}
- - cleanup sessions in tensorflowxcomp
- - cleanup modes? should they always be written pred/io, and i,o no longer be reserved words?
+Little jobs (WC):
  - output types as typename/id
  - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
- - move testability code to subclass "testabletensorflowxcompiler"
- - move "native" code to tensorlog.native
- - lazy DB/program compilation - should be able to load a program w/o DB, and have
-   declarations in the program
- - proppr defaults
-
-Bigger steps:
- - automatically move program constants into the database and introduce assign clauses when needed?? -nah
  - benchmark tests on tensorflow
- - adding tensorflow 'builtins' - maybe called user defined PRIMITIVES?
- -- bpcompiler: 
- --- code is mostly ready, based on BuiltInIOOp, just need to add a "virtual op" type. - DONE
- --- need to worry about checking modes, and multiple inputs -DONE
- -- xcomp virtualDB: maps modes to 
- --- p(i,o) -> lambda inputExpression:outputExpression - DONE
- --- p(o)   -> lambda outputExpression  - DONE
- -- udp listing in interp?
- - snake_case fixes in testing????
- - repackage (see below)???
- - optimize compilation???
+ - have --proppr as the default option for programs
+ - docs/tutorial
+  -- plugins, simple
+ - ?clean up autoweighting for rule weights and types
+ - ?get rid of typeless option
+ - ?tests and etc for {id} features.  Should I have these? they are just {weighted(R1): assign(R1,r1,ruleid_t)}
+ - ?cleanup sessions in tensorflowxcomp
+ - ?cleanup modes? should they always be written pred/io, and i,o no longer be reserved words?
+ - ? lazy DB/program compilation - should be able to load a program w/o DB, and have
+   declarations be embedded in in the program, before loading the DB.
+   maybe.
+ - ? automatically move program constants into the database and introduce assign clauses when needed?
+ - ? move testability code to subclass "testabletensorflowxcompiler"
+ - ? move "native" code to tensorlog.native
+ - ?? snake_case fixes in testing????
+ - ?? repackage (see below)???
+ - ?? optimize compilation???
 
 Overall package structure:
   tensorlog: config, matrixdb, parser, bpcomp(iler), program, funs, ops (-eval and bprop), xcomp
@@ -44,19 +36,6 @@ Overall package structure:
     .th: theanoxcomp
     .tf: tensorflowxcomp
   or maybe just stick a bunch of stuff in tlg.native: native.learn, ...
-
-Proposed simple -  _ means python object or else argument of comline.parseFOO
-  - tlg.Compiler(
-        compilerClass=_ | trget='tensorflow',
-    	program= _    
-      	type_declarations= _
-      	db= _,
-      	regularizer= ...
-      	summaryFile=...)
-
-Next actions:
-
-   - upload dialog-toy
 
 Question->query idea
 
