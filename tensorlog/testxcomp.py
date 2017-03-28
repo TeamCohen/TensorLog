@@ -4,6 +4,7 @@ import os
 import unittest
 import sys
 import collections
+from tensorlog.expt import Expt
 try:
   import tensorflow as tf
   from tensorlog import tensorflowxcomp
@@ -29,21 +30,29 @@ from tensorlog import testtensorlog
 from tensorlog import funs
 from tensorlog import ops
 from tensorlog import learnxcomp as learnxc
+from tensorlog import expt
 
 if tf:
   tf.logging.set_verbosity(tf.logging.WARN)
+  
 
 TESTED_COMPILERS = []
+TESTED_LEARNERS = {}
 if theano:
-  TESTED_COMPILERS.extend([
-  theanoxcomp.DenseMatDenseMsgCrossCompiler,
-  theanoxcomp.SparseMatDenseMsgCrossCompiler
-  ])
+  for c in [
+    theanoxcomp.DenseMatDenseMsgCrossCompiler,
+    theanoxcomp.SparseMatDenseMsgCrossCompiler
+    ]:
+    TESTED_COMPILERS.append(c)
+    TESTED_LEARNERS[c]=theanoxcomp.FixedRateGDLearner
 if tf:
-  TESTED_COMPILERS.extend([
-  tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-  tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
-  ])
+  for c in [
+    tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+    tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
+    ]:
+    TESTED_COMPILERS.append(c)
+    TESTED_LEARNERS[c]=tensorflowxcomp.FixedRateGCLearner
+    
 
 SAVE_SUMMARIES = False
 
@@ -359,10 +368,6 @@ class TestXCGrad(testtensorlog.TestGrad):
         self.check_directions(updates_with_string_keys,expected)
     self.learnxc_check(rule_strings,mode_string,params,xyPairs,expected)
 
-#examine=[tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-#                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]
-examine=[theanoxcomp.DenseMatDenseMsgCrossCompiler,
-         theanoxcomp.SparseMatDenseMsgCrossCompiler]
 class TestXCProPPR(testtensorlog.TestProPPR):
 
   def setUp(self):
@@ -402,15 +407,43 @@ class TestXCProPPR(testtensorlog.TestProPPR):
         uniform = {'pos':0.5,'neg':0.5,}
         self.check_dicts(d,uniform)
 
+  def testGradVector(self):
+    #if not tf: return
+    data = testtensorlog.DataBuffer(self.prog.db)
+    X,Y = testtensorlog.matrixAsTrainingData(self.labeledData,'train',2)
+    learner = learn.OnePredFixedRateGDLearner(self.prog)
+    for compilerClass in TESTED_COMPILERS:
+      xc = compilerClass(self.prog)
+      self.prog.db.markAsParameter('weighted',1)
+      #xc.compile(self.mode)
+      gradFun = xc.dataLossGradFunction('predict/io')
+      for i in range(X.shape[0]):
+        print "example",i
+        
+        updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X[i],Y[i])
+        w0 = updates[('weighted',1)].sum(axis=0)
+        print w0
+        
+        updates = gradFun(X[i],Y[i])
+        paramKey,w = updates[0]
+        print w
+        # w is different from the w in the corresponding testtensorlog test,
+        # which is a crossEntropy gradient for each example, but it should have
+        # opposite directions
+        nrow,ncol = w.shape
+        for i in range(nrow):
+          for j in range(ncol):
+            self.assertTrue((w[i,j]==0) == (w0[i,j]==0))
+            self.assertTrue(w[i,j] * w0[i,j] <= 0)
+
   def testGradMatrix(self):
-    if not tf: return
+    #if not tf: return
     data = testtensorlog.DataBuffer(self.prog.db)
     X,Y = testtensorlog.matrixAsTrainingData(self.labeledData,'train',2)
     learner = learn.OnePredFixedRateGDLearner(self.prog)
     updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X,Y)
     w0 = updates[('weighted',1)].sum(axis=0)
-    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+    for compilerClass in TESTED_COMPILERS:
       xc = compilerClass(self.prog)
       self.prog.db.markAsParameter('weighted',1)
       #xc.compile(self.mode)
@@ -423,18 +456,18 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       nrow,ncol = w.shape
       for i in range(nrow):
         for j in range(ncol):
-          self.assertTrue((w[i,j]==0) == (w0[i,j]==0))
-          self.assertTrue(w[i,j] * w0[i,j] <= 0.0)
+          self.assertTrue((w[i,j]==0) == (w0[i,j]==0),"i=%d,j=%d,w=%g,w0=%g"%(i,j,w[i,j],w0[i,j]))
+          self.assertTrue(w[i,j] * w0[i,j] <= 0,"i=%d,j=%d,w=%g,w0=%g"%(i,j,w[i,j],w0[i,j]))
 
   def testMultiLearn1(self):
     pass
 
   def testLearn(self):
-    if not tf: return
+    #if not tf: return
     mode = declare.ModeDeclaration('predict(i,o)')
+    modestr = 'predict/io'
     X,Y = testtensorlog.matrixAsTrainingData(self.labeledData,'train',2)
-    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+    for compilerClass in TESTED_COMPILERS:
       self.prog.setRuleWeights()
       self.prog.setFeatureWeights()
       if SAVE_SUMMARIES:
@@ -442,6 +475,15 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       else:
         xc = compilerClass(self.prog)
       self.prog.db.markAsParameter('weighted',1)
+      
+      v = self.prog.db.getParameter('weighted',1)
+      d =  self.prog.db.rowAsSymbolDict(v)
+      # sanity check a couple of values
+      self.assertTrue(d['little_pos'] == d['little_neg'])
+      self.assertTrue(d['big_pos'] == d['big_neg'])
+      
+#       optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+      learner = TESTED_LEARNERS[compilerClass](self.prog,xc=xc,rate=0.1,epochs=20)
 
       lossFun = xc.dataLossFunction('predict/io')
       loss0 = lossFun(X,Y)
@@ -449,30 +491,38 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       TX,TY = testtensorlog.matrixAsTrainingData(self.labeledData,'test',2)
       loss1 = lossFun(TX,TY)
       print 'initial test data loss',loss1
-      acc0 = xc.accuracy('predict/io',X,Y)
+      P = learner.predict('predict/io',X)
+      #acc0 = xc.accuracy('predict/io',X,Y)
+      acc0 = learner.accuracy(Y,P)
       print 'initial train accuracy',acc0
-      acc1 = xc.accuracy('predict/io',TX,TY)
+      TP = learner.predict('predict/io',TX)
+      #acc1 = xc.accuracy('predict/io',TX,TY)
+      acc1 = learner.accuracy(TY,TP)
       print 'initial test accuracy',acc1
 
       print 'params to optimize',xc.prog.getParamList()
       print 'vars to optimize',xc.getParamVariables('predict/io')
-
-      optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
-      xc.optimizeDataLoss('predict/io', optimizer, X, Y, epochs=20)
+      
+#       xc.optimizeDataLoss('predict/io', optimizer, X, Y, epochs=20)
+      learner.trainMode('predict/io',X,Y)
 
       loss2 = lossFun(X,Y)
       print 'final train data loss',loss2
       loss3 = lossFun(TX,TY)
       print 'final test data loss',loss3
-      acc2 = xc.accuracy('predict/io',X,Y)
+      P2 = learner.predict('predict/io',X)
+      #acc2 = xc.accuracy('predict/io',X,Y)
+      acc2 = learner.accuracy(Y,P2)
       print 'final train accuracy',acc2
-      acc3 = xc.accuracy('predict/io',TX,TY)
+      TP2 = learner.predict('predict/io',TX)
+      #acc3 = xc.accuracy('predict/io',TX,TY)
+      acc3 = learner.accuracy(TY,TP2)
       print 'final test accuracy',acc3
 
-      self.assertTrue(acc2>acc0)
-      self.assertTrue(acc3>acc1)
-      self.assertTrue(acc2==1.0)
+      self.assertTrue(acc2>=acc0)
+      self.assertTrue(acc3>=acc1)
       self.assertTrue(acc2>=0.9)
+      self.assertTrue(acc2==1.0)
 
       self.assertTrue(loss2<loss0)
       self.assertTrue(loss2<loss1)
@@ -483,6 +533,20 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       # sanity check a couple of values
       self.assertTrue(d['little_pos'] > d['little_neg'])
       self.assertTrue(d['big_pos'] < d['big_neg'])
+
+  def testExptScaffold(self):
+    mode = declare.ModeDeclaration('predict(i,o)')
+    X,Y = testtensorlog.matrixAsTrainingData(self.labeledData,'train',2)
+    TX,TY = testtensorlog.matrixAsTrainingData(self.labeledData,'test',2)
+    for compilerClass in TESTED_COMPILERS:
+      xc = compilerClass(self.prog)
+      learner = TESTED_LEARNERS[compilerClass](self.prog,xc=xc,rate=0.1,epochs=20)
+      expt.Expt({'prog':self.prog,
+                 'trainData':dataset.Dataset({mode:X},{mode:Y}),
+                 'testData':dataset.Dataset({mode:TX},{mode:TY}),
+                 'targetMode':mode,
+                 'learner':learner
+                 }).run()
 
   def testExpt(self):
     if not tf: return
@@ -511,12 +575,21 @@ class TestXCExpt(unittest.TestCase):
          "--proppr"])
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+      #TESTED_COMPILERS:
       xc = compilerClass(optdict['prog'])
-      xc.runExpt(
-          prog=optdict['prog'],
-          trainData=optdict['trainData'],
-          testData=optdict['testData'],
-          targetMode=declare.asMode("predict/io"))
+      learner = TESTED_LEARNERS[compilerClass](optdict['prog'],xc)
+      expt.Expt({
+          'prog':optdict['prog'],
+          'trainData':optdict['trainData'],
+          'testData':optdict['testData'],
+          'learner':learner,
+          'targetMode':declare.asMode("predict/io")
+          }).run()
+      #xc.runExpt(
+      #    prog=optdict['prog'],
+      #    trainData=optdict['trainData'],
+      #    testData=optdict['testData'],
+      #    targetMode=declare.asMode("predict/io"))
       pbDoc = xc.db.onehot('pb','doc')
       self.checkXC(xc,'predict/io',pbDoc,{'negPair':115,'posPair':115,'hasWord':59,'weighted':115,'label':5})
       # some checks on the output of pprint
@@ -617,3 +690,7 @@ if __name__ == "__main__":
         foo=TestXCProPPR('debug')
         foo.setUp()
         bar=foo.debug()
+        xc = TESTED_COMPILERS[0](bar.prog)
+        inferenceFun = xc.inferenceFunction('predict/io')
+        pred = bar.evalxc(xc, bar.X.getrow(0))
+        d = bar.prog.db.rowAsSymbolDict(pred)

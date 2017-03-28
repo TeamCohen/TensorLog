@@ -198,7 +198,7 @@ class AbstractCrossCompiler(object):
     if not key in self._handleExpr:
       variable_name = "v__" + matMode.getFunctor()
       val = self._wrapDBVector(self.db.vector(matMode)) #ignores all but functor for arity 1
-      self._insertHandleExpr(key, variable_name, val)
+      self._insertHandleExpr(key, variable_name, val, broadcast=True)
     return self._handleExpr[key]
 
   def _constantVector(self, variable_name, val):
@@ -207,7 +207,7 @@ class AbstractCrossCompiler(object):
     key = (variable_name,0)
     if not key in self._handleExpr:
       wrapped_val = self._wrapDBVector(val)
-      self._insertHandleExpr(key, variable_name, wrapped_val)
+      self._insertHandleExpr(key, variable_name, wrapped_val, broadcast=True)
     return self._handleExpr[key]
 
   def _matrix(self,matMode,transpose=False):
@@ -264,7 +264,7 @@ class AbstractCrossCompiler(object):
       fun = self.ws.tensorlogFun = self.prog.compile(mode)
       status('tensorlog compilation complete')
       self._doCompile(fun,mode)
-      status('tensorlog->tensorflow compilation complete')
+      status('tensorlog->target language compilation complete')
     return mode
 
   def _doCompile(self,fun,mode):
@@ -389,6 +389,11 @@ class AbstractCrossCompiler(object):
     """
     return [self._onlyType]*len(fun.inputTypes) if self._onlyType else fun.inputTypes
 
+  def _ensureWrapped(self,X,Y,wrapped):
+    return (X,Y) if wrapped else (self._wrapMsg(X),self._wrapMsg(Y))
+
+  def _ensureUnwrapped(self,X,Y,wrapped):
+    return (X,Y) if not wrapped else (self._unwrapOutput(X),self._unwrapOutput(Y))
   #
   # subclasses should implement these
   #
@@ -488,7 +493,6 @@ class AbstractCrossCompiler(object):
       newVal = self.getLearnedParam((functor,arity))
       self.db.setParameter(functor,arity,newVal)
 
-  # TOFIX implement for theano
   def getLearnedParam(self,key):
     """Replace the parameter values in self.prog.db with the value that
     was learned for this parameter.
