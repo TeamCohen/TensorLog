@@ -4,6 +4,7 @@ import os
 import unittest
 import sys
 import collections
+from tensorlog.expt import Expt
 try:
   import tensorflow as tf
   from tensorlog import tensorflowxcomp
@@ -29,6 +30,7 @@ from tensorlog import testtensorlog
 from tensorlog import funs
 from tensorlog import ops
 from tensorlog import learnxcomp as learnxc
+from tensorlog import expt
 
 if tf:
   tf.logging.set_verbosity(tf.logging.WARN)
@@ -366,10 +368,6 @@ class TestXCGrad(testtensorlog.TestGrad):
         self.check_directions(updates_with_string_keys,expected)
     self.learnxc_check(rule_strings,mode_string,params,xyPairs,expected)
 
-#examine=[tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-#                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]
-examine=[theanoxcomp.DenseMatDenseMsgCrossCompiler,
-         theanoxcomp.SparseMatDenseMsgCrossCompiler]
 class TestXCProPPR(testtensorlog.TestProPPR):
 
   def setUp(self):
@@ -506,7 +504,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       print 'vars to optimize',xc.getParamVariables('predict/io')
       
 #       xc.optimizeDataLoss('predict/io', optimizer, X, Y, epochs=20)
-      learner.train('predict/io',X,Y)
+      learner.trainMode('predict/io',X,Y)
 
       loss2 = lossFun(X,Y)
       print 'final train data loss',loss2
@@ -536,6 +534,20 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       self.assertTrue(d['little_pos'] > d['little_neg'])
       self.assertTrue(d['big_pos'] < d['big_neg'])
 
+  def testExptScaffold(self):
+    mode = declare.ModeDeclaration('predict(i,o)')
+    X,Y = testtensorlog.matrixAsTrainingData(self.labeledData,'train',2)
+    TX,TY = testtensorlog.matrixAsTrainingData(self.labeledData,'test',2)
+    for compilerClass in TESTED_COMPILERS:
+      xc = compilerClass(self.prog)
+      learner = TESTED_LEARNERS[compilerClass](self.prog,xc=xc,rate=0.1,epochs=20)
+      expt.Expt({'prog':self.prog,
+                 'trainData':dataset.Dataset({mode:X},{mode:Y}),
+                 'testData':dataset.Dataset({mode:TX},{mode:TY}),
+                 'targetMode':mode,
+                 'learner':learner
+                 }).run()
+
   def testExpt(self):
     if not tf: return
     mode = declare.ModeDeclaration('predict(i,o)')
@@ -563,12 +575,21 @@ class TestXCExpt(unittest.TestCase):
          "--proppr"])
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+      #TESTED_COMPILERS:
       xc = compilerClass(optdict['prog'])
-      xc.runExpt(
-          prog=optdict['prog'],
-          trainData=optdict['trainData'],
-          testData=optdict['testData'],
-          targetMode=declare.asMode("predict/io"))
+      learner = TESTED_LEARNERS[compilerClass](optdict['prog'],xc)
+      expt.Expt({
+          'prog':optdict['prog'],
+          'trainData':optdict['trainData'],
+          'testData':optdict['testData'],
+          'learner':learner,
+          'targetMode':declare.asMode("predict/io")
+          }).run()
+      #xc.runExpt(
+      #    prog=optdict['prog'],
+      #    trainData=optdict['trainData'],
+      #    testData=optdict['testData'],
+      #    targetMode=declare.asMode("predict/io"))
       pbDoc = xc.db.onehot('pb','doc')
       self.checkXC(xc,'predict/io',pbDoc,{'negPair':115,'posPair':115,'hasWord':59,'weighted':115,'label':5})
       # some checks on the output of pprint

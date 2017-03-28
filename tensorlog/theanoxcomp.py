@@ -13,6 +13,7 @@ from tensorlog import ops
 from tensorlog import dataset
 from tensorlog import xcomp
 from tensorlog import learnxcomp
+#from tensorlog.debug import mode
 
 class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
 
@@ -81,8 +82,16 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
   
   def optimizeDataLoss(self,mode,optimizer,X,Y,epochs=1,minibatchSize=0,wrapped=False):
     mode = self.ensureCompiled(mode)
-    trainStep = optimizer.minimize(self.ws.dataLossExpr, var_list=self.getParamVariables(mode), 
-                                   inputs=[self._wsDict[mode].inferenceArgs[0], self._wsDict[mode].dataLossArgs[-1]])
+    try:
+      has = mode in self._trainStepDict
+    except:
+      self._trainStepDict = {}
+      has=False
+    if has:
+      trainStep = self._trainStepDict[mode]
+    else:
+      trainStep = self._trainStepDict[mode] = optimizer.minimize(self.ws.dataLossExpr, var_list=self.getParamVariables(mode), 
+                                 inputs=[self._wsDict[mode].inferenceArgs[0], self._wsDict[mode].dataLossArgs[-1]])
     if not minibatchSize:
       (X,Y) = self._ensureWrapped(X,Y,wrapped)
       for i in range(epochs):
@@ -225,15 +234,15 @@ class GD(Optimizer):
     return trainStep
 
 
-class FixedRateGDLearner(learnxcomp.XLearner):
+class FixedRateGDLearner(learnxcomp.BatchEpochsLearner):
     """ A gradient descent learner.
     """
 
     def __init__(self,prog,xc=None,compilerClass=DenseMatDenseMsgCrossCompiler,epochs=20,rate=0.1,regularizer=None,tracer=None,epochTracer=None):
-        super(FixedRateGDLearner,self).__init__(prog,xc,compilerClass=compilerClass,regularizer=regularizer,tracer=tracer,epochTracer=epochTracer)
-        self.epochs=epochs
+        super(FixedRateGDLearner,self).__init__(prog,xc,epochs=epochs,compilerClass=compilerClass,regularizer=regularizer,tracer=tracer,epochTracer=epochTracer)
         self.rate=rate
         self.optimizer = GD(learning_rate=rate)
     
-    def train(self,mode,X,Y):
-        self.xc.optimizeDataLoss(mode,self.optimizer,X,Y,epochs=self.epochs)
+    def trainMode(self,mode,X,Y,epochs=-1):
+      if epochs<0: epochs=self.epochs
+      self.xc.optimizeDataLoss(mode,self.optimizer,X,Y,epochs=epochs)

@@ -264,7 +264,7 @@ class AbstractCrossCompiler(object):
       fun = self.ws.tensorlogFun = self.prog.compile(mode)
       status('tensorlog compilation complete')
       self._doCompile(fun,mode)
-      status('tensorlog->tensorflow compilation complete')
+      status('tensorlog->target language compilation complete')
     return mode
 
   def _doCompile(self,fun,mode):

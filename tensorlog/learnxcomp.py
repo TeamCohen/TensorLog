@@ -1,4 +1,6 @@
 import learn as L
+import time
+import sys
 
 class XLearner(L.Learner):
   def __init__(self,prog,xc,compilerClass=None,regularizer=None,tracer=None,epochTracer=None):
@@ -23,5 +25,29 @@ class XLearner(L.Learner):
     assert "Cross-compilers don't apply updates"
   def meanUpdate(self, functor, arity, delta, n, totalN=0):
     assert "Cross-compilers don't do mean updates"
+  def train(self,dset):
+    assert False, 'abstract method called'
+    
+class BatchEpochsLearner(XLearner):
+  def __init__(self,prog,xc,epochs=10,compilerClass=None,regularizer=None,tracer=None,epochTracer=None):
+    super(BatchEpochsLearner,self).__init__(prog,xc,compilerClass=compilerClass,regularizer=regularizer,tracer=tracer,epochTracer=epochTracer)
+    self.epochs=epochs
+  def trainMode(self,mode,X,Y,epochs=-1):
+    assert False, 'abstract method called'
+  def train(self,dset):
+    trainStartTime = time.time()
+    modes = dset.modesToLearn()
+    numModes = len(modes)
+    for i in range(self.epochs):
+      startTime = time.time()
+      for j,mode in enumerate(dset.modesToLearn()):
+        args = {'i':i,'startTime':startTime,'mode':str(mode)}
+        try:
+          self.trainMode(mode,dset.getX(mode),dset.getY(mode),epochs=1)
+        except:
+          print "Unexpected error at %s:" % str(args), sys.exc_info()[:2]
+          raise
+      #self.epochTracer(self,)
+    
   
         

@@ -469,5 +469,6 @@ class FixedRateGDLearner(learnxcomp.XLearner):
         self.rate=rate
         self.optimizer = tf.train.GradientDescentOptimizer(learning_rate=rate)
     
-    def train(self,mode,X,Y):
-        self.xc.optimizeDataLoss(mode,self.optimizer,X,Y,epochs=self.epochs)
+    def trainMode(self,mode,X,Y,epochs=-1):
+        if epochs<0: epochs=self.epochs
+        self.xc.optimizeDataLoss(mode,self.optimizer,X,Y,epochs=epochs)
