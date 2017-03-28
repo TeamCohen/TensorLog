@@ -404,7 +404,7 @@ class AbstractCrossCompiler(object):
     """Create a placeholder for top-level inputs"""
     assert False, 'abstract method called'
 
-  def _insertHandleExpr(self,key,expr,val):
+  def _insertHandleExpr(self,key,expr,val,broadcast=False):
     """Associate a DB object with the given functor,arity key (and value
     'val') with an expression in the target language.  The key is a
     (functor,arity) pair.  See comments for

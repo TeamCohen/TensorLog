@@ -52,8 +52,10 @@ class Expt(object):
             trainData = trainData.extractMode(targetMode)
             testData = testData.extractMode(targetMode)
 
+        prog.setAllWeights()
         if not learner: learner = learn.FixedRateGDLearner(prog)
 
+        
         TP0 = Expt.timeAction(
             'running untrained theory on train data',
             lambda:learner.datasetPredict(trainData))

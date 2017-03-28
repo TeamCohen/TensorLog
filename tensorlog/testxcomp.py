@@ -51,7 +51,7 @@ if tf:
     tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
     ]:
     TESTED_COMPILERS.append(c)
-    TESTED_LEARNERS[c]=tensorflowxcomp.FixedRateGCLearner
+    TESTED_LEARNERS[c]=tensorflowxcomp.FixedRateGDLearner
     
 
 SAVE_SUMMARIES = False

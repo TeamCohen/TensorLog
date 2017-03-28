@@ -388,7 +388,7 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     self.sparseMatInfo = {}
     logging.debug('SparseMatDenseMsgCrossCompiler initialized %.3f Gb' % comline.memusage())
 
-  def _insertHandleExpr(self,key,name,val):
+  def _insertHandleExpr(self,key,name,val,broadcast=False):
     (functor,arity) = key
     if arity<2:
       # vectors are dense so they are just stored as Variables
@@ -459,7 +459,7 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     return tf.transpose(tf.sparse_tensor_dense_matmul(mT,vT))
 
 
-class FixedRateGDLearner(learnxcomp.XLearner):
+class FixedRateGDLearner(learnxcomp.BatchEpochsLearner):
     """ A gradient descent learner.
     """
 
