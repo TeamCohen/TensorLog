@@ -21,7 +21,7 @@ from tensorlog import ops
 from tensorlog import expt
 from tensorlog import learn
 from tensorlog import plearn
-from tensorlog import learnxcomp as learnxc
+from tensorlog import learnxcomp
 
 # results july 14
 #
