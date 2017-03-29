@@ -311,6 +311,8 @@ class MatrixDB(object):
         if b==None:
           if i==0 and w<1e-10:
             logging.warn('ignoring low weight %g placed on index 0 for type %s in predicate %s' % (w,typeName1,functor))
+          elif i==0:
+            logging.warn('ignoring large weight %g placed on index 0 for type %s in predicate %s' % (w,typeName1,functor))
           else:
             assert False,'cannot find symbol on fact with weight %g for index %d for type %s in predicate %s' % (w,i,typeName1,functor)
         if b is not None:
