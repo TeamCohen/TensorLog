@@ -12,6 +12,7 @@ Little jobs (WC):
  - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
  - benchmark tests on tensorflow
  - have --proppr as the default option for programs
+ - document plugins, simple.Compiler(plugins=....)
  - docs/tutorial
   -- plugins, simple
  - ?clean up autoweighting for rule weights and types

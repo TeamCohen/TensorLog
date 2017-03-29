@@ -49,6 +49,12 @@ VERSION = '1.3.1a'
 #     simple.Compiler() fleshed out and tested for tensorflow
 # version 1.3.1a:
 #     AbstractCrossCompiler.possibleOps() added
+# version 1.3.2:
+#     binary user-defined plugins, eg
+#       plugins = program.Plugins()
+#       plugins.define('double/io', lambda x:2*x, lambda inputType:inputType)
+#       prog = program.ProPPRProgram(rules=rules,db=db,plugins=plugins)
+#     simple.RuleBuilder
 
 DEFAULT_MAXDEPTH=10
 DEFAULT_NORMALIZE='softmax'
