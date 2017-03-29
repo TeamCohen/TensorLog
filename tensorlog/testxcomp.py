@@ -674,6 +674,9 @@ class TestSimple(unittest.TestCase):
     tlog = simple.Compiler(
         db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
         prog=os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"))
+    self.runTextCatLearner(tlog)
+
+  def runTextCatLearner(self,tlog):
     trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
     testData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"))
     mode = trainData.keys()[0]
@@ -701,6 +704,39 @@ class TestSimple(unittest.TestCase):
     acc1 = session.run(accuracy, feed_dict=test_batch_fd)
     print 'final accuracy',acc1
     self.assertTrue(acc1>=0.9)
+
+  def testRuleBuilder1(self):
+    b = simple.RuleBuilder()
+    X,Y,Z = b.variables("X Y Z")
+    aunt,parent,sister,wife = b.predicates("aunt parent sister wife")
+    uncle = b.predicate("uncle")
+    b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y)
+    b += aunt(X,Y) <= parent(X,Z) & sister(Z,Y)
+    r1 = b.rule_id("ruleid_t","r1")
+    r2 = b.rule_id("ruleid_t","r2")
+    b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // r1
+    b += aunt(X,Y) <= parent(X,Z) & sister(Z,Y) // r2
+    feature,description = b.predicates("feature description")
+    weight = b.predicate("weight")
+    F = b.variable("F")
+    D = b.variable("D")
+    b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // (weight(F) | description(X,D) & feature(X,F))
+    b.rules.listing()
+    rs = b.rules.rulesFor(parser.Goal('aunt',[X,Y]))
+    self.assertEqual(str(rs[0]), "aunt(X,Y) :- uncle(X,Z), wife(Z,Y).")
+    self.assertEqual(str(rs[1]), "aunt(X,Y) :- parent(X,Z), sister(Z,Y).")
+    self.assertEqual(str(rs[2]), "aunt(X,Y) :- uncle(X,Z), wife(Z,Y) {weight(R1) : assign(R1,r1,ruleid_t)}.")
+    self.assertEqual(str(rs[3]), "aunt(X,Y) :- parent(X,Z), sister(Z,Y) {weight(R2) : assign(R2,r2,ruleid_t)}.")
+    self.assertEqual(str(rs[4]), "aunt(X,Y) :- uncle(X,Z), wife(Z,Y) {weight(F) : description(X,D),feature(X,F)}.")
+
+  def testRuleBuilder2(self):
+    b = simple.RuleBuilder()
+    predict,assign,weighted,hasWord,posPair,negPair = b.predicates("predict assign weighted hasWord posPair negPair")
+    X,Pos,Neg,F,W = b.variables("X Pos Neg F W")
+    b += predict(X,Pos) <= assign(Pos,'pos','label') // (weighted(F) | hasWord(X,W) & posPair(W,F))
+    b += predict(X,Neg) <= assign(Neg,'neg','label') // (weighted(F) | hasWord(X,W) & negPair(W,F))
+    dbSpec = os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts")
+    self.runTextCatLearner(simple.Compiler(db=dbSpec,prog=b.rules))
 
 class TestPlugins(unittest.TestCase):
 
