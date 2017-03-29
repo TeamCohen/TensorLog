@@ -21,11 +21,6 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     target_y = self._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self.ws.inferenceOutputType)
     self.ws.dataLossArgs = self.ws.inferenceArgs + [target_y]
 #     print "inferenceArgs:",self.ws.inferenceArgs
-#     entries, updates = theano.scan(fn=lambda yi,ll: -yi*ll,
-#                                    outputs_info=None,
-#                                    sequences=[target_y], # I can get at xi via self.ws.inferenceArgs[0] but how to properly insert into inferenceExpr?
-#                                    non_sequences=self._applyOpToNonzerosOfDense(TT.log,self.ws.inferenceExpr))
-    #self.ws.dataLossExpr = entries.mean()
     self.ws.dataLossExpr = (-target_y * self._applyOpToNonzerosOfDense(TT.log,self.ws.inferenceExpr)).mean()
     self.ws.dataLossGradExprs = theano.grad(self.ws.dataLossExpr, self.getParamVariables(mode))
 
@@ -90,7 +85,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     if has:
       trainStep = self._trainStepDict[mode]
     else:
-      trainStep = self._trainStepDict[mode] = optimizer.minimize(self.ws.dataLossExpr, var_list=self.getParamVariables(mode), 
+      trainStep = self._trainStepDict[mode] = optimizer.minimize(self._wsDict[mode].dataLossExpr, var_list=self.getParamVariables(mode), 
                                  inputs=[self._wsDict[mode].inferenceArgs[0], self._wsDict[mode].dataLossArgs[-1]])
     if not minibatchSize:
       (X,Y) = self._ensureWrapped(X,Y,wrapped)
@@ -229,7 +224,7 @@ class GD(Optimizer):
     self.learning_rate = learning_rate
   def minimize(self, expr, var_list=[], inputs=[]):
     dlosses = TT.grad(expr, var_list)
-    updates = [(v, v - self.learning_rate * dloss) for v,dloss in zip(var_list,dlosses)]
+    updates = [(v, v - TT.cast(self.learning_rate,v.dtype) * dloss) for v,dloss in zip(var_list,dlosses)]
     trainStep = theano.function(inputs, expr, updates=updates, mode='FAST_COMPILE')
     return trainStep
 

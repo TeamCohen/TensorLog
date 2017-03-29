@@ -7,16 +7,18 @@ import collections
 from tensorlog.expt import Expt
 try:
   import tensorflow as tf
-  from tensorlog import tensorflowxcomp
 except:
   tf=None
   tensorflowxcomp=None
+if tf:
+  from tensorlog import tensorflowxcomp
 try:
   import theano
-  from tensorlog import theanoxcomp
 except:
   theano=None
   theanoxcomp=None
+if theano:
+  from tensorlog import theanoxcomp
 
 from tensorlog import comline
 from tensorlog import dataset
@@ -564,8 +566,8 @@ class TestXCProPPR(testtensorlog.TestProPPR):
 
 class TestXCExpt(unittest.TestCase):
 
-  def testTCToyTypes(self):
-    if not tf: return
+
+  def testTCToyTypes_wscaffold(self):
     matrixdb.conf.ignore_types = False
     optdict,args = comline.parseCommandLine(
         ["--db", os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
@@ -573,9 +575,7 @@ class TestXCExpt(unittest.TestCase):
          "--trainData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"),
          "--testData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"),
          "--proppr"])
-    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
-      #TESTED_COMPILERS:
+    for compilerClass in TESTED_COMPILERS:
       xc = compilerClass(optdict['prog'])
       learner = TESTED_LEARNERS[compilerClass](optdict['prog'],xc)
       expt.Expt({
@@ -585,11 +585,6 @@ class TestXCExpt(unittest.TestCase):
           'learner':learner,
           'targetMode':declare.asMode("predict/io")
           }).run()
-      #xc.runExpt(
-      #    prog=optdict['prog'],
-      #    trainData=optdict['trainData'],
-      #    testData=optdict['testData'],
-      #    targetMode=declare.asMode("predict/io"))
       pbDoc = xc.db.onehot('pb','doc')
       self.checkXC(xc,'predict/io',pbDoc,{'negPair':115,'posPair':115,'hasWord':59,'weighted':115,'label':5})
       # some checks on the output of pprint
@@ -603,6 +598,59 @@ class TestXCExpt(unittest.TestCase):
       pbSym = xc.asSymbol(pbId,typeName='doc')
       self.assertEqual(pbSym,'pb')
       self.assertEqual(xc.asSymbolId('this does not appear in the data',typeName='doc'), -1)
+
+  def testTCToyTypes(self):
+    if not tf: return
+    matrixdb.conf.ignore_types = False
+    optdict,args = comline.parseCommandLine(
+        ["--db", os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
+         "--prog", os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"),
+         "--trainData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"),
+         "--testData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"),
+         "--proppr"])
+    for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+                          tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
+      xc = compilerClass(optdict['prog'])
+      xc.runExpt(
+          prog=optdict['prog'],
+          trainData=optdict['trainData'],
+          testData=optdict['testData'],
+          targetMode=declare.asMode("predict/io"))
+      pbDoc = xc.db.onehot('pb','doc')
+      self.checkXC(xc,'predict/io',pbDoc,{'negPair':115,'posPair':115,'hasWord':59,'weighted':115,'label':5})
+      # some checks on the output of pprint
+      lines = xc.pprint('predict/io')
+      self.assertTrue(lines[0].find("SoftMaxFunction") >= 0)
+      self.assertTrue(lines[1].find("SumFunction") >= 0)
+      self.assertEqual(len(lines), 16)
+      # some checks on misc xcomp API
+      self.assertEqual(xc.inferenceOutputType('predict/io'),'label')
+      pbId = xc.asSymbolId('pb',typeName='doc')
+      pbSym = xc.asSymbol(pbId,typeName='doc')
+      self.assertEqual(pbSym,'pb')
+      self.assertEqual(xc.asSymbolId('this does not appear in the data',typeName='doc'), -1)
+
+
+  def testTCToyIgnoringTypes_wscaffold(self):
+    matrixdb.conf.ignore_types = True
+    optdict,args = comline.parseCommandLine(
+        ["--db", os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
+         "--prog", os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"),
+         "--trainData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"),
+         "--testData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"),
+         "--proppr"])
+    for compilerClass in TESTED_COMPILERS:
+      xc = compilerClass(optdict['prog'])
+      learner = TESTED_LEARNERS[compilerClass](optdict['prog'],xc)
+      expt.Expt({
+          'prog':optdict['prog'],
+          'trainData':optdict['trainData'],
+          'testData':optdict['testData'],
+          'learner':learner,
+          'targetMode':declare.asMode("predict/io")
+          }).run()
+      pbDoc = xc.db.onehot('pb')
+      self.checkXC(xc,'predict/io',pbDoc,collections.defaultdict(lambda:191))
 
   def testTCToyIgnoringTypes(self):
     if not tf: return
@@ -623,7 +671,6 @@ class TestXCExpt(unittest.TestCase):
           targetMode=declare.asMode("predict/io"))
       pbDoc = xc.db.onehot('pb')
       self.checkXC(xc,'predict/io',pbDoc,collections.defaultdict(lambda:191))
-
 
   def checkXC(self,xc,mode,rawInput,expectedCols):
     print 'matrixdb.conf.ignore_types',matrixdb.conf.ignore_types
@@ -647,6 +694,24 @@ class TestMultiModeXC(unittest.TestCase):
     self.dset = dataset.Dataset.loadExamples(
         self.db, os.path.join(testtensorlog.TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     self.prog.setAllWeights()
+
+  def testInScaffold(self):
+    print TESTED_COMPILERS
+    self.assertTrue(self.dset.modesToLearn() > 1)
+    for compilerClass in TESTED_COMPILERS:
+      print compilerClass
+      xc = compilerClass(self.prog)
+      # compile everything
+      for mode in self.dset.modesToLearn():
+        xc.ensureCompiled(mode)
+      learner = TESTED_LEARNERS[compilerClass](self.prog,xc)
+      testAcc,testXent = expt.Expt({
+          'prog':self.prog,
+          'trainData':self.dset,
+          'testData':self.dset,
+          'learner':learner,
+          }).run()
+      print testAcc
 
   def testIt(self):
     if not tf: return
