@@ -231,8 +231,8 @@ class GD(Optimizer):
   def minimize(self, expr, var_list=[], inputs=[]):
     dlosses = TT.grad(expr, var_list)
     updates = [(v, v - TT.cast(self.learning_rate,v.dtype) * TT.cast(dloss,v.dtype)) for v,dloss in zip(var_list,dlosses)]
-    for v,u in updates:
-      print v.dtype,u.dtype
+#     for v,u in updates:
+#       print v.dtype,u.dtype
     trainStep = theano.function(inputs, expr, updates=updates, mode='FAST_COMPILE')
     return trainStep
 

@@ -886,6 +886,7 @@ class TestSimple(unittest.TestCase):
     self.runTextCatLearner(tlog)
 
   def runTextCatLearner(self,tlog):
+    if not xctargets.tf: return
     trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
     testData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"))
     mode = trainData.keys()[0]
@@ -915,6 +916,7 @@ class TestSimple(unittest.TestCase):
     self.assertTrue(acc1>=0.9)
 
   def testRuleBuilder1(self):
+    if not xctargets.tf: return
     b = simple.RuleBuilder()
     X,Y,Z = b.variables("X Y Z")
     aunt,parent,sister,wife = b.predicates("aunt parent sister wife")
@@ -939,6 +941,7 @@ class TestSimple(unittest.TestCase):
     self.assertEqual(str(rs[4]), "aunt(X,Y) :- uncle(X,Z), wife(Z,Y) {weight(F) : description(X,D),feature(X,F)}.")
 
   def testRuleBuilder2(self):
+    if not xctargets.tf: return
     b = simple.RuleBuilder()
     predict,assign,weighted,hasWord,posPair,negPair = b.predicates("predict assign weighted hasWord posPair negPair")
     X,Pos,Neg,F,W = b.variables("X Pos Neg F W")
@@ -990,6 +993,7 @@ class TestPlugins(unittest.TestCase):
     self.check_learning_with_udp(ruleStrings,plugins)
 
   def check_learning_with_udp(self,ruleStrings,plugins):
+    if not xctargets.tf: return
     db = matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"))
     rules = testtensorlog.rules_from_strings(ruleStrings)
     prog = program.ProPPRProgram(rules=rules,db=db,plugins=plugins)
