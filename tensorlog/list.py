@@ -24,15 +24,12 @@ if __name__ == "__main__":
     if db and (not '--mode' in optdict):
         db.listing()
     elif db and ('--mode' in optdict):
-        try:
-            functor,rest = optdict['--mode'].split("/")
-            arity = int(rest)
-            m = db.matEncoding[(functor,arity)]
-            for goal,weight in db.matrixAsPredicateFacts(functor,arity,m).items():
-                print '\t'.join([goal.functor] + goal.args + ['%g' % (weight)])
-        except Exception:
-            usage()
-            assert False,'mode should be of the form functor/arity for something in the database'
+        functor,rest = optdict['--mode'].split("/")
+        arity = int(rest)
+        m = db.matEncoding.get((functor,arity))
+        assert m is not None,'mode should be of the form functor/arity for something in the database'
+        for goal,weight in db.matrixAsPredicateFacts(functor,arity,m).items():
+            print '\t'.join([goal.functor] + goal.args + ['%g' % (weight)])
     elif '--prog' in optdict:
         prog = comline.parseProgSpec(optdict['--prog'],db,proppr=True)
         for rid in prog.ruleIds:

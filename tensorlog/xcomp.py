@@ -1,3 +1,5 @@
+# (C) William W. Cohen and Carnegie Mellon University, 2017
+
 import logging
 import time
 
@@ -5,9 +7,11 @@ from tensorlog import comline
 from tensorlog import config
 from tensorlog import declare
 from tensorlog import funs
+from tensorlog import matrixdb
 from tensorlog import ops
 
-# TOFIX move params from ws to xcompiler
+conf = config.Config()
+conf.reparameterizeMatrices = True; conf.help.reparameterizeMatrices = 'pass parameter matrices through a softplus to make keep them positive'
 
 TRAINING_TARGET_VARNAME = '_target_y'
 
@@ -43,7 +47,7 @@ class AbstractCrossCompiler(object):
     # calling insertHandleExpr().
     self._handleExpr = {}
     # For each handle expression, there is some underlying variable
-    # with a gradient that is used.  Often this is the same as the
+    # with a gradient that is optimized.  Often this is the same as the
     # handle expression, but not always.  These are indexed by
     # functor,arity key.
     self._handleExprVar = {}
@@ -52,8 +56,6 @@ class AbstractCrossCompiler(object):
   #
   # external UI
   #
-  # TODO: add regularizers, loss
-  # put the params in order!
 
   def inference(self,mode):
     """ Returns (args,inferenceExpr) """
@@ -73,6 +75,29 @@ class AbstractCrossCompiler(object):
     return self._asOneInputFunction(args[0],expr,wrapInputs,unwrapOutputs)
 
   def inferenceOutputType(self,mode):
+    """ The type associated with the output of a tensorlog function.
+    """
+    mode = self.ensureCompiled(mode)
+    return self._wsDict[mode].tensorlogFun.outputType
+
+  def proofCount(self,mode):
+    """ Returns (args,proofCountExpr) """
+    mode = self.ensureCompiled(mode)
+    return self._wsDict[mode].proofCountArgs, self._wsDict[mode].proofCountExpr
+
+  def proofCountFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
+    """Returns a python function which performs counts proofs for the
+    queries defined by that mode.  The function takes a length-one
+    tuple containing one argument X, which can be a row vector or a
+    minibatch, and outputs a matrix with the same number of rows as X,
+    and the number of columns appropriate for the output type of the
+    mode.
+    """
+    args,expr = self.proofCount(mode)
+    assert len(args)==1
+    return self._asOneInputFunction(args[0],expr,wrapInputs,unwrapOutputs)
+
+  def proofCountOutputType(self,mode):
     """ The type associated with the output of a tensorlog function.
     """
     mode = self.ensureCompiled(mode)
@@ -129,10 +154,53 @@ class AbstractCrossCompiler(object):
     """
     return self._wrapMsg(x)
 
+  def unwrapInput(self,x):
+    """Inverts wrapInput.  Override this only if inputs and outputs are
+    in a different format.
+    """
+    return self._unwrapOutput(x)
+
   def unwrapOutput(self,y):
     """ Convert output to scipy matrix
     """
     return self._wrapOutput(y)
+
+  def unwrapParam(self,y):
+    """ Convert output to scipy matrix
+    """
+    return self._unwrapOutput(x)
+
+
+  def possibleOps(self,subExpr,typeName=None):
+    """If a typeName is specified, then return a (expr,type) pairs, where
+    each expression performs one primitive tensorlog operation on the
+    subExpr given as input, and type is the name of the type for the
+    resulting subExpr.
+
+    If the typeName is NONE,
+
+    """
+    # TODO add multiple-input and zero-input operations
+    if typeName is None:
+      typeName = matrixdb.THING
+      assert self.db.isTypeless(),'if database has types declared, you must specify the type of the input to possibleOps'
+    result = []
+    for (functor,arity) in self.db.matEncoding:
+      if arity==2:
+        mode = declare.asMode("%s(i,o)" % functor)
+        if self.db.getDomain(functor,arity)==typeName:
+          op = self._vecMatMulExpr(subExpr, self._matrix(mode,transpose=False))
+          if self.db.isTypeless():
+            result.append(op)
+          else:
+            result.append((op,self.db.getRange(functor,arity)))
+        if self.db.getRange(functor,arity)==typeName:
+          op = self._vecMatMulExpr(subExpr, self._matrix(mode,transpose=True))
+          if self.db.isTypeless():
+            result.append(op)
+          else:
+            result.append((op,self.db.getDomain(functor,arity)))
+    return result
 
   #
   # used in inferenceFunction, dataLossFunction, etc
@@ -158,10 +226,31 @@ class AbstractCrossCompiler(object):
     assert False,'abstract method called'
 
   def getParamVariables(self,mode):
-    # TOFIX probly doesn't work if params are not used
-    """ Find variables corresponding to parameters """
+    """Find target-language variables that are optimized to set the DB
+    parameters.  These are the variables that will be optimized in
+    learning.  Eg, if a weight vector V is reparameterized by passing
+    it through an softplus, this will be the underlying variable V0
+    such that softplus(V0)=V.
+    """
     mode = self.ensureCompiled(mode)
     return map(lambda key:self._handleExprVar[key], self.prog.getParamList())
+
+  def getParamHandles(self,mode):
+    """Find target-language variables corresponding to DB parameters.
+    These are the variables that store or compute the values that
+    correspond most closely to the parameters. Eg, if a weight vector
+    V is reparameterized by passing it through an softplus, this will
+    be the variable V such that V=softplus(V0), where V0 is optimized
+    in learning.
+    """
+    mode = self.ensureCompiled(mode)
+    return map(lambda key:self._handleExpr[key], self.prog.getParamList())
+
+  def parameterFromDBToExpr(self,functor,arity):
+    return self._handleExpr.get((functor,arity))
+
+  def parameterFromDBToVariable(self,functor,arity):
+    return self._handleExprVar.get((functor,arity))
 
   def pprint(self,mode):
     """Return list of lines in a pretty-print of the underlying, pre-compilation function.
@@ -196,6 +285,7 @@ class AbstractCrossCompiler(object):
     assert matMode.arity==1
     key = (matMode.getFunctor(),1)
     if not key in self._handleExpr:
+      assert (matMode.functor,1) in self.db.matEncoding, 'DB does not contain a value for %s' % str(matMode)
       variable_name = "v__" + matMode.getFunctor()
       val = self._wrapDBVector(self.db.vector(matMode)) #ignores all but functor for arity 1
       self._insertHandleExpr(key, variable_name, val, broadcast=True)
@@ -218,6 +308,7 @@ class AbstractCrossCompiler(object):
     key = (matMode.getFunctor(),2)
     canonicalMode = declare.asMode( "%s(i,o)" % matMode.getFunctor())
     if not key in self._handleExpr:
+      assert (matMode.functor,2) in self.db.matEncoding, 'DB does not contain a value for %s' % str(matMode)
       variable_name = "M__" + matMode.getFunctor()
       val = self._wrapDBMatrix(self.db.matrix(canonicalMode,False))
       self._insertHandleExpr(key, variable_name, val)
@@ -272,9 +363,23 @@ class AbstractCrossCompiler(object):
     """
     self._setupGlobals()
     # build the expression used for inference
-    (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self._fun2Expr(fun)
+    if isinstance(fun,funs.SoftmaxFunction):
+      # proofCountExpr is the what we apply the softmax normalization to
+      (self.ws.proofCountArgs,self.ws.proofCountExpr,self.ws.proofCountOutputType) = self._fun2Expr(fun.fun)
+      self.ws.inferenceExpr = self._softmaxFun2Expr(self.ws.proofCountExpr,self.ws.proofCountOutputType)
+      self.ws.inferenceArgs = self.ws.proofCountArgs
+      self.ws.inferenceOutputType = self.ws.proofCountOutputType
+    else:
+      logging.warn('cannot recover proofCount expression for mode %s -  is it not softmax normalized?' % str(mode))
+      (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self._fun2Expr(fun)
     # extend the inferenceExpr to also compute loss
     self._buildLossExpr(mode)
+    self._finalizeCompile(mode)
+
+  def _finalizeCompile(self,mode):
+    """ Hook function called after _doCompile
+    """
+    pass
 
   def _setupGlobals(self):
     """ Initialize variables used by this cross-compiler object. """
@@ -285,24 +390,24 @@ class AbstractCrossCompiler(object):
         self._onlyType = self.db.getTypes()[0]
       self._globalsSet = True
 
-
   #
   # recursive compilation of function tree
   #
 
   def _fun2Expr(self,fun,sharedInputs=None,depth=0):
-    """Return a triple (inputs, expr, typeName) where binding the inputs in,
-    and then evaluating the expression, is semantically equivalent to
-    evaluating the Function fun in tensorlog, given that all the
-    workspace variables are initialized.  typeName is the outputType
-    of the function.
+    """Convert a tensorlog funs.Function() to an expression in the target
+    language.  Return a triple (inputs, expr, typeName) where binding
+    the inputs in, and then evaluating the expression, is semantically
+    equivalent to evaluating the Function fun in tensorlog, given that
+    all the workspace variables are initialized.  typeName is the
+    outputType of the function.
 
     The sharedInputs is used if you already have created variables
     corresponding to the inputs to this expression.  This is the case
     when you have a SumFunction: all the subexpressions share the same
     inputs.
 
-    Depth is the depth of recursion
+    Depth is the depth of recursion.
     """
 
     if isinstance(fun,funs.SoftmaxFunction):
@@ -428,11 +533,13 @@ class AbstractCrossCompiler(object):
     """Convert a matrix from the DB into the target language """
     assert False, 'abstract method called'
 
-  def _unwrapOutputs(self,targetLanguageOutputs):
-    """ Convert a list of outputs produced by the target language to a
-    tensorlog output (a scipy sparse vector/matrix)
-    """
-    return map(lambda v:self.unwrapOutput(v), targetLanguageOutputs)
+  def _unwrapDBVector(self,key,vec):
+    """ Convert a vector from the target language into the format used by the tensorlog DB """
+    assert False, 'abstract method called'
+
+  def _unwrapDBMatrix(self,key,mat):
+    """ Convert a matrix from the target language into the format used by the tensorlog DB """
+    assert False, 'abstract method called'
 
   def _unwrapOutput(self,targetLanguageOutputs):
     """ Convert an output produced by the target language to a
@@ -485,15 +592,15 @@ class AbstractCrossCompiler(object):
    compute any gradients that are needed. """
    assert False, 'abstract method called'
 
-  def exportAllLearnedParams(self):
+  def exportAllLearnedParams(self,session=None):
     """Replace the parameter values in self.prog.db with the values that
     have been learned.
     """
     for (functor,arity) in self.prog.getParamList():
-      newVal = self.getLearnedParam((functor,arity))
+      newVal = self.getLearnedParam((functor,arity),session)
       self.db.setParameter(functor,arity,newVal)
 
-  def getLearnedParam(self,key):
+  def getLearnedParam(self,key,session=None):
     """Replace the parameter values in self.prog.db with the value that
     was learned for this parameter.
     """
@@ -524,15 +631,15 @@ class Workspace(object):
     self.xcomp = xcomp
     # tensorlog function that will be cross-compiled
     self.tensorlogFun = None
-    # expression used for inference
+    # expression for proof counts for (output|input), with args and output type
+    self.proofCountExpr = None
+    self.proofCountArgs = None #list of placeholders
+    self.proofCountOutputType = None
+    # expression used for inference, with args and output type
     self.inferenceExpr = None
-    # list of arguments to inferenceExpr - generated with createPlaceholder
     self.inferenceArgs = None
-    # output type of the inferenceArgs
     self.inferenceOutputType = None
-    # expression used for unregularized loss
+    # expression used for unregularized loss, with args and output type
     self.dataLossExpr = None
-    # additional arguments for computing loss - generated with createPlaceholder
     self.dataLossArgs = None
-    # gradient of loss expression wrt each parameter
     self.dataLossGradExprs = None

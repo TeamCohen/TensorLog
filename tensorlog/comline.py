@@ -109,6 +109,8 @@ def parseDatasetSpec(spec,db):
         cache,src = getCacheSrcPair(spec)
         assert src.endswith(".examples") or src.endswith(".exam"), 'illegal --train or --test file'
         return dataset.Dataset.uncacheExamples(cache,db,src,proppr=src.endswith(".examples"))
+    elif spec.endswith(".dset"):
+        return dataset.Dataset.deserialize(spec)
     else:
         assert spec.endswith(".examples") or spec.endswith(".exam"), 'illegal --train or --test file'
         return dataset.Dataset.loadExamples(db,spec,proppr=spec.endswith(".examples"))

@@ -1,7 +1,6 @@
 # typed variant of the textcat problem
 
 # :- predict(doc,label)
-
 # :- hasWord(doc,word)
 
 hasWord	dh	a

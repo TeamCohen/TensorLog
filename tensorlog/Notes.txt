@@ -1,32 +1,47 @@
  - export PYTHONPATH=/usr/local/google/home/cohenw/code/TensorLog:$PYTHONPATH
  - live theano add /usr/local/google/home/cohenw/code/Theano
 
-Next actions:
+Next actions (KR):
 
  - revive debug.py - how can testing this be automated? should I bother? w/ Katie?
- - fix pyparsing
  - look at sparse messages in theano-based learner?
 
-Little jobs:
- - interp.helpConfig()
- - regularizers for cross compilation
- - output types as typename/id
- - clean up tensorflow/tensorlog interfaces, eg wrapping
- - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
+Next actions (WC):
+ - { .... } autoweight setting doesn't work for "p(X,Y) :- ... { wy(Y):true }".
+ - fan's stuff:
+   -- from _op2Expr, construct 
+    possibleOps( input=a, inputTypename=t) - list of (op, type)
+    possibleOps( inputs=[a,..], inputTypenames=[t...]) - list of (op, type) that use pairs of inputs
 
+Little jobs:
+ - tests and etc for {id} features.  Should I have these? they are just {weighted(R1): assign(R1,r1,ruleid_t)}
+ - cleanup sessions in tensorflowxcomp
+ - cleanup modes? should they always be written pred/io, and i,o no longer be reserved words?
+ - robust parsing of programs - figure out if it's proppr format or not? make rules weights optional?
+ - interp.helpConfig()
+ - output types as typename/id
+ - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
+ - move testability code to subclass "testabletensorflowxcompiler"
+
+Semantics:
+ - tensorlog compiler compiles p_io(x) to v=softmax(proofcount(y|x,db,prog,theta))
+ - alternative: make proofcount(y|x) the a core output, and configure inference schemes
+   on top of this -- either in compiler or just in tensorflow
 
 Bigger steps:
-
- - automatically move program constants into the database and introduce assign clauses when needed??
- - multi-mode training and compilation -- needed for movie app
+ - automatically move program constants into the database and introduce assign clauses when needed?? -nah
  - benchmark tests on tensorflow
  - adding tensorflow 'builtins'
- -- p(i,o) -> lambda inputExpression:outputExpression 
- -- p(o)   -> lambda outputExpression 
+ -- bpcompiler: 
+ --- code is mostly ready, based on BuiltInIOOp, just need to add a "virtual op" type.
+ --- need to worry about checking modes, and multiple inputs
+ -- xcomp virtualDB: maps modes to 
+ --- p(i,o) -> lambda inputExpression:outputExpression 
+ --- p(o)   -> lambda outputExpression 
  - snake_case fixes??
  - repackage (see below)???
  - optimize compilation???
- - typing for tensorlog 
+ - typing for tensorlog -done
  -- note: 10k sample has 3,434 people, 11,819 entities, larger yago has 59,120 people 118,703 entities
     so it's 10x bigger (in message size); 10k sample uses about 15 Gb memory
  -- should look at if sparse matrices are actually being used and monitor where the space is going
@@ -50,7 +65,7 @@ Overall package structure:
 
 Proposed simple -  _ means python object or else argument of comline.parseFOO
   - tlg.Compiler(
-	target='tensorflow',
+        compilerClass=_ | trget='tensorflow',
     	program= _    
       	type_declarations= _
       	db= _,
@@ -60,7 +75,6 @@ Proposed simple -  _ means python object or else argument of comline.parseFOO
 Next actions:
 
    - upload dialog-toy
-   - start on toy for provenance
 
 Question->query idea
 

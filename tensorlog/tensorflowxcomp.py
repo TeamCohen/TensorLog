@@ -56,21 +56,30 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   def getInputName(self,mode):
     """ String key for the input placeholder
     """
+    mode = self.ensureCompiled(mode)
     assert len(self._wsDict[mode].inferenceArgs)==1
     return self._wsDict[mode].inferenceArgs[0].name
 
-  def getTargetName(self,mode):
+  def getTargetOutputName(self,mode):
     """ String key for the target-output placeholder
     """
+    mode = self.ensureCompiled(mode)
     assert len(self._wsDict[mode].dataLossArgs)==2
     return self._wsDict[mode].dataLossArgs[-1].name
+
+  def getTargetOutputPlaceholder(self,mode):
+    """ String key for the target-output placeholder
+    """
+    mode = self.ensureCompiled(mode)
+    assert len(self._wsDict[mode].dataLossArgs)==2
+    return self._wsDict[mode].dataLossArgs[-1]
 
   def getFeedDict(self,mode,X,Y,wrapped=False):
     """ Create a feed dictionary for training based on X and Y
     """
     mode = self.ensureCompiled(mode)
     (X,Y) = self._ensureWrapped(X,Y,wrapped)
-    return { self.getInputName(mode):X, self.getTargetName(mode):Y }
+    return { self.getInputName(mode):X, self.getTargetOutputName(mode):Y }
 
   def optimizeDataLoss(self,mode,optimizer,X,Y,epochs=1,minibatchSize=0,wrapped=False):
     """ Train
@@ -219,12 +228,8 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
   # standard xcomp interface
   #
 
-  # TOFIX - clean up
-  # override this so I can mess with summaryFiles
-  def _doCompile(self,fun,mode):
-    self._setupGlobals()
-    (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self._fun2Expr(fun)
-    self._buildLossExpr(mode)
+  def _finalizeCompile(self,mode):
+    #TODO does this work for multi-mode compilation?
     if self.summaryFile:
       self.summaryMergeAll = tf.summary.merge_all()
 
@@ -292,12 +297,20 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     if verbose>=1:
       TensorFlowCrossCompiler.pprintExpr(self.ws.inferenceExpr)
 
-  def getLearnedParam(self,key):
-    self.ensureSessionInitialized()
-    with self.session.as_default():
-      varVal = self._handleExprVar[key].eval()
+  def getLearnedParam(self,key,session=None):
+    if session is None:
+      self.ensureSessionInitialized()
+      with self.session.as_default():
+        varVal = self._handleExpr[key].eval()
+    else:
+      with session.as_default():
+        varVal = self._handleExpr[key].eval()
     # same logic works for param values as param updates
-    return self._unwrapUpdate(key, varVal)
+    functor,arity = key
+    if arity==1:
+      return self._unwrapDBVector(key,varVal)
+    else:
+      return self._unwrapDBMatrix(key,varVal)
 
 ###############################################################################
 # implementation for dense messages, dense relation matrices
@@ -308,24 +321,49 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
   def __init__(self,db,summaryFile=None):
     super(DenseMatDenseMsgCrossCompiler,self).__init__(db,summaryFile=summaryFile)
 
+  def _softPlusInverse(self,y):
+    approxLogInf = 50.0
+    # be careful, because you can't apply softplus inverse to zero
+    # values, so first add 1 to all the zeros, by adding to all and
+    # subtracting from the nonzeros.  nonzeros here must be the values
+    # that are not zero, and don't underflow to zero when we add and
+    # subtract
+    nonzeroIndices = np.nonzero((y-approxLogInf) + approxLogInf)
+    tmp = y + 1.0
+    tmp[nonzeroIndices] -= 1.0
+    result = np.log(np.exp(tmp)-1.0)
+    # finally put something back in the zero positions which
+    # is small enough that softplus brings it back to zero
+    result -= approxLogInf
+    result[nonzeroIndices] += approxLogInf
+    return result
+
   def _createPlaceholder(self,name,kind,typeName):
     assert kind=='vector'
     result = tf.placeholder(tf.float32, shape=[None,self.db.dim(typeName)], name="tensorlog/"+name)
     return result
 
   def _insertHandleExpr(self,key,name,val,broadcast=False):
-    # TODO this machinery is a lot like get_variable, can I use that
-    # instead?
-    v = tf.Variable(val, name="tensorlog/"+name, dtype=tf.float32)
-    self.tfVarsToInitialize.append(v)
-    self._handleExpr[key] = self._handleExprVar[key] = v
+    # parameters are passed through softplus so they don't get pushed to zero
+    # we need to undo this transformation when you load them into variables...
+    isTrainable = (key in self.db.paramSet)
+    v = self._reparameterizeAndRecordVar(val,name,isTrainable)
+    self._handleExprVar[key] = v
+    self._handleExpr[key] = self._reparameterizedVarExpr(v,isTrainable)
+
+  def _reparameterizeAndRecordVar(self,val,name,isTrainable):
+    initVal = self._softPlusInverse(val) if (isTrainable and xcomp.conf.reparameterizeMatrices) else val
+    v = tf.Variable(initVal, name="tensorlog/"+name, trainable=isTrainable)
     self.summarize(name,v)
+    self.tfVarsToInitialize.append(v)
+    return v
+
+  def _reparameterizedVarExpr(self,var,isTrainable):
+    return tf.nn.softplus(var) if (isTrainable and xcomp.conf.reparameterizeMatrices) else var
 
   def summarize(self,name,v):
     if self.summaryFile:
-      with tf.name_scope('summaries'):
-        with tf.name_scope(name):
-          tf.summary.scalar('size', tf.size(v))
+      tf.summary.scalar('summaries/%s/size' % name, tf.size(v))
 
   def _wrapMsg(self,vec):
     """ Convert a vector from the DB into a vector value used by the
@@ -351,6 +389,12 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
     sx = ss.csr_matrix(x)
     sx.eliminate_zeros()
     return sx
+
+  def _unwrapDBVector(self,key,vec):
+    return self._unwrapOutput(vec)
+
+  def _unwrapDBMatrix(self,key,mat):
+    return self._unwrapOutput(vec)
 
   def _softmaxFun2Expr(self,subExpr,typeName):
     # zeros are actually big numbers for the softmax,
@@ -390,12 +434,12 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
 
   def _insertHandleExpr(self,key,name,val,broadcast=False):
     (functor,arity) = key
+    isTrainable = (key in self.db.paramSet)
     if arity<2:
-      # vectors are dense so they are just stored as Variables
-      v = tf.Variable(val, name="tensorlog/"+name, dtype=tf.float32)
-      self.tfVarsToInitialize.append(v)
-      self._handleExpr[key] = self._handleExprVar[key] = v
-      self.summarize(name,v)
+      initVal = self._softPlusInverse(val) if isTrainable else val
+      v = self._reparameterizeAndRecordVar(val,name,isTrainable)
+      self._handleExprVar[key] = v
+      self._handleExpr[key] = self._reparameterizedVarExpr(v,isTrainable)
     else:
       # matrixes are sparse so we need to convert them into
       # a handle expression that stores a SparseTensor, and
@@ -416,18 +460,24 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
       # create the handle expression, and save a link back to the
       # underlying varable which will be optimized, ie., the 'values'
       # of the SparseTensor,
-      indiceVar = tf.Variable(np.array(sparseIndices), name="tensorlog/%s_indices" % name, dtype=tf.int64)
-      valueVar = tf.Variable(val.data, name="tensorlog/%s_values" % name, dtype=tf.float32)
+      indiceVar = tf.Variable(np.array(sparseIndices), name="tensorlog/%s_indices" % name)
+      valueVar = self._reparameterizeAndRecordVar(val.data,name,isTrainable)
       # note: the "valueVar+0.0" seems to be necessary to get a non-zero
       # gradient, but I don't understand why.  w/o this there is no "read"
       # node in for the variable in the graph and the gradient fails
-      self._handleExpr[key] = tf.SparseTensor(indiceVar,valueVar+0.0,[nRows,nCols])
+      self._handleExpr[key] = tf.SparseTensor(indiceVar,self._reparameterizedVarExpr(valueVar,isTrainable)+0.0,[nRows,nCols])
       self._handleExprVar[key] = valueVar
-      # record the variables that need to be initialized
+      # record the index variable, which also needs to be initialized
       self.tfVarsToInitialize.append(indiceVar)
-      self.tfVarsToInitialize.append(valueVar)
       self.summarize("%s_indices" % name,indiceVar)
-      self.summarize("%s_value" % name,valueVar)
+
+  def _unwrapDBVector(self,key,vec):
+    return ss.csr_matrix(vec)
+
+  def _unwrapDBMatrix(self,key,mat):
+    (indices,indptr,shape) = self.sparseMatInfo[key]
+    return ss.csr_matrix((up,indices,indptr),shape=shape)
+
 
   def _unwrapUpdate(self,key,up):
     # we will optimize by updating the _handleExprVar's, which are,
@@ -454,10 +504,11 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
     return tf.sparse_transpose(m)
 
   def _vecMatMulExpr(self,v,m):
+    # TODO: the sparse_transpose below throws two op_scope deprecation warning
     mT = tf.sparse_transpose(m)
     vT = tf.transpose(v)
-    return tf.transpose(tf.sparse_tensor_dense_matmul(mT,vT))
-
+    result = tf.transpose(tf.sparse_tensor_dense_matmul(mT,vT))
+    return result
 
 class FixedRateGDLearner(learnxcomp.BatchEpochsLearner):
     """ A gradient descent learner.
@@ -472,3 +523,4 @@ class FixedRateGDLearner(learnxcomp.BatchEpochsLearner):
     def trainMode(self,mode,X,Y,epochs=-1):
         if epochs<0: epochs=self.epochs
         self.xc.optimizeDataLoss(mode,self.optimizer,X,Y,epochs=epochs)
+

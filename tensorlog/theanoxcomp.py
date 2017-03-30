@@ -112,7 +112,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
         print 'debugprint dataLossExpr:'
         theano.printing.debugprint(self.ws.dataLossExpr)
         
-  def getLearnedParam(self,key):
+  def getLearnedParam(self,key,session=None):
     varVal = self._handleExprVar[key].eval()
     # same logic works for param values as param updates
     return self._unwrapUpdate(key, varVal)
@@ -153,6 +153,12 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
 
   def _unwrapUpdate(self,key,up):
     return self._unwrapOutput(up)
+
+  def _unwrapDBVector(self,key,vec):
+    return self._unwrapOutput(vec)
+
+  def _unwrapDBMatrix(self,key,mat):
+    return self._unwrapOutput(mat)
 
   def _softmaxFun2Expr(self,subExpr,typeName):
     # _applyTopToNonzerosOfDense overweights the null element by at least 0.05,
@@ -224,7 +230,9 @@ class GD(Optimizer):
     self.learning_rate = learning_rate
   def minimize(self, expr, var_list=[], inputs=[]):
     dlosses = TT.grad(expr, var_list)
-    updates = [(v, v - TT.cast(self.learning_rate,v.dtype) * dloss) for v,dloss in zip(var_list,dlosses)]
+    updates = [(v, v - TT.cast(self.learning_rate,v.dtype) * TT.cast(dloss,v.dtype)) for v,dloss in zip(var_list,dlosses)]
+    for v,u in updates:
+      print v.dtype,u.dtype
     trainStep = theano.function(inputs, expr, updates=updates, mode='FAST_COMPILE')
     return trainStep
 

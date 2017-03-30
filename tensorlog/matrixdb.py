@@ -95,15 +95,18 @@ class MatrixDB(object):
     if conf.ignore_types:
       logging.info('ignoring type declaration %s at %s:%d' % (str(decl),filename,lineno))
     else:
-      errorMsg = '%s:%d:  multiple declarations for %s/%d' % (filename,lineno,decl.functor,decl.arity)
-      assert (decl.functor,decl.arity) not in self._type[0], errorMsg
       logging.info('type declaration %s at %s:%d' % (str(decl),filename,lineno))
       key = (decl.functor,decl.arity)
       for j in range(decl.arity):
         typeName = decl.getType(j)
-        if typeName not in self._stab:
-          self._stab[typeName] = self._safeSymbTab()
-        self._type[j][key] = typeName
+        if key in self._type[j] and self._type[j][key] != typeName:
+          errorMsg = '%s:%d:  %s/%d argument %d declared as both type %s and %s' \
+                      % (filename,lineno,decl.functor,decl.arity,j,typeName,self._type[j][key])
+          assert False, errorMsg
+        else:
+          if typeName not in self._stab:
+            self._stab[typeName] = self._safeSymbTab()
+          self._type[j][key] = typeName
 
   #
   # retrieve matrixes, vectors, etc
@@ -306,7 +309,13 @@ class MatrixDB(object):
         assert m1.row[i]==0, "Expected 0 at m1.row[%d]" % i
         b = self._stab[typeName1].getSymbol(m1.col[i])
         w = m1.data[i]
-        result[parser.Goal(functor,[b])] = w
+        if b==None:
+          if i==0 and w<1e-10:
+            logging.warn('ignoring low weight %g placed on index 0 for type %s in predicate %s' % (w,typeName1,functor))
+          else:
+            assert False,'cannot find symbol on fact with weight %g for index %d for type %s in predicate %s' % (w,i,typeName1,functor)
+        if b is not None:
+          result[parser.Goal(functor,[b])] = w
     return result
 
   #
@@ -401,6 +410,7 @@ class MatrixDB(object):
       if not stringKey.startswith('__'):
         db.matEncoding[eval(stringKey)] = scipy.sparse.csr_matrix(mat)
     logging.info('deserialized database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
+    db.checkTyping()
     return db
 
   @staticmethod
@@ -574,6 +584,7 @@ class MatrixDB(object):
 
 #
 # test main
+# --s serialize foo.cfacts foo.db
 #
 
 if __name__ == "__main__":

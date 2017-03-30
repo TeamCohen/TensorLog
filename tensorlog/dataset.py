@@ -11,9 +11,13 @@ import numpy as NP
 import numpy.random as NR
 import logging
 
+from tensorlog import config
 from tensorlog import mutil
 from tensorlog import matrixdb
 from tensorlog import declare
+
+conf = config.Config()
+conf.normalize_outputs = True;  conf.help.normalize_outputs =  "In .exam files, l1-normalize the weights of valid outputs"
 
 #
 # dealing with labeled training data
@@ -243,12 +247,14 @@ class Dataset(object):
                   accum = db.onehot(ys[0],yType,outOfVocabularySymbolsAllowed=True)
                   for y in ys[1:]:
                     accum = accum + db.onehot(y,yType,outOfVocabularySymbolsAllowed=True)
-                  accum = accum * 1.0/len(ys)
+                  if conf.normalize_outputs:
+                    accum = accum * 1.0/len(ys)
                   return accum
                 yRows = map(yRow, ysTmp[pred])
                 ysResult[pred] = mutil.stack(yRows)
         dset = Dataset(xsResult,ysResult)
         logging.info('loaded dataset has %d modes and %d non-zeros' % (len(dset.modesToLearn()), dset.size()))
+        logging.info('in loaded dataset, example normalization (so sum_{y} score[pred(x,y)] == 1) is %r' % conf.normalize_outputs)
         return dset
 
     #TODO refactor to also save examples in form: 'functor X Y1
