@@ -28,14 +28,14 @@ def isProcessedVariable(a):
     return type(a)==type(0)
 
 def isVariableAtom(a):
-    return a[0].isupper() or a[0]=='_' 
+    return a[0].isupper() or a[0]=='_'
 
 class Goal(object):
     """A prolog goal, eg brotherOf(X,Y)."""
     def __init__(self,functor,args):
         self.functor = functor
         self._setArgs(args)
-        
+
     def _setArgs(self,args):
         self.args = args
         self.arity = len(args)
@@ -46,7 +46,7 @@ class Goal(object):
 
     def __repr__(self):
         return 'Goal(%r,%r)' % (self.functor,self.args)
-        
+
 
 class Rule(object):
     """A prolog rule.  The lhs is a goal, the rhs a list of goals, so the
@@ -84,7 +84,7 @@ class Rule(object):
             if self.features:
                 self.features = map(convertGoal, self.features)
             if self.findall:
-                self.findall = map(convertGoal, self.findall)                
+                self.findall = map(convertGoal, self.findall)
             self.variableList = varTab.getSymbolList()
             self.nvars = len(self.variableList)
 
@@ -96,12 +96,12 @@ class Rule(object):
 
 class RuleCollection(object):
     """A set of prolog rules, indexed by functor and arity."""
-    
+
     def __init__(self):
         self.index = collections.defaultdict(list)
-    
+
     def _key(self,g):
-        return '%s/%d' % (g.functor,g.arity) 
+        return '%s/%d' % (g.functor,g.arity)
 
     def add(self,r):
         key = self._key(r.lhs)
@@ -115,13 +115,18 @@ class RuleCollection(object):
 
     def mapRules(self,mapfun):
         for key in self.index:
-            self.index[key] = map(mapfun, self.index[key]) 
+            self.index[key] = map(mapfun, self.index[key])
 
     def listing(self):
         for key in self.index:
             print'% rules for',key
             for r in self.index[key]:
                 print r
+
+    def __iter__(self):
+        for key in self.index:
+            for r in self.index[key]:
+                yield r
 
 ##############################################################################
 ## the parser
@@ -145,34 +150,34 @@ class Parser(object):
 
     @staticmethod
     def _convertRule(ptree):
-        if 'rhs' in ptree: 
+        if 'rhs' in ptree:
             tmpRhs = map(Parser._convertGoal, ptree['rhs'].asList())
-        else: 
+        else:
             tmpRhs = []
         if not 'features' in ptree:
-            return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,None,None) 
+            return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,None,None)
         else:
             if not 'ffindall' in ptree:
                 featureList = ptree['ftemplate'].asList()
                 tmpFeatures = map(Parser._convertGoal, featureList)
-                return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,None) 
+                return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,None)
             else:
                 featureList = ptree['ftemplate'].asList()
                 tmpFeatures = map(Parser._convertGoal, featureList)
                 findallList = ptree['ffindall'].asList()[1:]
-                tmpFindall = map(Parser._convertGoal, findallList)                
-                return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,tmpFindall) 
+                tmpFindall = map(Parser._convertGoal, findallList)
+                return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,tmpFindall)
 
     @staticmethod
     def parseGoal(s):
         """Convert a string to a goal."""
         return Parser._convertGoal(goalNT.parseString(s))
-	
+
     @staticmethod
     def parseGoalList(s):
         """Convert a string to a goal list."""
         return map(Parser._convertGoal, goalListNT.parseString(s).asList())
-		
+
     @staticmethod
     def parseRule(s):
         """Convert a string to a rule."""

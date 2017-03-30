@@ -435,13 +435,13 @@ class TestGrad(unittest.TestCase):
              {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
 
 
-  def test_printf(self):
-    rules = ['p(X,Z1):-printf(X,X1),spouse(X1,Y),printf(Y,Y1),sister(Y1,Z),printf(Z,Z1).']
-    mode = 'p(i,o)'
-    self.grad_check(rules,mode,
-             [('sister',2)],
-             [('susan',['rachel'])],
-             {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
+#  def test_printf(self):
+#    rules = ['p(X,Z1):-printf(X,X1),spouse(X1,Y),printf(Y,Y1),sister(Y1,Z),printf(Z,Z1).']
+#    mode = 'p(i,o)'
+#    self.grad_check(rules,mode,
+#             [('sister',2)],
+#             [('susan',['rachel'])],
+#             {'sister(william,rachel)': +1,'sister(william,lottie)': -1})
 
   def test_call1(self):
     rules = ['q(X,Y):-sister(X,Y).','p(Z,W):-q(Z,W).']
@@ -568,9 +568,9 @@ class TestProPPR(unittest.TestCase):
 
   def setUp(self):
     #logging.basicConfig(level=logging.DEBUG)
-    self.prog = program.ProPPRProgram.load(
-        [os.path.join(TEST_DATA_DIR,'textcat.ppr'),
-         os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')])
+    self.prog = program.ProPPRProgram.loadRules(
+        os.path.join(TEST_DATA_DIR,'textcat.ppr'),
+        db=matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')))
     self.labeledData = self.prog.db.createPartner()
     def moveToPartner(db,partner,functor,arity):
       partner.matEncoding[(functor,arity)] = db.matEncoding[(functor,arity)]
@@ -790,8 +790,8 @@ class TestExpt(unittest.TestCase):
     testData = dataset.Dataset.uncacheMatrix(self.cacheFile('test.dset'),db,'predict/io','test')
     print 'trainData:\n','\n'.join(trainData.pprint())
     print 'testData"\n','\n'.join(testData.pprint())
-    prog = program.ProPPRProgram.load(
-        [os.path.join(TEST_DATA_DIR,"textcat.ppr")],
+    prog = program.ProPPRProgram.loadRules(
+        os.path.join(TEST_DATA_DIR,"textcat.ppr"),
         db=db)
     prog.setFeatureWeights()
     params = {'prog':prog,
@@ -808,8 +808,8 @@ class TestExpt(unittest.TestCase):
         str(os.path.join(TEST_DATA_DIR,'textcattoy2.cfacts')))
     trainData = dataset.Dataset.uncacheMatrix(self.cacheFile('train.dset'),db,'predict/io','train')
     testData = dataset.Dataset.uncacheMatrix(self.cacheFile('test.dset'),db,'predict/io','test')
-    prog = program.ProPPRProgram.load(
-        [os.path.join(TEST_DATA_DIR,"textcat2.ppr")],
+    prog = program.ProPPRProgram.loadRules(
+        os.path.join(TEST_DATA_DIR,"textcat2.ppr"),
         db=db)
     prog.setFeatureWeights()
     prog.db.listing()
@@ -853,7 +853,7 @@ class TestExpt(unittest.TestCase):
         self.cacheFile('mtoy-train.dset'),db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = program.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
+    prog = program.ProPPRProgram.loadRules(os.path.join(TEST_DATA_DIR,"matchtoy.ppr"),db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData}
     result = expt.Expt(params).run()
@@ -877,7 +877,7 @@ class TestExpt(unittest.TestCase):
         self.cacheFile('mtoy-train.dset'),db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = program.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
+    prog = program.ProPPRProgram.loadRules(os.path.join(TEST_DATA_DIR,"matchtoy.ppr"),db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':learn.FixedRateSGDLearner(prog)}
     return expt.Expt(params).run()
@@ -890,7 +890,7 @@ class TestExpt(unittest.TestCase):
         self.cacheFile('mtoy-train.dset'),db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = program.ProPPRProgram.load([os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],db=db)
+    prog = program.ProPPRProgram.loadRules(os.path.join(TEST_DATA_DIR,"matchtoy.ppr"),db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData, 'learner':plearn.ParallelAdaGradLearner(prog)}
     return expt.Expt(params).run()
@@ -903,8 +903,8 @@ class TestExpt(unittest.TestCase):
         self.cacheFile('mtoy-train.dset'),db,
         os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     testData = trainData
-    prog = program.ProPPRProgram.load(
-        [os.path.join(TEST_DATA_DIR,"matchtoy.ppr")],
+    prog = program.ProPPRProgram.loadRules(
+        os.path.join(TEST_DATA_DIR,"matchtoy.ppr"),
         db=db)
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData,

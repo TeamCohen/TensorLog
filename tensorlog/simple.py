@@ -1,11 +1,14 @@
 import logging
 import os.path
+import collections
 
+from tensorlog import bpcompiler
 from tensorlog import comline
 from tensorlog import declare
 from tensorlog import dataset
 from tensorlog import funs
 from tensorlog import matrixdb
+from tensorlog import parser
 from tensorlog import program
 from tensorlog import xctargets
 if xctargets.tf:
@@ -65,7 +68,7 @@ class Compiler(object):
 
     # parse the db argument
     if isinstance(db,matrixdb.MatrixDB):
-      pass
+      self.db = db
     elif isinstance(db,str):
       self.db = comline.parseDBSpec(db)
     else:
@@ -73,13 +76,19 @@ class Compiler(object):
 
     # parse the program argument
     if isinstance(prog,program.Program):
-      pass
+      self.prog = prog
+    elif isinstance(prog,RuleBuilder):
+      self.prog = program.ProPPRProgram(db=self.db, rules=prog.rules)
+    elif isinstance(prog,parser.RuleCollection):
+      self.prog = program.ProPPRProgram(db=self.db, rules=prog)
     elif isinstance(prog,str):
       self.prog = comline.parseProgSpec(prog,self.db,proppr=rule_features)
-      if autoset_db_params:
-        self.prog.setAllWeights()
     else:
       assert False,'cannot convert %r to a program' % prog
+
+    # set weights
+    if autoset_db_params:
+      self.prog.setAllWeights()
 
     # parse the target argument
     self.target = target
@@ -303,3 +312,101 @@ class Compiler(object):
       print 'mode %s: X is sparse %d x %d matrix (about %.1f rows/Gb)' % (sm,rx,cx,rows_per_gigabyte(cx))
       print 'mode %s: Y is sparse %d x %d matrix (about %.1f rows/Gb)' % (sm,ry,cy,rows_per_gigabyte(cy))
     return dset
+
+class RuleBuilder(object):
+  """
+  Supports construction of programs within python, using the
+  following sort of syntax.
+
+    b = RuleBuilder()
+    X,Y,Z = b.variables("X Y Z")
+    aunt,parent,sister,wife = b.predicates("aunt parent sister wife")
+    uncle = b.predicate("uncle")
+
+    b += aunt(X,Y) <= parent(X,Z),sister(Z,Y)
+    b += aunt(X,Y) <= uncle(X,Z),wife(Z,Y)
+
+  Or, with 'control features'
+
+    b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // r1
+    b += aunt(X,Y) <= parent(X,Z) & sister(Z,Y) // r2
+    b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // (weight(F) | description(X,D) & feature(X,F))
+
+  """
+
+  def __init__(self):
+    self.rules = parser.RuleCollection()
+
+  @staticmethod
+  def variable(variable_name):
+    return RuleBuilder.variables(variable_name)[0]
+
+  @staticmethod
+  def variables(space_sep_variable_names):
+    return space_sep_variable_names.split()
+
+  @staticmethod
+  def rule_id(type_name,rule_id):
+    return RuleBuilder.rule_ids(type_name,rule_id)[0]
+
+  @staticmethod
+  def rule_ids(type_name,space_sep_rule_ids):
+    def goal_builder(rule_id):
+      var_name = rule_id[0].upper()+rule_id[1:]
+      return RuleWrapper(
+          None,
+          [],
+          features=[parser.Goal('weight',[var_name])],
+          findall=[parser.Goal(bpcompiler.ASSIGN,[var_name,rule_id,type_name])])
+    return map(goal_builder, space_sep_rule_ids.split())
+
+  @staticmethod
+  def predicate(predicate_name):
+    return RuleBuilder.predicates(predicate_name)[0]
+
+  @staticmethod
+  def predicates(space_sep_predicate_names):
+    def goal_builder(pred_name):
+      def builder(*args):
+        return RuleWrapper(None,[parser.Goal(pred_name,args)])
+      return builder
+    return map(goal_builder,space_sep_predicate_names.split())
+
+  def __iadd__(self,other):
+    if isinstance(other,parser.Rule):
+      self.rules.add(other)
+    else:
+      assert False, 'rule syntax error for builder: %s += %s' % (str(self),str(other))
+    return self
+
+class RuleWrapper(parser.Rule):
+
+  @staticmethod
+  def _combine(x,y):
+    if x is None: return y
+    elif y is None: return x
+    else: return x+y
+  def __and__(self,other):
+    return RuleWrapper(
+        None,
+        self.rhs + other.rhs,
+        features=RuleWrapper._combine(self.features,other.features),
+        findall=RuleWrapper._combine(self.findall,other.findall))
+  def __or__(self,other):
+    return RuleWrapper(None, [], features=self.rhs, findall=other.rhs)
+  def __floordiv__(self,other):
+    if other.features:
+      # self // other.features | other.rhs
+      return RuleWrapper(None, self.rhs, features=other.features, findall=other.findall)
+    else:
+      # self // other.rhs
+      return RuleWrapper(None, self.rhs, features=other.rhs)
+  def __le__(self,other):
+    assert len(self.rhs)==1, 'rule syntax error for builder: %s <= %s' % (str(self),str(other))
+    return RuleWrapper(
+        self.rhs[0],
+        other.rhs,
+        features=other.features,
+        findall=other.findall)
+  def __repr__(self):
+    return "RuleWrapper(%r,%r,features=%r,findall=%r" % (self.lhs,self.rhs,self.features,self.findall)

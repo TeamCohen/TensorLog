@@ -19,8 +19,6 @@ from tensorlog import matrixdb
 from tensorlog import mutil
 from tensorlog import plearn
 
-conf = config.Config()
-
 class Expt(object):
 
     def __init__(self,configDict):

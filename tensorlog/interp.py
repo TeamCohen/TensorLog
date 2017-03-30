@@ -7,9 +7,11 @@ import sys
 import logging
 import collections
 
+from tensorlog import config
 from tensorlog import comline
 from tensorlog import dataset
 from tensorlog import declare
+from tensorlog import masterconfig
 from tensorlog import parser
 from tensorlog import program
 
@@ -31,8 +33,10 @@ class Interp(object):
         self.trainData = trainData
         self.testData = testData
         self.numTopEcho = 10
+        self.conf = masterconfig.masterConfig()
 
     def help(self):
+        print "ti.helpConfig(): help on configuration options"
         print "ti.list(foo): foo can be a compiled function, eg \"foo/io\", a predicate definition, eg"
         print "              \"foo/2\", or a database predicate, also specified as \"foo/2\"."
         print "ti.list():    list everything."
@@ -123,6 +127,10 @@ class Interp(object):
       X = self.db.onehot(sym)
       dset = dataset.Dataset({mode:X},{mode:self.db.zeros()})
       debug.Debugger(self.prog,mode,dset,gradient=False).mainloop()
+
+    def helpConfig(self):
+      self.conf.pprint()
+      print "To set any option above, use something like: ti.conf.funs.trace = True"
 
     def debugDset(self,modeSpec,test=False):
       if not DEBUGGER_AVAILABLE:

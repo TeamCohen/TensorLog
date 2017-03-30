@@ -131,6 +131,15 @@ class BPCompiler(object):
 
 
   #
+  #
+  #
+
+  def inferredTypes(self):
+    self.inferFlow()
+    self.inferTypes()
+    return dict((v, self.varDict[v].varType) for v in self.varDict)
+
+  #
   # main compilation routine
   #
 
@@ -169,8 +178,12 @@ class BPCompiler(object):
     the compiler.  Can be before flow analysis."""
     assert self.rule.lhs.arity==2, "Bad arity in rule lhs"
     for goal in self.rule.rhs:
-      assert goal.arity>=1 and goal.arity<=3, "Bad arity in rhs goal '%s'" % goal
-      if goal.arity==3: assert goal.functor==ASSIGN
+      if goal.functor==ASSIGN:
+        assert goal.arity>=1 and goal.arity<=3, "Bad arity in rhs goal '%s'" % goal
+      else:
+        #TOFIX: multiple input user-defs would need this relaxation
+        #elif not self.tensorlogProg.plugins.isDefined(functor=goal.functor, arity=goal.arity):
+        assert goal.arity>=1 and goal.arity<=2, "Bad arity in rhs goal '%s'" % goal
 
   def inferFlow(self):
     """ Infer flow of information in the clause, by populating a VarInfo
@@ -225,19 +238,28 @@ class BPCompiler(object):
     self.varDict[y]!=None,'lhs output variable "%s" not bound' % y
 
   def inferTypes(self):
-    """ Populate varInfo.varType """
+    """ Infer the type of each variable, by populating varInfo.varType
+    """
     def informativeType(t): return (t is not None) and (t != matrixdb.THING)
+
     for i in range(1,len(self.goals)):
       gin = self.goalDict[i]
       functor = self.goals[i].functor
       arity = self.goals[i].arity
-      if functor == ASSIGN and arity==3:
+      mode = self.toMode(i)
+      if self.tensorlogProg.plugins.isDefined(mode):
+        for j in range(arity):
+          if mode.isOutput(j):
+            vj = self.goals[i].args[j]
+            self.varDict[vj].varType = self.tensorlogProg.plugins.outputType(mode,self.collectInputTypes(i))
+      elif functor == ASSIGN and arity==3:
         # goal is assign(Var,constantValue,type)
         self.varDict[self.goals[i].args[0]].varType = self.goals[i].args[2]
       elif functor != ASSIGN:
+        # infer type for a database predicate
         for j in range(arity):
           vj = self.goals[i].args[j]
-          newTj = self.tensorlogProg.db.getArgType(functor,arity,j)
+          newTj = self.tensorlogProg.db.getArgType(functor,arity,j,frozen=True)
           oldTj = self.varDict[vj].varType
           if informativeType(newTj):
             if informativeType(oldTj) and oldTj!=newTj:
@@ -263,9 +285,20 @@ class BPCompiler(object):
       if x in gin.inputs: return 'i'
       elif x in gin.outputs: return 'o'
       else:
+        # TODO figure out what's happening here?
         assert x!='i' and x!='o' and x!='i1' and x!='i2', 'Illegal to use constants i,o,i1,o1 in a program'
         return x
     return declare.ModeDeclaration(parser.Goal(goal.functor, [argIOMode(x) for x in goal.args]), strict=False)
+
+  def collectInputTypes(self,j):
+      """Helper - collect a list of all input types for the j-th goal of the rule."""
+      inputTypes = []
+      mode = self.toMode(j)
+      for i in range(mode.arity):
+          if mode.isInput(i):
+              vi = self.goals[j].args[i]
+              inputTypes.append(self.varDict[vi].varType)
+      return inputTypes
 
   #
   # the main belief propagation algorithm
@@ -276,7 +309,8 @@ class BPCompiler(object):
     actually constructing a message from src->dst in the course of
     BP, what we do instead is emit operations that would construct
     the message and assign it a 'variable' named 'foo', and then
-    return not the message but the variable-name string 'foo'. """
+    return not the message but the string that names the 'variable'.
+    """
 
     messages = {}
 
@@ -288,6 +322,8 @@ class BPCompiler(object):
       self.ops.append(op)
 
     def makeMessageName(stem,v,j=None,j2=None):
+      """ create a string that meaningfully names this message
+      """
       msgName = '%s_%s' % (stem,v)
       if j is not None: msgName += '%d' % j
       if j2 is not None: msgName += '%d' % j2
@@ -302,32 +338,39 @@ class BPCompiler(object):
       output."""
       gin = self.goalDict[j]
       if conf.trace: print '%smsg: %d->%s' % (('| '*traceDepth),j,v)
-      # The lhs goal, j==0, is the input factor
       if j==0 and v in self.goalDict[j].inputs:
-        #input port -> input variable
+        #input port -> input variable - The lhs goal, j==0, is the input factor
         assert parser.isVariableAtom(v),'input must be a variable'
         return v
       elif j==0:
         #output port -> output variable
-        assert False,'illegal message - something is wrong'
+        assert False,'illegal message goal %d to var %s' % (j,v)
       elif j>0 and v in self.goalDict[j].outputs:
         #message from rhs goal to an output variable of that goal
         msgName = makeMessageName('f',v,j)
         mode = self.toMode(j)
         if not gin.inputs:
-          # special cases - binding a variable to a constant with assign(Var,const) or assign(Var,type,const)
-          errorMsg = 'output variables without inputs are _only allowed for assign/2 or assign/3: %s' % str(self.rule.rhs[gin.index-1])
+          # special case - binding a variable to a constant with assign(Var,const) or assign(Var,type,const)
+          # TODO: should unary predicates in general be an input?
+          errorMsg = 'output variables without inputs are only allowed for assign/2 or assign/3: %s' % str(self.rule.rhs[gin.index-1])
           assert (mode.functor==ASSIGN and mode.arity>=2 and mode.isOutput(0)), errorMsg
           addOp(ops.AssignOnehotToVar(msgName,mode), traceDepth,j,v)
           return msgName
         else:
-          fx = msgVar2Goal(_only(gin.inputs),j,traceDepth+1) #ask for the message forward from the input to goal j
-          if ops.isBuiltinIOOp(mode):
-            addOp(ops.BuiltInIOOp(msgName,fx,mode), traceDepth,j,v)
-          elif not gin.definedPred:
-            addOp(ops.VecMatMulOp(msgName,fx,mode), traceDepth,j,v)
+          # figure out how to forward message from inputs to outputs
+          if (self.tensorlogProg.plugins.isDefined(mode)):
+            fxs = []
+            for vIn in gin.inputs:
+              vMsg = msgVar2Goal(vIn,j,traceDepth+1)
+              fxs.append(vMsg)
+            outType = self.tensorlogProg.plugins.outputType(mode,self.collectInputTypes(j))
+            addOp(ops.CallPlugin(msgName,fxs,mode,dstType=outType), traceDepth,j,v)
           else:
-            addOp(ops.DefinedPredOp(self.tensorlogProg,msgName,fx,mode,self.depth+1), traceDepth,j,v)
+            fx = msgVar2Goal(_only(gin.inputs),j,traceDepth+1) #ask for the message forward from the input to goal j
+            if not gin.definedPred:
+              addOp(ops.VecMatMulOp(msgName,fx,mode), traceDepth,j,v)
+            else:
+              addOp(ops.DefinedPredOp(self.tensorlogProg,msgName,fx,mode,self.depth+1), traceDepth,j,v)
           return msgName
       elif j>0 and v in self.goalDict[j].inputs:
         #message from rhs goal to an input variable of that goal
@@ -346,10 +389,10 @@ class BPCompiler(object):
             #optimize away the message from the output
             # var of gin, since it would be a dense
             # all-ones vector
+            # TODO: is this needed, since multiplication by an all-ones vector is kindof how this is usually implemented?
             assert len(gin.outputs)==1, 'need single output from %s' % self.goals[j]
             #this variable now is connected to the main chain
             self.varDict[_only(gin.outputs)].connected = True
-            assert not ops.isBuiltinIOOp(mode), 'can _only use built in io operators where inputs and outputs are used'
             assert not gin.definedPred, 'subpredicates must generate an output which is used downstream'
             addOp(ops.AssignPreimageToVar(msgName,mode,self.msgType[msgName]), traceDepth,j,v)
           else:
@@ -365,12 +408,14 @@ class BPCompiler(object):
       vin = self.varDict[v]
       vin.connected = True
       gin = self.goalDict[j]
-      #variables have one outputOf, but possily many inputTo connections
+      #variables have one outputOf, but possily many inputTo
+      #connections. Information  propagates back from things the
+      #variables are inputTo, unless those goals are CallPlugin's.
       vNeighbors = [j2 for j2 in [vin.outputOf]+list(vin.inputTo) if j2!=j]
       if conf.trace: print '%smsg from %s to %d, vNeighbors=%r' % ('| '*traceDepth,v,j,vNeighbors)
-      assert len(vNeighbors),'variables should have >1 neighbor but %s has _only one: %d' % (v,j)
+      assert len(vNeighbors),'variables should have >=1 neighbor but %s has none: %d' % (v,j)
       #form product of the incoming messages, cleverly
-      #generating _only the variables we really need
+      #generating only the variables we really need
       currentProduct = msgGoal2Var(vNeighbors[0],v,traceDepth+1)
       for j2 in vNeighbors[1:]:
         nextProd = makeMessageName('p',v,j,j2) if j2!=vNeighbors[-1] else makeMessageName('fb',v)

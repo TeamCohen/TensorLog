@@ -1,3 +1,4 @@
+Random howto:
  - export PYTHONPATH=/usr/local/google/home/cohenw/code/TensorLog:$PYTHONPATH
  - live theano add /usr/local/google/home/cohenw/code/Theano
 
@@ -6,54 +7,28 @@ Next actions (KR):
  - revive debug.py - how can testing this be automated? should I bother? w/ Katie?
  - look at sparse messages in theano-based learner?
 
-Next actions (WC):
- - { .... } autoweight setting doesn't work for "p(X,Y) :- ... { wy(Y):true }".
- - fan's stuff:
-   -- from _op2Expr, construct 
-    possibleOps( input=a, inputTypename=t) - list of (op, type)
-    possibleOps( inputs=[a,..], inputTypenames=[t...]) - list of (op, type) that use pairs of inputs
-
-Little jobs:
- - tests and etc for {id} features.  Should I have these? they are just {weighted(R1): assign(R1,r1,ruleid_t)}
- - cleanup sessions in tensorflowxcomp
- - cleanup modes? should they always be written pred/io, and i,o no longer be reserved words?
- - robust parsing of programs - figure out if it's proppr format or not? make rules weights optional?
- - interp.helpConfig()
+Little jobs (WC):
  - output types as typename/id
  - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
- - move testability code to subclass "testabletensorflowxcompiler"
-
-Semantics:
- - tensorlog compiler compiles p_io(x) to v=softmax(proofcount(y|x,db,prog,theta))
- - alternative: make proofcount(y|x) the a core output, and configure inference schemes
-   on top of this -- either in compiler or just in tensorflow
-
-Bigger steps:
- - automatically move program constants into the database and introduce assign clauses when needed?? -nah
  - benchmark tests on tensorflow
- - adding tensorflow 'builtins'
- -- bpcompiler: 
- --- code is mostly ready, based on BuiltInIOOp, just need to add a "virtual op" type.
- --- need to worry about checking modes, and multiple inputs
- -- xcomp virtualDB: maps modes to 
- --- p(i,o) -> lambda inputExpression:outputExpression 
- --- p(o)   -> lambda outputExpression 
- - snake_case fixes??
- - repackage (see below)???
- - optimize compilation???
- - typing for tensorlog -done
- -- note: 10k sample has 3,434 people, 11,819 entities, larger yago has 59,120 people 118,703 entities
-    so it's 10x bigger (in message size); 10k sample uses about 15 Gb memory
- -- should look at if sparse matrices are actually being used and monitor where the space is going
-
- -- declare.typeDeclaration -done
- -- cfacts parser allows #declare foo type1 type2 (insist everything typed or nothing, based on config?)
-    (see bufferFile/bufferLine in matrixDB -done
- -- matrixDB keeps a symtab for each type -done
- -- bpcompiler infers type of every variable -done
- -- funs maintains/returns type -done
- -- docs -done
- -- check type inference for sums -done
+ - have --proppr as the default option for programs
+ - document plugins, simple.Compiler(plugins=....)
+ - docs/tutorial
+  -- plugins, simple
+ - ?clean up autoweighting for rule weights and types
+ - ?get rid of typeless option
+ - ?tests and etc for {id} features.  Should I have these? they are just {weighted(R1): assign(R1,r1,ruleid_t)}
+ - ?cleanup sessions in tensorflowxcomp
+ - ?cleanup modes? should they always be written pred/io, and i,o no longer be reserved words?
+ - ? lazy DB/program compilation - should be able to load a program w/o DB, and have
+   declarations be embedded in in the program, before loading the DB.
+   maybe.
+ - ? automatically move program constants into the database and introduce assign clauses when needed?
+ - ? move testability code to subclass "testabletensorflowxcompiler"
+ - ? move "native" code to tensorlog.native
+ - ?? snake_case fixes in testing????
+ - ?? repackage (see below)???
+ - ?? optimize compilation???
 
 Overall package structure:
   tensorlog: config, matrixdb, parser, bpcomp(iler), program, funs, ops (-eval and bprop), xcomp
@@ -62,19 +37,6 @@ Overall package structure:
     .th: theanoxcomp
     .tf: tensorflowxcomp
   or maybe just stick a bunch of stuff in tlg.native: native.learn, ...
-
-Proposed simple -  _ means python object or else argument of comline.parseFOO
-  - tlg.Compiler(
-        compilerClass=_ | trget='tensorflow',
-    	program= _    
-      	type_declarations= _
-      	db= _,
-      	regularizer= ...
-      	summaryFile=...)
-
-Next actions:
-
-   - upload dialog-toy
 
 Question->query idea
 

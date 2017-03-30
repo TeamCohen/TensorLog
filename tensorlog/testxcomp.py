@@ -21,6 +21,7 @@ if xctargets.theano:
 else:
   theanoxcomp=None
 
+from tensorlog import bpcompiler
 from tensorlog import comline
 from tensorlog import dataset
 from tensorlog import declare
@@ -762,8 +763,8 @@ class TestMultiModeXC(unittest.TestCase):
   def setUp(self):
     self.db = matrixdb.MatrixDB.loadFile(
         os.path.join(testtensorlog.TEST_DATA_DIR,'matchtoy.cfacts'))
-    self.prog = program.ProPPRProgram.load(
-        [os.path.join(testtensorlog.TEST_DATA_DIR,"matchtoy.ppr")],db=self.db)
+    self.prog = program.ProPPRProgram.loadRules(
+        os.path.join(testtensorlog.TEST_DATA_DIR,"matchtoy.ppr"),db=self.db)
     self.dset = dataset.Dataset.loadExamples(
         self.db, os.path.join(testtensorlog.TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
     self.prog.setAllWeights()
@@ -882,6 +883,9 @@ class TestSimple(unittest.TestCase):
     tlog = simple.Compiler(
         db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
         prog=os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"))
+    self.runTextCatLearner(tlog)
+
+  def runTextCatLearner(self,tlog):
     trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
     testData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"))
     mode = trainData.keys()[0]
@@ -906,6 +910,118 @@ class TestSimple(unittest.TestCase):
         train_minibatch_fd = {tlog.input_placeholder_name(mode):TX, tlog.target_output_placeholder_name(mode):TY}
         session.run(train_step, feed_dict=train_minibatch_fd)
       print 'epoch',i+1,'finished'
+    acc1 = session.run(accuracy, feed_dict=test_batch_fd)
+    print 'final accuracy',acc1
+    self.assertTrue(acc1>=0.9)
+
+  def testRuleBuilder1(self):
+    b = simple.RuleBuilder()
+    X,Y,Z = b.variables("X Y Z")
+    aunt,parent,sister,wife = b.predicates("aunt parent sister wife")
+    uncle = b.predicate("uncle")
+    b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y)
+    b += aunt(X,Y) <= parent(X,Z) & sister(Z,Y)
+    r1 = b.rule_id("ruleid_t","r1")
+    r2 = b.rule_id("ruleid_t","r2")
+    b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // r1
+    b += aunt(X,Y) <= parent(X,Z) & sister(Z,Y) // r2
+    feature,description = b.predicates("feature description")
+    weight = b.predicate("weight")
+    F = b.variable("F")
+    D = b.variable("D")
+    b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // (weight(F) | description(X,D) & feature(X,F))
+    b.rules.listing()
+    rs = b.rules.rulesFor(parser.Goal('aunt',[X,Y]))
+    self.assertEqual(str(rs[0]), "aunt(X,Y) :- uncle(X,Z), wife(Z,Y).")
+    self.assertEqual(str(rs[1]), "aunt(X,Y) :- parent(X,Z), sister(Z,Y).")
+    self.assertEqual(str(rs[2]), "aunt(X,Y) :- uncle(X,Z), wife(Z,Y) {weight(R1) : assign(R1,r1,ruleid_t)}.")
+    self.assertEqual(str(rs[3]), "aunt(X,Y) :- parent(X,Z), sister(Z,Y) {weight(R2) : assign(R2,r2,ruleid_t)}.")
+    self.assertEqual(str(rs[4]), "aunt(X,Y) :- uncle(X,Z), wife(Z,Y) {weight(F) : description(X,D),feature(X,F)}.")
+
+  def testRuleBuilder2(self):
+    b = simple.RuleBuilder()
+    predict,assign,weighted,hasWord,posPair,negPair = b.predicates("predict assign weighted hasWord posPair negPair")
+    X,Pos,Neg,F,W = b.variables("X Pos Neg F W")
+    b += predict(X,Pos) <= assign(Pos,'pos','label') // (weighted(F) | hasWord(X,W) & posPair(W,F))
+    b += predict(X,Neg) <= assign(Neg,'neg','label') // (weighted(F) | hasWord(X,W) & negPair(W,F))
+    dbSpec = os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts")
+    self.runTextCatLearner(simple.Compiler(db=dbSpec,prog=b.rules))
+
+class TestPlugins(unittest.TestCase):
+
+  def test_identity_io(self):
+    ruleStrings = ['predict(X,Y) :- assign(Pos,pos,label),udp1(Pos,Y) {weighted(F): hasWord(X,W),posPair(W,F)}.',
+                   'predict(X,Y) :- assign(Neg,neg,label),udp1(Neg,Y) {weighted(F): hasWord(X,W),negPair(W,F)}.']
+    plugins = program.Plugins()
+    plugins.define('udp1/io', lambda x:x, lambda inputType:'label')
+    self.check_learning_with_udp(ruleStrings,plugins)
+
+  def test_identity_oi(self):
+    ruleStrings = ['predict(X,Y) :- assign(Pos,pos,label),udp2(Y,Pos) {weighted(F): hasWord(X,W),posPair(W,F)}.',
+                   'predict(X,Y) :- assign(Neg,neg,label),udp2(Y,Neg) {weighted(F): hasWord(X,W),negPair(W,F)}.']
+    plugins = program.Plugins()
+    plugins.define('udp2/oi', lambda x:x, lambda inputType:'label')
+    self.check_learning_with_udp(ruleStrings,plugins)
+
+  def test_double_io1(self):
+    ruleStrings = ['predict(X,Y) :- assign(Pos,pos,label),udp3(Pos,Y) {weighted(F): hasWord(X,W),posPair(W,F)}.',
+                   'predict(X,Y) :- assign(Neg,neg,label),udp3(Neg,Y) {weighted(F): hasWord(X,W),negPair(W,F)}.']
+    plugins = program.Plugins()
+    plugins.define('udp3/io', lambda x:2*x, lambda inputType:'label')
+    self.check_learning_with_udp(ruleStrings,plugins)
+
+  def test_double_io2(self):
+    ruleStrings = ['predict(X,Pos) :- assign(Pos,pos,label) {weighted(F): hasWord(X,W),double(W,W2),posPair(W2,F)}.',
+                   'predict(X,Neg) :- assign(Neg,neg,label) {weighted(F2): hasWord(X,W),negPair(W,F),double(F,F2)}.']
+    plugins = program.Plugins()
+    plugins.define('double/io', lambda x:2*x, lambda inputType:inputType)
+    self.check_learning_with_udp(ruleStrings,plugins)
+
+  # TOFIX needs some work to pass
+  # - you can't do polytree BP with multiple inputs
+  # - so there's not a simple fix
+  # - probably do this: (1) treat inputs to leftmost userDef as outputs (2) run message-passing for those outputs
+  # (3) add the user def operator (4) repeat .... (5) when there are no more plugins
+  def notest_isect_iio(self):
+    bpcompiler.conf.trace = True
+    ruleStrings = ['predict(X,Y) :- hasWord(X,W),posPair(W,P1),negPair(W,P2),isect(P1,P2,Y).']
+    plugins = program.Plugins()
+    plugins.define('isect/iio', lambda x1,x2:x1*x2, lambda t1,t2:t1)
+    self.check_learning_with_udp(ruleStrings,plugins)
+
+  def check_learning_with_udp(self,ruleStrings,plugins):
+    db = matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"))
+    rules = testtensorlog.rules_from_strings(ruleStrings)
+    prog = program.ProPPRProgram(rules=rules,db=db,plugins=plugins)
+    prog.setAllWeights()
+    mode = declare.asMode("predict/io")
+    prog.compile(mode)
+    fun = prog.function[(mode,0)]
+    print "\n".join(fun.pprint())
+    tlog = simple.Compiler(db=db, prog=prog)
+
+    trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
+    testData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"))
+    mode = trainData.keys()[0]
+    TX,TY = trainData[mode]
+    UX,UY = testData[mode]
+    inference = tlog.inference(mode)
+    trueY = tf.placeholder(tf.float32, shape=UY.shape, name='tensorlog/trueY')
+    correct = tf.equal(tf.argmax(trueY,1), tf.argmax(inference,1))
+    accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+    test_batch_fd = {tlog.input_placeholder_name(mode):UX, trueY.name:UY}
+    loss = tlog.loss(mode)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+    train_step = optimizer.minimize(loss)
+    train_batch_fd = {tlog.input_placeholder_name(mode):TX, tlog.target_output_placeholder_name(mode):TY}
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
+    acc0 = session.run(accuracy, feed_dict=test_batch_fd)
+    print 'initial accuracy',acc0
+    self.assertTrue(acc0<0.6)
+    for i in range(10):
+      print 'epoch',i+1
+      session.run(train_step, feed_dict=train_batch_fd)
     acc1 = session.run(accuracy, feed_dict=test_batch_fd)
     print 'final accuracy',acc1
     self.assertTrue(acc1>=0.9)
