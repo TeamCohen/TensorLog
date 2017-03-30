@@ -11,6 +11,7 @@ from tensorlog import comline
 from tensorlog import dataset
 from tensorlog import declare
 from tensorlog import parser
+from tensorlog import program
 
 # interactive debugger is sort of optional, and it depends on a bunch
 # of stuff that might not be present, so don't require this import
@@ -102,6 +103,9 @@ class Interp(object):
 
     def eval(self,modeSpec,sym,inputType=None,outputType=None):
         mode = declare.asMode(modeSpec)
+        fun = self.prog.getFunction(mode)
+        outputType = outputType or fun.outputType
+        inputType = inputType or fun.inputTypes[0]
         tmp = self.prog.evalSymbols(mode,[sym],typeName=inputType)
         result = self.prog.db.rowAsSymbolDict(tmp,typeName=outputType)
         if (self.numTopEcho):
@@ -139,7 +143,7 @@ class Interp(object):
 
 if __name__ == "__main__":
 
-    print "Tensorlog v%s (C) William W. Cohen and Carnegie Mellon University, 2016" % VERSION
+    print "Tensorlog v%s (C) William W. Cohen and Carnegie Mellon University, 2016" % program.VERSION
 
     optdict,args = comline.parseCommandLine(sys.argv[1:])
     ti = Interp(optdict['prog'],trainData=optdict.get('trainData'),testData=optdict.get('testData'))

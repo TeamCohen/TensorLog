@@ -31,11 +31,11 @@ class Expt(object):
         return self._run(**self.config)
 
     def _run(self,
-             prog=None, trainData=None, testData=None, targetMode=None, 
+             prog=None, trainData=None, testData=None, targetMode=None,
              savedTestPredictions=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None,
              learner=None):
 
-        """ Run an experiment.  
+        """ Run an experiment.
 
         The stages are
         - if targetMode is specified, extract just the examples from that mode from trainData and testData
@@ -47,7 +47,7 @@ class Expt(object):
         - if savedTestExamples (savedTrainExamples) is given, save the training/test examples in ProPPR format
         """
 
-        if targetMode: 
+        if targetMode:
             targetMode = declare.asMode(targetMode)
             trainData = trainData.extractMode(targetMode)
             testData = testData.extractMode(targetMode)
@@ -59,28 +59,33 @@ class Expt(object):
         TP0 = Expt.timeAction(
             'running untrained theory on train data',
             lambda:learner.datasetPredict(trainData))
-        UP0 = Expt.timeAction(
-            'running untrained theory on test data',
-            lambda:learner.datasetPredict(testData))
         Expt.printStats('untrained theory','train',trainData,TP0)
-        Expt.printStats('untrained theory','test',testData,UP0)
+        if testData is not None:
+          UP0 = Expt.timeAction(
+              'running untrained theory on test data',
+              lambda:learner.datasetPredict(testData))
+          Expt.printStats('untrained theory','test',testData,UP0)
 
         Expt.timeAction('training %s' % type(learner).__name__, lambda:learner.train(trainData))
 
         TP1 = Expt.timeAction(
             'running trained theory on train data',
             lambda:learner.datasetPredict(trainData))
-        UP1 = Expt.timeAction(
-            'running trained theory on test data',
-            lambda:learner.datasetPredict(testData))
+        if testData is not None:
+          UP1 = Expt.timeAction(
+              'running trained theory on test data',
+              lambda:learner.datasetPredict(testData))
 
         Expt.printStats('..trained theory','train',trainData,TP1)
-        testAcc,testXent = Expt.printStats('..trained theory','test',testData,UP1)
+        if testData is not None:
+          testAcc,testXent = Expt.printStats('..trained theory','test',testData,UP1)
+        else:
+          testAcc,testXent = None,None
 
         if savedModel:
             Expt.timeAction('saving trained model', lambda:prog.db.serialize(savedModel))
 
-        if savedTestPredictions:
+        if savedTestPredictions and testData:
             #todo move this logic to a dataset subroutine
             open(savedTestPredictions,"w").close() # wipe file first
             def doit():
@@ -89,7 +94,7 @@ class Expt(object):
                     qid+=Expt.predictionAsProPPRSolutions(savedTestPredictions,mode.functor,prog.db,UP1.getX(mode),UP1.getY(mode),True,qid)
             Expt.timeAction('saving test predictions', doit)
 
-        if savedTestExamples:
+        if savedTestExamples and testData:
             Expt.timeAction('saving test examples',
                             lambda:testData.saveProPPRExamples(savedTestExamples,prog.db))
 
@@ -97,7 +102,7 @@ class Expt(object):
             Expt.timeAction('saving train examples',
                             lambda:trainData.saveProPPRExamples(savedTrainExamples,prog.db))
 
-        if savedTestPredictions and savedTestExamples:
+        if savedTestPredictions and savedTestExamples and testData:
             print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' \
                 % (savedTestExamples,savedTestPredictions)
 

@@ -24,6 +24,7 @@ class Function(object):
 
     def __init__(self):
       self.outputType = None
+      self.inputTypes = None
 
     def eval(self,db,values,pad):
         self._checkDuplications()
@@ -198,6 +199,8 @@ class SumFunction(Function):
         # in to them - eg for a NullFunction
         for fun in self.funs:
           if fun.outputType is None: fun.outputType = self.outputType
+        for fun in self.funs:
+          if fun.inputTypes is not None: self.inputTypes = fun.inputTypes
     def __repr__(self):
         return 'SumFunction(%r)' % self.funs
     def pprintSummary(self):
@@ -233,6 +236,7 @@ class SoftmaxFunction(Function):
         super(SoftmaxFunction,self).__init__()
         self.fun = fun
         self.outputType = self.fun.outputType
+        self.inputTypes = self.fun.inputTypes
     def __repr__(self):
         return 'SoftmaxFunction(%r)' % self.fun
     def pprintSummary(self):

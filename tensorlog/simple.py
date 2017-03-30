@@ -7,7 +7,7 @@ from tensorlog import program
 from tensorlog import tensorflowxcomp
 from tensorlog import theanoxcomp
 
-def compiler(target='tensorflow',db=None,prog=None,rule_features=False,summary_file=False):
+def compiler(target='tensorflow',db=None,prog=None,rule_features=False,summary_file=None):
 
   if isinstanceof(db,matrixdb.MatrixDB):
     pass
@@ -29,3 +29,5 @@ def compiler(target='tensorflow',db=None,prog=None,rule_features=False,summary_f
     result = theanoxcomp.SparseMatDenseMsgCrossCompiler(prog)
   else:
     assert False,'illegal target %r: valid targets are "tensorflow" and "theano"' % target
+
+  return result

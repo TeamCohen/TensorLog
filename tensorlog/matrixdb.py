@@ -493,7 +493,7 @@ class MatrixDB(object):
   def flushBuffer(self,f,arity):
     """Flush the triples defining predicate p from the buffer and define
     p's matrix encoding"""
-    logging.info('flushing %d buffered facts for predicate %s' % (len(self._buf[(f,arity)]),f))
+    logging.info('flushing %d buffered rows for predicate %s' % (len(self._buf[(f,arity)]),f))
 
     if arity==2:
       nrows = self._stab[self.getDomain(f,arity)].getMaxId() + 1
