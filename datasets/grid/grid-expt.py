@@ -38,11 +38,14 @@ from tensorlog import learnxcomp
 
 EDGE_WEIGHT = 0.2
 CROSS_COMPILE = []
+CROSS_LEARN = {}
 
 try:
     from tensorlog import theanoxcomp
     CROSS_COMPILE.append(theanoxcomp.DenseMatDenseMsgCrossCompiler)
+    CROSS_LEARN[theanoxcomp.DenseMatDenseMsgCrossCompiler] = theanoxcomp.FixedRateGDLearner
     CROSS_COMPILE.append(theanoxcomp.SparseMatDenseMsgCrossCompiler)
+    CROSS_LEARN[theanoxcomp.SparseMatDenseMsgCrossCompiler] = theanoxcomp.FixedRateGDLearner
 except:
     pass
 
@@ -166,7 +169,7 @@ if __name__=="__main__":
 
         trainData = dataset.Dataset.loadExamples(db,trainFile)
         testData = dataset.Dataset.loadExamples(db,testFile)
-        prog.db.markAsParam('edge',2)
+        prog.db.markAsParameter('edge',2)
         prog.maxDepth = maxD
 
         # 20 epochs and rate=0.1 is ok for grid size up to about 10-12
@@ -198,18 +201,22 @@ if __name__=="__main__":
         expt.Expt(params).run()
         
         for compilerClass in CROSS_COMPILE:
-            xc = compilerClass(prog)
-            xc.compile('path/io',[('edge',2)])
             
-            learner = learnxc.XLearner(prog,xc)
+            print compilerClass
+            xc = compilerClass(prog)
+            # compile everything
+            for mode in trainData.modesToLearn():
+              xc.ensureCompiled(mode)
+            learner = CROSS_LEARN[compilerClass](prog,xc)
             
             params = {'prog':prog,
                       'trainData':trainData, 'testData':testData,
-                      'savedTestPredictions':'tmp-cache/test.solutions.txt',
-                      'savedTestExamples':'tmp-cache/test.examples',
+                      'savedTestPredictions':'tmp-cache/test.%s.solutions.txt' % str(compilerClass),
+                      'savedTestExamples':'tmp-cache/test.%s.examples' % str(compilerClass),
                       'learner':learner,
             }
-            expt.Expt(params).run()
+            
+            testAcc,testXent = expt.Expt(params).run()
         
         if False and NETWORKX:
             visualizeLearned(db,n)

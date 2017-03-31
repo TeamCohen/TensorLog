@@ -552,11 +552,37 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       # sanity check a couple of values
       self.assertTrue(d['little_pos'] > d['little_neg'])
       self.assertTrue(d['big_pos'] < d['big_neg'])
+  
+  def testDatasetPredict(self):
+    mode = declare.ModeDeclaration('predict(i,o)')
+    modestr = 'predict/io'
+    X,Y = testtensorlog.matrixAsTrainingData(self.labeledData,'train',2)
+    for compilerClass in TESTED_COMPILERS:
+      self.prog.setRuleWeights()
+      self.prog.setFeatureWeights()
+      if SAVE_SUMMARIES:
+        xc = compilerClass(self.prog,compilerClass.__name__+".summary")
+      else:
+        xc = compilerClass(self.prog)
+      self.prog.db.markAsParameter('weighted',1)
+      
+      learner = TESTED_LEARNERS[compilerClass](self.prog,xc=xc,rate=0.1,epochs=20)
+      P = learner.predict(mode,X)
+      print "X",X.shape
+      print "P",P.shape
+      self.assertTrue(X.shape==P.shape)
+      P = learner.datasetPredict(dataset.Dataset({mode:X},{mode:Y}))
+      print "X",X.shape
+      print "P",P.getX(mode).shape
+      self.assertTrue(X.shape==P.getX(mode).shape)
+      
+      return xc,learner,X,Y,P
 
   def testExptScaffold(self):
     mode = declare.ModeDeclaration('predict(i,o)')
     X,Y = testtensorlog.matrixAsTrainingData(self.labeledData,'train',2)
     TX,TY = testtensorlog.matrixAsTrainingData(self.labeledData,'test',2)
+    self.prog.setAllWeights()
     for compilerClass in TESTED_COMPILERS:
       xc = compilerClass(self.prog)
       learner = TESTED_LEARNERS[compilerClass](self.prog,xc=xc,rate=0.1,epochs=20)
@@ -640,6 +666,8 @@ class TestXCExpt(unittest.TestCase):
          "--trainData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"),
          "--testData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"),
          "--proppr"])
+    
+    optdict['prog'].setAllWeights()
     for compilerClass in TESTED_COMPILERS:
       xc = compilerClass(optdict['prog'])
       learner = TESTED_LEARNERS[compilerClass](optdict['prog'],xc)
@@ -713,6 +741,7 @@ class TestXCExpt(unittest.TestCase):
          "--trainData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"),
          "--testData", os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"),
          "--proppr"])
+    optdict['prog'].setAllWeights()
     for compilerClass in TESTED_COMPILERS:
       xc = compilerClass(optdict['prog'])
       learner = TESTED_LEARNERS[compilerClass](optdict['prog'],xc)
@@ -772,6 +801,7 @@ class TestMultiModeXC(unittest.TestCase):
   def testInScaffold(self):
     print TESTED_COMPILERS
     self.assertTrue(self.dset.modesToLearn() > 1)
+    self.prog.setAllWeights()
     for compilerClass in TESTED_COMPILERS:
       print compilerClass
       xc = compilerClass(self.prog)
@@ -784,6 +814,7 @@ class TestMultiModeXC(unittest.TestCase):
           'trainData':self.dset,
           'testData':self.dset,
           'learner':learner,
+          'savedTestPredictions':'TestMultiModeXC.testInScaffold.%s.solutions.txt'%compilerClass.__name__
           }).run()
       print testAcc
 
@@ -1036,10 +1067,7 @@ if __name__ == "__main__":
     if len(sys.argv)==1:
         unittest.main()
     else:
-        foo=TestXCProPPR('debug')
+        foo=TestXCProPPR('testDatasetPredict')
         foo.setUp()
-        bar=foo.debug()
-        xc = TESTED_COMPILERS[0](bar.prog)
-        inferenceFun = xc.inferenceFunction('predict/io')
-        pred = bar.evalxc(xc, bar.X.getrow(0))
-        d = bar.prog.db.rowAsSymbolDict(pred)
+        xc,learner,X,Y,P=foo.testDatasetPredict()
+        

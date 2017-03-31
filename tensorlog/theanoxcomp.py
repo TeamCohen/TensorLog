@@ -28,7 +28,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     pyfun = theano.function(inputs=[arg1], outputs=expr)
     def closure(rawInput1):
        input1 = self._wrapMsg(rawInput1) if wrapInputs else rawInput1
-       tmp = pyfun(input1)[0]
+       tmp = pyfun(input1) # was [0] here -- not sure why. -kmm
        return self._unwrapOutput(tmp) if unwrapOutputs else tmp
     return closure
 
@@ -230,9 +230,10 @@ class GD(Optimizer):
     self.learning_rate = learning_rate
   def minimize(self, expr, var_list=[], inputs=[]):
     dlosses = TT.grad(expr, var_list)
-    updates = [(v, v - TT.cast(self.learning_rate,v.dtype) * TT.cast(dloss,v.dtype)) for v,dloss in zip(var_list,dlosses)]
-#     for v,u in updates:
-#       print v.dtype,u.dtype
+    updates = [(v, v 
+                - TT.cast(self.learning_rate,v.dtype) 
+                * (TT.cast(dloss,v.dtype) if isinstance(dloss.type,TT.type.TensorType) else dloss)) 
+               for v,dloss in zip(var_list,dlosses)]
     trainStep = theano.function(inputs, expr, updates=updates, mode='FAST_COMPILE')
     return trainStep
 

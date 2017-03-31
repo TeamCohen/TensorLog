@@ -50,7 +50,6 @@ class Expt(object):
             trainData = trainData.extractMode(targetMode)
             testData = testData.extractMode(targetMode)
 
-        prog.setAllWeights()
         if not learner: learner = learn.FixedRateGDLearner(prog)
 
         
@@ -115,6 +114,7 @@ class Expt(object):
         dp = db.matrixAsSymbolDict(P,typeName=db.getRange(theoryPred,2))
         n=max(dx.keys())
         for i in range(n+1):
+            assert i in dp, "keys dp: %s\nkeys dx: %s" % (dp.keys(),dx.keys())
             dix = dx[i]
             dip = dp[i]
             assert len(dix.keys())==1,'X %s row %d is not onehot: %r' % (theoryPred,i,dix)
