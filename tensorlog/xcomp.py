@@ -12,6 +12,7 @@ from tensorlog import ops
 
 conf = config.Config()
 conf.reparameterizeMatrices = True; conf.help.reparameterizeMatrices = 'pass parameter matrices through a softplus to make keep them positive'
+conf.ignoreTypeCheck= False; conf.help.ignoreTypeCheck = 'allow unknown types in a database with types'
 
 TRAINING_TARGET_VARNAME = '_target_y'
 
@@ -434,6 +435,10 @@ class AbstractCrossCompiler(object):
       if sharedInputs==None:
         # create variables which will be used as inputs
         for v,typeName in zip(fun.opInputs,self._wrapInputTypes(fun)):
+          if (not self.db.isTypeless()) and (typeName is None) and (not conf.ignoreTypeCheck):
+            logging.error('unknown type trying to compile function %s # %s' % (fun.pprintSummary(),fun.pprintComment()))
+            logging.error('unknown type for %s - set xcomp.conf.ignoreTypeCheck to allow' % nspacer.internalName(v))
+            assert False
           nspacer[v] = self._createPlaceholder(nspacer.internalName(v),'vector',typeName)
           seqInputs.append(nspacer[v])
       else:
