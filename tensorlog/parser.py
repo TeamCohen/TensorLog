@@ -2,6 +2,7 @@
 
 import sys
 import collections
+import logging
 
 from tensorlog import symtab
 
@@ -192,19 +193,28 @@ class Parser(object):
         return result
 
     @staticmethod
-    def parseFile(file,rules = None):
+    def parseFile(filename,rules = None):
         """Extract a series of rules from a file."""
         if not rules: rules = RuleCollection()
         buf = ""
-        for line in open(file,'r'):
+        for line in open(filename,'r'):
             if not line[0]=='#':
                 buf += line
         try:
+            first_time = True
             for (ptree,lo,hi) in ruleNT.scanString(buf):
                 rules.add(Parser._convertRule(ptree))
+                if first_time:
+                  unread_text = buf[:lo].strip()
+                  if len(unread_text)>0:
+                    logging.error('unparsed text at start of %s: "%s..."' % (filename,unread_text))
+                  first_time = False
+            unread_text = buf[hi:].strip()
+            if len(unread_text)>0:
+              logging.error('unparsed text at end of %s: "...%s"' % (filename,unread_text))
             return rules
         except KeyError:
-            print 'error near ',lo,'in',file
+            print 'error near ',lo,'in',filename
         return rules
 
 if __name__ == "__main__":
