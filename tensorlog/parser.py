@@ -1,5 +1,6 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
+import sys
 import collections
 
 from tensorlog import symtab
@@ -205,3 +206,6 @@ class Parser(object):
         except KeyError:
             print 'error near ',lo,'in',file
         return rules
+
+if __name__ == "__main__":
+  Parser().parseFile(sys.argv[1]).listing()
