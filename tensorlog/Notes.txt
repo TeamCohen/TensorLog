@@ -7,12 +7,21 @@ Next actions (KR):
  - revive debug.py - how can testing this be automated? should I bother? w/ Katie?
  - look at sparse messages in theano-based learner?
 
+Medium jobs:
+ - clean up typing
+ - simple.expt? as demo code, at least
+ - move native stuff into a subdirectory?
+ - move dataset examples to demo/...?
+ - allow you to write some extra information into a serialized database/model
+ -- just serialize the parameters?
+ -- serialize the rules as well?
+ -- have a readme file that includes time, process, ....
+
 Little jobs (WC):
  - output types as typename/id
- - parsing is not robust --- eg, failures on 'musicby(X,Y) :- head(Trip,X),tail(Trip,Y),{weighted(C): creator(Trip,C)}.'
  - benchmark tests on tensorflow
  - have --proppr as the default option for programs
- - document plugins, simple.Compiler(plugins=....)
+ - test document plugins, simple.Compiler(plugins=....)
  - docs/tutorial
   -- plugins, simple
  - ?clean up autoweighting for rule weights and types

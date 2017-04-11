@@ -333,6 +333,10 @@ class MatrixDB(object):
   def listing(self):
     for (functor,arity),m in sorted(self.matEncoding.items()):
       print '%s/%d: %s' % (functor,arity,self.summary(functor,arity))
+    if not self.isTypeless():
+      for (functor,arity),m in sorted(self.matEncoding.items()):
+        typenames = map(lambda i:self.getArgType(functor,arity,i,frozen=True), range(arity))
+        print 'typing: %s(%s)' % (functor,",".join(typenames))
 
   def numMatrices(self):
     return len(self.matEncoding.keys())
@@ -422,6 +426,7 @@ class MatrixDB(object):
     colon-separated list.
     """
     if not os.path.exists(dbFile) or any([os.path.getmtime(f)>os.path.getmtime(dbFile) for f in factFile.split(":")]):
+      logging.info('serializing fact file %s to %s' % (factFile,dbFile))
       db = MatrixDB.loadFile(factFile)
       db.serialize(dbFile)
       os.utime(dbFile,None) #update the modification time for the directory
