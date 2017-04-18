@@ -7,7 +7,26 @@ from tensorlog import funs
 from tensorlog import learn
 from tensorlog import plearn
 from tensorlog import program
+from tensorlog import xctargets
 
+CROSSCOMPILERS = []
+CROSSLEARNERS = {}
+if xctargets.theano:
+  from tensorlog import theanoxcomp
+  for c in [
+    theanoxcomp.DenseMatDenseMsgCrossCompiler,
+    theanoxcomp.SparseMatDenseMsgCrossCompiler
+    ]:
+    CROSSCOMPILERS.append(c)
+    CROSSLEARNERS[c]=theanoxcomp.FixedRateGDLearner
+if xctargets.tf:
+  from tensorlog import tensorflowxcomp
+  for c in [
+    tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+    tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
+    ]:
+    CROSSCOMPILERS.append(c)
+    CROSSLEARNERS[c]=tensorflowxcomp.FixedRateGDLearner
 
 def setup(optdict, settings):
     # prog is shortcut to the output optdict, for convenience.
@@ -83,5 +102,18 @@ if __name__=="__main__":
 
     # run the experiment
     expt.Expt(params).run()
-    
-    
+
+    stem=settings['dataset']
+    for compilerClass in CROSSCOMPILE:
+        print compilerClass
+        xc = compilerClass(prog)
+        # compile everything
+        for mode in optdict['trainData'].modesToLearn():
+            xc.ensureCompiled(mode)
+        learner = CROSSLEARN[compilerClass](prog,xc)
+        params.update({
+                  'savedTestPredictions':'tmp-cache/%s-test.%s.solutions.txt' % (stem,compilerClass.__name__),
+                  'savedTestExamples':'tmp-cache/%s-test.%s.examples' % (stem,compilerClass.__name__),
+                  'learner':learner,
+                  })
+        testAcc,testXent = expt.Expt(params).run()
