@@ -7,5 +7,5 @@ all: kinship-rule.cfacts
 
 kinship-rule.cfacts: kinship-train-isg.ppr
 	grep -v ^# $< | \
-	sed 's/.*{//;s/[)]*}.*//;s/[(,]/\t/g' | \
+	sed 's/.*{//;s/[)][:a-z]*}.*//;s/[(,]/\t/g' | \
 	sort | uniq > $@

@@ -115,7 +115,11 @@ class RuleCollection(object):
 
     def mapRules(self,mapfun):
         for key in self.index:
-            self.index[key] = map(mapfun, self.index[key])
+            try:
+              self.index[key] = map(mapfun, self.index[key])
+            except:
+              print "Trouble mapping rule %s:"%key
+              raise
 
     def listing(self):
         for key in self.index:
