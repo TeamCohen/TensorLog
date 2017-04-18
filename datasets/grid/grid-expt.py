@@ -211,8 +211,8 @@ if __name__=="__main__":
             
             params = {'prog':prog,
                       'trainData':trainData, 'testData':testData,
-                      'savedTestPredictions':'tmp-cache/test.%s.solutions.txt' % str(compilerClass),
-                      'savedTestExamples':'tmp-cache/test.%s.examples' % str(compilerClass),
+                      'savedTestPredictions':'tmp-cache/test.%s.solutions.txt' % compilerClass.__name__,
+                      'savedTestExamples':'tmp-cache/test.%s.examples' % compilerClass.__name__,
                       'learner':learner,
             }
             
