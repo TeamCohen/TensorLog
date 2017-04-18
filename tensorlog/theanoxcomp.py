@@ -1,10 +1,15 @@
+import logging
+
 import theano
 import theano.tensor as TT
 import theano.tensor.basic as TTB
 import theano.tensor.nnet as TNN
-import theano.sparse as TS
-import theano.sparse.basic as TSB
-import theano.sparse.type as TST
+try:
+  import theano.sparse as TS
+  import theano.sparse.basic as TSB
+  import theano.sparse.type as TST
+except ImportError:
+  logging.warn("Cannot import theano.sparse! this will be a MAJOR problem if you use the SparseMatDenseMsgCrossCompiler")
 import scipy.sparse as SS
 import numpy as NP
 

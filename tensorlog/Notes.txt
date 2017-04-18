@@ -8,8 +8,9 @@ Next actions (KR):
  - look at sparse messages in theano-based learner?
 
 Medium jobs:
- - clean up typing
- - simple.expt? as demo code, at least
+ - simple.regularized_loss(regularization_scale=0.1, regularizer='l2')
+ - simple.train?
+ - demo/... 
  - move native stuff into a subdirectory?
  - move dataset examples to demo/...?
  - allow you to write some extra information into a serialized database/model
