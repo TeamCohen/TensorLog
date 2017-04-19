@@ -1,9 +1,7 @@
 # unit tests that take a few secs to run
 short-tests:
-	nosetests testtensorlog.py
-
-xctest:
-	nosetests testxcomp.py
+	python -m unittest testtensorlog
+	python -m unittest testxcomp
 
 # tests that take a few minutes to run
 # run 'make prepare-for-long-tests' in a fresh install before you run these

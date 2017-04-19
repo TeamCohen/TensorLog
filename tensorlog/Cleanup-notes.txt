@@ -1,12 +1,26 @@
-Thoughts:
+Should I switch from comline to gflags?
 
- - alternative to calling out to tensorlog would be to
- iteratively process multiple-input, single-output plugins.
- for i in plugInGoalPositions:
-   compile opsequence for A<=B1,...,B[i-1]
-   add op to compute output of B[i] from input
-   syntactic rule: links in polytree cannot cross boundaries
-    defined by plugin literals
+How do I set up examples and tests?
+ - demos/foo/
+    tf-expt.py --action [train|test] ...
+    nat-expt.py ... # native learning code
+    make short-test
+    make long-test
+    make download - for large datasets
+ foos:
+ - cora
+ - wordnet
+ - smokers
+ - grid
+ - wikimovies
+ - amie-qa?
+ - fb15k? - scalability
+
+easy:
+ - program depth as config option
+ - tlog_input_placeholder?
+
+Deep Thoughts:
 
 calling back and forth: should be able to specify input placeholder
  for a proofCount/inference function (passed thru to _doCompile, then
@@ -34,7 +48,15 @@ calling back and forth: should be able to specify input placeholder
    f = f1 * ... * fk
    loss = tlog.loss_for("answer/io", inference=f, input=shared_input, target_output=...)
 
- - having multiple inputs in bpcompiler would also be nice....
+ - alternative to calling out to tensorlog would be to
+ iteratively process multiple-input, single-output plugins.
+ for i in plugInGoalPositions:
+   compile opsequence for A<=B1,...,B[i-1]
+   add op to compute output of B[i] from input
+   syntactic rule: links in polytree cannot cross boundaries
+    defined by plugin literals
+
+- having multiple inputs in bpcompiler would also be nice....
  hard would this be to do?
 
  - types: maybe types are defined in by the simple.RuleBuilder? (do I need a parser?)
