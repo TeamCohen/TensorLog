@@ -1,0 +1,500 @@
+# what was the release date of the film Fellini's Casanova ['1976']
+answer	qtrain0000	1976
+# what is the main language in Manhattan Baby ['Italian']
+answer	qtrain0001	Italian
+# who wrote the screenplay for 12 Angry Men ['Reginald Rose']
+answer	qtrain0002	Reginald Rose
+# what was the release year of the film 2001 Maniacs ['2005']
+answer	qtrain0003	2005
+# what was the release date of David Copperfield ['2000']
+answer	qtrain0004	2000
+# what type of film is Return to House on Haunted Hill ['Horror']
+answer	qtrain0005	Horror
+# what did Harry Revier direct ['Child Bride']
+answer	qtrain0006	Child Bride
+# Ben Steinbauer was the director of which films ['Winnebago Man']
+answer	qtrain0007	Winnebago Man
+# which words describe Vagabond ['agn\xc3\xa8s varda']
+answer	qtrain0008	agnès varda
+# who stars in Om Jai Jagadish ['Anil Kapoor', 'Abhishek Bachchan', 'Waheeda Rehman', 'Fardeen Khan']
+answer	qtrain0009	Anil Kapoor	Abhishek Bachchan	Waheeda Rehman	Fardeen Khan
+# the movie Streets of Blood starred who ['Val Kilmer', 'Michael Biehn', 'Sharon Stone', '50 Cent']
+answer	qtrain0010	Val Kilmer	Michael Biehn	Sharon Stone	50 Cent
+# who wrote the film What's Cooking? ['Gurinder Chadha']
+answer	qtrain0011	Gurinder Chadha
+# Olivia Bonamy appears in which movies ['Them']
+answer	qtrain0012	Them
+# who directed Miss Bala ['Gerardo Naranjo']
+answer	qtrain0013	Gerardo Naranjo
+# what is the genre of the film 24 Hour Party People ['Drama', 'Comedy']
+answer	qtrain0014	Drama	Comedy
+# who was the director of Consuming Spirits ['Chris Sullivan']
+answer	qtrain0015	Chris Sullivan
+# what does Marjorie Reynolds act in ['The Fatal Hour']
+answer	qtrain0016	The Fatal Hour
+# which film did Menahem Golan write ['The Delta Force', 'The Apple', 'Crime and Punishment']
+answer	qtrain0017	The Delta Force	The Apple	Crime and Punishment
+# what year was Jack the Bear released ['1993']
+answer	qtrain0018	1993
+# the film The Hunchback was written by who ['Victor Hugo']
+answer	qtrain0019	Victor Hugo
+# what is the main language in Sapphire ['English']
+answer	qtrain0020	English
+# describe Chapter Two in a few words ['bd-r']
+answer	qtrain0021	bd-r
+# who was The Crawling Hand directed by ['Herbert L. Strock']
+answer	qtrain0022	Herbert L. Strock
+# which films did Burt Topper direct ['The Strangler']
+answer	qtrain0023	The Strangler
+# the movie Elephant starred who ['John Robinson', 'Alex Frost', 'Eric Deulen']
+answer	qtrain0024	John Robinson	Alex Frost	Eric Deulen
+# what year was the movie Waiting... released ['2005']
+answer	qtrain0025	2005
+# what is the language spoken in the movie The Best of Youth ['Italian']
+answer	qtrain0026	Italian
+# what is a film written by Karyn Kusama ['Girlfight']
+answer	qtrain0027	Girlfight
+# what films are about peter bogdanovich ['The Last Picture Show', 'Paper Moon', 'Mask', "What's Up , Doc?", 'Targets']
+answer	qtrain0028	The Last Picture Show	Paper Moon	Mask	What's Up , Doc?	Targets
+# what is a movie written by Jesse Vint ['Another Chance']
+answer	qtrain0029	Another Chance
+# what films was Lawrence Kimble a writer on ['Bells of Capistrano']
+answer	qtrain0030	Bells of Capistrano
+# which words describe Speak ['high school', 'kristen stewart']
+answer	qtrain0031	high school	kristen stewart
+# who is the author of Jingle All the Way ['Randy Kornfield']
+answer	qtrain0032	Randy Kornfield
+# what film did Wayne Slater write ["Bush's Brain"]
+answer	qtrain0033	Bush's Brain
+# which films did Götz Spielmann direct ['Revanche', 'Antares']
+answer	qtrain0034	Revanche	Antares
+# what movies did Richard Quine write ['My Sister Eileen']
+answer	qtrain0035	My Sister Eileen
+# who wrote Blue Like Jazz ['Steve Taylor', 'Ben Pearson', 'Donald Miller']
+answer	qtrain0036	Steve Taylor	Ben Pearson	Donald Miller
+# describe The Overcoat ['alberto lattuada']
+answer	qtrain0037	alberto lattuada
+# what year was the movie Fast Life released ['1932']
+answer	qtrain0038	1932
+# which films did Gus Van Sant direct ['Good Will Hunting', 'Milk', 'Finding Forrester', 'Elephant', "Paris , je t'aime", 'Psycho', 'My Own Private Idaho', 'To Die For', 'Promised Land', 'Paranoid Park', 'Drugstore Cowboy', 'Last Days', 'Gerry', 'Restless', 'Even Cowgirls Get the Blues', 'Mala Noche']
+answer	qtrain0039	Good Will Hunting	Milk	Finding Forrester	Elephant	Paris , je t'aime	Psycho	My Own Private Idaho	To Die For	Promised Land	Paranoid Park	Drugstore Cowboy	Last Days	Gerry	Restless	Even Cowgirls Get the Blues	Mala Noche
+# when was the film I Dream Too Much released ['1935']
+answer	qtrain0040	1935
+# what does John Shea appear in ['Missing', 'The Trouble with the Truth']
+answer	qtrain0041	Missing	The Trouble with the Truth
+# the director of Naked Harbour was who ['Aku Louhimies']
+answer	qtrain0042	Aku Louhimies
+# what movies did Brian Keith star in ['The Parent Trap', 'The Wind and the Lion', 'Nevada Smith', 'Meteor', 'Hooper', "Sharky's Machine", 'The Rare Breed', 'With Six You Get Eggroll', 'Nightfall', 'The Mountain Men', 'The Deadly Companions', 'Run of the Arrow', 'Tight Spot', '5 Against the House']
+answer	qtrain0043	The Parent Trap	The Wind and the Lion	Nevada Smith	Meteor	Hooper	Sharky's Machine	The Rare Breed	With Six You Get Eggroll	Nightfall	The Mountain Men	The Deadly Companions	Run of the Arrow	Tight Spot	5 Against the House
+# what movies are about julie delpy ['Before Sunrise', 'Before Sunset', 'Before Midnight', '2 Days in Paris', 'An American Werewolf in Paris', 'The Countess']
+answer	qtrain0044	Before Sunrise	Before Sunset	Before Midnight	2 Days in Paris	An American Werewolf in Paris	The Countess
+# when was the movie Desperate Journey released ['1942']
+answer	qtrain0045	1942
+# what does Terence Donovan appear in ['The Man from Snowy River']
+answer	qtrain0046	The Man from Snowy River
+# what was the genre of the movie The Boys of St. Vincent ['Drama']
+answer	qtrain0047	Drama
+# what movies did Nick Baldasare act in ['They Bite']
+answer	qtrain0048	They Bite
+# what films can be described by mohsen makhmalbaf ['Kandahar', 'Gabbeh', 'A Moment of Innocence']
+answer	qtrain0049	Kandahar	Gabbeh	A Moment of Innocence
+# who was the writer of Nine Lives ['Rodrigo Garc\xc3\xada']
+answer	qtrain0050	Rodrigo García
+# what film did Quinn K. Redeker write ['The Deer Hunter']
+answer	qtrain0051	The Deer Hunter
+# Rudy De Luca was the director of which films ['Transylvania 6-5000']
+answer	qtrain0052	Transylvania 6-5000
+# what does Stephen Graham act in ['Blood']
+answer	qtrain0053	Blood
+# who acted in Perfect Sense ['Ewan McGregor', 'Eva Green']
+answer	qtrain0054	Ewan McGregor	Eva Green
+# describe the movie Original Sin in a few words ['angelina jolie', 'antonio banderas']
+answer	qtrain0055	angelina jolie	antonio banderas
+# what is a movie written by Don Winslow ['Savages', 'The Death and Life of Bobby Z']
+answer	qtrain0056	Savages	The Death and Life of Bobby Z
+# who is the writer of the film The Long Gray Line ['Marty Maher']
+answer	qtrain0057	Marty Maher
+# what year was the movie Last Life in the Universe released ['2003']
+answer	qtrain0058	2003
+# who is the director of Crossfire ['Edward Dmytryk']
+answer	qtrain0059	Edward Dmytryk
+# what film genre is The Sixth Sense ['Thriller']
+answer	qtrain0060	Thriller
+# what year was the movie The Bourne Supremacy released ['2004']
+answer	qtrain0061	2004
+# what language is Iron Man 2 in ['Russian']
+answer	qtrain0062	Russian
+# who wrote the film Appleseed ['Masamune Shirow']
+answer	qtrain0063	Masamune Shirow
+# which film did Vladimir Jabotinsky write the story for ['Samson and Delilah']
+answer	qtrain0064	Samson and Delilah
+# what movies did Glenn Ficarra write ['I Love You Phillip Morris', 'Focus']
+answer	qtrain0065	I Love You Phillip Morris	Focus
+# what is a film directed by Charles de Lauzirika ['Crave']
+answer	qtrain0066	Crave
+# who are the actors in Lucrezia Borgia ['Gabriel Gabrio', 'Edwige Feuill\xc3\xa8re', 'Maurice Escande']
+answer	qtrain0067	Gabriel Gabrio	Edwige Feuillère	Maurice Escande
+# what movies did François Bégaudeau act in ['The Class']
+answer	qtrain0068	The Class
+# who acted in the movie Trancers ['Helen Hunt', 'Tim Thomerson']
+answer	qtrain0069	Helen Hunt	Tim Thomerson
+# what is a film directed by David Michôd ['Animal Kingdom', 'The Rover']
+answer	qtrain0070	Animal Kingdom	The Rover
+# what language is I Was a Male War Bride in ['French']
+answer	qtrain0071	French
+# Constance Shulman appears in which movies ["Doug's 1st Movie"]
+answer	qtrain0072	Doug's 1st Movie
+# who is the creator of the film script for Notting Hill ['Richard Curtis']
+answer	qtrain0073	Richard Curtis
+# what was the release date of the film I Shot a Man in Vegas ['1995']
+answer	qtrain0074	1995
+# which words describe film Under Siege ['action', 'tommy lee jones', 'steven seagal', 'andrew davis']
+answer	qtrain0075	action	tommy lee jones	steven seagal	andrew davis
+# what type of movie is Eggs ['Comedy']
+answer	qtrain0076	Comedy
+# what was the release year of The Private Eyes ['1980']
+answer	qtrain0077	1980
+# who acted in the movie 36 Hours ['James Garner', 'Rod Taylor', 'Eva Marie Saint']
+answer	qtrain0078	James Garner	Rod Taylor	Eva Marie Saint
+# Beer for My Horses is a film written by this person ['Toby Keith', 'Rodney Carrington']
+answer	qtrain0079	Toby Keith	Rodney Carrington
+# what is the genre of the movie Strange Days ['Action']
+answer	qtrain0080	Action
+# what type of movie is Rough Magic ['Comedy']
+answer	qtrain0081	Comedy
+# what films was Roberto Benigni a writer on ['Life Is Beautiful', 'The Tiger and the Snow', 'Johnny Stecchino', 'The Monster', 'Pinocchio']
+answer	qtrain0082	Life Is Beautiful	The Tiger and the Snow	Johnny Stecchino	The Monster	Pinocchio
+# the movie Kiss the Bride starred who ['Tori Spelling', 'Philipp Karner', "James O'Shea"]
+answer	qtrain0083	Tori Spelling	Philipp Karner	James O'Shea
+# the film Container was written by who ['Lukas Moodysson']
+answer	qtrain0084	Lukas Moodysson
+# what kind of movie is Election ['Comedy']
+answer	qtrain0085	Comedy
+# who's the director of 12 O'Clock Boys ['Lotfy Nathan']
+answer	qtrain0086	Lotfy Nathan
+# the film The Tattooed Widow was directed by who ['Lars Molin']
+answer	qtrain0087	Lars Molin
+# what terms are applicable to Jay and Silent Bob Strike Back ['comedy', 'star wars', 'kevin smith', 'view askew', 'jay and silent bob']
+answer	qtrain0088	comedy	star wars	kevin smith	view askew	jay and silent bob
+# what was the genre of the movie Borderland ['Horror']
+answer	qtrain0089	Horror
+# what is the main language in Mrs. Miniver ['German']
+answer	qtrain0090	German
+# what movies was Gordon Currie an actor in ['Puppet Master 4']
+answer	qtrain0091	Puppet Master 4
+# which movies was Cheryl Strayed the writer of ['Wild']
+answer	qtrain0092	Wild
+# what is the language spoken in the film Same Old Song ['French']
+answer	qtrain0093	French
+# which film did Chris Matheson write the story for ['Rapture-Palooza']
+answer	qtrain0094	Rapture-Palooza
+# who stars in Coal Miner's Daughter ['Tommy Lee Jones', 'Sissy Spacek', 'Levon Helm']
+answer	qtrain0095	Tommy Lee Jones	Sissy Spacek	Levon Helm
+# what was the release year of the movie Ace of Hearts ['2008']
+answer	qtrain0096	2008
+# who is the director of Cold Turkey ['Norman Lear']
+answer	qtrain0097	Norman Lear
+# the director of Ordinary Decent Criminal was who ["Thaddeus O'Sullivan"]
+answer	qtrain0098	Thaddeus O'Sullivan
+# what was the release year of the film Donovan's Brain ['1953']
+answer	qtrain0099	1953
+# who was the writer of the film The Worthless ['Aki Kaurism\xc3\xa4ki', 'Mika Kaurism\xc3\xa4ki']
+answer	qtrain0100	Aki Kaurismäki	Mika Kaurismäki
+# who directed Scarlet Diva ['Asia Argento']
+answer	qtrain0101	Asia Argento
+# which film did James Watkins write the story for ['Eden Lake']
+answer	qtrain0102	Eden Lake
+# the movie Black Water, when was it released ['2007']
+answer	qtrain0103	2007
+# what year was McLintock! released ['1963']
+answer	qtrain0104	1963
+# what was the genre of Demons ['Horror']
+answer	qtrain0105	Horror
+# what was the release date of the film Being Julia ['2004']
+answer	qtrain0106	2004
+# what genre is Fire Birds in ['Action']
+answer	qtrain0107	Action
+# which words describe movie Utamaro and His Five Women ['kenji mizoguchi']
+answer	qtrain0108	kenji mizoguchi
+# what is the genre for Orphan ['Thriller']
+answer	qtrain0109	Thriller
+# who wrote the screenplay for Barry Munday ["Chris D'Arienzo", 'Frank Turner Hollon']
+answer	qtrain0110	Chris D'Arienzo	Frank Turner Hollon
+# what movies did Peggy Cummins star in ['Gun Crazy', 'Hell Drivers']
+answer	qtrain0111	Gun Crazy	Hell Drivers
+# who stars in Dead Husbands ['John Ritter', 'Nicollette Sheridan', 'Sonja Smits', 'Donna Pescow']
+answer	qtrain0112	John Ritter	Nicollette Sheridan	Sonja Smits	Donna Pescow
+# what kind of movie is Hamlet ['Drama']
+answer	qtrain0113	Drama
+# what was the genre of the movie The Scalphunters ['Western']
+answer	qtrain0114	Western
+# what genre of movie is The Anarchist Cookbook ['Drama', 'Comedy']
+answer	qtrain0115	Drama	Comedy
+# what was the release date of Racing Stripes ['2005']
+answer	qtrain0116	2005
+# what films does Ivan Sergei appear in ['High Noon']
+answer	qtrain0117	High Noon
+# what kind of movie is Shriek If You Know What I Did Last Friday the Thirteenth ['Horror']
+answer	qtrain0118	Horror
+# Leigh Harris appears in which movies ['Sorceress']
+answer	qtrain0119	Sorceress
+# what was Cyril Frankel the director of ['The Witches', 'Never Take Sweets from a Stranger']
+answer	qtrain0120	The Witches	Never Take Sweets from a Stranger
+# what is the language spoken in Chinese Roulette ['German']
+answer	qtrain0121	German
+# which films are about patrick fugit ['White Oleander']
+answer	qtrain0122	White Oleander
+# the movie I Am a Sex Addict starred who ['Caveh Zahedi']
+answer	qtrain0123	Caveh Zahedi
+# what year was Breaking Upwards released ['2009']
+answer	qtrain0124	2009
+# who wrote the film Advance to the Rear ['Jack Schaefer']
+answer	qtrain0125	Jack Schaefer
+# what is the genre of The Net ['Action']
+answer	qtrain0126	Action
+# who was the writer of Non pensarci ['Gianni Zanasi']
+answer	qtrain0127	Gianni Zanasi
+# which person wrote The Method ['Jordi Galceran', 'Marcelo Pi\xc3\xb1eyro']
+answer	qtrain0128	Jordi Galceran	Marcelo Piñeyro
+# what movies are about danny devito ['L.A. Confidential', 'Batman Returns', 'Man on the Moon', 'Twins', 'Matilda', 'Get Shorty', 'Romancing the Stone', 'Duplex', 'The Rainmaker', 'Terms of Endearment', 'The War of the Roses', 'Death to Smoochy', 'Heist', 'Throw Momma from the Train', 'Ruthless People', 'Hoffa', 'Deck the Halls', 'Drowning Mona', 'Johnny Dangerously', "Other People's Money", 'Living Out Loud']
+answer	qtrain0129	L.A. Confidential	Batman Returns	Man on the Moon	Twins	Matilda	Get Shorty	Romancing the Stone	Duplex	The Rainmaker	Terms of Endearment	The War of the Roses	Death to Smoochy	Heist	Throw Momma from the Train	Ruthless People	Hoffa	Deck the Halls	Drowning Mona	Johnny Dangerously	Other People's Money	Living Out Loud
+# can you give a few words describing Diary of a Lost Girl ['georg wilhelm pabst', 'louise brooks']
+answer	qtrain0130	georg wilhelm pabst	louise brooks
+# what does Olivia Birkelund star in ['Letters from a Killer']
+answer	qtrain0131	Letters from a Killer
+# what genre is Nickelodeon in ['Comedy']
+answer	qtrain0132	Comedy
+# Dark Mirror, when was it released ['2007']
+answer	qtrain0133	2007
+# what was the genre of the movie What Women Want ['Comedy']
+answer	qtrain0134	Comedy
+# what films can be described by harmony korine ['Spring Breakers', 'Kids', 'Gummo', 'Mister Lonely']
+answer	qtrain0135	Spring Breakers	Kids	Gummo	Mister Lonely
+# what movies did Alden Ehrenreich star in ['Beautiful Creatures', 'Tetro']
+answer	qtrain0136	Beautiful Creatures	Tetro
+# who is the writer of Manson ['Laurence Merrick']
+answer	qtrain0137	Laurence Merrick
+# who in the world wrote Les Misérables ['Victor Hugo', 'Claude Lelouch']
+answer	qtrain0138	Victor Hugo	Claude Lelouch
+# what movies was Robert Dunham an actor in ['Godzilla vs. Megalon']
+answer	qtrain0139	Godzilla vs. Megalon
+# what is the main language in Games of Love and Chance ['French']
+answer	qtrain0140	French
+# who is the author of The Runaways ['Floria Sigismondi', 'Cherie Currie']
+answer	qtrain0141	Floria Sigismondi	Cherie Currie
+# who is the director for Liberty Stands Still ['Kari Skogland']
+answer	qtrain0142	Kari Skogland
+# what kind of film is War of the Dead ['Action', 'Horror']
+answer	qtrain0143	Action	Horror
+# what was the release date of the movie The Vicious Kind ['2009']
+answer	qtrain0144	2009
+# who was the writer of the film Donnie Brasco ['Paul Attanasio', 'Joseph D. Pistone', 'Richard Woodley']
+answer	qtrain0145	Paul Attanasio	Joseph D. Pistone	Richard Woodley
+# what movies can be described with satire? ['Network', 'Blazing Saddles']
+answer	qtrain0146	Network	Blazing Saddles
+# what sort of film is And the Band Played On ['Drama']
+answer	qtrain0147	Drama
+# which person wrote The Late George Apley ['George S. Kaufman', 'John P. Marquand']
+answer	qtrain0148	George S. Kaufman	John P. Marquand
+# which topics is movie Le Boucher about ['claude chabrol']
+answer	qtrain0149	claude chabrol
+# what films did Carey Lowell star in ['The Guardian', 'Down Twisted']
+answer	qtrain0150	The Guardian	Down Twisted
+# which films did Joe Tornatore direct ['Grotesque']
+answer	qtrain0151	Grotesque
+# who is the author of Coco Chanel ['Enrico Medioli', 'Lea Tafuri']
+answer	qtrain0152	Enrico Medioli	Lea Tafuri
+# can you give a few words describing Lady for a Day ['frank capra']
+answer	qtrain0153	frank capra
+# what year was the movie Petals on the Wind released ['2014']
+answer	qtrain0154	2014
+# what movies was Timm Sharp the writer of ['Standing Still']
+answer	qtrain0155	Standing Still
+# what films did Danny Elfman star in ['The Nightmare Before Christmas']
+answer	qtrain0156	The Nightmare Before Christmas
+# when was the movie Clandestine Childhood released ['2011']
+answer	qtrain0157	2011
+# which words describe Paranormal Activity 2 ['prequel']
+answer	qtrain0158	prequel
+# who was the director of Eichmann ['Robert Young']
+answer	qtrain0159	Robert Young
+# what language is The Day of the Beast in ['Spanish']
+answer	qtrain0160	Spanish
+# which person wrote the movie Cinderella ['Charles Perrault']
+answer	qtrain0161	Charles Perrault
+# what was the release date of I Killed My Mother ['2009']
+answer	qtrain0162	2009
+# what does Jane Alexander star in ['Brubaker', 'Testament', 'The Great White Hope', 'The New Centurions', 'Night Crossing']
+answer	qtrain0163	Brubaker	Testament	The Great White Hope	The New Centurions	Night Crossing
+# what films did Harry Fowler act in ['Hue and Cry']
+answer	qtrain0164	Hue and Cry
+# who directed the film Clapham Junction ['Adrian Shergold']
+answer	qtrain0165	Adrian Shergold
+# who was The Adventures of Picasso written by ['Hans Alfredson', 'Tage Danielsson']
+answer	qtrain0166	Hans Alfredson	Tage Danielsson
+# who directed the movie Shrek the Halls ['Gary Trousdale']
+answer	qtrain0167	Gary Trousdale
+# the film Villa Rides starred which actors ['Robert Mitchum', 'Herbert Lom', 'Yul Brynner']
+answer	qtrain0168	Robert Mitchum	Herbert Lom	Yul Brynner
+# which films can be described by geisha ['Memoirs of a Geisha']
+answer	qtrain0169	Memoirs of a Geisha
+# what is the primary language in the film A Generation ['Polish']
+answer	qtrain0170	Polish
+# what language is The Warped Ones in ['Japanese']
+answer	qtrain0171	Japanese
+# what films did Niall MacCormick direct ['Albatross']
+answer	qtrain0172	Albatross
+# what words describe In My Father's Den ['new zealand', 'matthew macfadyen']
+answer	qtrain0173	new zealand	matthew macfadyen
+# which movies was Anita Doron the writer of ['The Lesser Blessed']
+answer	qtrain0174	The Lesser Blessed
+# the movie Woman on Top starred who ['Pen\xc3\xa9lope Cruz', 'Harold Perrineau', 'Mark Feuerstein', 'Murilo Ben\xc3\xadcio']
+answer	qtrain0175	Penélope Cruz	Harold Perrineau	Mark Feuerstein	Murilo Benício
+# who was the writer of Lauderdale ['Bill Milling']
+answer	qtrain0176	Bill Milling
+# who wrote the screenplay for Ruby ['Stephen Davis']
+answer	qtrain0177	Stephen Davis
+# what is the language spoken in the movie The Brain ['French']
+answer	qtrain0178	French
+# what movie did Aurelius Battaglia write the story for ['Pinocchio']
+answer	qtrain0179	Pinocchio
+# what was the genre of Wonder Woman ['Animation']
+answer	qtrain0180	Animation
+# which words describe The Phantom Tollbooth ['bd-r', 'children', 'chuck jones']
+answer	qtrain0181	bd-r	children	chuck jones
+# what movies did Andrew Hodges write ['The Imitation Game']
+answer	qtrain0182	The Imitation Game
+# what year was Lemony Snicket's A Series of Unfortunate Events released ['2004']
+answer	qtrain0183	2004
+# what movies did Lauren Lopez star in ['A Very Potter Musical', 'A Very Potter Sequel']
+answer	qtrain0184	A Very Potter Musical	A Very Potter Sequel
+# what language is the movie Flyboys in ['French']
+answer	qtrain0185	French
+# who's the writer of Come Blow Your Horn ['Neil Simon', 'Norman Lear']
+answer	qtrain0186	Neil Simon	Norman Lear
+# the film Bullies starred which actors ['Jonathan Crombie', 'Stephen Hunter']
+answer	qtrain0187	Jonathan Crombie	Stephen Hunter
+# the movie Strangers on a Train starred who ['Farley Granger', 'Leo G. Carroll', 'Ruth Roman', 'Robert Walker']
+answer	qtrain0188	Farley Granger	Leo G. Carroll	Ruth Roman	Robert Walker
+# the director of The Monster Club was ['Roy Ward Baker']
+answer	qtrain0189	Roy Ward Baker
+# what films can be described by bob rafelson ['Five Easy Pieces', 'Head', 'The King of Marvin Gardens', 'Stay Hungry', 'Mountains of the Moon']
+answer	qtrain0190	Five Easy Pieces	Head	The King of Marvin Gardens	Stay Hungry	Mountains of the Moon
+# which topics is movie The Dam Busters about ['true story', 'michael anderson']
+answer	qtrain0191	true story	michael anderson
+# what year was the movie Voyage to Cythera released ['1984']
+answer	qtrain0192	1984
+# what genre is A Passage to India in ['Drama']
+answer	qtrain0193	Drama
+# which topics is Pure Luck about ['martin short']
+answer	qtrain0194	martin short
+# what movies can be described by julia ormond ['Legends of the Fall', 'First Knight', 'Sabrina']
+answer	qtrain0195	Legends of the Fall	First Knight	Sabrina
+# who was the writer of Goodbye Uncle Tom ['Gualtiero Jacopetti', 'Franco Prosperi']
+answer	qtrain0196	Gualtiero Jacopetti	Franco Prosperi
+# what is a film directed by Gillian Robespierre ['Obvious Child']
+answer	qtrain0197	Obvious Child
+# what movies did Cecilia Dopazo act in ['Wild Horses']
+answer	qtrain0198	Wild Horses
+# what was the release date of the movie Lord of the Flies ['1963']
+answer	qtrain0199	1963
+# which person directed The Gods Must Be Crazy II ['Jamie Uys']
+answer	qtrain0200	Jamie Uys
+# the movie Mass Appeal starred who ['Jack Lemmon']
+answer	qtrain0201	Jack Lemmon
+# which words describe film Honeymoon in Vegas ['nicolas cage', 'sarah jessica parker', 'andrew bergman']
+answer	qtrain0202	nicolas cage	sarah jessica parker	andrew bergman
+# when was Drifting Clouds released ['1996']
+answer	qtrain0203	1996
+# the film W. starred which actors ['Josh Brolin']
+answer	qtrain0204	Josh Brolin
+# which person wrote the movie Field of Dreams ['Phil Alden Robinson']
+answer	qtrain0205	Phil Alden Robinson
+# what year was the movie A Star Is Born released ['1976']
+answer	qtrain0206	1976
+# what is the genre of the film The Great Outdoors ['Comedy']
+answer	qtrain0207	Comedy
+# what movies did Kathleen York star in ['Sublime']
+answer	qtrain0208	Sublime
+# when was The Second Civil War released ['1997']
+answer	qtrain0209	1997
+# what was the genre of Let Sleeping Corpses Lie ['Horror']
+answer	qtrain0210	Horror
+# what was the release year of the movie Twin Sisters ['2002']
+answer	qtrain0211	2002
+# who directed the movie Prison ['Ingmar Bergman']
+answer	qtrain0212	Ingmar Bergman
+# which movie did Jean Poiret write ['The Birdcage', 'La Cage aux Folles']
+answer	qtrain0213	The Birdcage	La Cage aux Folles
+# who wrote Leatherheads ['Rick Reilly', 'Duncan Brantley']
+answer	qtrain0214	Rick Reilly	Duncan Brantley
+# which films did Douglas McGrath direct ['Emma', 'Infamous', 'Nicholas Nickleby', 'Company Man']
+answer	qtrain0215	Emma	Infamous	Nicholas Nickleby	Company Man
+# what movies was Aimee Lagos the writer of ['No Good Deed']
+answer	qtrain0216	No Good Deed
+# what movie did Roger Vercel write the story for ['Stormy Waters']
+answer	qtrain0217	Stormy Waters
+# who's the director of Total Recall ['Paul Verhoeven']
+answer	qtrain0218	Paul Verhoeven
+# who is the director for Houdini ['George Marshall']
+answer	qtrain0219	George Marshall
+# Jugal Hansraj was the director of which movies ['Pyaar Impossible!']
+answer	qtrain0220	Pyaar Impossible!
+# which person wrote the movie Soldier in the Rain ['William Goldman', 'Blake Edwards']
+answer	qtrain0221	William Goldman	Blake Edwards
+# which films did Martin Ritt direct ['Hud', 'The Spy Who Came in from the Cold', 'Hombre', 'Norma Rae', 'The Long , Hot Summer', 'The Front', 'Nuts', "Murphy's Romance", 'The Molly Maguires', 'Sounder', 'The Great White Hope', 'Edge of the City', 'Paris Blues', 'Conrack', 'Cross Creek', "Pete 'n' Tillie", 'The Brotherhood', 'The Sound and the Fury']
+answer	qtrain0222	Hud	The Spy Who Came in from the Cold	Hombre	Norma Rae	The Long , Hot Summer	The Front	Nuts	Murphy's Romance	The Molly Maguires	Sounder	The Great White Hope	Edge of the City	Paris Blues	Conrack	Cross Creek	Pete 'n' Tillie	The Brotherhood	The Sound and the Fury
+# who directed the movie ATM ['David Brooks']
+answer	qtrain0223	David Brooks
+# when was The Last Time released ['2006']
+answer	qtrain0224	2006
+# what is the genre of the film Ed's Next Move ['Comedy']
+answer	qtrain0225	Comedy
+# what sort of movie is Kamchatka ['Drama']
+answer	qtrain0226	Drama
+# which person directed Harvie Krumpet ['Adam Elliot']
+answer	qtrain0227	Adam Elliot
+# what was Ulf Malmros the director of ['Slim Susie']
+answer	qtrain0228	Slim Susie
+# who acted in the movie The Rachel Papers ['Jonathan Pryce', 'James Spader', 'Dexter Fletcher', 'Ione Skye']
+answer	qtrain0229	Jonathan Pryce	James Spader	Dexter Fletcher	Ione Skye
+# which movies was Tom Kingsley a writer on ['Black Pond']
+answer	qtrain0230	Black Pond
+# what year was the film Anna Christie released ['1930']
+answer	qtrain0231	1930
+# who is the writer of the film The End of America ['Naomi Wolf']
+answer	qtrain0232	Naomi Wolf
+# what kind of movie is Krrish ['Action']
+answer	qtrain0233	Action
+# who wrote 13 Assassins ['Daisuke Tengan']
+answer	qtrain0234	Daisuke Tengan
+# what was the genre of The Raven ['Horror']
+answer	qtrain0235	Horror
+# who was Salmonberries written by ['Percy Adlon']
+answer	qtrain0236	Percy Adlon
+# which topics is Nobody Lives Forever about ['jean negulesco']
+answer	qtrain0237	jean negulesco
+# who starred in Our Relations ['Stan Laurel']
+answer	qtrain0238	Stan Laurel
+# who's the director of Our Vines Have Tender Grapes ['Roy Rowland']
+answer	qtrain0239	Roy Rowland
+# what does Val Lauren appear in ['Interior. Leather Bar.']
+answer	qtrain0240	Interior. Leather Bar.
+# what was the release date of Death to Smoochy ['2002']
+answer	qtrain0241	2002
+# what movies can be described by education ['The Revisionaries']
+answer	qtrain0242	The Revisionaries
+# Walk the Line, is it any good ['good']
+answer	qtrain0243	good
+# what films did Kevin Conway act in ['The Lathe of Heaven', 'Mark Twain', 'The Elephant Man', 'Net Worth']
+answer	qtrain0244	The Lathe of Heaven	Mark Twain	The Elephant Man	Net Worth
+# which film did Pawan Kumar write ['Lucia']
+answer	qtrain0245	Lucia
+# which films did Abel Ferrara direct ['Bad Lieutenant', 'King of New York', 'Body Snatchers', 'The Funeral', 'The Addiction', 'The Driller Killer', 'New Rose Hotel', 'Dangerous Game', 'Fear City', 'The Blackout', 'Welcome to New York', 'Mary', "'R Xmas", 'Go Go Tales', 'Cat Chaser', 'Chelsea on the Rocks']
+answer	qtrain0246	Bad Lieutenant	King of New York	Body Snatchers	The Funeral	The Addiction	The Driller Killer	New Rose Hotel	Dangerous Game	Fear City	The Blackout	Welcome to New York	Mary	'R Xmas	Go Go Tales	Cat Chaser	Chelsea on the Rocks
+# what was the genre of the film Everybody's Fine ['Drama']
+answer	qtrain0247	Drama
+# what films can be described by mortality ['The Fountain']
+answer	qtrain0248	The Fountain
+# what films did Tom Gilroy write ['Spring Forward']
+answer	qtrain0249	Spring Forward
