@@ -27,14 +27,16 @@ from tensorlog import tensorflowxcomp
 
 # note: with all compilers tested, these tests now take about 5-6min, ouch
 
-TESTED_COMPILERS = [
-    # theanoxcomp.DenseMatDenseMsgCrossCompiler,
-    # theanoxcomp.SparseMatDenseMsgCrossCompiler,
-    tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-    tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
-]
+TESTED_COMPILERS = [ tensorflowxcomp.SparseMatDenseMsgCrossCompiler ]
+RUN_OLD_INFERENCE_TESTS = False
 
 SAVE_SUMMARIES = False
+
+def close_cross_compiler(xc):
+  xc.close()
+  if isinstance(xc,tensorflowxcomp.TensorFlowCrossCompiler):
+    tf.reset_default_graph()
+
 
 class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
@@ -114,10 +116,11 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
 
   def _xcomp_check(self,progType,weightVec,ruleStrings,mode_string,input_symbol,expected_result_dict):
     # run the base class check to see that the inference is correct
-    if progType=='proppr':
-      self.proppr_inference_check(weightVec,ruleStrings,mode_string,input_symbol,expected_result_dict)
-    else:
-      self.inference_check(ruleStrings,mode_string,input_symbol,expected_result_dict)
+    if RUN_OLD_INFERENCE_TESTS:
+      if progType=='proppr':
+        self.proppr_inference_check(weightVec,ruleStrings,mode_string,input_symbol,expected_result_dict)
+      else:
+        self.inference_check(ruleStrings,mode_string,input_symbol,expected_result_dict)
     # setup the next round of tests by compiling a tensorlog
     # Program - this code is lifted from the testtensorlog
     # inference routines
@@ -138,10 +141,10 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       print '== performing eval with',compilerClass,'=='
       inferenceFun = xc.inferenceFunction(mode_string)
       y = inferenceFun(prog.db.onehot(input_symbol))
-      # print 'input',xc.getInputName(mode_string),'args,fun =',xc.inference(mode_string)
-      # theano output will a be (probably dense) message, so
-      # just compare that maximal elements from these two dicts
-      # are the same
+      # print 'input',xc.getInputName(mode_string),'args,fun
+      # =',xc.inference(mode_string) theano output will a be (probably
+      # dense) message, so just compare and check that the maximal
+      # elements from these two dicts are the same
       actual_result_dict = self.db.rowAsSymbolDict(y)
       self.check_maxes_in_dicts(actual_result_dict, expected_result_dict)
       # check it's normalized
@@ -157,6 +160,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       if len(pc_result_dict)>0:
         self.check_maxes_in_dicts(pc_result_dict, expected_result_dict)
       print '== eval checks passed =='
+      close_cross_compiler(xc)
 
   def check_maxes_in_dicts(self,actual,expected):
     def maximalElements(d):
@@ -322,6 +326,7 @@ class TestXCGrad(testtensorlog.TestGrad):
             # need to flip for cross-compilers
             updates_with_string_keys[str(fact)] = -grad_of_fact
         self.check_directions(updates_with_string_keys,expected)
+        close_cross_compiler(xc)
 
 class TestXCProPPR(testtensorlog.TestProPPR):
 
@@ -345,6 +350,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
         d = self.prog.db.rowAsSymbolDict(pred)
         uniform = {'pos':0.5,'neg':0.5}
         self.check_dicts(d,uniform)
+      close_cross_compiler(xc)
 
   def testNativeMatrix(self):
 
@@ -357,6 +363,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       for i,d in d0.items():
         uniform = {'pos':0.5,'neg':0.5,}
         self.check_dicts(d,uniform)
+      close_cross_compiler(xc)
 
   def testGradMatrix(self):
     data = testtensorlog.DataBuffer(self.prog.db)
@@ -380,6 +387,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
         for j in range(ncol):
           self.assertTrue((w[i,j]==0) == (w0[i,j]==0))
           self.assertTrue(w[i,j] * w0[i,j] <= 0.0)
+      close_cross_compiler(xc)
 
   def testMultiLearn1(self):
     pass
@@ -437,6 +445,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       # sanity check a couple of values
       self.assertTrue(d['little_pos'] > d['little_neg'])
       self.assertTrue(d['big_pos'] < d['big_neg'])
+      close_cross_compiler(xc)
 
   def testExpt(self):
     mode = declare.ModeDeclaration('predict(i,o)')
@@ -450,6 +459,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
           trainData=dataset.Dataset({mode:X},{mode:Y}),
           testData=dataset.Dataset({mode:TX},{mode:TY}),
           targetMode=mode)
+      close_cross_compiler(xc)
 
 class TestXCOpGen(unittest.TestCase):
 
@@ -480,6 +490,7 @@ class TestXCOpGen(unittest.TestCase):
     self.assertTrue(len(ops)==2)
     for (expr,exprType) in ops:
       self.assertTrue(exprType=='word')
+    close_cross_compiler(xc)
 
   def testTCToyIgnoringTypes(self):
     matrixdb.conf.ignore_types = True
@@ -496,6 +507,7 @@ class TestXCOpGen(unittest.TestCase):
     for x in ops:
       # ops should just be tensors
       self.assertFalse(isinstance(x,tuple))
+    close_cross_compiler(xc)
 
 class TestXCExpt(unittest.TestCase):
 
@@ -537,6 +549,7 @@ class TestXCExpt(unittest.TestCase):
       pbSym = xc.asSymbol(pbId,typeName='doc')
       self.assertEqual(pbSym,'pb')
       self.assertEqual(xc.asSymbolId('this does not appear in the data',typeName='doc'), -1)
+      close_cross_compiler(xc)
 
   def testTCToyIgnoringTypes(self):
     matrixdb.conf.ignore_types = True
@@ -556,6 +569,7 @@ class TestXCExpt(unittest.TestCase):
           targetMode=declare.asMode("predict/io"))
       pbDoc = xc.db.onehot('pb')
       self.checkXC(xc,'predict/io',pbDoc,collections.defaultdict(lambda:191))
+      close_cross_compiler(xc)
 
 
   def checkXC(self,xc,mode,rawInput,expectedCols):
@@ -612,6 +626,8 @@ class TestMultiModeXC(unittest.TestCase):
         Y_ = xc.inferenceFunction(mode)(X)
         acc = xc.accuracy(mode,X,Y)
         print 'mode',mode,'acc',acc
+      session.close()
+      close_cross_compiler(xc)
 
 class TestSimple(unittest.TestCase):
 
@@ -669,6 +685,7 @@ class TestSimple(unittest.TestCase):
       acc3 = session2.run(accuracy2, feed_dict=test_batch_fd2)
       print 'accuracy after round-trip serialization',acc3
       self.assertTrue(acc3>=0.9)
+    session.close()
 
   def testMinibatch(self):
     tlog = simple.Compiler(
@@ -704,6 +721,7 @@ class TestSimple(unittest.TestCase):
     acc1 = session.run(accuracy, feed_dict=test_batch_fd)
     print 'final accuracy',acc1
     self.assertTrue(acc1>=0.9)
+    session.close()
 
   def testRuleBuilder1(self):
     b = simple.RuleBuilder()
@@ -816,8 +834,19 @@ class TestPlugins(unittest.TestCase):
     acc1 = session.run(accuracy, feed_dict=test_batch_fd)
     print 'final accuracy',acc1
     self.assertTrue(acc1>=0.9)
+    session.close()
 
 
 if __name__ == "__main__":
   logging.basicConfig(level=logging.INFO)
+  # default is to test just on
+  # tensorflowxcomp.SparseMatDenseMsgCrossCompiler adding command line
+  # arguments 'theano' and 'dense' will add more tests...
+  if 'theano' in sys.argv[1:]:
+    TESTED_COMPILERS.append(theanoxcomp.SparseMatDenseMsgCrossCompiler)
+  if 'dense' in sys.argv[1:]:
+    TESTED_COMPILERS.append(tensorflowxcomp.DenseMatDenseMsgCrossCompiler)
+  if 'theano' in sys.argv[1:] and 'dense' in sys.argv[1:]:
+    TESTED_COMPILERS.append(theanoxcomp.DenseMatDenseMsgCrossCompiler)
+  print 'TESTED_COMPILERS',TESTED_COMPILERS
   unittest.main()

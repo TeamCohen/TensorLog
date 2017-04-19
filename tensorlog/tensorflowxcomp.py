@@ -23,6 +23,10 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     self.sessionInitialized = None
     logging.debug('TensorFlowCrossCompiler initialized %.3f Gb' % comline.memusage())
 
+  def close(self):
+    if self.session is not None:
+      self.session.close()
+
   #
   # tensorflow specific routines
   #

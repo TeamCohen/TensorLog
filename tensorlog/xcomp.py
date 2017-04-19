@@ -58,6 +58,11 @@ class AbstractCrossCompiler(object):
   # external UI
   #
 
+  def close(self):
+    """ Release any resources
+    """
+    pass
+
   def inference(self,mode):
     """ Returns (args,inferenceExpr) """
     mode = self.ensureCompiled(mode)

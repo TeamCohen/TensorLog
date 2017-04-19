@@ -5,6 +5,7 @@ import os
 
 from tensorlog import dataset
 from tensorlog import matrixdb
+from tensorlog import version
 
 #
 # utilities for reading command lines
@@ -26,6 +27,7 @@ def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]
 
     argspec = ["db=", "proppr", "prog=", "trainData=", "testData=", "help", "logging="]
     try:
+        print "Tensorlog v%s (C) William W. Cohen and Carnegie Mellon University, 2016-2017" % version.VERSION
         optlist,args = getopt.getopt(argv, 'x', argspec)
         if extraArgConsumer:
             if args:
