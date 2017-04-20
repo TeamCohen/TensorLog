@@ -1,6 +1,6 @@
 Should I switch from comline to gflags?
 
-How do I set up examples and tests?
+How do I set up examples and tests? do I want to move them from datasets?
  - demos/foo/
     tf-expt.py --action [train|test] ...
     nat-expt.py ... # native learning code
@@ -16,9 +16,10 @@ How do I set up examples and tests?
  - amie-qa?
  - fb15k? - scalability
 
-easy:
+EASY:
  - program depth as config option
- - tlog_input_placeholder?
+ - simple.tlog_input_placeholder
+ - duplicate (c) notice in interp
 
 Deep Thoughts:
 

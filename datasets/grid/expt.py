@@ -11,18 +11,21 @@ import random
 import math
 import time
 
-from tensorlog import declare
-from tensorlog import matrixdb
-from tensorlog import dataset
 from tensorlog import comline
-from tensorlog import program
-from tensorlog import funs
-from tensorlog import ops
+from tensorlog import dataset
+from tensorlog import declare
 from tensorlog import expt
+from tensorlog import funs
+from tensorlog import interp
 from tensorlog import learn
+from tensorlog import matrixdb
+from tensorlog import ops
 from tensorlog import plearn
+from tensorlog import program
 
-# results july 14
+VISUALIZE = False
+
+# results july 14, 2016?
 #
 # published experiments used 0.5 for EDGE_WEIGHT and learning;
 # dropping this down to 0.2 gives good results for size 16-24;
@@ -37,7 +40,7 @@ from tensorlog import plearn
 
 EDGE_WEIGHT = 0.2
 
-def nodeName(i,j): 
+def nodeName(i,j):
     return '%d,%d' % (i,j)
 
 def visualizeLearned(db,n):
@@ -60,19 +63,15 @@ def visualizeLearned(db,n):
                         else:
                             weight[(dst,src)] = wFrom-wTo
                             g.add_edge(dst,src,weight=weight[(dst,src)])
-                            
+
                             #print "weight %s -> %s" % (src,dst),m[db.stab.getId(src),db.stab.getId(dst)]
 
     #color the edges with 10 different int values
-#    maxw = max(weight.values())
-#    minw = min(weight.values())
-#    def colorCode(w):
-#        return round(10 * (w-minw) / (maxw-minw))
     weightList = sorted(weight.values())
     def colorCode(w):
         return round(10*float(weightList.index(w))/len(weightList))
     edgeColors = map(lambda e:colorCode(weight.get(e,0)), g.edges())
-        
+
     pos = {}
     #position the nodes
     for i in range(n+1):
@@ -85,7 +84,7 @@ def visualizeLearned(db,n):
     networkx.draw(g,pos,node_color='#A0CBE2',width=4,edge_color=edgeColors,edge_cmap=plt.cm.cool,
                   with_labels=True,node_size=400)
     plt.savefig("visualize.png") # save as png
-    #plt.show() # display                        
+    #plt.show() # display
 
 def generateGrid(n,outf):
     fp = open(outf,'w')
@@ -110,11 +109,8 @@ def generateData(n,trainFile,testFile):
             fp = fpTrain if r.random()<0.67 else fpTest
             fp.write('\t'.join(['path',x,y]) + '\n')
 
-if __name__=="__main__":
-
-    # usage: acc [grid-size] [maxDepth] [epochs]"
-    #        time [grid-size] [maxDepth] "
-
+# parse command line args
+def getargs():
     goal = 'acc'
     if len(sys.argv)>1:
         goal = sys.argv[1]
@@ -122,12 +118,15 @@ if __name__=="__main__":
     if len(sys.argv)>2:
         n = int(sys.argv[2])
     maxD = round(n/2.0)
-    if len(sys.argv)>3:    
+    if len(sys.argv)>3:
         maxD = int(sys.argv[3])
     epochs = 20
     if len(sys.argv)>4:
         epochs = int(sys.argv[4])
+    return (goal,n,maxD,epochs)
 
+# generate all inputs for an accuracy (or timing) experiment
+def genInputs(n):
     #generate grid
     stem = 'inputs/g%d' % n
 
@@ -137,55 +136,67 @@ if __name__=="__main__":
 
     generateGrid(n,factFile)
     generateData(n,trainFile,testFile)
+    return (factFile,trainFile,testFile)
+
+# run timing experiment
+def timingExpt(prog):
+    times = []
+    startNode = nodeName(1,1)
+    for d in [4,8,16,32,64,99]:
+        print 'depth',d,
+        ti = interp.Interp(prog)
+        ti.prog.maxDepth = d
+        start = time.time()
+        ti.prog.evalSymbols(declare.asMode("path/io"), [startNode])
+        elapsed = time.time() - start
+        times.append(elapsed)
+        print 'time',elapsed,'sec'
+    return times
+
+# run accuracy experiment
+def accExpt(prog,trainFile,testFile,n,maxD,epochs):
+    print 'grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (n,n,epochs,maxD)
+    trainData = dataset.Dataset.loadExamples(prog.db,trainFile)
+    testData = dataset.Dataset.loadExamples(prog.db,testFile)
+    prog.db.markAsParam('edge',2)
+    prog.maxDepth = maxD
+    # 20 epochs and rate=0.1 is ok for grid size up to about 10-12
+    # then it gets sort of chancy
+    learner = plearn.ParallelFixedRateGDLearner(
+        prog,
+        epochs=epochs,
+        parallel=40,
+        miniBatchSize=25,
+        regularizer=learn.L2Regularizer(),
+        epochTracer=learn.EpochTracer.cheap,
+        rate=0.01)
+    params = {'prog':prog,
+              'trainData':trainData, 'testData':testData,
+              'savedTestPredictions':'tmp-cache/test.solutions.txt',
+              'savedTestExamples':'tmp-cache/test.examples',
+              'learner':learner,
+    }
+    NP.seterr(divide='raise')
+    return expt.Expt(params).run()
+
+def runMain():
+
+    # usage: acc [grid-size] [maxDepth] [epochs]"
+    #        time [grid-size] [maxDepth] "
+    (goal,n,maxD,epochs) = getargs()
+    (factFile,trainFile,testFile) = genInputs(n)
 
     db = matrixdb.MatrixDB.loadFile(factFile)
     prog = program.Program.loadRules("grid.ppr",db)
 
-    startNode = nodeName(1,1)
     if goal=='time':
-        for d in [4,8,16,32,64,99]:
-            print 'depth',d,
-            ti = program.Interp(prog)
-            ti.prog.maxDepth = d
-            start = time.time()
-            ti.prog.evalSymbols(declare.asMode("path/io"), [startNode])
-            print 'time',time.time() - start,'sec'
-
-
+        print timingExpt(prog)
     elif goal=='acc':
-        print 'grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (n,n,epochs,maxD)
-
-        trainData = dataset.Dataset.loadExamples(db,trainFile)
-        testData = dataset.Dataset.loadExamples(db,testFile)
-        prog.db.markAsParam('edge',2)
-        prog.maxDepth = maxD
-
-        # 20 epochs and rate=0.1 is ok for grid size up to about 10-12
-        # then it gets sort of chancy
-
-        learner = plearn.ParallelFixedRateGDLearner(
-#        learner = plearn.ParallelAdaGradLearner(
-            prog, 
-            epochs=epochs,
-            parallel=40,
-            miniBatchSize=25,
-            regularizer=learn.L2Regularizer(),
-            epochTracer=learn.EpochTracer.cheap,
-            rate=0.01)
-
-        params = {'prog':prog,
-                  'trainData':trainData, 'testData':testData,
-                  'savedTestPredictions':'tmp-cache/test.solutions.txt',
-                  'savedTestExamples':'tmp-cache/test.examples',
-                  'learner':learner,
-        }
-        NP.seterr(divide='raise')
-
-        #prog.normalize = 'log+softmax'
-        #funs.conf.trace = True
-        #ops.conf.trace = True
-        #ops.conf.long_trace = True
-        ops.conf.max_trace = True
-        expt.Expt(params).run()
-        if False and NETWORKX:
+        print accExpt(prog,trainFile,testFile,n,maxD,epochs)
+        if VISUALIZE and NETWORKX:
             visualizeLearned(db,n)
+    else:
+        assert False,'bad goal %s' % goal
+
+if __name__=="__main__":
+    runMain()
