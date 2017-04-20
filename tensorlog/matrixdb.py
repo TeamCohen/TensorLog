@@ -392,7 +392,7 @@ class MatrixDB(object):
       for line in open(symbolFile):
         sym = line.strip()
         i = db._stab[typeName].getId(sym)
-        assert i==k,'symbols out of sync for symbol "%s" type %d: expected index %d actual %d' % (sym,typeName,i,k)
+        assert i==k,'symbols out of sync for symbol "{sym}" type {typ}: expected index {index} actual {actual}'.format(sym=sym,typ=typeName,index=i,actual=k)
         k += 1
     symbolFile = os.path.join(direc,"symbols.txt")
     if os.path.isfile(symbolFile):

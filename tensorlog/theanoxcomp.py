@@ -18,11 +18,11 @@ from tensorlog import learnxcomp
 class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
 
   def _buildLossExpr(self,mode):
-    target_y = self._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self.ws.inferenceOutputType)
-    self.ws.dataLossArgs = self.ws.inferenceArgs + [target_y]
-#     print "inferenceArgs:",self.ws.inferenceArgs
-    self.ws.dataLossExpr = (-target_y * self._applyOpToNonzerosOfDense(TT.log,self.ws.inferenceExpr)).mean()
-    self.ws.dataLossGradExprs = theano.grad(self.ws.dataLossExpr, self.getParamVariables(mode))
+    target_y = self._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self._wsDict[mode].inferenceOutputType)
+    self._wsDict[mode].dataLossArgs = self._wsDict[mode].inferenceArgs + [target_y]
+    placeholder = map(lambda x:0*x, self.getParamVariables(mode)) # theano doesn't like it when some paramVariables don't appear in the loss expr
+    self._wsDict[mode].dataLossExpr = (-target_y * self._applyOpToNonzerosOfDense(TT.log,self._wsDict[mode].inferenceExpr)+sum(placeholder)).mean()
+    self._wsDict[mode].dataLossGradExprs = theano.grad(self._wsDict[mode].dataLossExpr, self.getParamVariables(mode))
 
   def _asOneInputFunction(self,arg1,expr,wrapInputs,unwrapOutputs):
     pyfun = theano.function(inputs=[arg1], outputs=expr)
