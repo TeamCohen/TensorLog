@@ -101,16 +101,18 @@ if __name__=="__main__":
     }
 
     # run the experiment
-    expt.Expt(params).run()
+    #expt.Expt(params).run()
 
     stem=settings['dataset']
-    for compilerClass in CROSSCOMPILE:
+    prog = optdict['prog']
+    for compilerClass in CROSSCOMPILERS:
         print compilerClass
         xc = compilerClass(prog)
         # compile everything
         for mode in optdict['trainData'].modesToLearn():
+            print 'compiling',mode
             xc.ensureCompiled(mode)
-        learner = CROSSLEARN[compilerClass](prog,xc)
+        learner = CROSSLEARNERS[compilerClass](prog,xc,epochs=settings['epochs'],rate=settings['rate'])
         params.update({
                   'savedTestPredictions':'tmp-cache/%s-test.%s.solutions.txt' % (stem,compilerClass.__name__),
                   'savedTestExamples':'tmp-cache/%s-test.%s.examples' % (stem,compilerClass.__name__),

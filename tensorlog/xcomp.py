@@ -351,9 +351,9 @@ class AbstractCrossCompiler(object):
       self.ws = self._wsDict[mode] = Workspace(self)
       startTime = time.time()
       def status(msg): logging.info('%s time %.3f sec mem %.3f Gb' % (msg,time.time()-startTime,comline.memusage()))
-      status('calling compile')
+      status('compiling %s'%str(mode))
       fun = self.ws.tensorlogFun = self.prog.compile(mode)
-      status('tensorlog compilation complete')
+      status('tensorlog compilation complete; cross-compiling %s'%str(mode))
       self._doCompile(fun,mode)
       status('tensorlog->target language compilation complete')
     return mode
