@@ -151,8 +151,6 @@ class Interp(object):
 
 if __name__ == "__main__":
 
-    print "Tensorlog v%s (C) William W. Cohen and Carnegie Mellon University, 2016-2017" % version.VERSION
-
     optdict,args = comline.parseCommandLine(sys.argv[1:])
     ti = Interp(optdict['prog'],trainData=optdict.get('trainData'),testData=optdict.get('testData'))
 

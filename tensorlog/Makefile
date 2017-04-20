@@ -1,4 +1,4 @@
-# unit tests that take a few secs to run
+# unit tests that take a few secs to run - all of these are about a minute 
 short-tests:
 	python -m unittest testtensorlog
 	python -m unittest testxcomp
