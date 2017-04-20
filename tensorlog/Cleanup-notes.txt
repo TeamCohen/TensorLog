@@ -1,17 +1,10 @@
 Should I switch from comline to gflags?
 
 How do I set up examples and tests? do I want to move them from datasets?
- - demos/foo/
-    tf-expt.py --action [train|test] ...
-    nat-expt.py ... # native learning code
-    make short-test
-    make long-test
-    make download - for large datasets
- foos:
  - cora
  - wordnet
  - smokers
- - grid
+ - grid - converted to unit test
  - wikimovies
  - amie-qa?
  - fb15k? - scalability
