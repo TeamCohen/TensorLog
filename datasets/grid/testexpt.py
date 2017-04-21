@@ -5,7 +5,7 @@ import expt
 from tensorlog import matrixdb
 from tensorlog import program
 
-class TestAccNative(unittest.TestCase):
+class TestNative(unittest.TestCase):
 
   def setUp(self):
     (self.n,self.maxD,self.epochs) = (16,8,20)
@@ -18,6 +18,7 @@ class TestAccNative(unittest.TestCase):
     self.assertTrue(acc >= 0.95)
     times = expt.timingExpt(self.prog)
     for t in times:
+      print 'time',t
       self.assertTrue(t < 0.005)
 
 class TestAccTF(unittest.TestCase):

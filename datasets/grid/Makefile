@@ -8,7 +8,7 @@ actual.txt: expt.log
 check: actual.txt
 	diff -y actual.txt expected.txt || true
 
-unittests:
+unittest:
 	python testexpt.py 
 
 test:

@@ -13,6 +13,9 @@ eval.log: expt.log
 check: actual.txt
 	diff -y actual.txt expected.txt || true
 
+unittest:
+	python testexpt.py 
+
 actual.txt: expt.log eval.log
 	echo \# actual output of expt on `date` > actual.txt
 	grep training.*done expt.log >> actual.txt

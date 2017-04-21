@@ -1,7 +1,11 @@
-# unit tests that take a few secs to run - all of these are about a minute 
+# unit tests that take a few secs to run - all of these are about a minute all told
+
 short-tests:
 	python -m unittest testtensorlog
 	python -m unittest testxcomp
+
+all-automatic-tests: short-tests grid-test cora-test
+
 
 # tests that take a few minutes to run
 # run 'make prepare-for-long-tests' in a fresh install before you run these
@@ -16,8 +20,16 @@ fb15k-valid.db:
 	python matrixdb.py --serialize test-data/fb15k-valid.cfacts fb15k-valid.db
 
 #
-# individual long tests
+# individual longer tests, which should take about 1min each
 #
+
+grid-test:
+	(cd ../datasets/grid/; make clean; make check; make clean; make unittest)
+
+cora-test:
+	(cd ../datasets/cora/; make clean; make check; make clean; make unittest)
+
+# not converted yet....
 
 benchmark-test:
 	python benchmark.py
@@ -25,11 +37,6 @@ benchmark-test:
 wnet-test:
 	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet/; make clean; make; make check)
 
-cora-test:
-	(export PYTHONPATH=`pwd`; cd ../datasets/cora/; make clean; make; make check)
-
-grid-test:
-	(cd ../datasets/grid/; make clean; make unittests)
 
 textcattoy-expt:
 	python -m expt --db test/textcattoy.cfacts --prog test/textcat.ppr --trainData test/toytrain.exam --testData test/toytrain.exam --proppr
