@@ -1,4 +1,5 @@
-
+training is much slower with tensorflow, presumably because the
+vectors are really wide
 
 ==============================================================================
 

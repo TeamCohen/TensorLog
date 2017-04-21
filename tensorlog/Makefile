@@ -29,13 +29,14 @@ grid-test:
 cora-test:
 	(cd ../datasets/cora/; make clean; make check; make clean; make unittest)
 
+
 # not converted yet....
+
+wnet-test:
+	(cd ../datasets/wordnet/; make clean; make; make check)
 
 benchmark-test:
 	python benchmark.py
-
-wnet-test:
-	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet/; make clean; make; make check)
 
 
 textcattoy-expt:

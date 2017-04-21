@@ -3,7 +3,7 @@
 expt: expt.log eval.log
 
 expt.log: inputs/wnet.cfacts inputs/wnet-learned.ppr inputs/wnet-train.exam inputs/wnet-valid.exam
-	python wnet-expt.py > expt.log
+	python expt.py > expt.log
 
 eval.log: expt.log
 	proppr eval tmp-cache/wnet-test.examples tmp-cache/hypernym-test.solutions.txt --metric auc --defaultNeg > eval.log
