@@ -44,7 +44,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     return closure
 
   def _exprListAsUpdateFunction(self,arg1,arg2,exprList,wrapInputs,unwrapOutputs):
-    pyfunReturningList = theano.function(inputs=[arg1,arg2], outputs=exprList, mode='FAST_COMPILE')
+    pyfunReturningList = theano.function(inputs=[arg1,arg2], outputs=exprList, )
 #     print "arg1",arg1
 #     print "arg2",arg2
     def closure(rawInput1,rawInput2):
@@ -234,7 +234,7 @@ class GD(Optimizer):
                 - TT.cast(self.learning_rate,v.dtype) 
                 * (TT.cast(dloss,v.dtype) if isinstance(dloss.type,TT.type.TensorType) else dloss)) 
                for v,dloss in zip(var_list,dlosses)]
-    trainStep = theano.function(inputs, expr, updates=updates, mode='FAST_COMPILE')
+    trainStep = theano.function(inputs, expr, updates=updates, )
     return trainStep
 
 
