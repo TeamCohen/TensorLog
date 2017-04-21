@@ -94,7 +94,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
         (stepSummary, _) = self.session.run([self.summaryMergeAll,trainStep],feed_dict=fd)
         self.summaryWriter.add_summary(stepSummary,i)
 
-    trainStep = optimizer.minimize(self.ws.dataLossExpr, var_list=self.getParamVariables(mode))
+    trainStep = optimizer.minimize(self._wsDict[mode].dataLossExpr, var_list=self.getParamVariables(mode))
     self.ensureSessionInitialized()
     if not minibatchSize:
       fd = self.getFeedDict(mode,X,Y,wrapped)
@@ -139,7 +139,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
     assert optimizer is None,'optimizers not supported yet'
     optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
-    train_step = optimizer.minimize(self.ws.dataLossExpr, var_list=self.getParamVariables(targetMode))
+    train_step = optimizer.minimize(self._wsDict[targetMode].dataLossExpr, var_list=self.getParamVariables(targetMode))
     X = trainData.getX(targetMode)
     Y = trainData.getY(targetMode)
     X,Y = self._ensureWrapped(X,Y,False)
@@ -234,17 +234,17 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
       self.summaryMergeAll = tf.summary.merge_all()
 
   def _buildLossExpr(self,mode):
-    target_y = self._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self.ws.inferenceOutputType)
-    self.ws.dataLossArgs = self.ws.inferenceArgs + [target_y]
+    target_y = self._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self._wsDict[mode].inferenceOutputType)
+    self._wsDict[mode].dataLossArgs = self._wsDict[mode].inferenceArgs + [target_y]
     # we want to take the log of the non-zero entries and leave the
     # zero entries alone, so add 1 to all the zero indices, then take
     # a log of that.
     inferenceReplacing0With1 = tf.where(
-        self.ws.inferenceExpr>0.0,
-        self.ws.inferenceExpr,
-        tf.ones(tf.shape(self.ws.inferenceExpr), tf.float32))
-    self.ws.dataLossExpr = tf.reduce_sum(-target_y * tf.log(inferenceReplacing0With1))
-    self.ws.dataLossGradExprs = tf.gradients(self.ws.dataLossExpr,self.getParamVariables(mode))
+        self._wsDict[mode].inferenceExpr>0.0,
+        self._wsDict[mode].inferenceExpr,
+        tf.ones(tf.shape(self._wsDict[mode].inferenceExpr), tf.float32))
+    self._wsDict[mode].dataLossExpr = tf.reduce_sum(-target_y * tf.log(inferenceReplacing0With1))
+    self._wsDict[mode].dataLossGradExprs = tf.gradients(self._wsDict[mode].dataLossExpr,self.getParamVariables(mode))
 
   def _asOneInputFunction(self,arg1,expr,wrapInputs,unwrapOutputs):
     def closure(rawInput1,session=None):
