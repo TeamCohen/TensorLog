@@ -33,9 +33,3 @@ clean:
 	rm -rf *~ *.log actual.txt
 	rm -rf cora-trained.db cora.db 
 
-####################
-
-# other experiments
-
-linear-expt: inputs/cora-linear.cfacts
-	python cora-linear-expt.py
