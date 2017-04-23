@@ -2,7 +2,8 @@
 
 expt: expt.log eval.log
 
-expt.log: inputs/wnet.cfacts inputs/wnet-learned.ppr inputs/wnet-train.exam inputs/wnet-valid.exam
+# expt.py reads inputs/* and outputs a log file
+expt.log: inputs inputs/wnet.cfacts inputs/wnet-learned.ppr inputs/wnet-train.exam inputs/wnet-valid.exam
 	python expt.py > expt.log
 
 eval.log: expt.log
@@ -18,13 +19,16 @@ inputs:
 tmp-cache:
 	mkdir $@
 
+# convert raw/train.exam, raw/valid.exam to inputs/train.exam, ...
 inputs/wnet-train.exam inputs/wnet-valid.exam:
 	python bin/convert-examples.py
 
+# convert the raw/(train,valid).cfacts and the inputs/wnet-ruleids.cfacts and generate wnet.cfacts
 inputs/wnet.cfacts: inputs/wnet-ruleids.cfacts
 	cut -f2- raw/train.cfacts raw/valid.cfacts | perl -nae 'print join("\t",$$F[0],"s".$$F[1],"s".$$F[2]),"\n"' > inputs/wnet-core.cfacts
 	cat inputs/wnet-*.cfacts > inputs/wnet.cfacts
 
+# convert the rules from raw/train-learned.ppr to inputs/wnet-learned.ppr and inputs/wnet-ruleids.cfacts
 inputs/wnet-learned.ppr inputs/wnet-ruleids.cfacts:
 	python bin/convert-rules.py
 

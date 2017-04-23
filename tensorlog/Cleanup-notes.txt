@@ -1,10 +1,10 @@
 Should I switch from comline to gflags?
 
 How do I set up examples and tests? do I want to move them from datasets?
- - cora
- - wordnet
+ - cora -done
+ - wordnet -slow! maybe look at a smaller sample? maybe just the nouns or something?
  - smokers
- - grid - converted to unit test
+ - grid - done
  - wikimovies
  - amie-qa?
  - fb15k? - scalability
@@ -12,7 +12,7 @@ How do I set up examples and tests? do I want to move them from datasets?
 EASY:
  - program depth as config option
  - simple.tlog_input_placeholder
- - duplicate (c) notice in interp
+ - duplicate (c) notice in interp -done
 
 Deep Thoughts:
 
