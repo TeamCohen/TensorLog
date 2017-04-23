@@ -140,10 +140,13 @@ def memusage():
     """ Memory used by the current process in Gb
     """
     proc_status = '/proc/%d/status' % os.getpid()
-    t = open(proc_status)
-    v = t.read()
-    t.close()
-    i = v.index('VmSize:')
-    v = v[i:].split(None,3)
-    scale = {'kB': 1024.0, 'mB': 1024.0*1024.0, 'KB': 1024.0, 'MB': 1024.0*1024.0}
-    return (float(v[1]) * scale[v[2]]) / (1024.0*1024.0*1024.0)
+    try:
+        t = open(proc_status)
+        v = t.read()
+        t.close()
+        i = v.index('VmSize:')
+        v = v[i:].split(None,3)
+        scale = {'kB': 1024.0, 'mB': 1024.0*1024.0, 'KB': 1024.0, 'MB': 1024.0*1024.0}
+        return (float(v[1]) * scale[v[2]]) / (1024.0*1024.0*1024.0)
+    except IOError:
+        return 0.0
