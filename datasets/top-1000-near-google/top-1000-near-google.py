@@ -2,49 +2,28 @@ import os.path
 import scipy.sparse as SS
 import scipy.io
 
-import expt
-import tensorlog
-import matrixdb
-import mutil
+from tensorlog import expt
+from tensorlog import comline
+from tensorlog import learn
 import logging
-import funs
 
-#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 stem = "top-1000-near-google"
-
-def uncacheDB(dbFile):
-    if not os.path.exists(dbFile):
-        print 'creating',dbFile,'...'
-        db = matrixdb.MatrixDB.loadFile('%s.cfacts' % stem)
-        db.addFile("%s-fact.cfacts" % stem)
-        db.addFile("%s-rule.cfacts" % stem)
-        db.serialize(dbFile)
-        print 'created',dbFile
-        return db
-    else:
-        return matrixdb.MatrixDB.deserialize(dbFile)
-
-def uncacheMatPairs(dbFile,exampleFile):
-        db = uncacheDB(dbFile)
-        print 'preparing examples...'
-        d = expt.Expt.propprExamplesAsData(db,exampleFile)
-        print 'prepared',d.keys()
-        return d
         
 if __name__=="__main__":
-    dTrain = uncacheMatPairs('%s.db' % stem,'raw/%s.train.examples' % stem)
-    dTest = uncacheMatPairs('%s.db' % stem,'raw/%s.test.examples' % stem)
-    prog = tensorlog.ProPPRProgram.load(["%s.db" % stem,"%s-recursive.ppr" % stem])
-    prog.setRuleWeights(prog.db.ones())
+    optdict,args = comline.parseCommandLine('--prog {stem}-recursive.ppr --proppr --db tmp-cache/{stem}.db|{stem}.cfacts:{stem}-fact.cfacts:{stem}-rule.cfacts --train tmp-cache/{stem}-train.dset|raw/{stem}.train.examples --test tmp-cache/{stem}-test.dset|raw/{stem}.test.examples'.format(stem=stem).split())
+    prog = optdict['prog']
+    prog.setRuleWeights()#prog.db.ones())
     prog.maxDepth=4
-    params = {'initProgram':prog,
+    params = {'prog':prog,
               #'theoryPred':'concept_atdate',
-              'trainData':dTrain,
-              'testData':dTest,
+              'trainData':optdict['trainData'],
+              'testData':optdict['testData'],
               'savedModel':'%s-trained.db' % stem,
-              'savedTestPreds':'%s-test.solutions.txt' % stem,
+              'savedTestPredictions':'%s-test.solutions.txt' % stem,
               'savedTrainExamples':'%s-train.examples' % stem,
               'savedTestExamples':'%s-test.examples' % stem,
+              'learner':learn.FixedRateGDLearner(prog,epochs=5)
     }
-    expt.BatchExpt(params,{'epochs':5}).run()
+    expt.Expt(params).run()

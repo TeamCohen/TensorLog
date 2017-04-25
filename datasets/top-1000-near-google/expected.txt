@@ -1,0 +1,3 @@
+# actual output of expt on Tue Apr 25 14:33:28 EDT 2017
+training FixedRateGDLearner ... done in 115.187 sec
+. micro: 0.804093567251
