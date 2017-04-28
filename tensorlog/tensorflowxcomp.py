@@ -66,6 +66,13 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     assert len(self._wsDict[mode].inferenceArgs)==1
     return self._wsDict[mode].inferenceArgs[0].name
 
+  def getInputPlaceholder(self,mode):
+    """ The input placeholder
+    """
+    mode = self.ensureCompiled(mode)
+    assert len(self._wsDict[mode].inferenceArgs)==1
+    return self._wsDict[mode].inferenceArgs[0]
+
   def getTargetOutputName(self,mode):
     """ String key for the target-output placeholder
     """
@@ -74,7 +81,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     return self._wsDict[mode].dataLossArgs[-1].name
 
   def getTargetOutputPlaceholder(self,mode):
-    """ String key for the target-output placeholder
+    """  The target-output placeholder
     """
     mode = self.ensureCompiled(mode)
     assert len(self._wsDict[mode].dataLossArgs)==2

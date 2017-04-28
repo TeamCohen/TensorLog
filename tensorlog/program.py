@@ -9,6 +9,7 @@ import collections
 import numpy as np
 
 from tensorlog import bpcompiler
+from tensorlog import config
 from tensorlog import comline
 from tensorlog import declare
 from tensorlog import funs
@@ -17,10 +18,9 @@ from tensorlog import mutil
 from tensorlog import opfunutil
 from tensorlog import parser
 
-DEFAULT_MAXDEPTH=10
-DEFAULT_NORMALIZE='softmax'
-#DEFAULT_NORMALIZE='log+softmax' # equiv to 'ordinary' normalization
-#DEFAULT_NORMALIZE='none'        # don't normalize
+conf = config.Config()
+conf.max_depth = 10;        conf.help.max_depth = "Maximum depth of program recursion"
+conf.normalize = 'softmax'; conf.help.normalize = "Default normalization, set to 'softmax', 'log+softmax', or 'none'"
 
 ##############################################################################
 ## a program
@@ -32,8 +32,8 @@ class Program(object):
         self.db = db
         self.function = {}
         self.rules = rules
-        self.maxDepth = DEFAULT_MAXDEPTH
-        self.normalize = DEFAULT_NORMALIZE
+        self.maxDepth = conf.max_depth
+        self.normalize = conf.normalize
         self.plugins = plugins if (plugins is not None) else Plugins()
         # check the rules aren't proppr formatted
         def checkRule(r):

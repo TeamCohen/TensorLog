@@ -173,9 +173,9 @@ class TestSmallProofs(unittest.TestCase):
     self.inference_check(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
 
   def test_rec1(self):
-    program.DEFAULT_MAXDEPTH=4
+    program.conf.max_depth=4
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
-    program.DEFAULT_MAXDEPTH=10
+    program.conf.max_depth=10
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 11.0})
 
   def test_const_output(self):

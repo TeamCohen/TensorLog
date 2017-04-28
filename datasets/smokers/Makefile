@@ -7,6 +7,9 @@ actual.txt:
 check:
 	diff -y actual.txt expected.txt || true
 
+unittest:
+	python testexpt.py 
+
 clean:
 	rm -f *~ *.pyc actual.txt
 

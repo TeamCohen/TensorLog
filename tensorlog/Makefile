@@ -4,8 +4,7 @@ short-tests:
 	python -m unittest testtensorlog
 	python -m unittest testxcomp
 
-all-automatic-tests: short-tests grid-test cora-test
-
+all-automatic-tests: short-tests grid-test cora-test wikimovies-test simple-comline-test smokers-test
 
 # tests that take a few minutes to run
 # run 'make prepare-for-long-tests' in a fresh install before you run these
@@ -29,6 +28,14 @@ grid-test:
 cora-test:
 	(cd ../datasets/cora/; make clean; make check; make clean; make unittest)
 
+wikimovies-test:
+	(cd ../datasets/wikimovies/; make clean; make unittest)
+
+smokers-test:
+	(cd ../datasets/smokers/; make clean; make unittest)
+
+simple-comline-test:
+	python simple.py experiment --db test-data/textcattoy.cfacts --prog test-data/textcat.ppr --train test-data/toytrain.exam  --test test-data/toytest.exam
 
 # not converted yet....
 
@@ -37,10 +44,6 @@ wnet-test:
 
 benchmark-test:
 	python benchmark.py
-
-
-textcattoy-expt:
-	python -m expt --db test/textcattoy.cfacts --prog test/textcat.ppr --trainData test/toytrain.exam --testData test/toytrain.exam --proppr
 
 # debug-test needs to be interactive
 debug-test:
