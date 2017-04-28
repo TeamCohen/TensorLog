@@ -169,7 +169,7 @@ class AbstractCrossCompiler(object):
   def unwrapOutput(self,y):
     """ Convert output to scipy matrix
     """
-    return self._wrapOutput(y)
+    return self._unwrapOutput(y)
 
   def unwrapParam(self,y):
     """ Convert output to scipy matrix

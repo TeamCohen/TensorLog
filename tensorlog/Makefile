@@ -3,6 +3,7 @@
 short-tests:
 	python -m unittest testtensorlog
 	python -m unittest testxcomp
+	python -m unittest testtf
 
 all-automatic-tests: short-tests grid-test cora-test wikimovies-test simple-comline-test smokers-test
 

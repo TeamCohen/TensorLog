@@ -110,22 +110,22 @@ class Compiler(object):
   def get_database(self):
     return self.db
 
-  def proof_count(self,mode):
+  def proof_count(self,mode,inputs=None):
     """ An expression for the inference associated with a mode
     """
-    args,expr = self.xc.proofCount(declare.asMode(mode))
+    args,expr = self.xc.proofCount(declare.asMode(mode),inputs=inputs)
     return expr
 
-  def inference(self,mode):
+  def inference(self,mode,inputs=None):
     """ An expression for the inference associated with a mode
     """
-    args,expr = self.xc.inference(declare.asMode(mode))
+    args,expr = self.xc.inference(declare.asMode(mode),inputs=inputs)
     return expr
 
-  def loss(self,mode):
+  def loss(self,mode,inputs=None):
     """ An expression for the unregularized loss associated with a mode
     """
-    args,expr = self.xc.dataLoss(declare.asMode(mode))
+    args,expr = self.xc.dataLoss(declare.asMode(mode),inputs=inputs)
     return expr
 
   def trainable_db_variables(self,mode,for_optimization=False):
