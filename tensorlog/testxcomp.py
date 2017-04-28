@@ -357,7 +357,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
     for compilerClass in [tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
                           tensorflowxcomp.SparseMatDenseMsgCrossCompiler]:
       xc = compilerClass(self.prog)
-      xc.ensureCompiled(self.mode)
+      xc.ensureCompiled(self.mode,inputs=None)
       pred = self.prog.eval(self.mode,[self.X])
       d0 = self.prog.db.matrixAsSymbolDict(pred)
       for i,d in d0.items():
@@ -602,7 +602,7 @@ class TestMultiModeXC(unittest.TestCase):
       xc = compilerClass(self.prog)
       # compile everything
       for mode in self.dset.modesToLearn():
-        xc.ensureCompiled(mode)
+        xc.ensureCompiled(mode,inputs=None)
       # check the variables
       optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
       session = tf.Session()

@@ -63,9 +63,9 @@ class AbstractCrossCompiler(object):
     """
     pass
 
-  def inference(self,mode):
+  def inference(self,mode,inputs=None):
     """ Returns (args,inferenceExpr) """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     return self._wsDict[mode].inferenceArgs, self._wsDict[mode].inferenceExpr
 
   def inferenceFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
@@ -80,18 +80,18 @@ class AbstractCrossCompiler(object):
     assert len(args)==1
     return self._asOneInputFunction(args[0],expr,wrapInputs,unwrapOutputs)
 
-  def inferenceOutputType(self,mode):
+  def inferenceOutputType(self,mode,inputs=None):
     """ The type associated with the output of a tensorlog function.
     """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     return self._wsDict[mode].tensorlogFun.outputType
 
-  def proofCount(self,mode):
+  def proofCount(self,mode,inputs=None):
     """ Returns (args,proofCountExpr) """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     return self._wsDict[mode].proofCountArgs, self._wsDict[mode].proofCountExpr
 
-  def proofCountFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
+  def proofCountFunction(self,mode,inputs=None,wrapInputs=True,unwrapOutputs=True):
     """Returns a python function which performs counts proofs for the
     queries defined by that mode.  The function takes a length-one
     tuple containing one argument X, which can be a row vector or a
@@ -99,19 +99,19 @@ class AbstractCrossCompiler(object):
     and the number of columns appropriate for the output type of the
     mode.
     """
-    args,expr = self.proofCount(mode)
+    args,expr = self.proofCount(mode,inputs=inputs)
     assert len(args)==1
     return self._asOneInputFunction(args[0],expr,wrapInputs,unwrapOutputs)
 
-  def proofCountOutputType(self,mode):
+  def proofCountOutputType(self,mode,inputs=None):
     """ The type associated with the output of a tensorlog function.
     """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     return self._wsDict[mode].tensorlogFun.outputType
 
-  def dataLoss(self,mode):
+  def dataLoss(self,mode,inputs=None):
     """ Returns (args,dataLossExpr) """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     return self._wsDict[mode].dataLossArgs, self._wsDict[mode].dataLossExpr
 
   def dataLossFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
@@ -123,20 +123,20 @@ class AbstractCrossCompiler(object):
     assert len(args)==2
     return self._asTwoInputFunction(args[0],args[1],expr,wrapInputs,unwrapOutputs)
 
-  def dataLossGrad(self,mode):
+  def dataLossGrad(self,mode,inputs=None):
     """Returns (args,[dataLossGrad1,....,dataLossGradn]), where each grad
     is the gradient of one of the parameters.The order of the grads
     is the same as the parameters.
     """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     return self._wsDict[mode].dataLossArgs, self._wsDict[mode].dataLossGradExprs
 
-  def dataLossGradFunction(self,mode,wrapInputs=True,unwrapOutputs=True):
+  def dataLossGradFunction(self,mode,inputs=None,wrapInputs=True,unwrapOutputs=True):
     """Returns a python function which performs inference for the function
     defined by that mode.  The function takes a single argument which
     is a list of (X,Y).
     """
-    args,exprList = self.dataLossGrad(mode)
+    args,exprList = self.dataLossGrad(mode,inputs=inputs)
     assert len(args)==2
     return self._exprListAsUpdateFunction(args[0],args[1],exprList,wrapInputs,unwrapOutputs)
 
@@ -231,17 +231,17 @@ class AbstractCrossCompiler(object):
     """
     assert False,'abstract method called'
 
-  def getParamVariables(self,mode):
+  def getParamVariables(self,mode,inputs=None):
     """Find target-language variables that are optimized to set the DB
     parameters.  These are the variables that will be optimized in
     learning.  Eg, if a weight vector V is reparameterized by passing
     it through an softplus, this will be the underlying variable V0
     such that softplus(V0)=V.
     """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     return map(lambda key:self._handleExprVar[key], self.prog.getParamList())
 
-  def getParamHandles(self,mode):
+  def getParamHandles(self,mode,inputs=None):
     """Find target-language variables corresponding to DB parameters.
     These are the variables that store or compute the values that
     correspond most closely to the parameters. Eg, if a weight vector
@@ -249,7 +249,7 @@ class AbstractCrossCompiler(object):
     be the variable V such that V=softplus(V0), where V0 is optimized
     in learning.
     """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     return map(lambda key:self._handleExpr[key], self.prog.getParamList())
 
   def parameterFromDBToExpr(self,functor,arity):
@@ -258,18 +258,18 @@ class AbstractCrossCompiler(object):
   def parameterFromDBToVariable(self,functor,arity):
     return self._handleExprVar.get((functor,arity))
 
-  def pprint(self,mode):
+  def pprint(self,mode,inputs=None):
     """Return list of lines in a pretty-print of the underlying, pre-compilation function.
     To actual display these, use something like
       print "\n".join(xcompiler.pprint("predict/io"))
     """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     return self._wsDict[mode].tensorlogFun.pprint()
 
-  def getWorkspace(self,mode):
+  def getWorkspace(self,mode,inputs=None):
     """ Return the workspace associated with a mode
     """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     return self._wsDict[mode]
 
   def _getParamVariables(self):
@@ -343,11 +343,14 @@ class AbstractCrossCompiler(object):
   # compilation
   #
 
-  def ensureCompiled(self,mode):
+  def ensureCompiled(self,mode,inputs=None):
     """Compile a tensorlog function to target language, and cache the
     result.  Returns the canonical name of the mode (which can be a
-    string of a declare.ModeDeclaration) that points to the compiled
-    workspace.
+    string produced by a declare.ModeDeclaration) that points to the
+    compiled workspace.
+
+    Inputs can be used to specify the input placeholders for the
+    inference and loss functions.
     """
 
     if isinstance(mode,str): mode = declare.asMode(mode)
@@ -360,24 +363,26 @@ class AbstractCrossCompiler(object):
       status('calling compile')
       fun = self.ws.tensorlogFun = self.prog.compile(mode)
       status('tensorlog compilation complete')
-      self._doCompile(fun,mode)
+      self._doCompile(fun,mode,inputs)
       status('tensorlog->tensorflow compilation complete')
     return mode
 
-  def _doCompile(self,fun,mode):
+  def _doCompile(self,fun,mode,inputs):
     """Main compilation method.  Can be overridden by subclasses
     """
     self._setupGlobals()
     # build the expression used for inference
     if isinstance(fun,funs.SoftmaxFunction):
       # proofCountExpr is the what we apply the softmax normalization to
-      (self.ws.proofCountArgs,self.ws.proofCountExpr,self.ws.proofCountOutputType) = self._fun2Expr(fun.fun)
+      (self.ws.proofCountArgs,self.ws.proofCountExpr,self.ws.proofCountOutputType) = \
+          self._fun2Expr(fun.fun,sharedInputs=inputs)
       self.ws.inferenceExpr = self._softmaxFun2Expr(self.ws.proofCountExpr,self.ws.proofCountOutputType)
       self.ws.inferenceArgs = self.ws.proofCountArgs
       self.ws.inferenceOutputType = self.ws.proofCountOutputType
     else:
       logging.warn('cannot recover proofCount expression for mode %s -  is it not softmax normalized?' % str(mode))
-      (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = self._fun2Expr(fun)
+      (self.ws.inferenceArgs,self.ws.inferenceExpr,self.ws.inferenceOutputType) = \
+          self._fun2Expr(fun,sharedInputs=inputs)
     # extend the inferenceExpr to also compute loss
     self._buildLossExpr(mode)
     self._finalizeCompile(mode)
