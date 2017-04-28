@@ -5,7 +5,7 @@ import expt
 
 def setup_tlog(maxD,factFile,trainFile,testFile):
   tlog = simple.Compiler(db=factFile,prog="grid.ppr")
-  tlog.prog.db.markAsParam('edge',2)
+  tlog.prog.db.markAsParameter('edge',2)
   tlog.prog.maxDepth = maxD
   trainData = tlog.load_small_dataset(trainFile)
   testData = tlog.load_small_dataset(testFile)

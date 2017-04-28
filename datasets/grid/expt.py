@@ -158,7 +158,7 @@ def accExpt(prog,trainFile,testFile,n,maxD,epochs):
     print 'grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (n,n,epochs,maxD)
     trainData = dataset.Dataset.loadExamples(prog.db,trainFile)
     testData = dataset.Dataset.loadExamples(prog.db,testFile)
-    prog.db.markAsParam('edge',2)
+    prog.db.markAsParameter('edge',2)
     prog.maxDepth = maxD
     # 20 epochs and rate=0.1 is ok for grid size up to about 10-12
     # then it gets sort of chancy

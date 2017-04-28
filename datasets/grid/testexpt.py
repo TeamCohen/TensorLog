@@ -19,7 +19,7 @@ class TestNative(unittest.TestCase):
     times = expt.timingExpt(self.prog)
     for t in times:
       print 'time',t
-      self.assertTrue(t < 0.005)
+      self.assertTrue(t < 0.05)
 
 class TestAccTF(unittest.TestCase):
 
