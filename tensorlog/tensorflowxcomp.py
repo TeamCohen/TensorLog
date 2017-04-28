@@ -87,7 +87,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     assert len(self._wsDict[mode].dataLossArgs)==2
     return self._wsDict[mode].dataLossArgs[-1]
 
-  def getFeedDict(self,mode,X,Y,inputs=None,wrapped=False):
+  def getFeedDict(self,mode,X,Y,wrapped=False,inputs=None):
     """ Create a feed dictionary for training based on X and Y
     """
     mode = self.ensureCompiled(mode,inputs=inputs)
@@ -121,7 +121,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
           fd = self.getFeedDict(mode,miniX,miniY,wrapped=False)
           runAndSummarize(fd,i)
 
-  def accuracy(self,mode,X,Y,inputs=None,wrapped=False):
+  def accuracy(self,mode,X,Y,wrapped=False,inputs=None):
     """ Return accuracy of a model on a test set
     """
     mode = self.ensureCompiled(mode,inputs=inputs)

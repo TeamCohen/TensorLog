@@ -91,7 +91,7 @@ class AbstractCrossCompiler(object):
     mode = self.ensureCompiled(mode,inputs=inputs)
     return self._wsDict[mode].proofCountArgs, self._wsDict[mode].proofCountExpr
 
-  def proofCountFunction(self,mode,inputs=None,wrapInputs=True,unwrapOutputs=True):
+  def proofCountFunction(self,mode,wrapInputs=True,unwrapOutputs=True,inputs=None):
     """Returns a python function which performs counts proofs for the
     queries defined by that mode.  The function takes a length-one
     tuple containing one argument X, which can be a row vector or a
@@ -131,7 +131,7 @@ class AbstractCrossCompiler(object):
     mode = self.ensureCompiled(mode,inputs=inputs)
     return self._wsDict[mode].dataLossArgs, self._wsDict[mode].dataLossGradExprs
 
-  def dataLossGradFunction(self,mode,inputs=None,wrapInputs=True,unwrapOutputs=True):
+  def dataLossGradFunction(self,mode,wrapInputs=True,unwrapOutputs=True,inputs=None):
     """Returns a python function which performs inference for the function
     defined by that mode.  The function takes a single argument which
     is a list of (X,Y).
