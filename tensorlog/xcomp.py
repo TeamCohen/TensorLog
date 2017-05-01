@@ -356,6 +356,8 @@ class AbstractCrossCompiler(object):
       status('tensorlog compilation complete; cross-compiling %s'%str(mode))
       self._doCompile(fun,mode)
       status('tensorlog->target language compilation complete')
+    else:
+      self.ws = self._wsDict[mode]
     return mode
 
   def _doCompile(self,fun,mode):
@@ -411,10 +413,12 @@ class AbstractCrossCompiler(object):
     """
 
     if isinstance(fun,funs.SoftmaxFunction):
+      logging.debug('compiling: %sSoftmax'%(' '*depth))
       inputs,subExpr,outType = self._fun2Expr(fun.fun,sharedInputs,depth)
       return inputs,self._softmaxFun2Expr(subExpr,outType),outType
 
     elif isinstance(fun,funs.SumFunction):
+      logging.debug('compiling: %sSum'%(' '*depth))
       assert(len(fun.funs)>=1)
       inputs,accum,outType = self._fun2Expr(fun.funs[0],sharedInputs,depth)
       for f in fun.funs[1:]:
@@ -425,6 +429,7 @@ class AbstractCrossCompiler(object):
       return (inputs,accum,outType)
 
     elif isinstance(fun,funs.OpSeqFunction):
+      logging.debug('compiling: %sOpSeq'%(' '*depth))
       assert len(fun.opInputs)==1, 'mismatching number of inputs'
       # allocate a new nspacer, which maps variables from the
       # OpSeqFunction's environment to subexpressions
@@ -451,6 +456,7 @@ class AbstractCrossCompiler(object):
       return (seqInputs, nspacer[fun.opOutput], self._wrapOutputType(fun))
 
     elif isinstance(fun,funs.NullFunction):
+      logging.debug('compiling: %sNull'%(' '*depth))
       typeName = self._wrapOutputType(fun)
       return ([], self._zeros(typeName), typeName)
 

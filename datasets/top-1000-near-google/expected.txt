@@ -1,3 +1,10 @@
-# actual output of expt on Tue Apr 25 14:33:28 EDT 2017
-training FixedRateGDLearner ... done in 115.187 sec
+# actual output of expt on Mon May 1 15:17:24 EDT 2017
+training tensorlog.learn.FixedRateGDLearner ... done in 121.314 sec
+training tensorlog.theanoxcomp.FixedRateGDLearner ... done in 393.066 sec
+training tensorlog.theanoxcomp.FixedRateGDLearner ... done in 430.367 sec
+file tmp-cache/top-1000-near-google-test.solutions.txt
 . micro: 0.804093567251
+file tmp-cache/top-1000-near-google-test.tensorlog.theanoxcomp.DenseMatDenseMsgCrossCompiler.solutions.txt
+. micro: 0.890372168285
+file tmp-cache/top-1000-near-google-test.tensorlog.theanoxcomp.SparseMatDenseMsgCrossCompiler.solutions.txt
+. micro: 0.890372168285

@@ -21,11 +21,13 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     target_y = self._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self._wsDict[mode].inferenceOutputType)
     self._wsDict[mode].dataLossArgs = self._wsDict[mode].inferenceArgs + [target_y]
     placeholder = map(lambda x:0*x, self.getParamVariables(mode)) # theano doesn't like it when some paramVariables don't appear in the loss expr
-    self._wsDict[mode].dataLossExpr = (-target_y * self._applyOpToNonzerosOfDense(TT.log,self._wsDict[mode].inferenceExpr)+sum(placeholder)).mean()
+    tmp = self._applyOpToNonzerosOfDense(TT.log,self._wsDict[mode].inferenceExpr)
+    self._wsDict[mode].dataLossExpr = (-y * tmp +sum(placeholder)).mean()
     self._wsDict[mode].dataLossGradExprs = theano.grad(self._wsDict[mode].dataLossExpr, self.getParamVariables(mode))
 
   def _asOneInputFunction(self,arg1,expr,wrapInputs,unwrapOutputs):
-    pyfun = theano.function(inputs=[arg1], outputs=expr)
+    # ignore: a program with no solutions does not depend on the inputs
+    pyfun = theano.function(inputs=[arg1], outputs=expr, on_unused_input='ignore')
     def closure(rawInput1):
        input1 = self._wrapMsg(rawInput1) if wrapInputs else rawInput1
        tmp = pyfun(input1) # was [0] here -- not sure why. -kmm
@@ -63,17 +65,23 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
 
   def _insertHandleExpr(self,key,name,val,broadcast=False):
     kwargs={}
-    if broadcast: kwargs['broadcastable']=tuple([dim==1 for dim in val.shape])
+    if broadcast: 
+      kwargs['broadcastable']=tuple([dim==1 for dim in val.shape])
     self._handleExpr[key] = self._handleExprVar[key] = theano.shared(val, name=name, **kwargs)
     #print "handleExpr %s shape"%name,val.shape,"broadcastable",self._handleExprVar[key].broadcastable
     
 
   def _applyOpToNonzerosOfDense(self,op,expr):
     # useful subroutine
+    
     sparseExpr = TSB.clean(TSB.csr_from_dense(expr))
     newData = op(TSB.csm_data(sparseExpr)).flatten()
     newSparse = TS.CSR(newData, TSB.csm_indices(sparseExpr), TSB.csm_indptr(sparseExpr), TSB.csm_shape(sparseExpr))
-    return TSB.dense_from_sparse(newSparse)
+    ret= TSB.dense_from_sparse(newSparse)
+    if any(expr.broadcastable):
+      corrected=TT.addbroadcast(ret,expr.broadcastable.index(True))
+    else: corrected=ret
+    return corrected
   
   def optimizeDataLoss(self,mode,optimizer,X,Y,epochs=1,minibatchSize=0,wrapped=False):
     mode = self.ensureCompiled(mode)
@@ -168,6 +176,7 @@ class DenseMatDenseMsgCrossCompiler(TheanoCrossCompiler):
     # in theano this would be something like -20*TT.isclose(subExpr,TT.zeros_like(subExpr))
     # but TT.isclose() is slow, so we use TT.exp(-s^2) as a faster approximation and 
     # cross our fingers and toes we don't have anything important in 0<s<1
+    #subExpr_printed = theano.printing.Print("softMax, ?:",['shape'])(subExpr)
     return TNN.nnet.softmax(subExpr+self._nullSmoother[typeName]-20*TT.exp(-subExpr*subExpr))
     #return self._applyOpToNonzerosOfDense(TNN.nnet.softmax,subExpr+self._nullSmoother[typeName])
 
@@ -234,7 +243,8 @@ class GD(Optimizer):
                 - TT.cast(self.learning_rate,v.dtype) 
                 * (TT.cast(dloss,v.dtype) if isinstance(dloss.type,TT.type.TensorType) else dloss)) 
                for v,dloss in zip(var_list,dlosses)]
-    trainStep = theano.function(inputs, expr, updates=updates, )
+    # ignore: a program with no solutions does not depend on the inputs
+    trainStep = theano.function(inputs, expr, updates=updates, on_unused_input='ignore')
     return trainStep
 
 
@@ -249,4 +259,9 @@ class FixedRateGDLearner(learnxcomp.BatchEpochsLearner):
     
     def trainMode(self,mode,X,Y,epochs=-1):
       if epochs<0: epochs=self.epochs
-      self.xc.optimizeDataLoss(mode,self.optimizer,X,Y,epochs=epochs)
+      try:
+        self.xc.optimizeDataLoss(mode,self.optimizer,X,Y,epochs=epochs)
+      except:
+        print "Inference expr:"
+        print theano.pprint(self.xc.ws.inferenceExpr)
+        raise

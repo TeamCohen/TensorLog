@@ -1,6 +1,7 @@
 import learn as L
 import time
 import sys
+import logging
 
 class XLearner(L.Learner):
   def __init__(self,prog,xc,compilerClass=None,regularizer=None,tracer=None,epochTracer=None):
@@ -9,8 +10,13 @@ class XLearner(L.Learner):
     else: self.xc = compilerClass(prog.db)
   def predict(self,mode,X,pad=None):
     """Make predictions on a data matrix associated with the given mode."""
-    inferenceFun = self.xc.inferenceFunction(mode)
-    result = inferenceFun(X)
+    logging.debug("XLearner predict %s"%mode)
+    try:
+      inferenceFun = self.xc.inferenceFunction(mode)
+      result = inferenceFun(X)
+    except:
+      print "tlogfun:","\n".join(self.xc.ws.tensorlogFun.pprint())
+      raise
     return result
   def crossEntropyGrad(self,mode,X,Y,tracerArgs={},pad=None):
     """Compute the parameter gradient associated with softmax

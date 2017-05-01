@@ -19,6 +19,9 @@ from tensorlog import matrixdb
 from tensorlog import mutil
 from tensorlog import plearn
 
+def fulltype(o):
+  return o.__module__ + "." + o.__class__.__name__
+
 class Expt(object):
 
     def __init__(self,configDict):
@@ -48,7 +51,8 @@ class Expt(object):
         if targetMode:
             targetMode = declare.asMode(targetMode)
             trainData = trainData.extractMode(targetMode)
-            testData = testData.extractMode(targetMode)
+            if testData is not None: 
+                testData = testData.extractMode(targetMode)
 
         if not learner: learner = learn.FixedRateGDLearner(prog)
 
@@ -63,7 +67,7 @@ class Expt(object):
               lambda:learner.datasetPredict(testData))
           Expt.printStats('untrained theory','test',testData,UP0)
 
-        Expt.timeAction('training %s' % type(learner).__name__, lambda:learner.train(trainData))
+        Expt.timeAction('training %s' % fulltype(learner), lambda:learner.train(trainData))
 
         TP1 = Expt.timeAction(
             'running trained theory on train data',
@@ -114,9 +118,11 @@ class Expt(object):
         dp = db.matrixAsSymbolDict(P,typeName=db.getRange(theoryPred,2))
         n=max(dx.keys())
         for i in range(n+1):
-            assert i in dp, "keys dp: %s\nkeys dx: %s" % (dp.keys(),dx.keys())
+            #assert i in dp, "keys dp: %s\nkeys dx: %s" % (dp.keys(),dx.keys())
             dix = dx[i]
-            dip = dp[i]
+            dip = {}
+            if i in dp:
+                dip = dp[i]
             assert len(dix.keys())==1,'X %s row %d is not onehot: %r' % (theoryPred,i,dix)
             x = dix.keys()[0]
             fp.write('# proved %d\t%s(%s,X1).\t999 msec\n' % (i+1+start,theoryPred,x))
