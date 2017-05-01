@@ -422,7 +422,7 @@ class RuleWrapper(parser.Rule):
 
 class Options(object):
   """
-  For handling options set on the command line.  
+  For handling options set on the command line.
   """
 
   def __init__(self):
@@ -435,7 +435,7 @@ class Options(object):
       attr_name = opt_name[2:]
       attr_type = type(getattr(self, attr_name))
       setattr(self, attr_name, attr_type(string_val))
-    
+
   def as_dictionary(self):
     return self.__dict__
 
@@ -454,7 +454,7 @@ class Experiment(Options):
     self.batch_size = 125
 
   def run(self):
-    tlog = Compiler(db=self.db, prog=self.prog) 
+    tlog = Compiler(db=self.db, prog=self.prog)
     train = tlog.load_big_dataset(self.train_data)
 
     loss = tlog.loss(self.mode)
