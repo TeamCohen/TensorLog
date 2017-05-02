@@ -133,7 +133,7 @@ class Dataset(object):
         just deserialize it.
         """
         if not os.path.exists(dsetFile) or os.path.getmtime(exampleFile)>os.path.getmtime(dsetFile):
-            print 'Storing cached dataset in',dsetFile
+            logging.info('serializing examples in %s to %s' % (exampleFile,dsetFile))
             dset = Dataset.loadExamples(db,exampleFile,proppr=proppr)
             dset.serialize(dsetFile)
             os.utime(dsetFile,None) #update the modification time for the directory

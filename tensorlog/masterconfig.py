@@ -1,3 +1,5 @@
+import logging
+
 from tensorlog import config
 
 def masterConfig():

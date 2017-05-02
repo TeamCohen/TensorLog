@@ -236,9 +236,9 @@ class ProPPRProgram(Program):
             pass
         elif ruleIdPred is not None:
             # TODO check this stuff and add type inference!
-            assert (ruleIdPred,1) in set.matEncoding,'there is no unary predicate called %s' % ruleIdPred
+            assert (ruleIdPred,1) in self.db.matEncoding,'there is no unary predicate called %s' % ruleIdPred
             self.db.markAsParameter("weighted",1)
-            self.db.setParameter(self.vector(declare.asMode('%s(o)' % ruleIdPred)) * epsilon)
+            self.db.setParameter("weighted",1,self.db.vector(declare.asMode('%s(o)' % ruleIdPred)) * epsilon)
         else:
             assert self.db.isTypeless(), 'cannot setRuleWeights for db with declared types unless ruleIdPred is given'
             self.db.markAsParameter("weighted",1)

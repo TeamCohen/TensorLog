@@ -1,0 +1,9 @@
+answer(Q,A) :- mentions_entity(Q,E), directed_by(A,E) {w_directed_by(F) : has_feature(Q,F)}.
+answer(Q,A) :- mentions_entity(Q,E), has_genre(A,E) {w_has_genre(F) : has_feature(Q,F)}.
+answer(Q,A) :- mentions_entity(Q,E), has_imdb_rating(A,E) {w_has_imdb_rating(F) : has_feature(Q,F)}.
+answer(Q,A) :- mentions_entity(Q,E), has_imdb_votes(A,E) {w_has_imdb_votes(F) : has_feature(Q,F)}.
+answer(Q,A) :- mentions_entity(Q,E), has_tags(A,E) {w_has_tags(F) : has_feature(Q,F)}.
+answer(Q,A) :- mentions_entity(Q,E), release_year(A,E) {w_release_year(F) : has_feature(Q,F)}.
+answer(Q,A) :- mentions_entity(Q,E), starred_actors(A,E) {w_starred_actors(F) : has_feature(Q,F)}.
+answer(Q,A) :- mentions_entity(Q,E), written_by(A,E) {w_written_by(F) : has_feature(Q,F)}.
+answer(Q,A) :- mentions_entity(Q,E), in_language(A,E) {w_in_language(F) : has_feature(Q,F)}.
