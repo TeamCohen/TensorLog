@@ -22,7 +22,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
     self._wsDict[mode].dataLossArgs = self._wsDict[mode].inferenceArgs + [target_y]
     placeholder = map(lambda x:0*x, self.getParamVariables(mode)) # theano doesn't like it when some paramVariables don't appear in the loss expr
     tmp = self._applyOpToNonzerosOfDense(TT.log,self._wsDict[mode].inferenceExpr)
-    self._wsDict[mode].dataLossExpr = (-y * tmp +sum(placeholder)).mean()
+    self._wsDict[mode].dataLossExpr = (-target_y * tmp).mean()
     self._wsDict[mode].dataLossGradExprs = theano.grad(self._wsDict[mode].dataLossExpr, self.getParamVariables(mode))
 
   def _asOneInputFunction(self,arg1,expr,wrapInputs,unwrapOutputs):
