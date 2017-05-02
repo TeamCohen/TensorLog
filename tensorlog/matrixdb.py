@@ -18,8 +18,9 @@ from tensorlog import parser
 from tensorlog import mutil
 
 conf = config.Config()
-conf.allow_weighted_tuples = True; conf.help.allow_weighted_tuples = 'Allow last column of cfacts file to be a weight for the fact'
-conf.ignore_types = False;         conf.help.ignore_types = 'Ignore type declarations'
+conf.allow_weighted_tuples = True;     conf.help.allow_weighted_tuples = 'Allow last column of cfacts file to be a weight for the fact'
+conf.default_to_typed_schema = False;  conf.help.default_to_typed_schema = 'If true use TypedSchema() as default schema in MatrixDB'
+conf.ignore_types = False;             conf.help.ignore_types = 'Ignore type declarations, even if they are present'
 
 NULL_ENTITY_NAME = schema.NULL_ENTITY_NAME
 THING = schema.THING
@@ -29,7 +30,7 @@ TRAINABLE_DECLARATION_FUNCTOR = 'trainable'
 class MatrixDB(object):
   """ A logical database implemented with sparse matrices """
 
-  def __init__(self,typed=False):
+  def __init__(self,initSchema=None):
     #matEncoding[(functor,arity)] encodes predicate as a matrix
     self.matEncoding = {}
     # mark which matrices are 'parameters' by (functor,arity) pair
@@ -37,8 +38,12 @@ class MatrixDB(object):
     self.paramList = []
     # buffers for reading in facts in tab-sep form
     self._databuf = self._rowbuf = self._colbuf = None
-    # typing information
-    self.schema = schema.UntypedSchema() if ((not typed) or (conf.ignore_types)) else schema.TypedSchema()
+    if initSchema is not None:
+      self.schema = initSchema
+    elif conf.default_to_typed_schema and not conf.ignore_types:
+      self.schema = schema.TypedSchema()
+    else:
+      self.schema = schema.UntypedSchema()
 
   def checkTyping(self):
     self.schema.checkTyping(self.matEncoding.keys())
@@ -444,7 +449,7 @@ class MatrixDB(object):
           trainableArity = int(decl.arg(1))
           self.markAsParameter(trainableFunctor,trainableArity)
         else:
-          # if possible, over-ride the default 'untyped' schema
+          # if possible, over-ride the default 'untyped' schema with one that can handle the type declaration
           if self.schema.isTypeless():
             if self.schema.empty() and not conf.ignore_types:
               self.schema = schema.TypedSchema()
@@ -497,39 +502,3 @@ class MatrixDB(object):
     else:
       logging.error('line %d file %s: illegal line %r' % (k,filename,line))
       return
-
-
-#
-# test main
-#
-
-if __name__ == "__main__":
-  if len(sys.argv) < 2:
-    pass
-  elif sys.argv[1]=='--serialize':
-    print 'loading cfacts from',sys.argv[2]
-    if sys.argv[2].find(":")>=0:
-      db = MatrixDB()
-      for f in sys.argv[2].split(":"):
-        db.addFile(f)
-    else:
-      db = MatrixDB.loadFile(sys.argv[2])
-    print 'saving to',sys.argv[3]
-    db.serialize(sys.argv[3])
-  elif sys.argv[1]=='--deserialize':
-    print 'loading saved db from ',sys.argv[2]
-    db = MatrixDB.deserialize(sys.argv[2])
-  elif sys.argv[1]=='--uncache':
-    print 'uncaching facts',sys.argv[3],'from',sys.argv[2]
-    db = MatrixDB.uncache(sys.argv[2],sys.argv[3])
-  elif sys.argv[1]=='--loadEcho':
-    logging.basicConfig(level=logging.INFO)
-    print 'loading cfacts from ',sys.argv[2]
-    db = MatrixDB.loadFile(sys.argv[2])
-    print db.matEncoding
-    for (f,a),m in db.matEncoding.items():
-      print f,a,m
-      d = db.matrixAsPredicateFacts(f,a,m)
-      print 'd for ',f,a,'is',d
-      for k,w in d.items():
-        print k,w
