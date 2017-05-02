@@ -10,6 +10,7 @@ def masterConfig():
   from tensorlog import matrixdb
   from tensorlog import mutil
   from tensorlog import ops
+  from tensorlog import program
   from tensorlog import xcomp
 
   master =  config.Config()
@@ -27,6 +28,8 @@ def masterConfig():
   master.help.mutil = 'config for tensorlog.mutil'
   master.ops = ops.conf
   master.help.ops = 'config for tensorlog.ops'
+  master.program = program.conf
+  master.help.program = 'conf for tensorlog.program'
   master.xcomp = xcomp.conf
   master.help.xcomp = 'config for tensorlog.xcomp'
   try:

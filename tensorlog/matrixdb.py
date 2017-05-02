@@ -495,7 +495,7 @@ class MatrixDB(object):
       logging.error("predicate encoding is already completed for "+str(key)+ " at line: "+line)
       return
     i = self._stab[self.getArgType(functor,arity,0)].getId(a1)
-    if not a2:
+    if arity==1:
       j = -1
     else:
       j = self._stab[self.getArgType(functor,arity,1)].getId(a2)

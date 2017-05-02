@@ -26,6 +26,10 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     self.sessionInitialized = None
     logging.debug('TensorFlowCrossCompiler initialized %.3f Gb' % comline.memusage())
 
+  def close(self):
+    if self.session is not None:
+      self.session.close()
+
   #
   # tensorflow specific routines
   #
@@ -53,31 +57,38 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
       self.sessionInitialized = True
       logging.debug('session initialized %.3f Gb' % comline.memusage())
 
-  def getInputName(self,mode):
+  def getInputName(self,mode,inputs=None):
     """ String key for the input placeholder
     """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     assert len(self._wsDict[mode].inferenceArgs)==1
     return self._wsDict[mode].inferenceArgs[0].name
 
-  def getTargetOutputName(self,mode):
+  def getInputPlaceholder(self,mode,inputs=None):
+    """ The input placeholder
+    """
+    mode = self.ensureCompiled(mode,inputs=inputs)
+    assert len(self._wsDict[mode].inferenceArgs)==1
+    return self._wsDict[mode].inferenceArgs[0]
+
+  def getTargetOutputName(self,mode,inputs=None):
     """ String key for the target-output placeholder
     """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     assert len(self._wsDict[mode].dataLossArgs)==2
     return self._wsDict[mode].dataLossArgs[-1].name
 
-  def getTargetOutputPlaceholder(self,mode):
-    """ String key for the target-output placeholder
+  def getTargetOutputPlaceholder(self,mode,inputs=None):
+    """  The target-output placeholder
     """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     assert len(self._wsDict[mode].dataLossArgs)==2
     return self._wsDict[mode].dataLossArgs[-1]
 
-  def getFeedDict(self,mode,X,Y,wrapped=False):
+  def getFeedDict(self,mode,X,Y,wrapped=False,inputs=None):
     """ Create a feed dictionary for training based on X and Y
     """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     (X,Y) = self._ensureWrapped(X,Y,wrapped)
     return { self.getInputName(mode):X, self.getTargetOutputName(mode):Y }
 
@@ -108,10 +119,10 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
           fd = self.getFeedDict(mode,miniX,miniY,wrapped=False)
           runAndSummarize(fd,i)
 
-  def accuracy(self,mode,X,Y,wrapped=False):
+  def accuracy(self,mode,X,Y,wrapped=False,inputs=None):
     """ Return accuracy of a model on a test set
     """
-    mode = self.ensureCompiled(mode)
+    mode = self.ensureCompiled(mode,inputs=inputs)
     Xval,trueYVal = self._ensureWrapped(X,Y,wrapped)
     trueY = tf.placeholder(tf.float32, shape=trueYVal.shape, name="tensorlog/trueY")
     fd = { self.getInputName(mode):Xval, trueY.name:trueYVal }
@@ -135,7 +146,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     prog.setAllWeights()
     logging.debug('runExpt finished setAllWeights %.3f Gb' % comline.memusage())
 
-    expt.Expt.timeAction('compiling and cross-compiling', lambda:self.ensureCompiled(targetMode))
+    expt.Expt.timeAction('compiling and cross-compiling', lambda:self.ensureCompiled(targetMode,inputs=None))
 
     assert optimizer is None,'optimizers not supported yet'
     optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)

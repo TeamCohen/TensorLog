@@ -11,6 +11,9 @@ check: actual.txt
 setup:
 	mkdir -p inputs tmp-cache
 
+unittest:
+	python testexpt.py 
+
 test:
 	python grid-expt.py time 16
 	python grid-expt.py time 64

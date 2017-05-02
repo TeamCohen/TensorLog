@@ -1,12 +1,20 @@
-Thoughts:
+Should I switch from comline to gflags?
 
- - alternative to calling out to tensorlog would be to
- iteratively process multiple-input, single-output plugins.
- for i in plugInGoalPositions:
-   compile opsequence for A<=B1,...,B[i-1]
-   add op to compute output of B[i] from input
-   syntactic rule: links in polytree cannot cross boundaries
-    defined by plugin literals
+How do I set up examples and tests? do I want to move them from datasets?
+ - cora -done
+ - wordnet -slow! maybe look at a smaller sample? maybe just the nouns or something?
+ - smokers
+ - grid - done
+ - wikimovies
+ - amie-qa?
+ - fb15k? - scalability
+
+EASY:
+ - program depth as config option -done
+ - simple.tlog_input_placeholder -done
+ - duplicate (c) notice in interp -done
+
+Deep Thoughts:
 
 calling back and forth: should be able to specify input placeholder
  for a proofCount/inference function (passed thru to _doCompile, then
@@ -34,7 +42,15 @@ calling back and forth: should be able to specify input placeholder
    f = f1 * ... * fk
    loss = tlog.loss_for("answer/io", inference=f, input=shared_input, target_output=...)
 
- - having multiple inputs in bpcompiler would also be nice....
+ - alternative to calling out to tensorlog would be to
+ iteratively process multiple-input, single-output plugins.
+ for i in plugInGoalPositions:
+   compile opsequence for A<=B1,...,B[i-1]
+   add op to compute output of B[i] from input
+   syntactic rule: links in polytree cannot cross boundaries
+    defined by plugin literals
+
+- having multiple inputs in bpcompiler would also be nice....
  hard would this be to do?
 
  - types: maybe types are defined in by the simple.RuleBuilder? (do I need a parser?)
@@ -56,8 +72,8 @@ calling back and forth: should be able to specify input placeholder
  declare their types, OR will be automarked if they appear after a //
  - tlog(autoset_db_params=True) will only set UNDEFINED params
  - you can load just parameters, not a whole DB
- - maybe caching/uncaching is done by specifying a cache directory, instead of
- complicated "cache|src" syntax?
+ - ????maybe caching/uncaching is done by specifying a cache directory, instead of
+ complicated "cache|src" syntax????
 
 Cleanup:
  - clean up typing: schema.py and a separate schema object, schema file?

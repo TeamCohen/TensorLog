@@ -103,3 +103,8 @@ Then train high-confidence results against low-confidence ones.
  p_conflict
 
  p_conflict(Slot,Filler) :- p(Slot,Filler)
+(tensorflow) WilliamMacBook2:tensorlog wcohen$ echo $PYTHONPATH
+/Users/wcohen/Documents/code/TensorLog:.
+(tensorflow) WilliamMacBook2:tensorlog wcohen$ history | grep activate
+  522  source ~/tensorflow/bin/activate
+  528  history | grep activate

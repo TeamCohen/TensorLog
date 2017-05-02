@@ -1,6 +1,9 @@
+import collections
 import logging
 import os.path
-import collections
+import getopt
+import sys
+import time
 
 from tensorlog import bpcompiler
 from tensorlog import comline
@@ -12,9 +15,12 @@ from tensorlog import parser
 from tensorlog import program
 from tensorlog import xctargets
 if xctargets.tf:
+  import tensorflow as tf
   from tensorlog import tensorflowxcomp
 if xctargets.theano:
   from tensorlog import theanoxcomp
+
+
 
 class Compiler(object):
 
@@ -110,22 +116,22 @@ class Compiler(object):
   def get_database(self):
     return self.db
 
-  def proof_count(self,mode):
+  def proof_count(self,mode,inputs=None):
     """ An expression for the inference associated with a mode
     """
-    args,expr = self.xc.proofCount(declare.asMode(mode))
+    args,expr = self.xc.proofCount(declare.asMode(mode),inputs=inputs)
     return expr
 
-  def inference(self,mode):
+  def inference(self,mode,inputs=None):
     """ An expression for the inference associated with a mode
     """
-    args,expr = self.xc.inference(declare.asMode(mode))
+    args,expr = self.xc.inference(declare.asMode(mode),inputs=inputs)
     return expr
 
-  def loss(self,mode):
+  def loss(self,mode,inputs=None):
     """ An expression for the unregularized loss associated with a mode
     """
-    args,expr = self.xc.dataLoss(declare.asMode(mode))
+    args,expr = self.xc.dataLoss(declare.asMode(mode),inputs=inputs)
     return expr
 
   def trainable_db_variables(self,mode,for_optimization=False):
@@ -154,13 +160,19 @@ class Compiler(object):
   #
 
   def input_placeholder_name(self,mode):
-    """ For tensorflow, the placeholder associated with the input to this function.
+    """ For tensorflow, the name of the placeholder associated with the input to this function.
     """
     assert self.target == 'tensorflow'
     return self.xc.getInputName(declare.asMode(mode))
 
+  def input_placeholder(self,mode):
+    """ For tensorflow, the placeholder associated with the input to this function.
+    """
+    assert self.target == 'tensorflow'
+    return self.xc.getInputPlaceholder(declare.asMode(mode))
+
   def target_output_placeholder_name(self,mode):
-    """ For tensorflow, the placeholder associated with the output to this function.
+    """ For tensorflow, the name of the placeholder associated with the output to this function.
     """
     assert self.target == 'tensorflow'
     return self.xc.getTargetOutputName(declare.asMode(mode))
@@ -380,6 +392,9 @@ class RuleBuilder(object):
     return self
 
 class RuleWrapper(parser.Rule):
+  """ Used by the RuleBuilder to hold parts of a rule,
+  and combine the parts using operator overloading
+  """
 
   @staticmethod
   def _combine(x,y):
@@ -410,3 +425,76 @@ class RuleWrapper(parser.Rule):
         findall=other.findall)
   def __repr__(self):
     return "RuleWrapper(%r,%r,features=%r,findall=%r" % (self.lhs,self.rhs,self.features,self.findall)
+
+class Options(object):
+  """
+  For handling options set on the command line.  
+  """
+
+  def __init__(self):
+    pass
+
+  def set_from_command_line(self,argv):
+    argspec = ["%s=" % opt_name for opt_name in self.__dict__.keys()]
+    optlist,_ = getopt.getopt(argv, 'x', argspec)
+    for opt_name,string_val in dict(optlist).items():
+      attr_name = opt_name[2:]
+      attr_type = type(getattr(self, attr_name))
+      setattr(self, attr_name, attr_type(string_val))
+    
+  def as_dictionary(self):
+    return self.__dict__
+
+  def option_usage(self):
+    return " ".join(map(lambda item:"[--%s %r]" % item, self.as_dictionary().items()))
+
+class Experiment(Options):
+
+  def __init__(self):
+    self.train_data = 'train.exam'
+    self.test_data = 'test.exam'
+    self.db = 'db.cfacts'
+    self.prog = 'theory.ppr'
+    self.mode = 'predict/io'
+    self.epochs = 10
+    self.batch_size = 125
+
+  def run(self):
+    tlog = Compiler(db=self.db, prog=self.prog) 
+    train = tlog.load_big_dataset(self.train_data)
+
+    loss = tlog.loss(self.mode)
+    optimizer = tf.train.AdagradOptimizer(0.1)
+    train_step = optimizer.minimize(loss)
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
+
+    t0 = time.time()
+    for i in range(self.epochs):
+      b = 0
+      for (_,(TX,TY)) in tlog.minibatches(train,batch_size=self.batch_size):
+        print 'epoch',i+1,'of',self.epochs,'minibatch',b+1
+        train_fd = {tlog.input_placeholder_name(self.mode):TX, tlog.target_output_placeholder_name(self.mode):TY}
+        session.run(train_step, feed_dict=train_fd)
+        b += 1
+        print 'learning time',time.time()-t0,'sec'
+
+    predicted_y = tlog.inference(self.mode)
+    actual_y = tlog.target_output_placeholder(self.mode)
+    correct_predictions = tf.equal(tf.argmax(actual_y,1), tf.argmax(predicted_y,1))
+    accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
+
+    test = tlog.load_small_dataset(self.test_data)
+    UX,UY = test[self.mode]
+    test_fd = {tlog.input_placeholder_name(self.mode):UX, tlog.target_output_placeholder_name(self.mode):UY}
+    acc = session.run(accuracy, feed_dict=test_fd)
+    print 'test acc',acc
+    return acc
+
+if __name__ == "__main__":
+  if len(sys.argv)>=2 and sys.argv[1]=='experiment':
+    experiment = Experiment()
+    experiment.set_from_command_line(sys.argv[2:])
+    experiment.run()
+  else:
+    print "usage: experiment " + Experiment().option_usage()

@@ -4,16 +4,17 @@ NOTIFY:="DATASETS" variable not set. For long tests, clone a copy of tensorlog-d
 Makefile.config: Makefile.config.template
 	cp $< $@
 
-# unit tests that take a few secs to run
+# unit tests that take a few secs to run  - all of these are about a minute all told
 short-tests:
-	nosetests testtensorlog.py
+	python -m unittest testtensorlog
+	python -m unittest testxcomp $(XCOMP_FILTER)
+	python -m unittest testtf
 
-xctest:
-	nosetests testxcomp.py
+all-automatic-tests: short-tests grid-test cora-test wikimovies-test simple-comline-test smokers-test
 
 # tests that take a few minutes to run
 # run 'make prepare-for-long-tests' in a fresh install before you run these
-long-tests: short-tests benchmark-test wnet-test cora-test grid-test
+long-tests: benchmark-test wnet-test cora-test grid-test
 
 prepare-for-long-tests:
 	make fb15k-valid.db 
@@ -28,12 +29,30 @@ fb15k-valid.db:
 	PYTHONPATH=$(PYTHONPATH):../; python matrixdb.py --serialize tensorlog/test-data/fb15k-valid.cfacts tensorlog/fb15k-valid.db
 
 #
-# individual long tests
+# individual longer tests, which should take about 1min each
 #
 
-benchmark-test:
-	PYTHONPATH=../; python benchmark.py
+cora-test:
+ifneq ($(DATASETS),)
+	(cd ../; PYTHONPATH=`pwd`; cd $(DATASETS)/cora/; make clean; make; make check; make clean; make unittest)
+else
+	$(error $(NOTIFY))
+endif
 
+grid-test:
+	(cd ../; PYTHONPATH=`pwd`; cd datasets/grid/; make clean; make; make check; make clean; make unittest)
+
+wikimovies-test:
+	(cd ../datasets/wikimovies/; make clean; make unittest)
+
+smokers-test:
+	(cd ../datasets/smokers/; make clean; make unittest)
+
+simple-comline-test:
+	python simple.py experiment --db test-data/textcattoy.cfacts --prog test-data/textcat.ppr --train test-data/toytrain.exam  --test test-data/toytest.exam
+
+
+# not converted yet....
 wnet-test:
 ifneq ($(DATASETS),)
 	(cd ../; PYTHONPATH=`pwd`; cd $(DATASETS)/wordnet/; make clean; make; make check)
@@ -41,18 +60,8 @@ else
 	$(error $(NOTIFY))
 endif
 
-cora-test:
-ifneq ($(DATASETS),)
-	(cd ../; PYTHONPATH=`pwd`; cd $(DATASETS)/cora/; make clean; make; make check)
-else
-	$(error $(NOTIFY))
-endif
-
-grid-test:
-	(cd ../; PYTHONPATH=`pwd`; cd datasets/grid/; make clean; make; make check)
-
-textcattoy-expt:
-	PYTHONPATH=../; python -m expt --db test-data/textcattoy.cfacts --prog test-data/textcat.ppr --trainData test-data/toytrain.exam --testData test-data/toytrain.exam --proppr
+benchmark-test:
+	PYTHONPATH=../; python benchmark.py
 
 # debug-test needs to be interactive
 debug-test:

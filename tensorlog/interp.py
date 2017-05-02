@@ -13,7 +13,7 @@ from tensorlog import dataset
 from tensorlog import declare
 from tensorlog import masterconfig
 from tensorlog import parser
-from tensorlog import program
+from tensorlog import version
 
 # interactive debugger is sort of optional, and it depends on a bunch
 # of stuff that might not be present, so don't require this import
@@ -150,8 +150,6 @@ class Interp(object):
 #
 
 if __name__ == "__main__":
-
-    print "Tensorlog v%s (C) William W. Cohen and Carnegie Mellon University, 2016" % program.VERSION
 
     optdict,args = comline.parseCommandLine(sys.argv[1:])
     ti = Interp(optdict['prog'],trainData=optdict.get('trainData'),testData=optdict.get('testData'))
