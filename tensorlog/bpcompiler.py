@@ -10,7 +10,6 @@ import logging
 from tensorlog import ops
 from tensorlog import funs
 from tensorlog import config
-from tensorlog import symtab
 from tensorlog import parser
 from tensorlog import declare
 from tensorlog import matrixdb
@@ -259,7 +258,7 @@ class BPCompiler(object):
         # infer type for a database predicate
         for j in range(arity):
           vj = self.goals[i].args[j]
-          newTj = self.tensorlogProg.db.getArgType(functor,arity,j,frozen=True)
+          newTj = self.tensorlogProg.db.schema.getArgType(functor,arity,j)
           oldTj = self.varDict[vj].varType
           if informativeType(newTj):
             if informativeType(oldTj) and oldTj!=newTj:

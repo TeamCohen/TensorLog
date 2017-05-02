@@ -1,5 +1,11 @@
 Should I switch from comline to gflags?
 
+Current status: matrixdb - needs to get rid of calls to
+_stab. schema.py --- need to decide about defaults for testing
+purposes....should I have conf options for for ignore_types,
+keep_types, or optionally_use_types? or go thru and manually stick in
+typing for the test cases that use it?
+
 How do I set up examples and tests? do I want to move them from datasets?
  - cora -done
  - wordnet -slow! maybe look at a smaller sample? maybe just the nouns or something?

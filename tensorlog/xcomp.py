@@ -194,18 +194,18 @@ class AbstractCrossCompiler(object):
     for (functor,arity) in self.db.matEncoding:
       if arity==2:
         mode = declare.asMode("%s(i,o)" % functor)
-        if self.db.getDomain(functor,arity)==typeName:
+        if self.db.schema.getDomain(functor,arity)==typeName:
           op = self._vecMatMulExpr(subExpr, self._matrix(mode,transpose=False))
           if self.db.isTypeless():
             result.append(op)
           else:
-            result.append((op,self.db.getRange(functor,arity)))
-        if self.db.getRange(functor,arity)==typeName:
+            result.append((op,self.db.schema.getRange(functor,arity)))
+        if self.db.schema.getRange(functor,arity)==typeName:
           op = self._vecMatMulExpr(subExpr, self._matrix(mode,transpose=True))
           if self.db.isTypeless():
             result.append(op)
           else:
-            result.append((op,self.db.getDomain(functor,arity)))
+            result.append((op,self.db.schema.getDomain(functor,arity)))
     return result
 
   #
@@ -395,10 +395,10 @@ class AbstractCrossCompiler(object):
   def _setupGlobals(self):
     """ Initialize variables used by this cross-compiler object. """
     if not self._globalsSet:
-      for typeName in self.db.getTypes():
+      for typeName in self.db.schema.getTypes():
         self._nullSmoother[typeName] = self._constantVector("_nullSmoother_"+typeName,self.db.nullMatrix(numRows=1,typeName=typeName)*(1e-5))
       if self.db.isTypeless():
-        self._onlyType = self.db.getTypes()[0]
+        self._onlyType = self.db.schema.defaultType()
       self._globalsSet = True
 
   #
