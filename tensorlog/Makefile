@@ -5,19 +5,15 @@ short-tests:
 	python -m unittest testxcomp
 	python -m unittest testtf
 
-all-automatic-tests: short-tests grid-test cora-test wikimovies-test simple-comline-test smokers-test
+all-automatic-tests: short-tests grid-test cora-test wikimovies-test simple-comline-test smokers-test fb-benchmark-test:
 
 # tests that take a few minutes to run
 # run 'make prepare-for-long-tests' in a fresh install before you run these
 long-tests: benchmark-test wnet-test cora-test grid-test
 
 prepare-for-long-tests:
-	make fb15k-valid.db 
 	(export PYTHONPATH=`pwd`; cd ../datasets/wordnet; make setup)
 	(export PYTHONPATH=`pwd`; cd ../datasets/cora; make setup)
-
-fb15k-valid.db:
-	python matrixdb.py --serialize test-data/fb15k-valid.cfacts fb15k-valid.db
 
 #
 # individual longer tests, which should take about 1min each
@@ -38,13 +34,13 @@ smokers-test:
 simple-comline-test:
 	python simple.py experiment --db test-data/textcattoy.cfacts --prog test-data/textcat.ppr --train test-data/toytrain.exam  --test test-data/toytest.exam
 
+fb-benchmark-test:
+	(cd ../datasets/fb15k-speed/; make clean; make unittest)
+
 # not converted yet....
 
 wnet-test:
 	(cd ../datasets/wordnet/; make clean; make; make check)
-
-benchmark-test:
-	python benchmark.py
 
 # debug-test needs to be interactive
 debug-test:
@@ -55,10 +51,7 @@ debug-test:
 # word count
 
 wc:
-	wc `ls *.py | grep -v pyparsing | grep -v wam | grep -v test | grep -v try | grep -v benchmark`
-
-wc-all:
-	wc `ls *.py | grep -v pyparsing`
+	wc `ls *.py | grep -v test | grep -v try`
 
 # cleanup
 

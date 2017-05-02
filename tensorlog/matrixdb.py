@@ -10,7 +10,6 @@ import scipy.sparse
 import scipy.io
 import collections
 import logging
-import numpy as NP
 
 from tensorlog import config
 from tensorlog import declare
@@ -36,8 +35,8 @@ class MatrixDB(object):
     # mark which matrices are 'parameters' by (functor,arity) pair
     self.paramSet = set()
     self.paramList = []
-    # buffer initialization: see startBuffers()
-    self._buf = None
+    # buffers for reading in facts in tab-sep form
+    self._databuf = self._rowbuf = self._colbuf = None
     # typing information
     self.schema = schema.UntypedSchema() if ((not typed) or (conf.ignore_types)) else schema.TypedSchema()
 
@@ -329,31 +328,108 @@ class MatrixDB(object):
       logging.info('deserializing db file '+ dbFile)
       return MatrixDB.deserialize(dbFile)
 
-  def _bufferLine(self,line,filename,k):
-    """Load a single triple encoded as a tab-separated line.."""
+  # high level routines for loading files
 
-    def atof(s):
+  def addLines(self,lines):
+    """ Clear the buffers, add lines, and flush the buffers.
+    """
+    self.startBuffers()
+    for line in lines:
+      self._bufferLine(line,'<no file>',0)
+    self.flushBuffers()
+
+  @staticmethod
+  def loadFile(filenames):
+    """Return a MatrixDB created by loading a file, or colon-separated
+    list of files.
+    """
+    db = MatrixDB()
+    db.startBuffers()
+    for f in filenames.split(":"):
+      db.bufferFile(f)
+      logging.info('buffered file %s' % f)
+    db.flushBuffers()
+    logging.info('loaded database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
+    return db
+
+  # manage buffers used to store matrix data before it is inserted
+
+  def startBuffers(self):
+    #buffer data for a sparse matrix: buf[pred][i][j] = f
+    #TODO: would lists and a coo matrix make a nicer buffer?
+    #def dictOfFloats(): return collections.defaultdict(float)
+    #def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
+    #self._buf = collections.defaultdict(dictOfFloatDicts)
+    self._databuf = collections.defaultdict(list)
+    self._rowbuf = collections.defaultdict(list)
+    self._colbuf = collections.defaultdict(list)
+
+  def bufferFile(self,filename):
+    """Load triples from a file and buffer them internally."""
+    k = 0
+    for line in open(filename):
+      k += 1
+      if not k%10000: logging.info('read %d lines' % k)
+      self._bufferLine(line,filename,k)
+
+  def flushBuffers(self):
+    """Flush all triples from the buffer."""
+    for f,arity in self._databuf.keys():
+      self._flushBuffer(f,arity)
+    self._databuf = None
+    self.startBuffers()
+
+  def _flushBuffer(self,functor,arity):
+    """Flush the triples defining predicate p from the buffer and define
+    p's matrix encoding"""
+    key = (functor,arity)
+    logging.info('flushing %d buffered non-zero values for predicate %s' % (len(self._databuf[key]),functor))
+    if arity==2:
+      nrows = self.schema.getMaxId(self.schema.getDomain(functor,arity)) + 1
+      ncols = self.schema.getMaxId(self.schema.getRange(functor,arity)) + 1
+    else:
+      nrows = 1
+      ncols = self.schema.getMaxId(self.schema.getDomain(functor,arity)) + 1
+    coo_matrix = scipy.sparse.coo_matrix((self._databuf[key],(self._rowbuf[key],self._colbuf[key])), shape=(nrows,ncols))
+    self.matEncoding[key] = scipy.sparse.csr_matrix(coo_matrix,dtype='float32')
+    self.matEncoding[key].sort_indices()
+    mutil.checkCSR(self.matEncoding[key], 'flushBuffer %s/%d' % key)
+
+  def _bufferTriplet(self,functor,arity,a1,a2,w,filename,k):
+    key = (functor,arity)
+    if (key in self.matEncoding):
+      logging.error("predicate encoding is already completed for "+str(key)+ " at line: "+line)
+      return
+    ti = self.schema.getArgType(functor,arity,0)
+    tj = self.schema.getArgType(functor,arity,1)
+    if ti is None or (tj is None and arity==2):
+      logging.error('line %d of %s: undeclared relation %s/%d' % (k,filename,functor,arity))
+    else:
+      i = self.schema.getId(ti, a1)
+      self._databuf[key].append(w)
+      if arity==1:
+        self._rowbuf[key].append(0)
+        self._colbuf[key].append(i)
+      else:
+        assert arity==2 and a2 is not None
+        self._rowbuf[key].append(i)
+        j = self.schema.getId(tj, a2)
+        self._colbuf[key].append(j)
+
+  #
+  # the real work in parsing a .cfacts file
+  #
+
+  def _bufferLine(self,line,filename,k):
+
+    """Load a single triple encoded as a tab-separated line.."""
+    def _atof(s):
       try:
         return float(s)
       except ValueError:
         return None
 
-    def addToBuffer(functor,arity,a1,a2,w):
-      key = (functor,arity)
-      if (key in self.matEncoding):
-        logging.error("predicate encoding is already completed for "+str(key)+ " at line: "+line)
-        return
-      ti = self.schema.getArgType(functor,arity,0)
-      tj = self.schema.getArgType(functor,arity,1)
-      if ti is None or (tj is None and arity==2):
-        logging.error('line %d of %s: undeclared relation %s/%d' % (k,filename,functor,arity))
-      else:
-        i = self.schema.getId(ti, a1)
-        j = -1 if arity==1 else self.schema.getId(tj, a2)
-        self._buf[key][i][j] = w
-
     line = line.strip()
-
     # blank lines
     if not line: return
     # declarations
@@ -381,141 +457,47 @@ class MatrixDB(object):
     if len(parts)==4:
       # must be functor,a1,a2,weight
       functor,a1,a2,weight_string = parts[0],parts[1],parts[2],parts[3]
-      w = atof(weight_string)
+      w = _atof(weight_string)
       if w is None:
         logging.error('line %d of %s: illegal weight' % (k,filename,weight_string))
         return
-      addToBuffer(functor,2,a1,a2,w)
+      self._bufferTriplet(functor,2,a1,a2,w,filename,k)
     elif len(parts)==2:
       # must be functor,a1
       functor,a1 = parts[0],parts[1]
-      addToBuffer(functor,1,a1,None,1.0)
+      self._bufferTriplet(functor,1,a1,None,1.0,filename,k)
     elif len(parts)==3:
       # might be functor,a1,a2 OR functor,a1,weight
       possible_weight_string = parts[2]
-      w = atof(possible_weight_string)
+      w = _atof(possible_weight_string)
       if self.schema.isTypeless() and (w is not None) and conf.allow_weighted_tuples:
         functor,a1 = parts[0],parts[1]
-        addToBuffer(functor,1,a1,None,w)
+        self._bufferTriplet(functor,1,a1,None,w,filename,k)
       elif self.schema.isTypeless():
         # can't make this a weighted tuple
         functor,a1,a2 = parts[0],parts[1],parts[2]
-        addToBuffer(functor,2,a1,a2,1.0)
+        self._bufferTriplet(functor,2,a1,a2,1.0,filename,k)
       elif not self.schema.isTypeless():
         functor = parts[0]
         if self.schema.getDomain(functor,2) and not self.schema.getDomain(functor,1):
           # must be binary
           a1,a2 = parts[1],parts[2]
-          addToBuffer(functor,2,a1,a2,1.0)
+          self._bufferTriplet(functor,2,a1,a2,1.0,filename,k)
         elif self.schema.getDomain(functor,1) and not self.schema.getDomain(functor,2):
           assert w is not None,'line %d file %s: illegal weight %s' % (k,filename,possible_weight_string)
           a1 = parts[1]
-          addToBuffer(functor,1,a1,None,1.0)
+          self._bufferTriplet(functor,1,a1,None,1.0,filename,k)
         elif w is not None:
           a1 = parts[1]
           logging.warn('line %d file %s: assuming %s is a weight' % (k,filename,possible_weight_string))
-          addToBuffer(functor,1,a1,None,w)
+          self._bufferTriplet(functor,1,a1,None,w,filename,k)
         else:
           a1,a2 = parts[1],parts[2]
-          addToBuffer(functor,2,a1,a2,1.0)
+          self._bufferTriplet(functor,2,a1,a2,1.0,filename,k)
     else:
       logging.error('line %d file %s: illegal line %r' % (k,filename,line))
       return
 
-  def bufferFile(self,filename):
-    """Load triples from a file and buffer them internally."""
-    k = 0
-    for line in open(filename):
-      k += 1
-      if not k%10000: logging.info('read %d lines' % k)
-      self._bufferLine(line,filename,k)
-
-  def flushBuffers(self):
-    """Flush all triples from the buffer."""
-    for f,arity in self._buf.keys():
-      self.flushBuffer(f,arity)
-
-  def flushBuffer(self,f,arity):
-    """Flush the triples defining predicate p from the buffer and define
-    p's matrix encoding"""
-    logging.info('flushing %d buffered rows for predicate %s' % (len(self._buf[(f,arity)]),f))
-
-    if arity==2:
-      nrows = self.schema.getMaxId(self.schema.getDomain(f,arity)) + 1
-      ncols = self.schema.getMaxId(self.schema.getRange(f,arity)) + 1
-      m = scipy.sparse.lil_matrix((nrows,ncols),dtype='float32')
-      for i in self._buf[(f,arity)]:
-        for j in self._buf[(f,arity)][i]:
-          m[i,j] = self._buf[(f,arity)][i][j]
-      del self._buf[(f,arity)]
-      self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m,dtype='float32')
-      self.matEncoding[(f,arity)].sort_indices()
-    elif arity==1:
-      ncols = self.schema.getMaxId(self.schema.getDomain(f,arity))  + 1
-      m = scipy.sparse.lil_matrix((1,ncols))
-      for i in self._buf[(f,arity)]:
-        for j in self._buf[(f,arity)][i]:
-          m[0,i] = self._buf[(f,arity)][i][j]
-      del self._buf[(f,arity)]
-      self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m,dtype='float32')
-      self.matEncoding[(f,arity)].sort_indices()
-    mutil.checkCSR(self.matEncoding[(f,arity)], 'flushBuffer %s/%d' % (f,arity))
-
-  def rebufferMatrices(self):
-    """Re-encode previously frozen matrices after a symbol table update"""
-    for (functor,arity),m in self.matEncoding.items():
-      targetNrows = self.schema.getMaxId(self.schema.getDomain(functor,arity)) + 1
-      targetNcols = self.schema.getMaxId(self.schema.getRange(functor,arity)) + 1
-      (rows,cols) = m.get_shape()
-      if cols != targetNcols or rows != targetNrows:
-        logging.info("Re-encoding predicate %s" % functor)
-        if arity==2:
-          # first shim the extra rows
-          shim = scipy.sparse.lil_matrix((targetNrows-rows,cols))
-          m = scipy.sparse.vstack([m,shim])
-          (rows,cols) = m.get_shape()
-        # shim extra columns
-        shim = scipy.sparse.lil_matrix((rows,targetNcols-cols))
-        self.matEncoding[(functor,arity)] = scipy.sparse.hstack([m,shim],format="csr")
-        self.matEncoding[(functor,arity)].sort_indices()
-
-  def clearBuffers(self):
-    """Save space by removing buffers"""
-    self._buf = None
-
-  def startBuffers(self):
-    #buffer data for a sparse matrix: buf[pred][i][j] = f
-    #TODO: would lists and a coo matrix make a nicer buffer?
-    def dictOfFloats(): return collections.defaultdict(float)
-    def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
-    self._buf = collections.defaultdict(dictOfFloatDicts)
-
-  def addLines(self,lines):
-    self.startBuffers()
-    for line in lines:
-      self._bufferLine(line,'<no file>',0)
-    self.rebufferMatrices()
-    self.flushBuffers()
-    self.clearBuffers()
-
-  def addFile(self,filename):
-    logging.info('adding cfacts file '+ filename)
-    self.startBuffers()
-    self.bufferFile(filename)
-    self.rebufferMatrices()
-    self.flushBuffers()
-    self.clearBuffers()
-
-  @staticmethod
-  def loadFile(filenames):
-    """Return a MatrixDB created by loading a file.  Also allows a
-    colon-separated list of files.
-    """
-    db = MatrixDB()
-    for f in filenames.split(":"):
-      db.addFile(f)
-    logging.info('loaded database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
-    return db
 
 #
 # test main

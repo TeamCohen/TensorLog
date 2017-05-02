@@ -6,13 +6,13 @@ class TestTimeNative(unittest.TestCase):
 
   def testIt(self):
     time = expt.runMain()
-    self.assertTrue(time <= 0.1) 
+    self.assertTrue(time <= 0.1)
 
 class TestTimeTF(unittest.TestCase):
 
   def testIt(self):
-      time = tfexpt.runMain()
-      self.assertTrue(time < 0.5)
+    time = tfexpt.runMain()
+    self.assertTrue(time < 0.5)
 
 if __name__ == "__main__":
   unittest.main()

@@ -1,10 +1,6 @@
 Should I switch from comline to gflags?
 
-Current status: matrixdb - needs to get rid of calls to
-_stab. schema.py --- need to decide about defaults for testing
-purposes....should I have conf options for for ignore_types,
-keep_types, or optionally_use_types? or go thru and manually stick in
-typing for the test cases that use it?
+
 
 How do I set up examples and tests? do I want to move them from datasets?
  - cora -done
@@ -13,14 +9,11 @@ How do I set up examples and tests? do I want to move them from datasets?
  - grid - done
  - wikimovies
  - amie-qa?
- - fb15k? - scalability
+ - fb15k? - scalability TODO
+ - added inputs argument to proofCount, etc.
 
 EASY:
- - program depth as config option -done
- - simple.tlog_input_placeholder -done
- - duplicate (c) notice in interp -done
-
-Deep Thoughts:
+ - conf move to schema
 
 calling back and forth: should be able to specify input placeholder
  for a proofCount/inference function (passed thru to _doCompile, then
@@ -82,7 +75,6 @@ calling back and forth: should be able to specify input placeholder
  complicated "cache|src" syntax????
 
 Cleanup:
- - clean up typing: schema.py and a separate schema object, schema file?
  - clean up mutil: densify
  - clean up dataset: matrix examples and proppr nonsense (move proppr to extras)
  - clean up funs, ops: refactor bprop and eval into 'native'

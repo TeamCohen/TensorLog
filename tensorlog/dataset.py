@@ -210,7 +210,7 @@ class Dataset(object):
     def loadProPPRExamples(db,fileName):
         """Convert a proppr-style foo.examples file to a two dictionaries of
         modename->matrix pairs, one for the Xs, one for the Ys"""
-        return loadExamples(db,fileName,proppr=True)
+        return Dataset.loadExamples(db,fileName,proppr=True)
 
     @staticmethod
     def loadExamples(db,fileName,proppr=False):
