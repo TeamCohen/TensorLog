@@ -64,7 +64,7 @@ class ModeDeclaration(AbstractDeclaration):
 class TypeDeclaration(AbstractDeclaration):
     """Declare allowed types for a goal, eg hasWord(doc,word).
     """
-    def __init__(self,goal,strict=True):
+    def __init__(self,goal):
         super(TypeDeclaration,self).__init__(goal)
     def getType(self,i):
         return self.arg(i)

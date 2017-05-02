@@ -4,11 +4,13 @@ import os.path
 import getopt
 import sys
 import time
+import re
 
 from tensorlog import bpcompiler
 from tensorlog import comline
 from tensorlog import declare
 from tensorlog import dataset
+from tensorlog import dbschema
 from tensorlog import funs
 from tensorlog import matrixdb
 from tensorlog import parser
@@ -342,6 +344,11 @@ class RuleBuilder(object):
 
   def __init__(self):
     self.rules = parser.RuleCollection()
+    self.schema = SchemaWrapper()
+
+  @staticmethod
+  def _split(comma_or_space_sep_names):
+    return re.split("\\W+", comma_or_space_sep_names)
 
   @staticmethod
   def variable(variable_name):
@@ -349,7 +356,11 @@ class RuleBuilder(object):
 
   @staticmethod
   def variables(space_sep_variable_names):
-    return space_sep_variable_names.split()
+    return RuleBuilder._split(space_sep_variable_names)
+
+  @staticmethod
+  def types(space_sep_type_names):
+    return RuleBuilder._split(space_sep_type_names)
 
   @staticmethod
   def rule_id(type_name,rule_id):
@@ -364,7 +375,7 @@ class RuleBuilder(object):
           [],
           features=[parser.Goal('weight',[var_name])],
           findall=[parser.Goal(bpcompiler.ASSIGN,[var_name,rule_id,type_name])])
-    return map(goal_builder, space_sep_rule_ids.split())
+    return map(goal_builder, RuleBuilder._split(space_sep_rule_ids))
 
   @staticmethod
   def predicate(predicate_name):
@@ -376,7 +387,7 @@ class RuleBuilder(object):
       def builder(*args):
         return RuleWrapper(None,[parser.Goal(pred_name,args)])
       return builder
-    return map(goal_builder,space_sep_predicate_names.split())
+    return map(goal_builder, RuleBuilder._split(space_sep_predicate_names))
 
   def __iadd__(self,other):
     if isinstance(other,parser.Rule):
@@ -384,6 +395,19 @@ class RuleBuilder(object):
     else:
       assert False, 'rule syntax error for builder: %s += %s' % (str(self),str(other))
     return self
+
+class SchemaWrapper(dbschema.TypedSchema):
+  """ Subclass a schema to handle a += notation
+  """
+  def __iadd__(self,other):
+    if isinstance(other,parser.Rule):
+      for g in other.rhs:
+        d = declare.TypeDeclaration(g)
+        self.declarePredicateTypes(d.functor, d.args())
+    else:
+      assert False, 'type declaration error for builder: %s += %s' % (str(self),str(other))
+    return self
+
 
 class RuleWrapper(parser.Rule):
   """ Used by the RuleBuilder to hold parts of a rule,

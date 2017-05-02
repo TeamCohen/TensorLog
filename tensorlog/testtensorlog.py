@@ -20,6 +20,7 @@ import scipy
 
 from tensorlog import comline
 from tensorlog import dataset
+from tensorlog import dbschema
 from tensorlog import declare
 from tensorlog import expt
 from tensorlog import funs
@@ -30,7 +31,7 @@ from tensorlog import mutil
 from tensorlog import parser
 from tensorlog import plearn
 from tensorlog import program
-from tensorlog import schema
+
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__),"test-data/")
 
@@ -989,7 +990,7 @@ class TestMatrixUtils(unittest.TestCase):
 class TestTypes(unittest.TestCase):
 
   def setUp(self):
-    self.db = matrixdb.MatrixDB(initSchema=schema.TypedSchema())
+    self.db = matrixdb.MatrixDB(initSchema=dbschema.TypedSchema())
     self.testLines = [
         '# :- head(triple,entity)\n',
         '# :- tail(triple,entity)\n',
@@ -1073,7 +1074,7 @@ class TestTypeSemantics(unittest.TestCase):
 class TestTrainableDeclarations(unittest.TestCase):
 
   def testIt(self):
-    db = matrixdb.MatrixDB(initSchema=schema.TypedSchema())
+    db = matrixdb.MatrixDB(initSchema=dbschema.TypedSchema())
     db.addLines([
         "# :- trainable(w1,1)\n",
         "# :- trainable(w2,2)\n",

@@ -13,7 +13,7 @@ import logging
 
 from tensorlog import config
 from tensorlog import declare
-from tensorlog import schema
+from tensorlog import dbschema
 from tensorlog import parser
 from tensorlog import mutil
 
@@ -22,8 +22,10 @@ conf.allow_weighted_tuples = True;     conf.help.allow_weighted_tuples = 'Allow 
 conf.default_to_typed_schema = False;  conf.help.default_to_typed_schema = 'If true use TypedSchema() as default schema in MatrixDB'
 conf.ignore_types = False;             conf.help.ignore_types = 'Ignore type declarations, even if they are present'
 
-NULL_ENTITY_NAME = schema.NULL_ENTITY_NAME
-THING = schema.THING
+NULL_ENTITY_NAME = dbschema.NULL_ENTITY_NAME
+THING = dbschema.THING
+OOV_ENTITY_NAME = dbschema.OOV_ENTITY_NAME
+
 #functor in declarations of trainable relations, eg trainable(posWeight,1)
 TRAINABLE_DECLARATION_FUNCTOR = 'trainable'
 
@@ -41,9 +43,9 @@ class MatrixDB(object):
     if initSchema is not None:
       self.schema = initSchema
     elif conf.default_to_typed_schema and not conf.ignore_types:
-      self.schema = schema.TypedSchema()
+      self.schema = dbschema.TypedSchema()
     else:
-      self.schema = schema.UntypedSchema()
+      self.schema = dbschema.UntypedSchema()
 
   def checkTyping(self):
     self.schema.checkTyping(self.matEncoding.keys())
@@ -67,7 +69,7 @@ class MatrixDB(object):
     typeName = self._fillDefault(typeName)
     """A onehot row representation of a symbol."""
     if outOfVocabularySymbolsAllowed and not self.schema.hasId(typeName,s):
-        return self.onehot(schema.OOV_ENTITY_NAME,typeName)
+        return self.onehot(OOV_ENTITY_NAME,typeName)
     assert self.schema.hasId(typeName,s),'constant %s (type %s) not in db' % (s,typeName)
     n = self.dim(typeName)
     i = self.schema.getId(typeName,s)
@@ -303,7 +305,7 @@ class MatrixDB(object):
   @staticmethod
   def deserialize(direc):
     db = MatrixDB()
-    db.schema = schema.AbstractSchema.deserialize(direc)
+    db.schema = dbschema.AbstractSchema.deserialize(direc)
     scipy.io.loadmat(os.path.join(direc,"db.mat"),db.matEncoding)
     #serialization/deserialization ends up converting
     #(functor,arity) pairs to strings and csr_matrix to csc_matrix
@@ -452,7 +454,7 @@ class MatrixDB(object):
           # if possible, over-ride the default 'untyped' schema with one that can handle the type declaration
           if self.schema.isTypeless():
             if self.schema.empty() and not conf.ignore_types:
-              self.schema = schema.TypedSchema()
+              self.schema = dbschema.TypedSchema()
           if not conf.ignore_types:
             self.schema.declarePredicateTypes(decl.functor,decl.args())
       return

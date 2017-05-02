@@ -205,6 +205,10 @@ class TypedSchema(AbstractSchema):
     # self._type[i][(functor,arity)] is name of type for argument i of that predicate
     self._type = { 0:{}, 1:{} }
     self._stab = {}
+    self._declarations = []
+
+  def __str__(self):
+    return 'DB Schema with %d declarations: %s' % (len(self._declarations), " & ".join(self._declarations))
 
   def checkTyping(self,predicateList,strict=False):
     """ Raise an error or print a warning if types of the functor,arity pairs in the
@@ -246,6 +250,7 @@ class TypedSchema(AbstractSchema):
     return self._type[i].get((functor,arity))
 
   def declarePredicateTypes(self,functor,types):
+    self._declarations.append( '%s(%s)' % (functor,",".join(types)))
     arity = len(types)
     key = (functor,arity)
     for i,typeName in enumerate(types):
