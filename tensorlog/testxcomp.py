@@ -538,13 +538,6 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       acc3 = learner.accuracy(TY,TP2)
       print 'final test accuracy',acc3
 
-      self.assertTrue(acc2>=acc0)
-      self.assertTrue(acc3>=acc1)
-      self.assertTrue(acc2>=0.9)
-      self.assertTrue(acc2==1.0)
-
-      self.assertTrue(loss2<loss0)
-      self.assertTrue(loss2<loss1)
 
       xc.exportAllLearnedParams()
       v = self.prog.db.getParameter('weighted',1)
@@ -552,6 +545,15 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       # sanity check a couple of values
       self.assertTrue(d['little_pos'] > d['little_neg'])
       self.assertTrue(d['big_pos'] < d['big_neg'])
+
+      self.assertTrue(acc2>=acc0)
+      self.assertTrue(acc3>=acc1)
+
+      self.assertTrue(loss2<loss0)
+      self.assertTrue(loss2<loss1)
+      
+      self.assertTrue(acc2>=0.9)
+      self.assertTrue(acc2==1.0)
   
   def testDatasetPredict(self):
     mode = declare.ModeDeclaration('predict(i,o)')
