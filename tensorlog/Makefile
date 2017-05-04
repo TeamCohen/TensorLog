@@ -43,10 +43,10 @@ grid-test:
 	(cd ../; PYTHONPATH=`pwd`; cd datasets/grid/; make clean; make; make check; make clean; make unittest)
 
 wikimovies-test:
-	(cd ../datasets/wikimovies/; make clean; make unittest)
+	(cd ../; PYTHONPATH=`pwd`; cd datasets/wikimovies/; make clean; make unittest)
 
 smokers-test:
-	(cd ../datasets/smokers/; make clean; make unittest)
+	(cd ../; PYTHONPATH=`pwd`; cd datasets/smokers/; make clean; make unittest)
 
 simple-comline-test:
 	python simple.py experiment --db test-data/textcattoy.cfacts --prog test-data/textcat.ppr --train test-data/toytrain.exam  --test test-data/toytest.exam

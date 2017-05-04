@@ -1,7 +1,0 @@
-answer(Q,X) :- mentionsEntity(Q,E), actedIn(X,E) { weight_actedIn(F): feature(Q,F) }.
-answer(Q,X) :- mentionsEntity(Q,E), hasChild(X,E) { weight_hasChild(F): feature(Q,F) }.
-answer(Q,X) :- mentionsEntity(Q,E), isMarriedTo(X,E) { weight_isMarriedTo(F): feature(Q,F) }.
-answer(Q,X) :- mentionsEntity(Q,E), actedIn(X,E) { weight_actedIn(F): feature(Q,F) }.
-answer(Q,X) :- mentionsEntity(Q,E), directed(X,E) { weight_directed(F): feature(Q,F) }.
-answer(Q,X) :- mentionsEntity(Q,E), produced(X,E) { weight_produced(F): feature(Q,F) }.
-answer(Q,X) :- mentionsEntity(Q,E), isCitizenOf(X,E) { weight_isCitizenOf(F): feature(Q,F) }.
