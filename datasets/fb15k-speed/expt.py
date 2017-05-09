@@ -8,7 +8,7 @@ from tensorlog import matrixdb
 from tensorlog import mutil
 from tensorlog import program
 from tensorlog import opfunutil
-
+from tensorlog import expt
 
 def setExptParams():
     print 'loading db....'
@@ -81,5 +81,65 @@ def runMain():
     qps2 = runNative(db,prog,modeSet,queries)
     return (fps,qps1,qps2)
 
+def runCross():
+    (db,prog,modeSet,queries) = setExptParams()
+    from tensorlog import xctargets
+    CROSSCOMPILERS = []
+    CROSSLEARNERS = {}
+    if xctargets.theano:
+      from tensorlog import theanoxcomp
+      for c in [
+        #theanoxcomp.DenseMatDenseMsgCrossCompiler,
+        theanoxcomp.SparseMatDenseMsgCrossCompiler
+        ]:
+        CROSSCOMPILERS.append(c)
+        CROSSLEARNERS[c]=theanoxcomp.FixedRateGDLearner
+    if xctargets.tf:
+      from tensorlog import tensorflowxcomp
+      for c in [
+        #tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+        tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
+        ]:
+        CROSSCOMPILERS.append(c)
+        CROSSLEARNERS[c]=tensorflowxcomp.FixedRateGDLearner
+    results = {}
+    for compilerClass in CROSSCOMPILERS:
+        xc = compilerClass(prog)
+        print expt.fulltype(xc)
+        
+        # compileAll
+        start = time.time()
+        k = 0
+        # compile
+        for mode in modeSet:
+            if not prog.findPredDef(mode):continue
+            k += 1
+            xc.ensureCompiled(mode)
+        fps = k / (time.time() - start)
+        print "compiled",k,"of",len(modeSet),"functions at",fps,"fps"
+        
+        # runSequential
+        start = time.time()
+        k = 0
+        for (mode,vx) in queries:
+            xc.inferenceFunction(mode)(vx)
+            k += 1
+            if not k%100: print "answered",k,"queries"
+        qps1 = len(queries) / (time.time() - start)
+        print "answered",len(queries),"queries at",qps1,"qps"
+        
+        # runNative
+        dset = comline.parseDatasetSpec('tmp-cache/fb15k-valid.dset|inputs/fb15k-valid.examples',db)
+        start = time.time()
+        for mode in dset.modesToLearn():
+            if not prog.findPredDef(mode):continue
+            X = dset.getX(mode)
+            xc.inferenceFunction(mode)(X)
+        qps2 = len(queries) / (time.time() - start)
+        print "answered",len(queries),"queries at",qps2,"qps"
+        results[expt.fulltype(xc)] = (fps,qps1,qps2)
+    return results
+
 if __name__ == "__main__":
     fps,qps1,qps1 = runMain()
+    if "cross" in sys.argv[1:]: runCross()
