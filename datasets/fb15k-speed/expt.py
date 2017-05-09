@@ -32,7 +32,8 @@ def compileAll(db,prog,modeSet,queries):
     return fps
 
 def runNative(db,prog,modeSet,queries):
-    dset = dataset.Dataset.loadProPPRExamples(db,'inputs/fb15k-valid.examples')
+    dset = comline.parseDatasetSpec('tmp-cache/fb15k-valid.dset|inputs/fb15k-valid.examples',db)
+    #dataset.Dataset.loadProPPRExamples(db,'inputs/fb15k-valid.examples')
     start = time.time()
     for mode in dset.modesToLearn():
         if prog.findPredDef(mode):
