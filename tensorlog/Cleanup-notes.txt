@@ -1,19 +1,23 @@
 Should I switch from comline to gflags?
 
-
-
 How do I set up examples and tests? do I want to move them from datasets?
  - cora -done
  - wordnet -slow! maybe look at a smaller sample? maybe just the nouns or something?
- - smokers
+ - smokers -done
  - grid - done
  - wikimovies
  - amie-qa?
- - fb15k? - scalability TODO
+ - fb15k-speed done
  - added inputs argument to proofCount, etc.
 
 EASY:
- - conf move to schema
+ - config options for db -> move to dbschema?
+ - speed up dataset loading (buffer everything, don't use stack) -done
+
+To think through:
+ - pass schema in to DB somehow in simple compiler?
+ - maybe include b.db = '....' (and/or b.db += ....?)
+ - maybe RuleBuilder should just be Builder?
 
 calling back and forth: should be able to specify input placeholder
  for a proofCount/inference function (passed thru to _doCompile, then
@@ -22,7 +26,7 @@ calling back and forth: should be able to specify input placeholder
  build up Tensorlog/Tensorflow expressions more easily.
 
  use cases: 
- -- training from partial information, known pos and known negatives. 
+ -- training from partial information, known pos and known negatives (try this out!)
  --- define two prediction predicates: predict(X,Y) and predictComplement(X,Y)
  --- data for predict is known pos, for predictComplement, known neg
  set up optimization as follows:
@@ -31,7 +35,7 @@ calling back and forth: should be able to specify input placeholder
    f2 = tlog.inference("predictComplement/io", input=shared_input)
    loss = tlog.loss("predict/io") - tlog.loss("predictComplement/io")
    ...
- -- learn conjunction of properties
+ -- learn conjunction of properties (try this out!)
    answer1(Q,Y) <= mention(Q,EC), entity(EC,E), chain1(E,Y) // (w1(F) | context(EC,C), feature(C,F))
    answer2(...) <= ...
    shared_input = tf.PlaceHolder(....)   
@@ -52,17 +56,12 @@ calling back and forth: should be able to specify input placeholder
 - having multiple inputs in bpcompiler would also be nice....
  hard would this be to do?
 
- - types: maybe types are defined in by the simple.RuleBuilder? (do I need a parser?)
- and can the RuleBuilder handle constants and 'assign' statements, or do I need a 
- b.assign predicate?
-
     person_t, movie_t, word_t = b.types("person_t movie_t word_t)
     starred_in,directed_by = b.predicate("starred_in directed_by")
     b.rules += ... 
     b.schema += starred_in(person_t,movie_t)  # define one of these for each DB predicate
     b.schema += weight(ruleid_t)
-    b.schema += ...
-    b.schema += None # for typeless
+    b.schema = None # for typeless
     b.constants += 'r1'
     b.rules += (a <= ..... // weight('r1'))
     b.db += 'file.tsv'  # why not just do this, and not have a separate "builder"
@@ -76,7 +75,7 @@ calling back and forth: should be able to specify input placeholder
 
 Cleanup:
  - clean up mutil: densify
- - clean up dataset: matrix examples and proppr nonsense (move proppr to extras)
+ - clean up dataset: matrix examples (done?) and proppr nonsense (move proppr to extras)
  - clean up funs, ops: refactor bprop and eval into 'native'
  - clean up program: autoweighting, ProPPRProgram vs program
 

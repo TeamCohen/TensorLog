@@ -340,6 +340,11 @@ class RuleBuilder(object):
     b += aunt(X,Y) <= parent(X,Z) & sister(Z,Y) // r2
     b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // (weight(F) | description(X,D) & feature(X,F))
 
+  You can also construct a database schema
+
+    person_t,place_t = b.types("person_t place_t") # note: singleton 'type' isn't available
+    b.schema += aunt(person_t,person_t) & uncle(person_t,person_t)
+
   """
 
   def __init__(self):
