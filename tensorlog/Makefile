@@ -10,7 +10,7 @@ short-tests:
 	python -m unittest testxcomp $(XCOMP_FILTER)
 	python -m unittest testtf
 
-all-automatic-tests: short-tests grid-test cora-test wikimovies-test simple-comline-test smokers-test fb-benchmark-test:
+all-automatic-tests: short-tests grid-test cora-test wikimovies-test simple-comline-test smokers-test fb-benchmark-test
 
 # tests that take a few minutes to run
 # run 'make prepare-for-long-tests' in a fresh install before you run these
