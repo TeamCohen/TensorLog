@@ -9,20 +9,26 @@ from tensorlog import matrixdb
 from tensorlog import mutil
 from tensorlog import program
 from tensorlog import funs
+from tensorlog import xctargets
 
-#logging.basicConfig(level=logging.DEBUG)
-
-CROSS_COMPILE = []
-CROSS_LEARN = {}
-
-try:
-    from tensorlog import theanoxcomp
-    CROSS_COMPILE.append(theanoxcomp.DenseMatDenseMsgCrossCompiler)
-    CROSS_LEARN[theanoxcomp.DenseMatDenseMsgCrossCompiler] = theanoxcomp.FixedRateGDLearner
-    CROSS_COMPILE.append(theanoxcomp.SparseMatDenseMsgCrossCompiler)
-    CROSS_LEARN[theanoxcomp.SparseMatDenseMsgCrossCompiler] = theanoxcomp.FixedRateGDLearner
-except:
-    pass
+CROSSCOMPILERS = []
+CROSSLEARNERS = {}
+if xctargets.theano:
+  from tensorlog import theanoxcomp
+  for c in [
+    theanoxcomp.DenseMatDenseMsgCrossCompiler,
+    theanoxcomp.SparseMatDenseMsgCrossCompiler
+    ]:
+    CROSSCOMPILERS.append(c)
+    CROSSLEARNERS[c]=theanoxcomp.FixedRateGDLearner
+if xctargets.tf:
+  from tensorlog import tensorflowxcomp
+  for c in [
+    tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+    tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
+    ]:
+    CROSSCOMPILERS.append(c)
+    CROSSLEARNERS[c]=tensorflowxcomp.FixedRateGDLearner
 
 stem = "kinship"
 if __name__=="__main__":
@@ -32,13 +38,10 @@ if __name__=="__main__":
     testData = comline.parseDatasetSpec('tmp-cache/{stem}-test.dset|inputs/{stem}-test.examples'.format(stem=stem),db)
     print 'train:','\n  '.join(trainData.pprint())
     print 'test: ','\n  '.join(testData.pprint())
-    #dTrain = uncacheMatPairs('%s.db' % stem,'raw/%s.train.examples' % stem)
-    #dTest = uncacheMatPairs('%s.db' % stem,'raw/%s.test.examples' % stem)
     prog = program.ProPPRProgram.loadRules("%s-train-isg.ppr" % stem,db=db)
     prog.setRuleWeights()
     prog.maxDepth=4
     params = {'prog':prog,
-              #'theoryPred':'concept_atdate',
               'trainData':trainData,
               'testData':testData,
               'savedModel':'tmp-cache/%s-trained.db' % stem,
@@ -48,19 +51,19 @@ if __name__=="__main__":
     }
     expt.Expt(params).run()
     
-    for compilerClass in CROSS_COMPILE:
-        
-        print compilerClass
+    for compilerClass in CROSSCOMPILERS:
         xc = compilerClass(prog)
+        print expt.fulltype(xc)
+        
         # compile everything
         for mode in trainData.modesToLearn():
           xc.ensureCompiled(mode)
-        learner = CROSS_LEARN[compilerClass](prog,xc)
+        learner = CROSSLEARNERS[compilerClass](prog,xc)
         
         params = {'prog':prog,
                   'trainData':trainData, 'testData':testData,
-                  'savedTestPredictions':'tmp-cache/%s-test.%s.solutions.txt' % (stem,compilerClass.__name__),
-                  'savedTestExamples':'tmp-cache/%s-test.%s.examples' % (stem,compilerClass.__name__),
+                  'savedTestPredictions':'tmp-cache/%s-test.%s.solutions.txt' % (stem,expt.fulltype(xc)),
+                  'savedTestExamples':'tmp-cache/%s-test.%s.examples' % (stem,expt.fulltype(xc)),
                   'learner':learner,
         }
         
