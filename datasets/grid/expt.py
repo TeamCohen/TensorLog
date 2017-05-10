@@ -10,6 +10,7 @@ import numpy as NP
 import random
 import math
 import time
+import os
 
 from tensorlog import comline
 from tensorlog import dataset
@@ -23,6 +24,26 @@ from tensorlog import ops
 from tensorlog import plearn
 from tensorlog import program
 from tensorlog import learnxcomp
+from tensorlog import xctargets
+
+CROSSCOMPILERS = []
+CROSSLEARNERS = {}
+if xctargets.theano:
+  from tensorlog import theanoxcomp
+  for c in [
+    theanoxcomp.DenseMatDenseMsgCrossCompiler,
+    theanoxcomp.SparseMatDenseMsgCrossCompiler
+    ]:
+    CROSSCOMPILERS.append(c)
+    CROSSLEARNERS[c]=theanoxcomp.FixedRateGDLearner
+if xctargets.tf:
+  from tensorlog import tensorflowxcomp
+  for c in [
+    tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
+    tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
+    ]:
+    CROSSCOMPILERS.append(c)
+    CROSSLEARNERS[c]=tensorflowxcomp.FixedRateGDLearner
 
 VISUALIZE = False
 
@@ -42,15 +63,6 @@ VISUALIZE = False
 EDGE_WEIGHT = 0.2
 CROSS_COMPILE = []
 CROSS_LEARN = {}
-
-try:
-    from tensorlog import theanoxcomp
-    CROSS_COMPILE.append(theanoxcomp.DenseMatDenseMsgCrossCompiler)
-    CROSS_LEARN[theanoxcomp.DenseMatDenseMsgCrossCompiler] = theanoxcomp.FixedRateGDLearner
-    CROSS_COMPILE.append(theanoxcomp.SparseMatDenseMsgCrossCompiler)
-    CROSS_LEARN[theanoxcomp.SparseMatDenseMsgCrossCompiler] = theanoxcomp.FixedRateGDLearner
-except:
-    pass
 
 def nodeName(i,j):
     return '%d,%d' % (i,j)
@@ -166,10 +178,8 @@ def timingExpt(prog):
     return times
 
 # run accuracy experiment
-def accExpt(prog,trainFile,testFile,n,maxD,epochs):
+def accExpt(prog,trainData,testData,n,maxD,epochs):
     print 'grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (n,n,epochs,maxD)
-    trainData = dataset.Dataset.loadExamples(prog.db,trainFile)
-    testData = dataset.Dataset.loadExamples(prog.db,testFile)
     prog.db.markAsParameter('edge',2)
     prog.maxDepth = maxD
     # 20 epochs and rate=0.1 is ok for grid size up to about 10-12
@@ -191,36 +201,28 @@ def accExpt(prog,trainFile,testFile,n,maxD,epochs):
     NP.seterr(divide='raise')
     return expt.Expt(params).run()
 
-        #prog.normalize = 'log+softmax'
-        #funs.conf.trace = True
-        #ops.conf.trace = True
-        #ops.conf.long_trace = True
-        ops.conf.max_trace = True
-        expt.Expt(params).run()
-
-def xc_accExpt(prog,trainFile,testFile,n,maxD,epochs):
+def xc_accExpt(prog,trainData,testData,n,maxD,epochs):
 	results = {}
-        for compilerClass in CROSS_COMPILE:
+        for compilerClass in CROSSCOMPILERS:
             
-            print compilerClass
             xc = compilerClass(prog)
+            print expt.fulltype(xc)
             # compile everything
             for mode in trainData.modesToLearn():
               xc.ensureCompiled(mode)
-            learner = CROSS_LEARN[compilerClass](prog,xc)
+            learner = CROSSLEARNERS[compilerClass](prog,xc)
             
             params = {'prog':prog,
                       'trainData':trainData, 'testData':testData,
-                      'savedTestPredictions':'tmp-cache/test.%s.solutions.txt' % compilerClass.__name__,
-                      'savedTestExamples':'tmp-cache/test.%s.examples' % compilerClass.__name__,
+                      'savedTestPredictions':'tmp-cache/test.%s.solutions.txt' % expt.fulltype(xc),
                       'learner':learner,
             }
             
-            results[compilerClass] = expt.Expt(params).run()
+            results[expt.fulltype(xc)] = expt.Expt(params).run()
 	return results
 
 def runMain():
-
+    if not os.path.exists("tmp-cache"): os.mkdir("tmp-cache")
     # usage: acc [grid-size] [maxDepth] [epochs]"
     #        time [grid-size] [maxDepth] "
     (goal,n,maxD,epochs) = getargs()
@@ -232,8 +234,10 @@ def runMain():
     if goal=='time':
         print timingExpt(prog)
     elif goal=='acc':
-        print accExpt(prog,trainFile,testFile,n,maxD,epochs)
-	print "\n".join(["%s: %s" % i for i in xc_accExpt(prog,trainFile,testFile,n,maxD,epochs).items()])
+        trainData = dataset.Dataset.loadExamples(prog.db,trainFile)
+        testData = dataset.Dataset.loadExamples(prog.db,testFile)
+        print accExpt(prog,trainData,testData,n,maxD,epochs)
+	print "\n".join(["%s: %s" % i for i in xc_accExpt(prog,trainData,testData,n,maxD,epochs).items()])
         if VISUALIZE and NETWORKX:
             visualizeLearned(db,n)
     else:
