@@ -304,6 +304,7 @@ class MatrixDB(object):
 
   @staticmethod
   def deserialize(direc):
+    logging.info('deserializing database from %s' % direc)
     db = MatrixDB()
     db.schema = dbschema.AbstractSchema.deserialize(direc)
     scipy.io.loadmat(os.path.join(direc,"db.mat"),db.matEncoding)
