@@ -463,6 +463,9 @@ class Options(object):
     for opt_name,string_val in dict(optlist).items():
       attr_name = opt_name[2:]
       attr_type = type(getattr(self, attr_name))
+      if attr_type==type(True):
+        # coercing string to bool only is false for empty string, which is unintuitive
+        attr_type = lambda s: s not in ['False','false','0','','n','N','No','no']
       setattr(self, attr_name, attr_type(string_val))
 
   def as_dictionary(self):
