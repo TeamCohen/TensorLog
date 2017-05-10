@@ -14,7 +14,7 @@ def setExptParams(num):
     prog.setFeatureWeights()
     learner = plearn.ParallelFixedRateGDLearner(prog,regularizer=learn.L2Regularizer(),parallel=5,epochs=10)
     return {'prog':prog,
-            'trainData':trainData, 
+            'trainData':trainData,
             'testData':testData,
             'targetMode':'answer/io',
             'savedModel':'learned-model.db',

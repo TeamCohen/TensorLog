@@ -43,7 +43,7 @@ def runNative(db,prog,modeSet,queries):
     qps = len(queries)/(time.time() - start)
     print "answered",len(queries),"queries at",qps,"qps"
     return qps
-    
+
 def runSequential(db,prog,modeSet,queries):
     start = time.time()
     k = 0
@@ -141,5 +141,5 @@ def runCross():
     return results
 
 if __name__ == "__main__":
-    fps,qps1,qps1 = runMain()
+    fps,qps1,qps2 = runMain()
     if "cross" in sys.argv[1:]: runCross()

@@ -4,8 +4,6 @@ import sys
 import collections
 import logging
 
-from tensorlog import symtab
-
 #
 # Parse prolog rules in one of these sample formats
 #

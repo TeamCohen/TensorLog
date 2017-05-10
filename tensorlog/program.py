@@ -235,10 +235,10 @@ class ProPPRProgram(Program):
                         if goal.arity==1 and (goal.functor,goal.arity) in self.db.paramSet:
                             newType = varTypes.get(goal.args[0])
                             decl = declare.TypeDeclaration(parser.Goal(goal.functor,[newType]))
-                            self.db.addTypeDeclaration(decl,'<autosetting parameters>',-1)
+                            self.db.schema.declarePredicateTypes(decl.functor,decl.args())
             for (functor,arity) in self.db.paramList:
                 if arity==1:
-                    typename = self.db.getArgType(functor,arity,0)
+                    typename = self.db.schema.getArgType(functor,arity,0)
                     self.db.setParameter(functor,arity,self.db.ones(typename)*epsilon)
                 else:
                     logging.warn('cannot set weights of matrix parameter %s/%d automatically',functor,arity)
@@ -259,7 +259,7 @@ class ProPPRProgram(Program):
             def typeOfWeights(mode):
                 for i in range(mode.arity):
                     if mode.isInput(i):
-                        return self.db.getArgType(mode.functor,mode.arity,i)
+                        return self.db.schema.getArgType(mode.functor,mode.arity,i)
                 assert False
             weights = self.db.matrixPreimage(domainModes[0])
             weightType = typeOfWeights(domainModes[0])
@@ -269,10 +269,6 @@ class ProPPRProgram(Program):
             weights = weights * 1.0/len(domainModes)
             weights = mutil.mapData(lambda d:np.clip(d,0.0,1.0), weights)
             self.db.setParameter(paramName,1,weights*epsilon)
-            decl = declare.TypeDeclaration(parser.Goal(paramName,[weightType]))
-            self.db.addTypeDeclaration(decl,'<autosetting parameters>',-1)
-            logging.debug('parameter %s/1 initialized to %s' % (paramName,"+".join(map(lambda dm:'preimage(%s)' % str(dm), domainModes))))
-            logging.debug('type declaration for %s/1 is %s' % (paramName,decl))
         for (paramName,arity) in self.getParamList():
             if not self.db.parameterIsInitialized(paramName,arity):
                 logging.warn("Parameter %s could not be set automatically")
