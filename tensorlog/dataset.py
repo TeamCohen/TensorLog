@@ -210,7 +210,7 @@ class Dataset(object):
     def loadProPPRExamples(db,fileName):
         """Convert a proppr-style foo.examples file to a two dictionaries of
         modename->matrix pairs, one for the Xs, one for the Ys"""
-        return loadExamples(db,fileName,proppr=True)
+        return Dataset.loadExamples(db,fileName,proppr=True)
 
     @staticmethod
     def loadExamples(db,fileName,proppr=False):
@@ -237,13 +237,13 @@ class Dataset(object):
                     ysTmp[pred].append(pos)
             logging.info("loading %d predicates from %s..." % (len(xsTmp),fileName))
             for pred in xsTmp.keys():
-                xType = db.getDomain(pred.getFunctor(),2)
+                xType = db.schema.getDomain(pred.getFunctor(),2)
                 xRows = map(lambda x:db.onehot(x,xType,outOfVocabularySymbolsAllowed=True), xsTmp[pred])
                 xsResult[pred] = mutil.stack(xRows)
             for pred in ysTmp.keys():
                 def yRow(ys):
                   assert len(ys)>0, 'empty output list for example %s %s in file %s' % (pred,x,fileName)
-                  yType = db.getRange(pred.getFunctor(),2)
+                  yType = db.schema.getRange(pred.getFunctor(),2)
                   accum = db.onehot(ys[0],yType,outOfVocabularySymbolsAllowed=True)
                   for y in ys[1:]:
                     accum = accum + db.onehot(y,yType,outOfVocabularySymbolsAllowed=True)
@@ -266,8 +266,8 @@ class Dataset(object):
         for mode in modeKeys:
             assert mode in self.yDict, "No mode '%s' in yDict" % mode
             functor,arity = mode.getFunctor(),mode.getArity()
-            dx = db.matrixAsSymbolDict(self.xDict[mode],db.getDomain(functor,arity))
-            dy = db.matrixAsSymbolDict(self.yDict[mode],db.getRange(functor,arity))
+            dx = db.matrixAsSymbolDict(self.xDict[mode],db.schema.getDomain(functor,arity))
+            dy = db.matrixAsSymbolDict(self.yDict[mode],db.schema.getRange(functor,arity))
             theoryPred = mode.functor
             for i in range(max(dx.keys())+1):
                 dix = dx[i]

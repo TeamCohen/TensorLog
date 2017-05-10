@@ -10,11 +10,10 @@ import scipy.sparse
 import scipy.io
 import collections
 import logging
-import numpy as NP
 
 from tensorlog import config
 from tensorlog import declare
-from tensorlog import symtab
+from tensorlog import schema
 from tensorlog import parser
 from tensorlog import mutil
 
@@ -22,119 +21,51 @@ conf = config.Config()
 conf.allow_weighted_tuples = True; conf.help.allow_weighted_tuples = 'Allow last column of cfacts file to be a weight for the fact'
 conf.ignore_types = False;         conf.help.ignore_types = 'Ignore type declarations'
 
-#name of null entity, which is returned when a proof fails
-NULL_ENTITY_NAME = '__NULL__'
-#name of out-of-vocabulary marker entity
-OOV_ENTITY_NAME = '__OOV__'
-#name of default type
-THING = '__THING__'
+NULL_ENTITY_NAME = schema.NULL_ENTITY_NAME
+THING = schema.THING
 #functor in declarations of trainable relations, eg trainable(posWeight,1)
 TRAINABLE_DECLARATION_FUNCTOR = 'trainable'
 
 class MatrixDB(object):
   """ A logical database implemented with sparse matrices """
 
-  def __init__(self):
-    #maps symbols to numeric ids
-    self._stab = {THING: self._safeSymbTab() }
+  def __init__(self,typed=False):
     #matEncoding[(functor,arity)] encodes predicate as a matrix
     self.matEncoding = {}
     # mark which matrices are 'parameters' by (functor,arity) pair
     self.paramSet = set()
     self.paramList = []
-    # buffer initialization: see startBuffers()
-    self._buf = None
-    # type information - indexed by (functor,arity) pair
-    # defaulting to 'THING'
-    self._type = collections.defaultdict( lambda:collections.defaultdict(lambda:THING) )
+    # buffers for reading in facts in tab-sep form
+    self._databuf = self._rowbuf = self._colbuf = None
+    # typing information
+    self.schema = schema.UntypedSchema() if ((not typed) or (conf.ignore_types)) else schema.TypedSchema()
 
-  def _safeSymbTab(self):
-    """ Symbol table with reserved words 'i', 'o', and 'any'
-    """
-    result = symtab.SymbolTable()
-    result.reservedSymbols.add("i")
-    result.reservedSymbols.add("o")
-    result.reservedSymbols.add(THING)
-    # always insert special entity names first
-    result.insert(NULL_ENTITY_NAME)
-    assert result.getId(NULL_ENTITY_NAME)==1
-    result.insert(OOV_ENTITY_NAME)
-    return result
-
-  def checkTyping(self,strict=False):
-    if self.isTypeless():
-      logging.info('untyped matrixDB passed checkTyping')
-    else:
-      for i,d in enumerate(self._type.values()):
-        for (functor,arity),typeName in d.items():
-          if typeName==THING:
-            logging.warn('matrixDB relation %s/%d has no type declared for argument %d' % (functor,arity,i+1))
-            if strict: assert False,'inconsistent use of types'
-          else:
-            logging.info('matrixDB relation %s/%d argument %d type %s' % (functor,arity,i+1,typeName))
+  def checkTyping(self):
+    self.schema.checkTyping(self.matEncoding.keys())
 
   def isTypeless(self):
-    return len(self._stab.keys())==1
-
-  def declaredType(self,functor,arity):
-    return (functor,arity) in self._type[0]
-
-  def getTypes(self):
-    return self._stab.keys()
-
-  def getDomain(self,functor,arity,frozen=False):
-    """ Domain of a predicate """
-    return self.getArgType(functor,arity,0)
-
-  def getRange(self,functor,arity,frozen=False):
-    """ Range of a predicate """
-    return self.getArgType(functor,arity,1)
-
-  def getArgType(self,functor,arity,i,frozen=False):
-    """ Type associated with argument i of a predicate"""
-    if not frozen:
-      return self._type[i][(functor,arity)]
-    else:
-      return self._type[i].get((functor,arity),THING)
-
-  def addTypeDeclaration(self,decl,filename,lineno):
-    if conf.ignore_types:
-      logging.info('ignoring type declaration %s at %s:%d' % (str(decl),filename,lineno))
-    else:
-      logging.info('type declaration %s at %s:%d' % (str(decl),filename,lineno))
-      key = (decl.functor,decl.arity)
-      for j in range(decl.arity):
-        typeName = decl.getType(j)
-        if key in self._type[j] and self._type[j][key] != typeName:
-          errorMsg = '%s:%d:  %s/%d argument %d declared as both type %s and %s' \
-                      % (filename,lineno,decl.functor,decl.arity,j,typeName,self._type[j][key])
-          assert False, errorMsg
-        else:
-          if typeName not in self._stab:
-            self._stab[typeName] = self._safeSymbTab()
-          self._type[j][key] = typeName
+    return self.schema.isTypeless()
 
   #
   # retrieve matrixes, vectors, etc
   #
 
   def _fillDefault(self,typeName):
-    if typeName is None or conf.ignore_types: return THING
-    else: return typeName
+    return self.schema.defaultType() if typeName is None else typeName
 
   def dim(self,typeName=None):
     typeName = self._fillDefault(typeName)
     """Number of constants in the database, and dimension of all the vectors/matrices."""
-    return self._stab[typeName].getMaxId() + 1
+    return self.schema.getMaxId(typeName) + 1
 
   def onehot(self,s,typeName=None,outOfVocabularySymbolsAllowed=False):
     typeName = self._fillDefault(typeName)
     """A onehot row representation of a symbol."""
-    if outOfVocabularySymbolsAllowed and not self._stab[typeName].hasId(s):
-        return self.onehot(OOV_ENTITY_NAME,typeName)
-    assert self._stab[typeName].hasId(s),'constant %s (type %s) not in db' % (s,typeName)
+    if outOfVocabularySymbolsAllowed and not self.schema.hasId(typeName,s):
+        return self.onehot(schema.OOV_ENTITY_NAME,typeName)
+    assert self.schema.hasId(typeName,s),'constant %s (type %s) not in db' % (s,typeName)
     n = self.dim(typeName)
-    i = self._stab[typeName].getId(s)
+    i = self.schema.getId(typeName,s)
     return scipy.sparse.csr_matrix( ([float(1.0)],([0],[i])), shape=(1,n), dtype='float32')
 
   def zeros(self,numRows=1,typeName=None):
@@ -211,9 +142,9 @@ class MatrixDB(object):
     this mode is db.ones(typeName=t)*M """
     functor = mode.getFunctor()
     if self.transposeNeeded(mode,transpose=True):
-      return self.getRange(functor,2)
+      return self.schema.getRange(functor,2)
     else:
-      return self.getDomain(functor,2)
+      return self.schema.getDomain(functor,2)
 
   def matrixPreimageOnes(self,mode):
     """Return the ones vector v such that the preimage associated with
@@ -260,16 +191,15 @@ class MatrixDB(object):
   def asSymbol(self,symbolId,typeName=None):
     """ Convert a typed integer id to a symbol
     """
-    if typeName is None: typeName = THING
-    return self._stab[typeName].getSymbol(symbolId)
+    typeName = self._fillDefault(typeName)
+    return self.schema.getSymbol(typeName,symbolId)
 
   def asSymbolId(self,symbol,typeName=None):
     """ Convert a typed symbol to an integer id
     """
-    if typeName is None: typeName = THING
-    stab = self._stab[typeName]
-    if stab.hasId(symbol):
-      return stab.getId(symbol)
+    typeName = self._fillDefault(typeName)
+    if self.schema.hasId(typeName,symbol):
+      return self.schema.getId(typeName,symbol)
     else:
       return -1
 
@@ -279,7 +209,7 @@ class MatrixDB(object):
     coorow = row.tocoo()
     for i in range(len(coorow.data)):
       assert coorow.row[i]==0,"Expected 0 at coorow.row[%d]" % i
-      s = self._stab[typeName].getSymbol(coorow.col[i])
+      s = self.schema.getSymbol(typeName,coorow.col[i])
       result[s] = coorow.data[i]
     return result
 
@@ -302,19 +232,19 @@ class MatrixDB(object):
   def matrixAsPredicateFacts(self,functor,arity,m):
     result = {}
     m1 = scipy.sparse.coo_matrix(m)
-    typeName1 = self.getArgType(functor,arity,0)
+    typeName1 = self.schema.getArgType(functor,arity,0)
     if arity==2:
-      typeName2 = self.getArgType(functor,arity,1)
+      typeName2 = self.schema.getArgType(functor,arity,1)
       for i in range(len(m1.data)):
-        a = self._stab[typeName1].getSymbol(m1.row[i])
-        b = self._stab[typeName2].getSymbol(m1.col[i])
+        a = self.schema.getSymbol(typeName1,m1.row[i])
+        b = self.schema.getSymbol(typeName2,m1.col[i])
         w = m1.data[i]
         result[parser.Goal(functor,[a,b])] = w
     else:
       assert arity==1,"Arity (%d) must be 1 or 2" % arity
       for i in range(len(m1.data)):
         assert m1.row[i]==0, "Expected 0 at m1.row[%d]" % i
-        b = self._stab[typeName1].getSymbol(m1.col[i])
+        b = self.schema.getSymbol(typeName1,m1.col[i])
         w = m1.data[i]
         if b==None:
           if i==0 and w<1e-10:
@@ -343,7 +273,7 @@ class MatrixDB(object):
       print '%s/%d: %s' % (functor,arity,self.summary(functor,arity))
     if not self.isTypeless():
       for (functor,arity),m in sorted(self.matEncoding.items()):
-        typenames = map(lambda i:self.getArgType(functor,arity,i,frozen=True), range(arity))
+        typenames = map(lambda i:self.schema.getArgType(functor,arity,i), range(arity))
         print 'typing: %s(%s)' % (functor,",".join(typenames))
 
   def numMatrices(self):
@@ -360,7 +290,7 @@ class MatrixDB(object):
     but not the same data. Matrices/relations can be moved back
     and forth between partners.  Used mainly for testing."""
     partner = MatrixDB()
-    partner._stab = self._stab
+    partner.schema = self.schema
     return partner
 
   #
@@ -370,50 +300,13 @@ class MatrixDB(object):
   def serialize(self,direc):
     if not os.path.exists(direc):
       os.makedirs(direc)
-    if self.isTypeless():
-      # old format - one symbol table
-      with open(os.path.join(direc,"symbols.txt"), 'w') as fp:
-        for i in range(1,self.dim(THING)):
-          fp.write(self._stab[THING].getSymbol(i) + '\n')
-    else:
-      # write relation type information
-      with open(os.path.join(direc,'types.txt'),'w') as fp:
-        for i in range(2):
-          for (functor,arity) in self._type[i]:
-            fp.write('\t'.join([str(i),functor,str(arity),self._type[i][(functor,arity)]]) + '\n')
-      # write each symbol table
-      for typeName in self._stab.keys():
-        with open(os.path.join(direc,typeName+"-symbols.txt"), 'w') as fp:
-          for i in range(1,self.dim(typeName)):
-            fp.write(self._stab[typeName].getSymbol(i) + '\n')
+    self.schema.serialize(direc)
     scipy.io.savemat(os.path.join(direc,"db.mat"),self.matEncoding,do_compression=True)
 
   @staticmethod
   def deserialize(direc):
     db = MatrixDB()
-    def checkSymbols(typeName,symbolFile):
-      k = 1
-      for line in open(symbolFile):
-        sym = line.strip()
-        i = db._stab[typeName].getId(sym)
-        assert i==k,'symbols out of sync for symbol "{sym}" type {typ}: expected index {index} actual {actual}'.format(sym=sym,typ=typeName,index=i,actual=k)
-        k += 1
-    symbolFile = os.path.join(direc,"symbols.txt")
-    if os.path.isfile(symbolFile):
-      checkSymbols(THING,symbolFile)
-    else:
-      # read relation type information
-      for line in open(os.path.join(direc,'types.txt')):
-        iStr,functor,arityStr,typeStr = line.strip().split("\t")
-        db._type[int(iStr)][(functor,int(arityStr))] = typeStr
-      # read each symbol table
-      for f0 in os.listdir(direc):
-        f = os.path.join(direc,f0)
-        if os.path.isfile(f) and str(f).endswith("-symbols.txt"):
-          typeName = str(f0)[:-len("-symbols.txt")]
-          if typeName not in db._stab:
-            db._stab[typeName] = db._safeSymbTab()
-          checkSymbols(typeName,f)
+    db.schema = schema.AbstractSchema.deserialize(direc)
     scipy.io.loadmat(os.path.join(direc,"db.mat"),db.matEncoding)
     #serialization/deserialization ends up converting
     #(functor,arity) pairs to strings and csr_matrix to csc_matrix
@@ -443,63 +336,41 @@ class MatrixDB(object):
       logging.info('deserializing db file '+ dbFile)
       return MatrixDB.deserialize(dbFile)
 
-  def _bufferLine(self,line,filename,k):
-    """Load a single triple encoded as a tab-separated line.."""
-    def atof(s):
-      try:
-        return float(s)
-      except ValueError:
-        return float(0.0)
+  # high level routines for loading files
 
-    line = line.strip()
+  def addLines(self,lines):
+    """ Clear the buffers, add lines, and flush the buffers.
+    """
+    self.startBuffers()
+    for line in lines:
+      self._bufferLine(line,'<no file>',0)
+    self.flushBuffers()
 
-    if not line: return
-    if line.startswith('#'):
-      # look for a type declaration
-      place = line.find(':-')
-      if place>=0:
-        decl = declare.TypeDeclaration(line[place+len(':-'):].strip())
-        if decl.getFunctor()==TRAINABLE_DECLARATION_FUNCTOR and decl.getArity()==2 and (decl.arg(1) in ['1','2']):
-          # declaration is trainable(foo,1) or trainable(foo,2)
-          trainableFunctor = decl.arg(0)
-          trainableArity = int(decl.arg(1))
-          self.markAsParameter(trainableFunctor,trainableArity)
-        else:
-          self.addTypeDeclaration(decl,filename,k)
-      return
+  @staticmethod
+  def loadFile(filenames):
+    """Return a MatrixDB created by loading a file, or colon-separated
+    list of files.
+    """
+    db = MatrixDB()
+    db.startBuffers()
+    for f in filenames.split(":"):
+      db.bufferFile(f)
+      logging.info('buffered file %s' % f)
+    db.flushBuffers()
+    logging.info('loaded database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
+    return db
 
-    # buffer the parts of the line, which can be have either 1 or 2
-    # arguments and optionally a numeric weight
-    parts = line.split("\t")
-    if conf.allow_weighted_tuples and len(parts)==4:
-      functor,a1,a2,wstr = parts[0],parts[1],parts[2],parts[3]
-      arity = 2
-      w = atof(wstr)
-    elif len(parts)==3:
-      functor,a1,a2 = parts[0],parts[1],parts[2]
-      w = atof(a2)
-      if not conf.allow_weighted_tuples or w==0:
-        arity = 2
-        w = float(1.0)
-      else:
-        arity = 1
-    elif len(parts)==2:
-      functor,a1,a2 = parts[0],parts[1],None
-      arity = 1
-      w = float(1.0)
-    else:
-      logging.error("bad line '"+line+" '" + repr(parts)+"'")
-      return
-    key = (functor,arity)
-    if (key in self.matEncoding):
-      logging.error("predicate encoding is already completed for "+str(key)+ " at line: "+line)
-      return
-    i = self._stab[self.getArgType(functor,arity,0)].getId(a1)
-    if arity==1:
-      j = -1
-    else:
-      j = self._stab[self.getArgType(functor,arity,1)].getId(a2)
-    self._buf[key][i][j] = w
+  # manage buffers used to store matrix data before it is inserted
+
+  def startBuffers(self):
+    #buffer data for a sparse matrix: buf[pred][i][j] = f
+    #TODO: would lists and a coo matrix make a nicer buffer?
+    #def dictOfFloats(): return collections.defaultdict(float)
+    #def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
+    #self._buf = collections.defaultdict(dictOfFloatDicts)
+    self._databuf = collections.defaultdict(list)
+    self._rowbuf = collections.defaultdict(list)
+    self._colbuf = collections.defaultdict(list)
 
   def bufferFile(self,filename):
     """Load triples from a file and buffer them internally."""
@@ -511,98 +382,139 @@ class MatrixDB(object):
 
   def flushBuffers(self):
     """Flush all triples from the buffer."""
-    for f,arity in self._buf.keys():
-      self.flushBuffer(f,arity)
+    for f,arity in self._databuf.keys():
+      self._flushBuffer(f,arity)
+    self._databuf = None
+    self.startBuffers()
 
-  def flushBuffer(self,f,arity):
+  def _flushBuffer(self,functor,arity):
     """Flush the triples defining predicate p from the buffer and define
     p's matrix encoding"""
-    logging.info('flushing %d buffered rows for predicate %s' % (len(self._buf[(f,arity)]),f))
-
+    key = (functor,arity)
+    logging.info('flushing %d buffered non-zero values for predicate %s' % (len(self._databuf[key]),functor))
     if arity==2:
-      nrows = self._stab[self.getDomain(f,arity)].getMaxId() + 1
-      ncols = self._stab[self.getRange(f,arity)].getMaxId() + 1
-      m = scipy.sparse.lil_matrix((nrows,ncols),dtype='float32')
-      for i in self._buf[(f,arity)]:
-        for j in self._buf[(f,arity)][i]:
-          m[i,j] = self._buf[(f,arity)][i][j]
-      del self._buf[(f,arity)]
-      self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m,dtype='float32')
-      self.matEncoding[(f,arity)].sort_indices()
-    elif arity==1:
-      ncols = self._stab[self.getDomain(f,arity)].getMaxId() + 1
-      m = scipy.sparse.lil_matrix((1,ncols))
-      for i in self._buf[(f,arity)]:
-        for j in self._buf[(f,arity)][i]:
-          m[0,i] = self._buf[(f,arity)][i][j]
-      del self._buf[(f,arity)]
-      self.matEncoding[(f,arity)] = scipy.sparse.csr_matrix(m,dtype='float32')
-      self.matEncoding[(f,arity)].sort_indices()
-    mutil.checkCSR(self.matEncoding[(f,arity)], 'flushBuffer %s/%d' % (f,arity))
+      nrows = self.schema.getMaxId(self.schema.getDomain(functor,arity)) + 1
+      ncols = self.schema.getMaxId(self.schema.getRange(functor,arity)) + 1
+    else:
+      nrows = 1
+      ncols = self.schema.getMaxId(self.schema.getDomain(functor,arity)) + 1
+    coo_matrix = scipy.sparse.coo_matrix((self._databuf[key],(self._rowbuf[key],self._colbuf[key])), shape=(nrows,ncols))
+    self.matEncoding[key] = scipy.sparse.csr_matrix(coo_matrix,dtype='float32')
+    self.matEncoding[key].sort_indices()
+    mutil.checkCSR(self.matEncoding[key], 'flushBuffer %s/%d' % key)
 
-  def rebufferMatrices(self):
-    """Re-encode previously frozen matrices after a symbol table update"""
-    for (functor,arity),m in self.matEncoding.items():
-      targetNrows = self._stab[self.getDomain(functor,arity)].getMaxId() + 1
-      targetNcols = self._stab[self.getRange(functor,arity)].getMaxId() + 1
-      (rows,cols) = m.get_shape()
-      if cols != targetNcols or rows != targetNrows:
-        logging.info("Re-encoding predicate %s" % functor)
-        if arity==2:
-          # first shim the extra rows
-          shim = scipy.sparse.lil_matrix((targetNrows-rows,cols))
-          m = scipy.sparse.vstack([m,shim])
-          (rows,cols) = m.get_shape()
-        # shim extra columns
-        shim = scipy.sparse.lil_matrix((rows,targetNcols-cols))
-        self.matEncoding[(functor,arity)] = scipy.sparse.hstack([m,shim],format="csr")
-        self.matEncoding[(functor,arity)].sort_indices()
+  def _bufferTriplet(self,functor,arity,a1,a2,w,filename,k):
+    key = (functor,arity)
+    if (key in self.matEncoding):
+      logging.error("predicate encoding is already completed for "+str(key)+ " at line: "+line)
+      return
+    ti = self.schema.getArgType(functor,arity,0)
+    tj = self.schema.getArgType(functor,arity,1)
+    if ti is None or (tj is None and arity==2):
+      logging.error('line %d of %s: undeclared relation %s/%d' % (k,filename,functor,arity))
+    else:
+      i = self.schema.getId(ti, a1)
+      self._databuf[key].append(w)
+      if arity==1:
+        self._rowbuf[key].append(0)
+        self._colbuf[key].append(i)
+      else:
+        assert arity==2 and a2 is not None
+        self._rowbuf[key].append(i)
+        j = self.schema.getId(tj, a2)
+        self._colbuf[key].append(j)
 
-  def clearBuffers(self):
-    """Save space by removing buffers"""
-    self._buf = None
+  #
+  # the real work in parsing a .cfacts file
+  #
 
-  def startBuffers(self):
-    #buffer data for a sparse matrix: buf[pred][i][j] = f
-    #TODO: would lists and a coo matrix make a nicer buffer?
-    def dictOfFloats(): return collections.defaultdict(float)
-    def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
-    self._buf = collections.defaultdict(dictOfFloatDicts)
+  def _bufferLine(self,line,filename,k):
 
-  def addLines(self,lines):
-    self.startBuffers()
-    for line in lines:
-      self._bufferLine(line,'<no file>',0)
-    self.rebufferMatrices()
-    self.flushBuffers()
-    self.clearBuffers()
+    """Load a single triple encoded as a tab-separated line.."""
+    def _atof(s):
+      try:
+        return float(s)
+      except ValueError:
+        return None
 
-  def addFile(self,filename):
-    logging.info('adding cfacts file '+ filename)
-    self.startBuffers()
-    self.bufferFile(filename)
-    self.rebufferMatrices()
-    self.flushBuffers()
-    self.clearBuffers()
+    line = line.strip()
+    # blank lines
+    if not line: return
+    # declarations
+    if line.startswith('#'):
+      # look for a type declaration
+      place = line.find(':-')
+      if place>=0:
+        decl = declare.TypeDeclaration(line[place+len(':-'):].strip())
+        if decl.getFunctor()==TRAINABLE_DECLARATION_FUNCTOR and decl.getArity()==2 and (decl.arg(1) in ['1','2']):
+          # declaration is trainable(foo,1) or trainable(foo,2)
+          trainableFunctor = decl.arg(0)
+          trainableArity = int(decl.arg(1))
+          self.markAsParameter(trainableFunctor,trainableArity)
+        else:
+          # if possible, over-ride the default 'untyped' schema
+          if self.schema.isTypeless():
+            if self.schema.empty() and not conf.ignore_types:
+              self.schema = schema.TypedSchema()
+          if not conf.ignore_types:
+            self.schema.declarePredicateTypes(decl.functor,decl.args())
+      return
 
-  @staticmethod
-  def loadFile(filenames):
-    """Return a MatrixDB created by loading a file.  Also allows a
-    colon-separated list of files.
-    """
-    db = MatrixDB()
-    for f in filenames.split(":"):
-      db.addFile(f)
-    logging.info('loaded database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
-    return db
+    # data lines
+    parts = line.split("\t")
+    if len(parts)==4:
+      # must be functor,a1,a2,weight
+      functor,a1,a2,weight_string = parts[0],parts[1],parts[2],parts[3]
+      w = _atof(weight_string)
+      if w is None:
+        logging.error('line %d of %s: illegal weight' % (k,filename,weight_string))
+        return
+      self._bufferTriplet(functor,2,a1,a2,w,filename,k)
+    elif len(parts)==2:
+      # must be functor,a1
+      functor,a1 = parts[0],parts[1]
+      self._bufferTriplet(functor,1,a1,None,1.0,filename,k)
+    elif len(parts)==3:
+      # might be functor,a1,a2 OR functor,a1,weight
+      possible_weight_string = parts[2]
+      w = _atof(possible_weight_string)
+      if self.schema.isTypeless() and (w is not None) and conf.allow_weighted_tuples:
+        functor,a1 = parts[0],parts[1]
+        self._bufferTriplet(functor,1,a1,None,w,filename,k)
+      elif self.schema.isTypeless():
+        # can't make this a weighted tuple
+        functor,a1,a2 = parts[0],parts[1],parts[2]
+        self._bufferTriplet(functor,2,a1,a2,1.0,filename,k)
+      elif not self.schema.isTypeless():
+        functor = parts[0]
+        if self.schema.getDomain(functor,2) and not self.schema.getDomain(functor,1):
+          # must be binary
+          a1,a2 = parts[1],parts[2]
+          self._bufferTriplet(functor,2,a1,a2,1.0,filename,k)
+        elif self.schema.getDomain(functor,1) and not self.schema.getDomain(functor,2):
+          assert w is not None,'line %d file %s: illegal weight %s' % (k,filename,possible_weight_string)
+          a1 = parts[1]
+          self._bufferTriplet(functor,1,a1,None,1.0,filename,k)
+        elif w is not None:
+          a1 = parts[1]
+          logging.warn('line %d file %s: assuming %s is a weight' % (k,filename,possible_weight_string))
+          self._bufferTriplet(functor,1,a1,None,w,filename,k)
+        else:
+          a1,a2 = parts[1],parts[2]
+          self._bufferTriplet(functor,2,a1,a2,1.0,filename,k)
+    else:
+      logging.error('line %d file %s: illegal line %r' % (k,filename,line))
+      return
+
 
 #
 # test main
-# --s serialize foo.cfacts foo.db
 #
 
 if __name__ == "__main__":
-  if sys.argv[1]=='--serialize':
+  if len(sys.argv) < 2:
+    pass
+  elif sys.argv[1]=='--serialize':
     print 'loading cfacts from',sys.argv[2]
     if sys.argv[2].find(":")>=0:
       db = MatrixDB()

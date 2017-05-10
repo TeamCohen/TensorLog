@@ -114,8 +114,8 @@ class Expt(object):
     def predictionAsProPPRSolutions(fileName,theoryPred,db,X,P,append=False,start=0):
         """Print X and P in the ProPPR solutions.txt format."""
         fp = open(fileName,'a' if append else 'w')
-        dx = db.matrixAsSymbolDict(X,typeName=db.getDomain(theoryPred,2))
-        dp = db.matrixAsSymbolDict(P,typeName=db.getRange(theoryPred,2))
+        dx = db.matrixAsSymbolDict(X,typeName=db.schema.getDomain(theoryPred,2))
+        dp = db.matrixAsSymbolDict(P,typeName=db.schema.getRange(theoryPred,2))
         n=max(dx.keys())
         for i in range(n+1):
             #assert i in dp, "keys dp: %s\nkeys dx: %s" % (dp.keys(),dx.keys())

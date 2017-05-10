@@ -988,18 +988,17 @@ class TestMatrixUtils(unittest.TestCase):
 class TestTypes(unittest.TestCase):
 
   def setUp(self):
-    self.db = matrixdb.MatrixDB()
+    self.db = matrixdb.MatrixDB(typed=True)
     self.testLines = [
         '# :- head(triple,entity)\n',
         '# :- tail(triple,entity)\n',
-        '# :-creator(triple,source)\n',
+        '# :- creator(triple,source)\n',
         '# :- rel(triple,relation)\n',
         '\t'.join(['head','rxy','x']) + '\n',
         '\t'.join(['tail','rxy','y']) + '\n',
         '\t'.join(['creator','rxy','nyt']) + '\n',
         '\t'.join(['creator','rxy','fox']) + '\n',
         '\t'.join(['rel','rxy','r']) + '\n',
-        '\t'.join(['undeclared','a','b']) + '\n',
     ]
     self.db.addLines(self.testLines)
 
@@ -1017,26 +1016,25 @@ class TestTypes(unittest.TestCase):
         'relation':['__NULL__', '__OOV__', 'r'],
         'triple':['__NULL__', '__OOV__', 'rxy'],
         'entity':['__NULL__', '__OOV__', 'x', 'y'],
-        matrixdb.THING: ['__NULL__', '__OOV__', 'a', 'b']
     }
-    self.assertEqual(len(expectedSymLists.keys()), len(self.db._stab.keys()))
+    self.assertEqual(len(expectedSymLists.keys()), len(self.db.schema._stab.keys()))
     for typeName in expectedSymLists:
-      self.assertTrue(typeName in self.db._stab)
-      actualSymList = self.db._stab[typeName].getSymbolList()
+      self.assertTrue(typeName in self.db.schema.getTypes())
+      actualSymList = self.db.schema._stab[typeName].getSymbolList()
       self.assertEqual(len(expectedSymLists[typeName]),len(actualSymList))
       for a,b in zip(expectedSymLists[typeName],actualSymList):
         self.assertEqual(a,b)
 
   def testDeclarations(self):
     for r in ['head','tail']:
-      self.assertEqual(self.db.getDomain(r,2), 'triple')
-      self.assertEqual(self.db.getRange(r,2), 'entity')
+      self.assertEqual(self.db.schema.getDomain(r,2), 'triple')
+      self.assertEqual(self.db.schema.getRange(r,2), 'entity')
     for r in ['creator','rel']:
-      self.assertEqual(self.db.getDomain(r,2), 'triple')
-    self.assertEqual(self.db.getRange('creator',2), 'source')
-    self.assertEqual(self.db.getRange('rel',2), 'relation')
-    for f in [self.db.getRange,self.db.getDomain]:
-      self.assertEqual(f('undeclared',2), matrixdb.THING)
+      self.assertEqual(self.db.schema.getDomain(r,2), 'triple')
+    self.assertEqual(self.db.schema.getRange('creator',2), 'source')
+    self.assertEqual(self.db.schema.getRange('rel',2), 'relation')
+    for f in [self.db.schema.getRange,self.db.schema.getDomain]:
+      self.assertEqual(f('undeclared',2), None)
 
   def testTCToyExptTypes(self):
     optdict,args = comline.parseCommandLine(
@@ -1074,7 +1072,7 @@ class TestTypeSemantics(unittest.TestCase):
 class TestTrainableDeclarations(unittest.TestCase):
 
   def testIt(self):
-    db = matrixdb.MatrixDB()
+    db = matrixdb.MatrixDB(typed=True)
     db.addLines([
         "# :- trainable(w1,1)\n",
         "# :- trainable(w2,2)\n",

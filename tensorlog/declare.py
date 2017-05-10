@@ -23,6 +23,8 @@ class AbstractDeclaration(object):
             goal = parser.Parser.parseGoal(goal)
         self.prototype = goal
         self._key = str(goal)
+    def args(self):
+        return self.prototype.args
     def arg(self,i):
         return self.prototype.args[i]
     def getArity(self):
