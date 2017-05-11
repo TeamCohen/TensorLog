@@ -64,7 +64,7 @@ class Compiler(object):
         tensorlog.program.ProPPRProgram object).
 
       autoset_db_params: if True, try and set parameter values
-        automatically. This usually works for rule_features but but
+        automatically. This usually works for rule_features but not
         others.
 
       summary_file: if not None, and if target=='tensorflow', this

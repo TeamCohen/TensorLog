@@ -12,6 +12,7 @@ from tensorlog import xcomp
 from tensorlog import expt
 from tensorlog import learnxcomp
 from tensorlog import dataset
+from tensorlog import declare
 
 class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
@@ -52,8 +53,9 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
       logging.debug('session created %.3f Gb' % comline.memusage())
     if not self.sessionInitialized:
       logging.debug('initializing session %.3f Gb' % comline.memusage())
-      for var in self.tfVarsToInitialize:
-        self.session.run(var.initializer)
+      #for var in self.tfVarsToInitialize:
+      #  self.session.run(var.initializer)
+      self.session.run(tf.global_variables_initializer())
       self.sessionInitialized = True
       logging.debug('session initialized %.3f Gb' % comline.memusage())
 
@@ -533,5 +535,6 @@ class FixedRateGDLearner(learnxcomp.BatchEpochsLearner):
     
     def trainMode(self,mode,X,Y,epochs=-1):
         if epochs<0: epochs=self.epochs
+        if isinstance(mode,str):mode=declare.asMode(mode)
         self.xc.optimizeDataLoss(mode,self.optimizer,X,Y,epochs=epochs)
 
