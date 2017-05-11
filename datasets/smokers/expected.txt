@@ -1,6 +1,33 @@
-# expected result from Mon Jul 18 18:01:49 EDT 2016
-eval t_stress/io time 0.00655293464661 sec
-eval t_influences/io time 0.00620603561401 sec
-eval t_cancer_spont/io time 0.00629305839539 sec
-eval t_cancer_smoke/io time 0.00623607635498 sec
-total time 0.0253541469574 sec
+# actual result on Thu May 11 15:11:45 EDT 2017
+Tensorlog v1.3.3 (C) William W. Cohen and Carnegie Mellon University, 2016-2017
+eval t_stress/io time 0.00632214546204 sec
+eval t_influences/io time 0.00614285469055 sec
+eval t_cancer_spont/io time 0.00518012046814 sec
+eval t_cancer_smoke/io time 0.00516486167908 sec
+total time 0.0228428840637 sec
+time 0.0228428840637
+Tensorlog v1.3.3 (C) William W. Cohen and Carnegie Mellon University, 2016-2017
+tensorlog.theanoxcomp.DenseMatDenseMsgCrossCompiler
+eval t_stress/io time 7.65080595016 sec
+eval t_influences/io time 0.176002025604 sec
+eval t_cancer_spont/io time 0.143238782883 sec
+eval t_cancer_smoke/io time 0.144819974899 sec
+total time tensorlog.theanoxcomp.DenseMatDenseMsgCrossCompiler 8.62610697746 sec
+tensorlog.theanoxcomp.SparseMatDenseMsgCrossCompiler
+eval t_stress/io time 0.145111083984 sec
+eval t_influences/io time 0.14995598793 sec
+eval t_cancer_spont/io time 0.14336514473 sec
+eval t_cancer_smoke/io time 0.152543067932 sec
+total time tensorlog.theanoxcomp.SparseMatDenseMsgCrossCompiler 0.775099039078 sec
+tensorlog.tensorflowxcomp.DenseMatDenseMsgCrossCompiler
+eval t_stress/io time 0.158535003662 sec
+eval t_influences/io time 0.351592063904 sec
+eval t_cancer_spont/io time 0.233716011047 sec
+eval t_cancer_smoke/io time 0.23553109169 sec
+total time tensorlog.tensorflowxcomp.DenseMatDenseMsgCrossCompiler 1.92545294762 sec
+tensorlog.tensorflowxcomp.SparseMatDenseMsgCrossCompiler
+eval t_stress/io time 0.789707183838 sec
+eval t_influences/io time 0.33563709259 sec
+eval t_cancer_spont/io time 0.299407958984 sec
+eval t_cancer_smoke/io time 0.322700977325 sec
+total time tensorlog.tensorflowxcomp.SparseMatDenseMsgCrossCompiler 2.70987987518 sec

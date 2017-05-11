@@ -1,10 +1,11 @@
 import sys
 import time
-
+import logging
 from tensorlog import comline
 from tensorlog import declare
 from tensorlog import interp
 from tensorlog import mutil
+from tensorlog import expt
 from tensorlog import xctargets
 
 CROSSCOMPILERS = []
@@ -22,6 +23,7 @@ if xctargets.tf:
     tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
     ]:
     CROSSCOMPILERS.append(c)
+  import tensorflow as tf
 
 
 modes = ["t_stress/io", "t_influences/io","t_cancer_spont/io", "t_cancer_smoke/io"]
@@ -45,7 +47,7 @@ def runMain():
     for modeString in modes:
         print 'eval',modeString,
         start = time.time()
-        prog.eval(declare.asMode(modeString), [X])
+        ti.prog.eval(declare.asMode(modeString), [X])
         print 'time',time.time() - start,'sec'
     tot = time.time() - start0
     print 'total time',tot,'sec'
@@ -57,16 +59,19 @@ if __name__=="__main__":
 
     (ti,X) = setExptParams()
     for compilerClass in CROSSCOMPILERS:
-        print compilerClass.__name__
         start0=time.time()
-        xc = compilerClass(prog)
+        xc = compilerClass(ti.prog)
+        print expt.fulltype(xc)
         # compile everything
         for modeString in modes:
             mode = declare.asMode(modeString)
             xc.ensureCompiled(mode)
-            print 'eval',modeString,compilerClass.__name__
+            print 'eval',modeString,
             start = time.time()
+            if expt.fulltype(xc).find("tensorflow")>=0:
+              xc.ensureSessionInitialized()
+              xc.session.run(tf.global_variables_initializer())
             xc.inferenceFunction(mode)(X)
             print 'time',time.time() - start,'sec'
-        print 'total time',compilerClass.__name__,time.time()-start0,'sec'
+        print 'total time',expt.fulltype(xc),time.time()-start0,'sec'
 
