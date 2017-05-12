@@ -1,25 +1,22 @@
-Should I switch from comline to gflags?
+Status:
 
-How do I set up examples and tests? do I want to move them from datasets?
- - cora -done
- - wordnet -slow! maybe look at a smaller sample? maybe just the nouns or something?
- - smokers -done
- - grid - done
- - wikimovies
- - amie-qa?
- - fb15k-speed done
- - added inputs argument to proofCount, etc.
+ - looking at sparse implementation of softmax....but it doesn't seem
+   to be differentiable the way I set it up. can it be? maybe I should
+   be using a sampling softmax?
+
+   should I back out of this
+
+Should I switch from comline to gflags?
 
 EASY:
  - config options for db -> move to dbschema?
- - speed up dataset loading (buffer everything, don't use stack) -done
 
 To think through:
  - pass schema in to DB somehow in simple compiler?
  - maybe include b.db = '....' (and/or b.db += ....?)
  - maybe RuleBuilder should just be Builder?
 
-calling back and forth: should be able to specify input placeholder
+calling back and forth: should be able to specify input placeholder -done
  for a proofCount/inference function (passed thru to _doCompile, then
  _fun2Expr as sharedInputs.  should be able to create an inference function
  and loss function from a proofCount function.  This will let you
@@ -70,8 +67,6 @@ calling back and forth: should be able to specify input placeholder
  declare their types, OR will be automarked if they appear after a //
  - tlog(autoset_db_params=True) will only set UNDEFINED params
  - you can load just parameters, not a whole DB
- - ????maybe caching/uncaching is done by specifying a cache directory, instead of
- complicated "cache|src" syntax????
 
 Cleanup:
  - clean up mutil: densify
