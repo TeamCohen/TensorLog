@@ -5,6 +5,7 @@ import scipy.sparse as ss
 import tensorflow as tf
 
 from tensorlog import comline
+from tensorlog import config
 from tensorlog import funs
 from tensorlog import ops
 from tensorlog import xcomp
@@ -411,12 +412,12 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 
   def _softmaxFun2Expr(self,subExpr,typeName):
     # zeros are actually big numbers for the softmax,
-    # so replace them with -20
-    subExprReplacing0WithNeg20 = tf.where(
-      subExpr>0.0,
-      subExpr,
-      tf.ones(tf.shape(subExpr), tf.float32)*(-10.0))
-    return tf.nn.softmax(subExprReplacing0WithNeg20 + self._nullSmoother[typeName])
+    # so replace them with a big negative number
+    subExprReplacing0WithNeg10 = tf.where(
+        subExpr>0.0,
+        subExpr,
+        tf.ones(tf.shape(subExpr), tf.float32)*(-10.0))
+    return tf.nn.softmax(subExprReplacing0WithNeg10 + self._nullSmoother[typeName])
 
   def _transposeMatrixExpr(self,m):
     return tf.transpose(m)

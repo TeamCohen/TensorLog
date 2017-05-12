@@ -149,6 +149,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       self.check_maxes_in_dicts(actual_result_dict, expected_result_dict)
       # check it's normalized
       l1_error = abs(sum(actual_result_dict.values()) - 1.0)
+      #print 'l1_error',l1_error,'actual_result_dict',actual_result_dict,'expected_result_dict',expected_result_dict
       self.assertTrue( l1_error < 0.0001)
       # also test proofCountFun
       proofCountFun = xc.proofCountFunction(mode_string)
