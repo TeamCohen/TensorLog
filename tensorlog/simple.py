@@ -16,7 +16,10 @@ from tensorlog import matrixdb
 from tensorlog import parser
 from tensorlog import program
 from tensorlog import tensorflowxcomp
-from tensorlog import theanoxcomp
+try:
+  from tensorlog import theanoxcomp
+except ImportError:
+  logging.warn('Cannot import theanoxcomp')
 
 import tensorflow as tf
 

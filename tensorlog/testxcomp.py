@@ -8,7 +8,10 @@ import sys
 import collections
 import tempfile
 import tensorflow as tf
-import theano
+try:
+  import theano
+except ImportError:
+  logging.warn('Cannot import theano')
 
 from tensorlog import bpcompiler
 from tensorlog import comline
@@ -21,8 +24,11 @@ from tensorlog import parser
 from tensorlog import program
 from tensorlog import simple
 from tensorlog import testtensorlog
-from tensorlog import theanoxcomp
 from tensorlog import tensorflowxcomp
+try:
+  import theanoxcomp
+except ImportError:
+  logging.warn('Cannot import theano')
 
 
 # note: with all compilers tested, these tests now take about 5-6min, ouch
