@@ -73,6 +73,8 @@ class Compiler(object):
     # parse the db argument
     if isinstance(db,matrixdb.MatrixDB):
       self.db = db
+    elif isinstance(db,DBWrapper):
+      self.db = db.inner_db
     elif isinstance(db,str):
       self.db = comline.parseDBSpec(db)
     else:
@@ -81,7 +83,7 @@ class Compiler(object):
     # parse the program argument
     if isinstance(prog,program.Program):
       self.prog = prog
-    elif isinstance(prog,RuleBuilder):
+    elif isinstance(prog,Builder):
       self.prog = program.ProPPRProgram(db=self.db, rules=prog.rules)
     elif isinstance(prog,parser.RuleCollection):
       self.prog = program.ProPPRProgram(db=self.db, rules=prog)
@@ -321,35 +323,66 @@ class Compiler(object):
       print 'mode %s: Y is sparse %d x %d matrix (about %.1f rows/Gb)' % (sm,ry,cy,rows_per_gigabyte(cy))
     return dset
 
-class RuleBuilder(object):
-  """
-  Supports construction of programs within python, using the
+class Builder(object):
+  """Supports construction of programs within python, using the
   following sort of syntax.
 
-    b = RuleBuilder()
+    b = Builder()
     X,Y,Z = b.variables("X Y Z")
     aunt,parent,sister,wife = b.predicates("aunt parent sister wife")
     uncle = b.predicate("uncle")
 
-    b += aunt(X,Y) <= parent(X,Z),sister(Z,Y)
-    b += aunt(X,Y) <= uncle(X,Z),wife(Z,Y)
+    b.rules += aunt(X,Y) <= parent(X,Z),sister(Z,Y)
+    b.rules += aunt(X,Y) <= uncle(X,Z),wife(Z,Y)
 
   Or, with 'control features'
 
-    b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // r1
-    b += aunt(X,Y) <= parent(X,Z) & sister(Z,Y) // r2
-    b += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // (weight(F) | description(X,D) & feature(X,F))
+    r1,r2 = b.rule_ids("r1 r2")
+    b.rules += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // r1
+    b.rules += aunt(X,Y) <= parent(X,Z) & sister(Z,Y) // r2
+
+  or
+
+    b.rules += aunt(X,Y) <= uncle(X,Z) & wife(Z,Y) // (weight(F) | description(X,D) & feature(X,F))
 
   You can also construct a database schema
 
     person_t,place_t = b.types("person_t place_t") # note: singleton 'type' isn't available
     b.schema += aunt(person_t,person_t) & uncle(person_t,person_t)
+    ...
+
+  Or specify the database (either once you've established a schema, or
+  else if the schema information is inline, of the database is
+  untyped) as:
+
+    b.db = "foo.db|f1.cfacts:f2.cfacts"
+
+  or
+
+    b.db = "foo.db"
+
+  or
+
+    b.db += "f1.cfacts"
+    b.db += "f2.cfacts"
+    ...
 
   """
 
   def __init__(self):
-    self.rules = parser.RuleCollection()
-    self.schema = SchemaWrapper()
+    self.rules = RuleCollectionWrapper()
+    self.schema = SchemaWrapper(self)
+    self.db = DBWrapper(self)
+
+  def __setattr__(self,name,value):
+    if name=='db':
+      if 'db' not in self.__dict__:
+        # the assignment in Builder.__init__
+        self.__dict__['db'] = value
+      else:
+        self.__dict__['db']._set_to_value(value)
+    else:
+      self.__dict__[name] = value
 
   @staticmethod
   def _split(comma_or_space_sep_names):
@@ -357,19 +390,19 @@ class RuleBuilder(object):
 
   @staticmethod
   def variable(variable_name):
-    return RuleBuilder.variables(variable_name)[0]
+    return Builder.variables(variable_name)[0]
 
   @staticmethod
   def variables(space_sep_variable_names):
-    return RuleBuilder._split(space_sep_variable_names)
+    return Builder._split(space_sep_variable_names)
 
   @staticmethod
   def types(space_sep_type_names):
-    return RuleBuilder._split(space_sep_type_names)
+    return Builder._split(space_sep_type_names)
 
   @staticmethod
   def rule_id(type_name,rule_id):
-    return RuleBuilder.rule_ids(type_name,rule_id)[0]
+    return Builder.rule_ids(type_name,rule_id)[0]
 
   @staticmethod
   def rule_ids(type_name,space_sep_rule_ids):
@@ -380,11 +413,11 @@ class RuleBuilder(object):
           [],
           features=[parser.Goal('weight',[var_name])],
           findall=[parser.Goal(bpcompiler.ASSIGN,[var_name,rule_id,type_name])])
-    return map(goal_builder, RuleBuilder._split(space_sep_rule_ids))
+    return map(goal_builder, Builder._split(space_sep_rule_ids))
 
   @staticmethod
   def predicate(predicate_name):
-    return RuleBuilder.predicates(predicate_name)[0]
+    return Builder.predicates(predicate_name)[0]
 
   @staticmethod
   def predicates(space_sep_predicate_names):
@@ -392,7 +425,7 @@ class RuleBuilder(object):
       def builder(*args):
         return RuleWrapper(None,[parser.Goal(pred_name,args)])
       return builder
-    return map(goal_builder, RuleBuilder._split(space_sep_predicate_names))
+    return map(goal_builder, Builder._split(space_sep_predicate_names))
 
   def __iadd__(self,other):
     if isinstance(other,parser.Rule):
@@ -401,10 +434,57 @@ class RuleBuilder(object):
       assert False, 'rule syntax error for builder: %s += %s' % (str(self),str(other))
     return self
 
+class RuleCollectionWrapper(parser.RuleCollection):
+  """ Subclass RuleCollection to handle a += notation
+  """
+  def __iadd__(self,other):
+    if isinstance(other,parser.Rule):
+      self.add(other)
+    else:
+      assert False, 'rule syntax error for builder: %s += %s' % (str(self),str(other))
+    return self
+
+class DBWrapper(object):
+  """ Wraps a database and supports builder.db = matrixDB, builder.db = db_spec
+  where db_spec is parseable by comline, or builder.db += filename.
+  """
+
+  def __init__(self,builder):
+    self.builder = builder
+    self.inner_db = None
+
+  def _set_to_value(self,other):
+    init_schema = None if self.builder.schema.empty() else self.builder.schema
+    if isinstance(other,matrixdb.MatrixDB):
+      if init_schema is not None:
+        logging.warn('schema definition is discarded when you assign a database to builder.db')
+      self.inner_db = other
+    elif isinstance(other,str) and comline.isUncachefromSrc(other):
+      cache,src = comline.getCacheSrcPair(other)
+      self.inner_db = matrixdb.MatrixDB.uncache(cache,src,initSchema=init_schema)
+    elif isinstance(other,str) and other.endswith(".db"):
+      self.inner_db = matrixdb.MatrixDB.deserialize(other)
+    elif isinstance(other,str):
+      self.inner_db = matrixdb.MatrixDB.loadFile(other,initSchema=init_schema)
+    else:
+      assert False,'builder.db can only be assigned to a string, or a tensorlog.matrixdb.MatrixDB'
+
+  def __iadd__(self,other):
+    if self.inner_db is None:
+      init_schema = None if self.builder.schema.empty() else self.builder.schema
+      self.inner_db = matrixdb.MatrixDB(initSchema=init_schema)
+    self.inner_db.addFile(other)
+
 class SchemaWrapper(dbschema.TypedSchema):
   """ Subclass a schema to handle a += notation
   """
+  def __init__(self,builder):
+    super(SchemaWrapper,self).__init__()
+    self.builder = builder
+
   def __iadd__(self,other):
+    if self.builder.db.inner_db is not None:
+      logging.warn('Adding to builder.schema after builder.db is initialized, this is dangerous')
     if isinstance(other,parser.Rule):
       for g in other.rhs:
         d = declare.TypeDeclaration(g)
@@ -415,7 +495,7 @@ class SchemaWrapper(dbschema.TypedSchema):
 
 
 class RuleWrapper(parser.Rule):
-  """ Used by the RuleBuilder to hold parts of a rule,
+  """ Used by the Builder to hold parts of a rule,
   and combine the parts using operator overloading
   """
 

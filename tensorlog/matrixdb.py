@@ -320,7 +320,7 @@ class MatrixDB(object):
     return db
 
   @staticmethod
-  def uncache(dbFile,factFile):
+  def uncache(dbFile,factFile,initSchema=None):
     """Build a database file from a factFile, serialize it, and return
     the de-serialized database.  Or if that's not necessary, just
     deserialize it.  As always the factFile can be a
@@ -328,7 +328,7 @@ class MatrixDB(object):
     """
     if not os.path.exists(dbFile) or any([os.path.getmtime(f)>os.path.getmtime(dbFile) for f in factFile.split(":")]):
       logging.info('serializing fact file %s to %s' % (factFile,dbFile))
-      db = MatrixDB.loadFile(factFile)
+      db = MatrixDB.loadFile(factFile,initSchema=initSchema)
       db.serialize(dbFile)
       os.utime(dbFile,None) #update the modification time for the directory
       return db
@@ -346,12 +346,20 @@ class MatrixDB(object):
       self._bufferLine(line,'<no file>',0)
     self.flushBuffers()
 
+  def addFile(self,filename):
+    """ Clear the buffers, add lines, and flush the buffers.
+    """
+    self.startBuffers()
+    for k,line in enumerate(open(filename)):
+      self._bufferLine(line,filename,k+1)
+    self.flushBuffers()
+
   @staticmethod
-  def loadFile(filenames):
+  def loadFile(filenames,initSchema=None):
     """Return a MatrixDB created by loading a file, or colon-separated
     list of files.
     """
-    db = MatrixDB()
+    db = MatrixDB(initSchema=initSchema)
     db.startBuffers()
     for f in filenames.split(":"):
       db.bufferFile(f)

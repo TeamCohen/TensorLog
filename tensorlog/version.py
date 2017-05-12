@@ -42,3 +42,5 @@ VERSION = '1.3.3'
 #     simple.RuleBuilder
 # version 1.3.3:
 #     split of version.py into different file
+#     refactored schema
+#     simple.RuleBuilder -> simple.Builder

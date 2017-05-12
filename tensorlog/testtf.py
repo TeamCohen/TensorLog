@@ -13,14 +13,14 @@ from tensorlog import testtensorlog
 class TestReuse(unittest.TestCase):
 
   def setUp(self):
-    b = simple.RuleBuilder()
+    b = simple.Builder()
     p,q,sister,child = b.predicates("p q sister child")
     X,Y,Z = b.variables("X Y Z")
     b += p(X,Y) <= sister(X,Z) & child(Z,Y)
     b += q(X,Y) <= sister(X,Y)
     factFile = os.path.join(testtensorlog.TEST_DATA_DIR,"fam.cfacts")
     self.tlog = simple.Compiler(db=factFile, prog=b.rules)
- 
+
   def testCombinePC(self):
     """ Check that we can reuse the inputs from one tensorlog function in another.
     """
@@ -28,7 +28,7 @@ class TestReuse(unittest.TestCase):
     self.f2 = self.tlog.proof_count("q/io", inputs=[self.tlog.input_placeholder("p/io")])
     self.g = (2*self.f1 + self.f2)
     self.checkBehavior()
- 
+
   def testCombineInf(self):
     _1 = self.tlog.inference("p/io")
     _2 = self.tlog.inference("q/io", inputs=[self.tlog.input_placeholder("p/io")])
@@ -38,7 +38,7 @@ class TestReuse(unittest.TestCase):
     self.checkBehavior()
 
   def testCombineLoss(self):
-    
+
     _1 = self.tlog.loss("p/io")
     _2 = self.tlog.loss("q/io", inputs=[self.tlog.input_placeholder("p/io")])
     self.f1 = self.tlog.proof_count("p/io")
@@ -49,10 +49,10 @@ class TestReuse(unittest.TestCase):
   def checkBehavior(self):
     tlog = self.tlog
     self.assertTrue(tlog.input_placeholder("p/io") is tlog.input_placeholder("q/io"))
-    
+
     session = tf.Session()
     session.run(tf.global_variables_initializer())
-    
+
     x = tlog.db.onehot("william").todense()
     input_name = tlog.input_placeholder_name("p/io")
     y1 = session.run(self.f1, feed_dict={input_name:x})
@@ -73,5 +73,3 @@ class TestReuse(unittest.TestCase):
     self.assertEqual(len(actual.keys()), len(expected.keys()))
     for k in actual.keys():
       self.assertAlmostEqual(actual[k], expected[k], delta=0.05)
-
-

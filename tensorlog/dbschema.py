@@ -228,7 +228,7 @@ class TypedSchema(AbstractSchema):
 
   def empty(self):
     for stab in self._stab.values():
-      if not self._stab.empty: return False
+      if not stab.empty: return False
     return True
 
   def insertType(self,typeName):

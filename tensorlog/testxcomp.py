@@ -724,8 +724,8 @@ class TestSimple(unittest.TestCase):
     self.assertTrue(acc1>=0.9)
     session.close()
 
-  def testRuleBuilder1(self):
-    b = simple.RuleBuilder()
+  def testBuilder1(self):
+    b = simple.Builder()
     X,Y,Z = b.variables("X Y Z")
     aunt,parent,sister,wife = b.predicates("aunt parent sister wife")
     uncle = b.predicate("uncle")
@@ -748,14 +748,34 @@ class TestSimple(unittest.TestCase):
     self.assertEqual(str(rs[3]), "aunt(X,Y) :- parent(X,Z), sister(Z,Y) {weight(R2) : assign(R2,r2,ruleid_t)}.")
     self.assertEqual(str(rs[4]), "aunt(X,Y) :- uncle(X,Z), wife(Z,Y) {weight(F) : description(X,D),feature(X,F)}.")
 
-  def testRuleBuilder2(self):
-    b = simple.RuleBuilder()
+  def testBuilder2(self):
+    b = simple.Builder()
     predict,assign,weighted,hasWord,posPair,negPair = b.predicates("predict assign weighted hasWord posPair negPair")
     X,Pos,Neg,F,W = b.variables("X Pos Neg F W")
     b += predict(X,Pos) <= assign(Pos,'pos','label') // (weighted(F) | hasWord(X,W) & posPair(W,F))
     b += predict(X,Neg) <= assign(Neg,'neg','label') // (weighted(F) | hasWord(X,W) & negPair(W,F))
     dbSpec = os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts")
     self.runTextCatLearner(simple.Compiler(db=dbSpec,prog=b.rules))
+
+  def testBuilder3(self):
+    b = simple.Builder()
+    predict,assign,weighted,hasWord,posPair,negPair,label = b.predicates("predict assign weighted hasWord posPair negPair label")
+    doc_t,label_t,word_t,labelWordPair_t = b.types("doc_t label_t word_t labelWordPair_t")
+
+    b.schema += predict(doc_t,label_t)
+    b.schema += hasWord(doc_t,word_t)
+    b.schema += posPair(word_t,labelWordPair_t)
+    b.schema += negPair(word_t,labelWordPair_t)
+    b.schema += label(label_t)
+
+    X,Pos,Neg,F,W = b.variables("X Pos Neg F W")
+    b.rules += predict(X,Pos) <= assign(Pos,'pos','label') // (weighted(F) | hasWord(X,W) & posPair(W,F))
+    b.rules += predict(X,Neg) <= assign(Neg,'neg','label') // (weighted(F) | hasWord(X,W) & negPair(W,F))
+
+    # use the untyped version of the facts to make sure the schema works
+    b.db = os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy.cfacts")
+
+    self.runTextCatLearner(simple.Compiler(db=b.db, prog=b.rules))
 
 class TestPlugins(unittest.TestCase):
 
