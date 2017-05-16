@@ -260,6 +260,8 @@ class Compiler(object):
         will be loaded, parsed, and serialized in foo.dset for later.
     """
     dset = comline.parseDatasetSpec(dataset_spec,self.db)
+    return self.annotate_small_dataset(dset)
+  def annotate_small_dataset(self,dset):
     m = dset.modesToLearn()[0]
     # convert to something bereft of tensorlog data structures: a
     # dictionary mapping strings like "p/io" to X,Y pairs, where X and
@@ -314,6 +316,8 @@ class Compiler(object):
     """
 
     dset = comline.parseDatasetSpec(dataset_spec,self.db)
+    return self.annotate_big_dataset(dset)
+  def annotate_big_dataset(self,dset):
     for m in dset.modesToLearn():
       x = dset.getX(m)
       y = dset.getY(m)
