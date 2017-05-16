@@ -117,7 +117,7 @@ class MatrixDB(object):
       result = self.matEncoding[(mode.functor,mode.arity)]
     else:
       result = self.matEncoding[(mode.functor,mode.arity)].transpose()
-      result = scipy.sparse.csr_matrix(result)
+      result = scipy.sparse.csr_matrix(result,dtype='float32')
       mutil.checkCSR(result,'db.matrix mode %s transpose %s' % (str(mode),str(transpose)))
     return result
 
@@ -314,7 +314,7 @@ class MatrixDB(object):
     for stringKey,mat in db.matEncoding.items():
       del db.matEncoding[stringKey]
       if not stringKey.startswith('__'):
-        db.matEncoding[eval(stringKey)] = scipy.sparse.csr_matrix(mat)
+        db.matEncoding[eval(stringKey)] = scipy.sparse.csr_matrix(mat,dtype='float32')
     logging.info('deserialized database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
     db.checkTyping()
     return db
