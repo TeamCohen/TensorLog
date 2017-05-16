@@ -3,7 +3,7 @@
 expt: expt.log eval.log
 
 expt.log:
-	python top-1000-near-google.py > expt.log
+	python expt.py > expt.log
 
 eval.log: expt.log
 	rm -f $@
