@@ -1,39 +1,81 @@
 TODO: 
 
+ - seem to have a type inference bug in bug_fails_type_inference.ppr
+ - multi-task datasets
+ - sparse softmax (sampling softmax? nce_loss?)
+
+TF CLEANUPS:
+ - comline to gflags?
+ - add way to get arguments in Options.set_from_command_line
+ - simple serialize --input x --output y
+
+ - alternative to calling out to tensorlog would be to
+ iteratively process multiple-input, single-output plugins.
+ for i in plugInGoalPositions:
+   compile opsequence for A<=B1,...,B[i-1]
+   add op to compute output of B[i] from input
+   syntactic rule: links in polytree cannot cross boundaries
+    defined by plugin literals
+- having multiple inputs in bpcompiler would also be nice....
+ hard would this be to do?
+
+NATIVE:
  - check y - p vs p - y in tensorlog (and gradient sign)
  - check family dataset
  - check subfunction reuse in grid
  - add __repr__ functions for learners so you can echo them in expt
-
  - cleanup gradient stuff:
  -- plearn tasks should postprocess the parameters via rowsum for the paramGrad weights - sort of like a combiner
  -- plearn postprocessing should do weighted average of the gradients - maybe do with with a bunch of pairwise addition tasks?
-
  - need to test Adagrad on real data
    - update: regularization runs but it possibly broken
 
- - faster database loader/fact buffer flushing
- - think about typed predicates and dense matrices
- -- maybe extend env so that env.matrixType[v] indicates type: sparse or dense+offset
- -- have ops dispatch to the correct operator as appropriate
+NATIVE CLEANUP:
+ - clean up mutil: densify
+ - clean up dataset: matrix examples (done?) and proppr nonsense (move proppr to extras)
+ - clean up funs, ops: refactor bprop and eval into 'native'
+ - clean up program: autoweighting, ProPPRProgram vs program
 
- -- rather than types, I could just read in all constants in order so that
- you can group similar-typed ones together (eg, have 'foo.order' be 
- an extra input in programFiles and add a bit to the matrixdb to 
- loadConstants)
+ - code reorg?
+
+    __init__.py
+    test (2k lines)
+      benchmark.py
+      testtensorlog.py
+      testxcomp.py
+    core: (maybe 2k lines)
+      bpcompiler.py
+      comline.py - should add my super simple option holder
+      config.py
+      dataset.py
+      declare.py - do I really need something so complicated as a Goal?
+      funs.py - a lot is backprop or eval
+      masterconfig.py
+      matrixdb.py
+      ops.py - a lot is backprop or eval
+      parser.py - 200 lines and do I need it?
+      program.py - autoweighting
+      symtab.py - should start at 0 or 1? do I need reserved words?
+      simple.py
+      tensorflowxcomp.py - *Function, *Grad, runExpt and support is test, this is a few hundred lines
+      theanoxcomp.py - *Function, *Grad, runExpt and support is test
+      xcomp.py - *Function, ...
+      opfunutil.py - scratchpad crap
+    extra (200)
+      interp.py
+      list.py
+    native (1500)
+      learn.py
+      debug.py
+      expt.py
+      plearn.py
+      putil.py
+      mutil.py - shuffleRows, selectRows used in dataset only; stack, numRows and checkCSR a lot; mapData a lot,
+        mostly for clipping; but it's ony 300 lines or so
 
 TUTORIAL/DOCS
 
   see wiki
-
-TODO: Thinking thru functions and re-use: I'm not sure that re-used functions are handled properly.
-They cache their outputs so if they are called multiple times at the same level with different
-inputs we really need a copy of each instance. Proposed test case:
-
- 	 p(X,Y) :- q(X,Y),r(Y,Z),r(X,W).
-	 q(a,b)
-	 r(X,Y) :- s(X,Y).  # so it's a re-used function
-	 s(a,c). s(b,c).
 
 BUGS: 
 
@@ -44,21 +86,24 @@ DESIGN FLAWS: 1 fails but 2 is ok even tho both are polytrees.
  1 p(X,Y) :- q(X,X1),r(Y,Y1),s(X1,Y1)
  2 p(X,Y) :- q(X,X1),s(X1,Y1),r(Y,Y1)
 
-EXTENSIONS:
- - throw sensible error when a novel rule constant is seen
 
-config:
- - might want to include, in config.py, an overall 'top' configuration
- which includes the others as subconfigurations.  also might want to
- serialize/deserialize them.
+USE CASES FOR TF/TLOG interface:
 
-learning:
- - serializable multi-task datasets
-  propprExamplesAsData(db,fileName): convert to provide (xdict,ydict) outputs
- - adagrad & holdout set for convergence
-
-MORE EXPERIMENTS:
-
- - Rose's representation learning/recommendation
- - SSL
-
+ -- training from partial information, known pos and known negatives (try this out!)
+ --- define two prediction predicates: predict(X,Y) and predictComplement(X,Y)
+ --- data for predict is known pos, for predictComplement, known neg
+ set up optimization as follows:
+   shared_input = tf.PlaceHolder(....)
+   f1 = tlog.inference("predict/io", input=shared_input)
+   f2 = tlog.inference("predictComplement/io", input=shared_input)
+   loss = tlog.loss("predict/io") - tlog.loss("predictComplement/io")
+   ...
+ -- learn conjunction of properties (try this out!)
+   answer1(Q,Y) <= mention(Q,EC), entity(EC,E), chain1(E,Y) // (w1(F) | context(EC,C), feature(C,F))
+   answer2(...) <= ...
+   shared_input = tf.PlaceHolder(....)   
+   f1 = tlog.inference("answer1/io", input=shared_input)
+   f2 = tlog.inference("answer2/io", input=shared_input)
+   ...
+   f = f1 * ... * fk
+   loss = tlog.loss_for("answer/io", inference=f, input=shared_input, target_output=...)

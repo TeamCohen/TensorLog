@@ -2,45 +2,12 @@ Status:
 
  - looking at sparse implementation of softmax....but it doesn't seem
    to be differentiable the way I set it up. can it be? maybe I should
-   be using a sampling softmax?
-
-   should I back out of this
+   be using a sampling softmax? or nce_loss?
 
 Should I switch from comline to gflags?
 
 EASY:
- - config options for db -> move to dbschema?
 
-To think through:
- - pass schema in to DB somehow in simple compiler?
- - maybe include b.db = '....' (and/or b.db += ....?)
- - maybe RuleBuilder should just be Builder?
-
-calling back and forth: should be able to specify input placeholder -done
- for a proofCount/inference function (passed thru to _doCompile, then
- _fun2Expr as sharedInputs.  should be able to create an inference function
- and loss function from a proofCount function.  This will let you
- build up Tensorlog/Tensorflow expressions more easily.
-
- use cases: 
- -- training from partial information, known pos and known negatives (try this out!)
- --- define two prediction predicates: predict(X,Y) and predictComplement(X,Y)
- --- data for predict is known pos, for predictComplement, known neg
- set up optimization as follows:
-   shared_input = tf.PlaceHolder(....)
-   f1 = tlog.inference("predict/io", input=shared_input)
-   f2 = tlog.inference("predictComplement/io", input=shared_input)
-   loss = tlog.loss("predict/io") - tlog.loss("predictComplement/io")
-   ...
- -- learn conjunction of properties (try this out!)
-   answer1(Q,Y) <= mention(Q,EC), entity(EC,E), chain1(E,Y) // (w1(F) | context(EC,C), feature(C,F))
-   answer2(...) <= ...
-   shared_input = tf.PlaceHolder(....)   
-   f1 = tlog.inference("answer1/io", input=shared_input)
-   f2 = tlog.inference("answer2/io", input=shared_input)
-   ...
-   f = f1 * ... * fk
-   loss = tlog.loss_for("answer/io", inference=f, input=shared_input, target_output=...)
 
  - alternative to calling out to tensorlog would be to
  iteratively process multiple-input, single-output plugins.

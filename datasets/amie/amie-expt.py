@@ -15,10 +15,10 @@ def setup(optdict, settings):
 
     # the weight vector is sparse - just the constants in the unary predicate rule
     prog.setRuleWeights(prog.db.vector(declare.asMode("rule(i)")))
-    
+
     # set the max recursion depth
     prog.maxDepth = settings['maxDepth']
-    
+
     # be verbose
     # funs.conf.trace = True
 
@@ -46,7 +46,7 @@ def setup(optdict, settings):
 
 if __name__=="__main__":
     #usage: [dataset] [epochs] [maxDepth] [threads]
-    
+
     #get the command-line options for this experiment
     settings = {}
     settings['dataset'] = 'yago2-sample' if len(sys.argv)<=1 else sys.argv[1]
@@ -71,7 +71,7 @@ if __name__=="__main__":
 
     # configute the experiment
     params = {'prog':optdict['prog'],
-              'trainData':optdict['trainData'], 
+              'trainData':optdict['trainData'],
               'testData':optdict['testData'],
               'targetMode':None,
               'savedTestPredictions':'tmp-cache/%s-eval.solutions.txt' % settings['dataset'],
@@ -83,5 +83,3 @@ if __name__=="__main__":
 
     # run the experiment
     expt.Expt(params).run()
-    
-    
