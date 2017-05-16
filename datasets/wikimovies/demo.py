@@ -56,9 +56,9 @@ def configure_from_command_line(argv):
 
 def generate_rules():
   """Generate rules from the list of known relations, which will be
-  returned in a simple.RuleBuilder object.
+  returned in a simple.Builder object.
   """
-  b = simple.RuleBuilder()
+  b = simple.Builder()
   answer,mentions_entity,has_feature = b.predicates("answer mentions_entity has_feature")
   Question,Movie,Entity,F = b.variables("Question Movie Entity F")
   # rules for answering questions like 'what movie was directed by FOO?'
