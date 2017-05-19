@@ -636,6 +636,50 @@ class TestMultiModeXC(unittest.TestCase):
       session.close()
       close_cross_compiler(xc)
 
+class TestMatParams(unittest.TestCase):
+
+  def setUp(self):
+    self.cacheDir = tempfile.mkdtemp()
+
+  def cacheFile(self,fileName):
+    return os.path.join(self.cacheDir,fileName)
+
+  def testMToyMatParam(self):
+    tlog = simple.Compiler(
+        db=os.path.join(testtensorlog.TEST_DATA_DIR,"matchtoy.cfacts"),
+        prog=os.path.join(testtensorlog.TEST_DATA_DIR,"matchtoy.ppr"))
+    trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"matchtoy-train.exam"))
+    tlog.db.markAsParameter('dabbrev',2)
+    factDict = tlog.db.matrixAsPredicateFacts('dabbrev',2,tlog.db.matEncoding[('dabbrev',2)])
+    print 'before learning',len(factDict),'dabbrevs'
+    self.assertTrue(len(factDict)==5)
+    for f in sorted(factDict.keys()):
+      print '>',str(f),factDict[f]
+
+    # expt pipeline
+    mode = trainData.keys()[0]
+    TX,TY = trainData[mode]
+    inference = tlog.inference(mode)
+    trueY = tf.placeholder(tf.float32, shape=TY.shape, name='tensorlog/trueY')
+    loss = tlog.loss(mode)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+    train_step = optimizer.minimize(loss)
+    train_batch_fd = {tlog.input_placeholder_name(mode):TX, tlog.target_output_placeholder_name(mode):TY}
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
+    for i in range(5):
+      print 'epoch',i+1
+      session.run(train_step, feed_dict=train_batch_fd)
+    tlog.set_all_db_params_to_learned_values(session)
+#    params = {'prog':prog,'trainData':trainData, 'testData':testData}
+#    result = expt.Expt(params).run()
+#    factDict = db.matrixAsPredicateFacts('dabbrev',2,db.matEncoding[('dabbrev',2)])
+#    print 'after learning',len(factDict),'dabbrevs'
+#    for f in sorted(factDict.keys()):
+#      print '>',str(f),factDict[f]
+#    self.assertTrue(len(factDict)>5)
+
+
 class TestSimple(unittest.TestCase):
 
   def testBatch(self):

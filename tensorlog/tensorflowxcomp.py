@@ -491,7 +491,8 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
 
   def _unwrapDBMatrix(self,key,mat):
     (indices,indptr,shape) = self.sparseMatInfo[key]
-    return ss.csr_matrix((up,indices,indptr),shape=shape)
+    # note mat will be a SparseTensor in this case.....
+    return ss.csr_matrix((mat.values,indices,indptr),shape=shape)
 
 
   def _unwrapUpdate(self,key,up):

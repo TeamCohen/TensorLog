@@ -4,6 +4,8 @@ TODO:
  - multi-task datasets
  - sparse softmax (sampling softmax? nce_loss?)
 
+ - make serialize, etc work on 'filelike' objects, not just strings
+
 TF CLEANUPS:
  - comline to gflags?
  - add way to get arguments in Options.set_from_command_line

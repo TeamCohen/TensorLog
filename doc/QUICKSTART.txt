@@ -90,7 +90,7 @@ There's no serialized form of a program.
 
 There's a more Pythonic syntax for rules, which can be used to create
 rules programmatically, described in the docs for
-tensorlog.simple.RuleBuilder class.  Briefly, some examples are:
+tensorlog.simple.Builder class.  Briefly, some examples are:
 
     from tensorlog import simple			     
     b = simple.Builder()

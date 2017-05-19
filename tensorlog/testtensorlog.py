@@ -765,6 +765,9 @@ class TestExpt(unittest.TestCase):
     acc,xent = self.runMToyExpt3()
     #TODO check performance
 
+  def testMToyExptMatParam(self):
+    acc,xent = self.runMToyMatParam()
+
   def testMToyParallel(self):
     acc,xent = self.runMToyParallel()
 
@@ -859,16 +862,6 @@ class TestExpt(unittest.TestCase):
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData}
     result = expt.Expt(params).run()
-#    for mode in testData.modesToLearn():
-#      X = testData.getX(mode)
-#      Y = testData.getY(mode)
-#      Y_ = prog.eval(mode,[X])
-#      print 'mode',mode
-#      dX = db.matrixAsSymbolDict(X)
-#      dY = db.matrixAsSymbolDict(Y)
-#      dY_ = db.matrixAsSymbolDict(Y_)
-#      for i in sorted(dX.keys()):
-#        print i,'X',dX[i],'Y',dY[i],'Y_',sorted(dY_[i].items(),key=lambda (key,val):-val)
     return result
 
   def runMToyExpt2(self):
@@ -913,6 +906,34 @@ class TestExpt(unittest.TestCase):
           'testData':testData,
           'learner':plearn.ParallelFixedRateGDLearner(prog)}
     return expt.Expt(params).run()
+
+  def runMToyMatParam(self):
+    db = matrixdb.MatrixDB.uncache(
+        self.cacheFile('matchtoy.db'),
+        str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
+    trainData = dataset.Dataset.uncacheExamples(
+        self.cacheFile('mtoy-train.dset'),db,
+        os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
+    testData = trainData
+    prog = program.ProPPRProgram.loadRules(os.path.join(TEST_DATA_DIR,"matchtoy.ppr"),db=db)
+    prog.setRuleWeights(db.ones())
+    db.markAsParameter('dabbrev',2)
+    factDict = db.matrixAsPredicateFacts('dabbrev',2,db.matEncoding[('dabbrev',2)])
+    print 'before learning',len(factDict),'dabbrevs'
+    self.assertTrue(len(factDict)==5)
+#    for f in sorted(factDict.keys()):
+#      print '>',str(f),factDict[f]
+
+    params = {'prog':prog,'trainData':trainData, 'testData':testData}
+    result = expt.Expt(params).run()
+    factDict = db.matrixAsPredicateFacts('dabbrev',2,db.matEncoding[('dabbrev',2)])
+    print 'after learning',len(factDict),'dabbrevs'
+#    for f in sorted(factDict.keys()):
+#      print '>',str(f),factDict[f]
+    self.assertTrue(len(factDict)>5)
+
+    return result
+
 
 class TestDataset(unittest.TestCase):
 
