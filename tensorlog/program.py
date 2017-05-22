@@ -61,7 +61,7 @@ class Program(object):
             self.function[(mode,depth)] = funs.NullFunction(mode)
         else:
             predDef = self.findPredDef(mode)
-            if len(predDef)==0:
+            if predDef is None or len(predDef)==0:
                 assert False,'no rules match mode %s' % mode
             elif len(predDef)==1:
                 #instead of a sum of one function, just find the function
@@ -229,13 +229,13 @@ class ProPPRProgram(Program):
             inferredParamType = {}
             # don't assume types for weights have been declared
             for rule in self.rules:
-                for m in possibleModes(rule):
-                    varTypes = bpcompiler.BPCompiler(m,self,0,rule).inferredTypes()
-                    for goal in rule.rhs:
-                        if goal.arity==1 and (goal.functor,goal.arity) in self.db.paramSet:
-                            newType = varTypes.get(goal.args[0])
-                            decl = declare.TypeDeclaration(parser.Goal(goal.functor,[newType]))
-                            self.db.schema.declarePredicateTypes(decl.functor,decl.args())
+              for m in possibleModes(rule):
+                varTypes = bpcompiler.BPCompiler(m,self,0,rule).inferredTypes()
+                for goal in rule.rhs:
+                  if goal.arity==1 and (goal.functor,goal.arity) in self.db.paramSet:
+                    newType = varTypes.get(goal.args[0])
+                    decl = declare.TypeDeclaration(parser.Goal(goal.functor,[newType]))
+                    self.db.schema.declarePredicateTypes(decl.functor,decl.args())
             for (functor,arity) in self.db.paramList:
                 if arity==1:
                     typename = self.db.schema.getArgType(functor,arity,0)

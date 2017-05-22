@@ -151,12 +151,12 @@ class BPCompiler(object):
 
     self.inferFlow()
 
-    # infer types for each variable
-    self.inferTypes()
-
     #recursively call the tensorlog program to compile
     #any intensionally-defined subpredicates
     self.compileDefinedPredicates()
+
+    # infer types for each variable
+    self.inferTypes()
 
     # generate an operation sequence that implements the BP algorithm
     if conf.produce_ops:
@@ -255,15 +255,18 @@ class BPCompiler(object):
         # goal is assign(Var,constantValue,type)
         self.varDict[self.goals[i].args[0]].varType = self.goals[i].args[2]
       elif functor != ASSIGN:
-        # infer type for a database predicate
-        for j in range(arity):
-          vj = self.goals[i].args[j]
-          newTj = self.tensorlogProg.db.schema.getArgType(functor,arity,j)
-          oldTj = self.varDict[vj].varType
-          if informativeType(newTj):
-            if informativeType(oldTj) and oldTj!=newTj:
-              logging.warn('variable %s has types %s and %s in rule %s' % (vj,oldTj,newTj,str(self.rule)))
-            self.varDict[vj].varType = newTj
+        if self.tensorlogProg.findPredDef(mode):
+          pass # we handled this case in compileDefinedPredicates
+        else:
+          # infer type for a database predicate
+          for j in range(arity):
+            vj = self.goals[i].args[j]
+            newTj = self.tensorlogProg.db.schema.getArgType(functor,arity,j)
+            oldTj = self.varDict[vj].varType
+            if informativeType(newTj):
+              if informativeType(oldTj) and oldTj!=newTj:
+                logging.warn('variable %s has types %s and %s in rule %s' % (vj,oldTj,newTj,str(self.rule)))
+              self.varDict[vj].varType = newTj
 
   def compileDefinedPredicates(self):
     """Recursively call the tensorlog program to compile
@@ -273,7 +276,14 @@ class BPCompiler(object):
       mode = self.toMode(j)
       if self.tensorlogProg.findPredDef(mode):
         gin.definedPred = True
-        self.tensorlogProg.compile(mode,self.depth+1)
+        fun = self.tensorlogProg.compile(mode,self.depth+1)
+        # save type information while we're in here, if it's available
+        typeForV = fun.inputTypes
+        if typeForV is not None:
+          for v,typeForV in zip(gin.inputs,fun.inputTypes):
+            self.varDict[v].varType = typeForV
+          v = _only(gin.outputs)
+          self.varDict[v].varType = fun.outputType
 
   def toMode(self,j):
     """Helper - Return a mode declaration for the j-th goal of the rule,

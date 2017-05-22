@@ -1,10 +1,13 @@
 TODO: 
 
  - seem to have a type inference bug in bug_fails_type_inference.ppr
+ --- see qparse/bug.py --- I seem to have forgotten how type inference works, or doesn't
+ --- see line 258 in bpcompiler.py
+
  - multi-task datasets
  - sparse softmax (sampling softmax? nce_loss?)
-
  - make serialize, etc work on 'filelike' objects, not just strings
+ - clean up database serialization so you can just save parameters.... 
 
 TF CLEANUPS:
  - comline to gflags?

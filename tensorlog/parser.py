@@ -111,7 +111,7 @@ class RuleCollection(object):
         return sum(len(self.index[k]) for k in self.index.keys())
 
     def rulesFor(self,g):
-        return self.index[self._key(g)]
+        return self.index.get(self._key(g))
 
     def mapRules(self,mapfun):
         for key in self.index:
