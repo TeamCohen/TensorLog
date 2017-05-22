@@ -16,6 +16,8 @@ from tensorlog import declare
 from tensorlog import dbschema
 from tensorlog import parser
 from tensorlog import mutil
+from tensorlog import util
+
 
 conf = config.Config()
 conf.allow_weighted_tuples = True;     conf.help.allow_weighted_tuples = 'Allow last column of cfacts file to be a weight for the fact'
@@ -300,24 +302,63 @@ class MatrixDB(object):
     if not os.path.exists(direc):
       os.makedirs(direc)
     self.schema.serialize(direc)
-    scipy.io.savemat(os.path.join(direc,"db.mat"),self.matEncoding,do_compression=True)
+    self.serializeDataTo(os.path.join(direc,"db.mat"))
+
+  def serializeDataTo(self,fileLike,filter=None):
+    """ Serialize a subset of the data into a file-like object.
+    Values of the filter are None (save everything), 'fixed' (save non-parameters)
+    or 'params' (save parameters only).
+    """
+    if filter is None:
+      d = self.matEncoding
+    elif filter=='params':
+      d = dict([(key,m) for (key,m) in self.matEncoding.items() if key in self.paramSet])
+    elif filter=='fixed' or filter=='nonparams':
+      d = dict([(key,m) for (key,m) in self.matEncoding.items() if key not in self.paramSet])
+    self._saveMatDictWithScipy(fileLike,d)
+
+  @staticmethod
+  def _saveMatDictWithScipy(fileLike,d):
+    scipy.io.savemat(fileLike,d,do_compression=True)
+
+  @staticmethod
+  def _restoreMatDictWithScipy(fileLike):
+    d = {}
+    scipy.io.loadmat(fileLike,d)
+    #serialization/deserialization ends up converting
+    #(functor,arity) pairs to strings and csr_matrix to csc_matrix
+    #so convert them back....
+    for stringKey,mat in d.items():
+      del d[stringKey]
+      if not stringKey.startswith('__'):
+        d[eval(stringKey)] = scipy.sparse.csr_matrix(mat)
+    return d
 
   @staticmethod
   def deserialize(direc):
     logging.info('deserializing database from %s' % direc)
     db = MatrixDB()
     db.schema = dbschema.AbstractSchema.deserialize(direc)
-    scipy.io.loadmat(os.path.join(direc,"db.mat"),db.matEncoding)
-    #serialization/deserialization ends up converting
-    #(functor,arity) pairs to strings and csr_matrix to csc_matrix
-    #so convert them back....
-    for stringKey,mat in db.matEncoding.items():
-      del db.matEncoding[stringKey]
-      if not stringKey.startswith('__'):
-        db.matEncoding[eval(stringKey)] = scipy.sparse.csr_matrix(mat)
+    db.matEncoding = db._restoreMatDictWithScipy(os.path.join(direc,"db.mat"))
     logging.info('deserialized database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
     db.checkTyping()
     return db
+
+#  @staticmethod
+#  def deserialize(direc):
+#    logging.info('deserializing database from %s' % direc)
+#    db = MatrixDB()
+#    db.schema = dbschema.AbstractSchema.deserialize(direc)
+#    scipy.io.loadmat(os.path.join(direc,"db.mat"),db.matEncoding)
+#    #serialization/deserialization ends up converting
+#    #(functor,arity) pairs to strings and csr_matrix to csc_matrix
+#    #so convert them back....
+#    for stringKey,mat in db.matEncoding.items():
+#      del db.matEncoding[stringKey]
+#      if not stringKey.startswith('__'):
+#        db.matEncoding[eval(stringKey)] = scipy.sparse.csr_matrix(mat)
+#    db.checkTyping()
+#    return db
 
   @staticmethod
   def uncache(dbFile,factFile,initSchema=None):
@@ -350,7 +391,7 @@ class MatrixDB(object):
     """ Clear the buffers, add lines, and flush the buffers.
     """
     self.startBuffers()
-    for k,line in enumerate(open(filename)):
+    for k,line in enumerate(util.linesIn(filename)):
       self._bufferLine(line,filename,k+1)
     self.flushBuffers()
 
@@ -371,11 +412,7 @@ class MatrixDB(object):
   # manage buffers used to store matrix data before it is inserted
 
   def startBuffers(self):
-    #buffer data for a sparse matrix: buf[pred][i][j] = f
-    #TODO: would lists and a coo matrix make a nicer buffer?
-    #def dictOfFloats(): return collections.defaultdict(float)
-    #def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
-    #self._buf = collections.defaultdict(dictOfFloatDicts)
+    #buffer data for a sparse matrix
     self._databuf = collections.defaultdict(list)
     self._rowbuf = collections.defaultdict(list)
     self._colbuf = collections.defaultdict(list)
@@ -383,7 +420,7 @@ class MatrixDB(object):
   def bufferFile(self,filename):
     """Load triples from a file and buffer them internally."""
     k = 0
-    for line in open(filename):
+    for line in util.linesIn(filename):
       k += 1
       if not k%10000: logging.info('read %d lines' % k)
       self._bufferLine(line,filename,k)

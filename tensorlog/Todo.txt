@@ -1,6 +1,6 @@
 TODO: 
 
- - seem to have a type inference bug in bug_fails_type_inference.ppr
+ - seem to have a type inference bug in bug_fails_type_inference.ppr -fixed
  --- see qparse/bug.py --- I seem to have forgotten how type inference works, or doesn't
  --- see line 258 in bpcompiler.py
 

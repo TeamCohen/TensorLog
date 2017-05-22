@@ -4,10 +4,11 @@ Status:
    to be differentiable the way I set it up. can it be? maybe I should
    be using a sampling softmax? or nce_loss?
 
-Should I switch from comline to gflags?
-
 EASY:
 
+ Need to test!
+ -- db.schema.serializeTo(filelike)
+ -- db.serializeTo(filelike,filter=None|params|noparams)
 
  - alternative to calling out to tensorlog would be to
  iteratively process multiple-input, single-output plugins.
@@ -34,6 +35,9 @@ EASY:
  declare their types, OR will be automarked if they appear after a //
  - tlog(autoset_db_params=True) will only set UNDEFINED params
  - you can load just parameters, not a whole DB
+
+ - Should I switch from comline to gflags?
+
 
 Cleanup:
  - clean up mutil: densify

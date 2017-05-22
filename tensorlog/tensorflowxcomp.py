@@ -10,6 +10,7 @@ from tensorlog import funs
 from tensorlog import ops
 from tensorlog import xcomp
 from tensorlog import expt
+from tensorlog import util
 
 class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
@@ -22,7 +23,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     self.summaryFile = summaryFile
     self.session = None
     self.sessionInitialized = None
-    logging.debug('TensorFlowCrossCompiler initialized %.3f Gb' % comline.memusage())
+    logging.debug('TensorFlowCrossCompiler initialized %.3f Gb' % util.memusage())
 
   def close(self):
     if self.session is not None:
@@ -50,15 +51,15 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     initializing them if needed
     """
     if self.session is None:
-      logging.debug('creating session %.3f Gb' % comline.memusage())
+      logging.debug('creating session %.3f Gb' % util.memusage())
       self.session = tf.Session()
-      logging.debug('session created %.3f Gb' % comline.memusage())
+      logging.debug('session created %.3f Gb' % util.memusage())
     if not self.sessionInitialized:
-      logging.debug('initializing session %.3f Gb' % comline.memusage())
+      logging.debug('initializing session %.3f Gb' % util.memusage())
       for var in self.tfVarsToInitialize:
         self.session.run(var.initializer)
       self.sessionInitialized = True
-      logging.debug('session initialized %.3f Gb' % comline.memusage())
+      logging.debug('session initialized %.3f Gb' % util.memusage())
 
   def getInputName(self,mode,inputs=None):
     """ String key for the input placeholder
@@ -145,9 +146,9 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     """
     assert targetMode is not None,'targetMode must be specified'
     assert prog is not None,'prog must be specified'
-    logging.debug('runExpt calling setAllWeights %.3f Gb' % comline.memusage())
+    logging.debug('runExpt calling setAllWeights %.3f Gb' % util.memusage())
     prog.setAllWeights()
-    logging.debug('runExpt finished setAllWeights %.3f Gb' % comline.memusage())
+    logging.debug('runExpt finished setAllWeights %.3f Gb' % util.memusage())
 
     expt.Expt.timeAction('compiling and cross-compiling', lambda:self.ensureCompiled(targetMode,inputs=None))
 
@@ -438,13 +439,13 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
 
   def __init__(self,db,summaryFile=None):
-    logging.debug('SparseMatDenseMsgCrossCompiler calling %r %.3f Gb' % (super(SparseMatDenseMsgCrossCompiler,self).__init__,comline.memusage()))
+    logging.debug('SparseMatDenseMsgCrossCompiler calling %r %.3f Gb' % (super(SparseMatDenseMsgCrossCompiler,self).__init__,util.memusage()))
     super(SparseMatDenseMsgCrossCompiler,self).__init__(db,summaryFile=summaryFile)
-    logging.debug('SparseMatDenseMsgCrossCompiler finished super.__init__ %.3f Gb' % comline.memusage())
+    logging.debug('SparseMatDenseMsgCrossCompiler finished super.__init__ %.3f Gb' % util.memusage())
     # we will need to save the original indices/indptr representation
     # of each sparse matrix
     self.sparseMatInfo = {}
-    logging.debug('SparseMatDenseMsgCrossCompiler initialized %.3f Gb' % comline.memusage())
+    logging.debug('SparseMatDenseMsgCrossCompiler initialized %.3f Gb' % util.memusage())
 
 
   def _insertHandleExpr(self,key,name,val):

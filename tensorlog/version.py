@@ -2,7 +2,7 @@
 #
 # version number tracking for Tensorlog
 
-VERSION = '1.3.3'
+VERSION = '1.3.4'
 
 # externally visible changes:
 #
@@ -44,3 +44,8 @@ VERSION = '1.3.3'
 #     split of version.py into different file
 #     refactored schema
 #     simple.RuleBuilder -> simple.Builder
+# version 1.3.4:
+#     bug fix in type inference
+#     new serialization and use of file-like objects for load* methods
+#       dbschema.serializeTo(filelike)
+#       db.serializeDataTo(filelike,filter=None|params|noparams)

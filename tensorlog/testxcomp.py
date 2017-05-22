@@ -25,6 +25,7 @@ from tensorlog import program
 from tensorlog import simple
 from tensorlog import testtensorlog
 from tensorlog import tensorflowxcomp
+from tensorlog import util
 try:
   import theanoxcomp
 except ImportError:

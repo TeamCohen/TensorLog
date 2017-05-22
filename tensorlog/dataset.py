@@ -15,6 +15,7 @@ from tensorlog import config
 from tensorlog import mutil
 from tensorlog import matrixdb
 from tensorlog import declare
+from tensorlog import util
 
 conf = config.Config()
 conf.normalize_outputs = True;  conf.help.normalize_outputs =  "In .exam files, l1-normalize the weights of valid outputs"
@@ -238,7 +239,7 @@ class Dataset(object):
           s = symbol if db.schema.hasId(typeName,symbol) else matrixdb.OOV_ENTITY_NAME
           return db.schema.getId(typeName,s)
         with open(fileName) as fp:
-          for line in fp:
+          for line in util.linesIn(fp):
             pred,x,ys = Dataset._parseLine(line,proppr=proppr)
             if pred:
               xType = db.schema.getDomain(pred.getFunctor(),2)

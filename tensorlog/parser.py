@@ -195,7 +195,7 @@ class Parser(object):
         """Extract a series of rules from a file."""
         if not rules: rules = RuleCollection()
         buf = ""
-        for line in open(filename,'r'):
+        for line in open(filename):
             if not line[0]=='#':
                 buf += line
         try:

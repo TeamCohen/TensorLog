@@ -28,7 +28,7 @@ import scipy.sparse
 def loadExamples(file,db):
     xs = []
     ys = []
-    for line in open(file):
+    for line in util.linesIn(file):
         sx,sy = line.strip().split("\t")
         xs.append(db.onehot(sx))
         ys.append(db.onehot(sy))

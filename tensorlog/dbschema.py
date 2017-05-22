@@ -5,6 +5,8 @@
 import os.path
 import logging
 
+from tensorlog import util
+
 THING = '__THING__' # name of default type
 NULL_ENTITY_NAME = '__NULL__'  #name of out-of-vocabulary marker entity
 OOV_ENTITY_NAME = '__OOV__'  #name of out-of-vocabulary marker entity
@@ -69,24 +71,9 @@ class AbstractSchema(object):
     """
     symbolFile = os.path.join(direc,"symbols.txt")
     if os.path.isfile(symbolFile):
-      schema = UntypedSchema()
-      schema._checkAndInsertSymbols(THING,symbolFile)
-      return schema
+      return UntypedSchema.deserializeFrom(symbolFile)
     else:
-      # read relation type information
-      schema = TypedSchema()
-      for line in open(os.path.join(direc,'types.txt')):
-        iStr,functor,arityStr,typeStr = line.strip().split("\t")
-        schema._type[int(iStr)][(functor,int(arityStr))] = typeStr
-      # read each symbol table
-      for f0 in os.listdir(direc):
-        f = os.path.join(direc,f0)
-        if os.path.isfile(f) and str(f).endswith("-symbols.txt"):
-          typeName = str(f0)[:-len("-symbols.txt")]
-          if typeName not in schema.getTypes():
-            schema.insertType(typeName)
-          schema._checkAndInsertSymbols(typeName,f)
-      return schema
+      return TypedSchema.deserializeFrom(os.path.join(direc,"typed-symbols.txt"))
 
   def getMaxId(self,typeName):
     """ Return max id of any symbol for this type
@@ -126,6 +113,8 @@ class AbstractSchema(object):
     return result
 
   def _checkAndInsertSymbols(self,typeName,symbolFile):
+    """ worker routine used by load methods
+    """
     k = 1
     for line in open(symbolFile):
       sym = line.strip()
@@ -172,9 +161,29 @@ class UntypedSchema(AbstractSchema):
     assert False, 'predicate declared but database schema is untyped'
 
   def serialize(self,direc):
+    """Save info needed to deserialize this object in appropriately named
+    file in the given directory
+    """
     with open(os.path.join(direc,'symbols.txt'), 'w') as fp:
-      for i in range(1,self.getMaxId(THING)+1):
-        fp.write(self.getSymbol(THING,i) + '\n')
+      self.serializeTo(fp)
+
+  def serializeTo(self,fpLike):
+    """Serialize the info needed to deserialize this object in a stream -
+    ie any object which supports the write method.
+    """
+    for i in range(1,self.getMaxId(THING)+1):
+      fpLike.write(self.getSymbol(THING,i) + '\n')
+
+  @staticmethod
+  def deserializeFrom(fileLike):
+    result = UntypedSchema()
+    k = 1
+    for line in util.linesIn(fileLike):
+      sym = line.strip()
+      i = result.getId(THING,sym)
+      assert i==k,'symbols out of sync for symbol "%s" type %d: expected index %d actual %d' % (sym,typeName,i,k)
+      k += 1
+    return result
 
   def getMaxId(self,typeName):
     """ Return max id of any symbol for this type
@@ -263,15 +272,54 @@ class TypedSchema(AbstractSchema):
         self._stab[typeName] = self._safeSymbTab()
 
   def serialize(self,direc):
-    with open(os.path.join(direc,'types.txt'),'w') as fp:
-      for i in range(2):
-        for (functor,arity) in self._type[i]:
-          fp.write('\t'.join([str(i),functor,str(arity),self._type[i][(functor,arity)]]) + '\n')
-    # write each symbol table
+    """Save info needed to deserialize this object in appropriately named
+    file in the given directory
+    """
+    with open(os.path.join(direc,'typed-symbols.txt'), 'w') as fp:
+      self.serializeTo(fp)
+
+  def serializeTo(self,fp):
+    for i in range(2):
+      for (functor,arity) in self._type[i]:
+        fp.write('\t'.join([str(i),functor,str(arity),self._type[i][(functor,arity)]]) + '\n')
     for typeName in self.getTypes():
-      with open(os.path.join(direc,typeName+"-symbols.txt"), 'w') as fp:
-        for i in range(1,self.getMaxId(typeName)+1):
-          fp.write(self.getSymbol(typeName,i) + '\n')
+      fp.write('\n' + typeName + '\n')
+      for i in range(1,self.getMaxId(typeName)+1):
+        fp.write(self.getSymbol(typeName,i) + '\n')
+
+  @staticmethod
+  def deserializeFrom(fileLike):
+    result = TypedSchema()
+    readingTypeDecs = True
+    currentType = None
+    k = -1
+    for line in util.linesIn(fileLike):
+      line = line.strip()
+      if readingTypeDecs and line:
+        # type declarations start out the file
+        iStr,functor,arityStr,typeStr = line.split("\t")
+        result._type[int(iStr)][(functor,int(arityStr))] = typeStr
+      elif readingTypeDecs and not line:
+        # empty line terminates type declarations
+        readingTypeDecs = False
+        currentType = None
+      elif not readingTypeDecs and line and currentType is None:
+        # first line after empty line (signalled by 'currentType is None') is type name
+        currentType = line
+        result.insertType(currentType)
+        k = 1
+      elif not readingTypeDecs and line and currentType is not None:
+        # lines following the name of a type are symbols for that type
+        sym = line
+        i = result.getId(currentType,sym)
+        assert i==k,'symbols out of sync for symbol "%s" type %d: expected index %d actual %d' % (sym,currentType,i,k)
+        k += 1
+      elif not readingTypeDecs and not line:
+        # empty line terminates list of symbols for a type
+        currentType = None
+      else:
+        assert False,'cannot deserialize a TypedSchema from %r' % fileLike
+    return result
 
   def getMaxId(self,typeName):
     """ Return max id of any symbol for this type

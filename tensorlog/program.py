@@ -17,6 +17,7 @@ from tensorlog import matrixdb
 from tensorlog import mutil
 from tensorlog import opfunutil
 from tensorlog import parser
+from tensorlog import util
 
 conf = config.Config()
 conf.max_depth = 10;        conf.help.max_depth = "Maximum depth of program recursion"
@@ -136,9 +137,9 @@ class Program(object):
     def setAllWeights(self):
         """ Set all parameter weights to a plausible value - mostly useful for proppr programs,
         where parameters are known. """
-        logging.debug('setting feature weights %.3f Gb' % comline.memusage())
+        logging.debug('setting feature weights %.3f Gb' % util.memusage())
         self.setFeatureWeights()
-        logging.debug('setting rule weights %.3f Gb' % comline.memusage())
+        logging.debug('setting rule weights %.3f Gb' % util.memusage())
         self.setRuleWeights()
         self.db.checkTyping()
 

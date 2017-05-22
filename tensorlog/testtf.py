@@ -73,3 +73,7 @@ class TestReuse(unittest.TestCase):
     self.assertEqual(len(actual.keys()), len(expected.keys()))
     for k in actual.keys():
       self.assertAlmostEqual(actual[k], expected[k], delta=0.05)
+
+if __name__=="__main__":
+  if len(sys.argv)==1:
+    unittest.main()

@@ -32,6 +32,8 @@ from tensorlog import parser
 from tensorlog import plearn
 from tensorlog import program
 from tensorlog import simple
+from tensorlog import util
+
 
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__),"test-data/")
@@ -731,7 +733,7 @@ class TestProPPR(unittest.TestCase):
     xsyms = []
     xs = []
     ys = []
-    for line in open(filename):
+    for line in util.linesIn(filename):
       sx,sy = line.strip().split("\t")
       xsyms.append(sx)
       xs.append(db.onehot(sx))
@@ -1038,10 +1040,10 @@ class TestTypes(unittest.TestCase):
   def setUp(self):
     self.db = matrixdb.MatrixDB(initSchema=dbschema.TypedSchema())
     self.testLines = [
-        '# :- head(triple,entity)\n',
-        '# :- tail(triple,entity)\n',
-        '# :- creator(triple,source)\n',
-        '# :- rel(triple,relation)\n',
+        '# :- head(triple_t,entity_t)\n',
+        '# :- tail(triple_t,entity_t)\n',
+        '# :- creator(triple_t,source_t)\n',
+        '# :- rel(triple_t,relation_t)\n',
         '\t'.join(['head','rxy','x']) + '\n',
         '\t'.join(['tail','rxy','y']) + '\n',
         '\t'.join(['creator','rxy','nyt']) + '\n',
@@ -1060,10 +1062,10 @@ class TestTypes(unittest.TestCase):
 
   def testStabs(self):
     expectedSymLists = {
-        'source':['__NULL__', '__OOV__', 'nyt', 'fox'],
-        'relation':['__NULL__', '__OOV__', 'r'],
-        'triple':['__NULL__', '__OOV__', 'rxy'],
-        'entity':['__NULL__', '__OOV__', 'x', 'y'],
+        'source_t':['__NULL__', '__OOV__', 'nyt', 'fox'],
+        'relation_t':['__NULL__', '__OOV__', 'r'],
+        'triple_t':['__NULL__', '__OOV__', 'rxy'],
+        'entity_t':['__NULL__', '__OOV__', 'x', 'y'],
     }
     self.assertEqual(len(expectedSymLists.keys()), len(self.db.schema._stab.keys()))
     for typeName in expectedSymLists:
@@ -1075,12 +1077,12 @@ class TestTypes(unittest.TestCase):
 
   def testDeclarations(self):
     for r in ['head','tail']:
-      self.assertEqual(self.db.schema.getDomain(r,2), 'triple')
-      self.assertEqual(self.db.schema.getRange(r,2), 'entity')
+      self.assertEqual(self.db.schema.getDomain(r,2), 'triple_t')
+      self.assertEqual(self.db.schema.getRange(r,2), 'entity_t')
     for r in ['creator','rel']:
-      self.assertEqual(self.db.schema.getDomain(r,2), 'triple')
-    self.assertEqual(self.db.schema.getRange('creator',2), 'source')
-    self.assertEqual(self.db.schema.getRange('rel',2), 'relation')
+      self.assertEqual(self.db.schema.getDomain(r,2), 'triple_t')
+    self.assertEqual(self.db.schema.getRange('creator',2), 'source_t')
+    self.assertEqual(self.db.schema.getRange('rel',2), 'relation_t')
     for f in [self.db.schema.getRange,self.db.schema.getDomain]:
       self.assertEqual(f('undeclared',2), None)
 
