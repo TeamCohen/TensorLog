@@ -1,19 +1,11 @@
-TODO: 
+TODO easy: 
 
- - seem to have a type inference bug in bug_fails_type_inference.ppr -fixed
- --- see qparse/bug.py --- I seem to have forgotten how type inference works, or doesn't
- --- see line 258 in bpcompiler.py
+ new command: simple serialize --input x --output y
 
- - multi-task datasets
- - sparse softmax (sampling softmax? nce_loss?)
- - make serialize, etc work on 'filelike' objects, not just strings
- - clean up database serialization so you can just save parameters.... 
-
-TF CLEANUPS:
+TODO easy cleanups?
  - comline to gflags?
- - add way to get arguments in Options.set_from_command_line
- - simple serialize --input x --output y
 
+TODO major:
  - alternative to calling out to tensorlog would be to
  iteratively process multiple-input, single-output plugins.
  for i in plugInGoalPositions:
@@ -23,6 +15,18 @@ TF CLEANUPS:
     defined by plugin literals
 - having multiple inputs in bpcompiler would also be nice....
  hard would this be to do?
+
+ - autoset_db_params: schema predicates can be marked 'trainable' when you
+ declare their types, OR will be automarked if they appear after a //
+ - tlog(autoset_db_params=True) will only set UNDEFINED params
+ - you can load just parameters, not a whole DB
+
+ - onhold (see below): looking at sparse implementation of softmax....but it
+   doesn't seem to be differentiable the way I set it up. can it be?
+   maybe I should be using a sampling softmax? or nce_loss?
+
+ - multi-task datasets
+
 
 NATIVE:
  - check y - p vs p - y in tensorlog (and gradient sign)
@@ -35,48 +39,7 @@ NATIVE:
  - need to test Adagrad on real data
    - update: regularization runs but it possibly broken
 
-NATIVE CLEANUP:
- - clean up mutil: densify
- - clean up dataset: matrix examples (done?) and proppr nonsense (move proppr to extras)
- - clean up funs, ops: refactor bprop and eval into 'native'
- - clean up program: autoweighting, ProPPRProgram vs program
-
- - code reorg?
-
-    __init__.py
-    test (2k lines)
-      benchmark.py
-      testtensorlog.py
-      testxcomp.py
-    core: (maybe 2k lines)
-      bpcompiler.py
-      comline.py - should add my super simple option holder
-      config.py
-      dataset.py
-      declare.py - do I really need something so complicated as a Goal?
-      funs.py - a lot is backprop or eval
-      masterconfig.py
-      matrixdb.py
-      ops.py - a lot is backprop or eval
-      parser.py - 200 lines and do I need it?
-      program.py - autoweighting
-      symtab.py - should start at 0 or 1? do I need reserved words?
-      simple.py
-      tensorflowxcomp.py - *Function, *Grad, runExpt and support is test, this is a few hundred lines
-      theanoxcomp.py - *Function, *Grad, runExpt and support is test
-      xcomp.py - *Function, ...
-      opfunutil.py - scratchpad crap
-    extra (200)
-      interp.py
-      list.py
-    native (1500)
-      learn.py
-      debug.py
-      expt.py
-      plearn.py
-      putil.py
-      mutil.py - shuffleRows, selectRows used in dataset only; stack, numRows and checkCSR a lot; mapData a lot,
-        mostly for clipping; but it's ony 300 lines or so
+NATIVE CLEANUPS: see Cleanup-notes.txt
 
 TUTORIAL/DOCS
 
@@ -112,3 +75,25 @@ USE CASES FOR TF/TLOG interface:
    ...
    f = f1 * ... * fk
    loss = tlog.loss_for("answer/io", inference=f, input=shared_input, target_output=...)
+
+--------------------
+  def _softmaxFun2Expr(self,subExpr,typeName):
+    if xcomp.conf.softmax_alg == 'dense':
+      # zeros are actually big numbers for the softmax,
+      # so replace them with a big negative number
+      subExprReplacing0WithNeg10 = tf.where(
+          subExpr>0.0,
+          subExpr,
+          tf.ones(tf.shape(subExpr), tf.float32)*(-10.0))
+      return tf.nn.softmax(subExprReplacing0WithNeg10 + self._nullSmoother[typeName])
+    elif xcomp.conf.softmax_alg == 'sparse':
+      # inference is ok but the gradients aren't there....problem is this use of 'where', it seems
+      smoothedSubexpr = subExpr + self._nullSmoother[typeName]
+      nz_indices = tf.where(tf.not_equal(smoothedSubexpr, tf.constant(0, dtype=tf.float32)))
+      nz_values = tf.gather_nd(smoothedSubexpr, nz_indices)
+      sparseSubexpr = tf.SparseTensor(nz_indices, nz_values, tf.cast(tf.shape(smoothedSubexpr),tf.int64))
+      sparseSoftmax = tf.sparse_softmax(sparseSubexpr)
+      denseSoftmax = tf.sparse_tensor_to_dense(sparseSoftmax)
+      return denseSoftmax
+    else:
+      assert False
