@@ -156,9 +156,9 @@ class Program(object):
     @staticmethod
     def _loadRules(fileNames):
         ruleFiles = fileNames.split(":")
-        rules = parser.Parser.parseFile(ruleFiles[0])
+        rules = parser.Parser().parseFile(ruleFiles[0])
         for f in ruleFiles[1:]:
-            rules = parser.Parser.parseFile(f,rules)
+            rules = parser.Parser().parseFile(f,rules)
         return rules
 
     @staticmethod

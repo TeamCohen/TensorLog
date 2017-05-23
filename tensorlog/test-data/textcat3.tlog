@@ -1,0 +1,5 @@
+# typed version
+
+predict(X,Pos) <= assign(Pos,pos,label) // weighted(F) | hasWord(X,W) & posPair(W,F)
+predict(X,Neg) <= assign(Neg,neg,label) // weighted(F) | hasWord(X,W) & negPair(W,F)
+

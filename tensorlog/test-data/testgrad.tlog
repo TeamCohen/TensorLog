@@ -1,0 +1,3 @@
+after(GX,GW) <= like(X,GX) & before(W,X) & like(W,GW)
+
+

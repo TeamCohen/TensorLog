@@ -135,7 +135,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     testtensorlog.softmax_normalize(expected_result_dict)
     rules = parser.RuleCollection()
     for r in ruleStrings:
-      rules.add(parser.Parser.parseRule(r))
+      rules.add(parser.Parser().parseRule(r))
     if progType=='proppr':
       prog = program.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
     else:

@@ -47,5 +47,6 @@ VERSION = '1.3.4'
 # version 1.3.4:
 #     bug fix in type inference
 #     new serialization and use of file-like objects for load* methods
-#       dbschema.serializeTo(filelike)
+#       db.schema.serializeTo(filelike)
 #       db.serializeDataTo(filelike,filter=None|params|noparams)
+#       db.importSerializeDataFrom(filelike)

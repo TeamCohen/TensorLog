@@ -20,7 +20,7 @@ class AbstractDeclaration(object):
     """Mode - or later - type - declaration for a predicate."""
     def __init__(self,goal):
         if type(goal)==type(""):
-            goal = parser.Parser.parseGoal(goal)
+            goal = parser.Parser().parseGoal(goal)
         self.prototype = goal
         self._key = str(goal)
     def args(self):

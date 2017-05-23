@@ -53,7 +53,7 @@ def rules_from_strings(rule_strings):
     print '>',r
     rules = parser.RuleCollection()
     for r in rule_strings:
-      rules.add(parser.Parser.parseRule(r))
+      rules.add(parser.Parser().parseRule(r))
   return rules
 
 class DataBuffer(object):
@@ -288,7 +288,7 @@ class TestMultiRowOps(unittest.TestCase):
       print '>',r
     rules = parser.RuleCollection()
     for r in rule_strings:
-      rules.add(parser.Parser.parseRule(r))
+      rules.add(parser.Parser().parseRule(r))
     prog = program.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
 
@@ -303,7 +303,7 @@ class TestMultiRowOps(unittest.TestCase):
       print '>',r
     rules = parser.RuleCollection()
     for r in rule_strings:
-      rules.add(parser.Parser.parseRule(r))
+      rules.add(parser.Parser().parseRule(r))
     prog = program.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
 
@@ -1061,8 +1061,7 @@ class TestTypes(unittest.TestCase):
     self.testDeclarations()
 
   def testPartialSerialization(self):
-    #direc = tempfile.mkdtemp()
-    direc = '/tmp/test'
+    direc = tempfile.mkdtemp()
     with open(os.path.join(direc,'typed-schema.txt'),'w') as fp:
       self.db.schema.serializeTo(fp)
     with open(os.path.join(direc,'db-all.mat'),'w') as fp:
@@ -1096,6 +1095,22 @@ class TestTypes(unittest.TestCase):
     self.testStabs()
     self.testDeclarations()
 
+
+  def testUntypedSerialization(self):
+    db = matrixdb.MatrixDB()
+    testLines = [
+        '\t'.join(['head','rxy','x']) + '\n',
+        '\t'.join(['tail','rxy','y']) + '\n',
+        '\t'.join(['creator','rxy','nyt']) + '\n',
+        '\t'.join(['creator','rxy','fox']) + '\n',
+        '\t'.join(['rel','rxy','r']) + '\n',
+    ]
+    db.addLines(self.testLines)
+    direc = tempfile.mkdtemp()
+    db.serialize(direc)
+    self.db = matrixdb.MatrixDB.deserialize(direc)
+    self.testStabs()
+    self.testDeclarations()
 
   def testStabs(self):
     expectedSymLists = {
