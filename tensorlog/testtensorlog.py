@@ -35,7 +35,6 @@ from tensorlog import simple
 from tensorlog import util
 
 
-
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__),"test-data/")
 
 def softmax_normalize(expected_result_dict):
@@ -1194,6 +1193,32 @@ class TestTrainableDeclarations(unittest.TestCase):
     self.assertTrue(str(w1.keys()[0])=="w1(hello)")
     self.assertTrue(len(w2.keys())==1)
     self.assertTrue(str(w2.keys()[0])=="w2(hello,there)")
+
+class TestParser(unittest.TestCase):
+
+  def testIt(self):
+    def equalGoal(g1,g2):
+      self.assertEqual(g1.functor,g2.functor)
+      self.assertEqual(g1.arity,g2.arity)
+      self.assertEqual(g1.args,g2.args)
+    def equalRule(r1,r2):
+      equalGoal(r1.lhs,r2.lhs)
+      self.assertEqual(len(r1.rhs),len(r2.rhs))
+      for g1,g2 in zip(r1.rhs,r2.rhs):
+        equalGoal(g1,g2)
+
+    pprParser = parser.Parser(syntax='proppr')
+    tlogParser = parser.Parser(syntax='pythonic')
+    for stem in "matchtoy testgrad textcat textcat2 textcat3".split():
+      rules1 = pprParser.parseFile(os.path.join(TEST_DATA_DIR,stem+".ppr"))
+      rules2 = tlogParser.parseFile(os.path.join(TEST_DATA_DIR,stem+".tlog"))
+      keys1 = set(r.lhs for r in rules1)
+      for key in keys1:
+        keydef1 = rules1.rulesFor(key)
+        keydef2 = rules2.rulesFor(key)
+        self.assertTrue(len(keydef1)==len(keydef2))
+        for r1,r2 in zip(keydef1,keydef2):
+          equalRule(r1,r2)
 
 if __name__=="__main__":
   if len(sys.argv)==1:

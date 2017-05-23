@@ -1,4 +1,4 @@
-match(R,S) <= fname(R,FR) & lfmatch(FR,FS) & fname(S,FS) // f
+match(R,S) <= fname(R,FR) & fmatch(FR,FS) & fname(S,FS) // f
 match(R,S) <= lname(R,LR) & lmatch(LR,LS) & lname(S,LS) // l
 match(R,S) <= addr(R,AR) & amatch(AR,AS) & addr(S,AS) // a
 

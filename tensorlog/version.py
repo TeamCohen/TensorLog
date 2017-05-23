@@ -50,3 +50,4 @@ VERSION = '1.3.4'
 #       db.schema.serializeTo(filelike)
 #       db.serializeDataTo(filelike,filter=None|params|noparams)
 #       db.importSerializeDataFrom(filelike)
+#     pythonic syntax for parser
