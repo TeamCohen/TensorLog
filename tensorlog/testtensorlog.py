@@ -31,7 +31,6 @@ from tensorlog import mutil
 from tensorlog import parser
 from tensorlog import plearn
 from tensorlog import program
-from tensorlog import simple
 from tensorlog import util
 
 
@@ -1009,30 +1008,6 @@ class TestMatrixUtils(unittest.TestCase):
       self.assertTrue('william' in di)
       self.assertTrue('poppy' in di)
       self.assertEqual(len(di.keys()), 2)
-
-class TestTypeInference(unittest.TestCase):
-
-  def testNest(self):
-    b = simple.Builder()
-    answer,about,actor,mention = b.predicates("answer,about,actor,mention")
-    Q,M,A = b.variables("Q,M,A")
-    b.rules += answer(Q,M) <= about(Q,A) & actor(M,A)
-    b.rules += about(Q,A) <= mention(Q,A)
-    b.rules.listing()
-    db = matrixdb.MatrixDB(initSchema=dbschema.TypedSchema())
-    db.addLines([ "# :- answer(query_t,movie_t)\n",
-                  "# :- mention(query_t,actor_t)\n",
-                  "# :- actor(actor_t,movie_t)\n",
-                  '\t'.join(['mention','what_was_mel_brooks_in','mel_brooks']) + '\n',
-                  '\t'.join(['actor','young_frankenstein','mel_brooks']) + '\n'
-                  ])
-    prog = program.Program(db=db, rules=b.rules)
-    afun = prog.compile(declare.asMode("answer/io"))
-    for t in afun.inputTypes:
-      self.assertTrue(t is not None)
-    bfun = prog.compile(declare.asMode("about/io"))
-    for t in bfun.inputTypes:
-      self.assertTrue(t is not None)
 
 class TestTypes(unittest.TestCase):
 
