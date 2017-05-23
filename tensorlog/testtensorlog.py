@@ -1060,6 +1060,43 @@ class TestTypes(unittest.TestCase):
     self.testStabs()
     self.testDeclarations()
 
+  def testPartialSerialization(self):
+    #direc = tempfile.mkdtemp()
+    direc = '/tmp/test'
+    with open(os.path.join(direc,'typed-schema.txt'),'w') as fp:
+      self.db.schema.serializeTo(fp)
+    with open(os.path.join(direc,'db-all.mat'),'w') as fp:
+      self.db.serializeDataTo(fp)
+
+    with open(os.path.join(direc,'typed-schema.txt')) as fp:
+      schema2 = dbschema.TypedSchema.deserializeFrom(fp)
+    db2 = matrixdb.MatrixDB(schema2)
+    with open(os.path.join(direc,'db-all.mat')) as fp:
+      db2.matEncoding = matrixdb.MatrixDB.deserializeDataFrom(fp)
+    self.db = db2
+    self.testStabs()
+    self.testDeclarations()
+
+    self.db.markAsParameter('rel',2)
+    with open(os.path.join(direc,'db-params.mat'),'w') as fp:
+      self.db.serializeDataTo(fp,filter='params')
+    with open(os.path.join(direc,'db-fixed.mat'),'w') as fp:
+      self.db.serializeDataTo(fp,filter='fixed')
+
+    db3 = matrixdb.MatrixDB(schema2)
+    with open(os.path.join(direc,'db-fixed.mat')) as fp:
+      db3.matEncoding = matrixdb.MatrixDB.deserializeDataFrom(fp)
+    with open(os.path.join(direc,'db-params.mat')) as fp:
+      pd = matrixdb.MatrixDB.deserializeDataFrom(fp)
+    self.assertTrue(len(pd.keys())==1)
+    self.assertTrue(len(db3.matEncoding.keys())==3)
+    with open(os.path.join(direc,'db-params.mat')) as fp:
+      db3.importSerializeDataFrom(fp)
+    self.db = db3
+    self.testStabs()
+    self.testDeclarations()
+
+
   def testStabs(self):
     expectedSymLists = {
         'source_t':['__NULL__', '__OOV__', 'nyt', 'fox'],

@@ -313,9 +313,26 @@ class MatrixDB(object):
       d = self.matEncoding
     elif filter=='params':
       d = dict([(key,m) for (key,m) in self.matEncoding.items() if key in self.paramSet])
-    elif filter=='fixed' or filter=='nonparams':
+    elif filter=='fixed':
       d = dict([(key,m) for (key,m) in self.matEncoding.items() if key not in self.paramSet])
+    else:
+      assert False,"illegal filter: legal ones are None, 'params', or 'fixed'"
     self._saveMatDictWithScipy(fileLike,d)
+
+  def importSerializeDataFrom(self,fileLike):
+    """Read data stored using db.serializeDataTo(fp) and add it to the
+    database.  This assumes the DB schema can hold this information.
+    """
+    d = MatrixDB._restoreMatDictWithScipy(fileLike)
+    for key in d:
+      self.matEncoding[key] = d
+
+  @staticmethod
+  def deserializeDataFrom(fileLike):
+    """ Read data stored using db.serializeDataTo(fp) and return it as a dictionary
+    mapping (functor,arity) to a matEncoding.
+    """
+    return MatrixDB._restoreMatDictWithScipy(fileLike)
 
   @staticmethod
   def _saveMatDictWithScipy(fileLike,d):
@@ -343,22 +360,6 @@ class MatrixDB(object):
     logging.info('deserialized database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
     db.checkTyping()
     return db
-
-#  @staticmethod
-#  def deserialize(direc):
-#    logging.info('deserializing database from %s' % direc)
-#    db = MatrixDB()
-#    db.schema = dbschema.AbstractSchema.deserialize(direc)
-#    scipy.io.loadmat(os.path.join(direc,"db.mat"),db.matEncoding)
-#    #serialization/deserialization ends up converting
-#    #(functor,arity) pairs to strings and csr_matrix to csc_matrix
-#    #so convert them back....
-#    for stringKey,mat in db.matEncoding.items():
-#      del db.matEncoding[stringKey]
-#      if not stringKey.startswith('__'):
-#        db.matEncoding[eval(stringKey)] = scipy.sparse.csr_matrix(mat)
-#    db.checkTyping()
-#    return db
 
   @staticmethod
   def uncache(dbFile,factFile,initSchema=None):

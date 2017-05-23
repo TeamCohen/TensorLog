@@ -261,15 +261,18 @@ class TypedSchema(AbstractSchema):
   def declarePredicateTypes(self,functor,types):
     self._declarations.append( '%s(%s)' % (functor,",".join(types)))
     arity = len(types)
-    key = (functor,arity)
     for i,typeName in enumerate(types):
-      if key in self._type[i] and self._type[i][key]!=typeName:
-        errorMsg = '%s/%d argument %d declared as both type %r and %r' \
+      self._declarePredicateArgType(functor,arity,i,typeName)
+
+  def _declarePredicateArgType(self,functor,arity,i,typeName):
+    key = (functor,arity)
+    if key in self._type[i] and self._type[i][key]!=typeName:
+      errorMsg = '%s/%d argument %d declared as both type %r and %r' \
                       % (functor,arity,i,typeName,self._type[i][key])
-        assert False, errorMsg
-      self._type[i][key] = typeName
-      if typeName not in self._stab:
-        self._stab[typeName] = self._safeSymbTab()
+      assert False, errorMsg
+    self._type[i][key] = typeName
+    if typeName not in self._stab:
+      self._stab[typeName] = self._safeSymbTab()
 
   def serialize(self,direc):
     """Save info needed to deserialize this object in appropriately named
@@ -279,6 +282,8 @@ class TypedSchema(AbstractSchema):
       self.serializeTo(fp)
 
   def serializeTo(self,fp):
+    for decl in self._declarations:
+      fp.write(decl + '\n')
     for i in range(2):
       for (functor,arity) in self._type[i]:
         fp.write('\t'.join([str(i),functor,str(arity),self._type[i][(functor,arity)]]) + '\n')
@@ -296,9 +301,14 @@ class TypedSchema(AbstractSchema):
     for line in util.linesIn(fileLike):
       line = line.strip()
       if readingTypeDecs and line:
-        # type declarations start out the file
-        iStr,functor,arityStr,typeStr = line.split("\t")
-        result._type[int(iStr)][(functor,int(arityStr))] = typeStr
+        # type declarations start out the file - either strings describing a declaration,
+        # or else i,function,arity,type_of_arg_i_of_pred_defined_by_functor_and_arity
+        parts = line.split("\t")
+        if len(parts)==1:
+          result._declarations.append(parts[0])
+        else:
+          iStr,functor,arityStr,typeName = parts
+          result._declarePredicateArgType(functor,int(arityStr),int(iStr),typeName)
       elif readingTypeDecs and not line:
         # empty line terminates type declarations
         readingTypeDecs = False
