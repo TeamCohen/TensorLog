@@ -325,7 +325,7 @@ class MatrixDB(object):
     """
     d = MatrixDB._restoreMatDictWithScipy(fileLike)
     for key in d:
-      self.matEncoding[key] = d
+      self.matEncoding[key] = d[key]
 
   @staticmethod
   def deserializeDataFrom(fileLike):
