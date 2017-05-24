@@ -1195,6 +1195,27 @@ class TestParser(unittest.TestCase):
         for r1,r2 in zip(keydef1,keydef2):
           equalRule(r1,r2)
 
+class TestExampleLoading(unittest.TestCase):
+
+  def testIt(self):
+    db = matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'textcattoy.cfacts'))
+    dset1 = dataset.Dataset.loadExamples(db, os.path.join(TEST_DATA_DIR,"toytrain.examples"))
+    with open(os.path.join(TEST_DATA_DIR,"toytrain.examples")) as fp:
+      dset2 = dataset.Dataset.loadExamples(db, fp)
+    modes2 = set(dset2.modesToLearn())
+    for mode in dset1.modesToLearn():
+      self.assertTrue(mode in modes2)
+      X1 = dset1.getX(mode)
+      Y1 = dset1.getY(mode)
+      X2 = dset2.getX(mode)
+      Y2 = dset2.getY(mode)
+      self.assertEqual(X1.shape,X2.shape)
+      self.assertEqual(Y1.shape,Y2.shape)
+      self.assertEqual(X1.nnz,X2.nnz)
+      self.assertEqual(Y1.nnz,Y2.nnz)
+      self.assertEqual(X1.data,X2.data)
+      self.assertEqual(Y1.data,Y2.data)
+
 if __name__=="__main__":
   if len(sys.argv)==1:
     unittest.main()

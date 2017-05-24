@@ -223,7 +223,7 @@ class Dataset(object):
         one for the Ys.
 
         """
-        logging.info('loading examples file '+ fileName)
+        logging.info('loading examples from '+ str(fileName))
 
         # map from relation to lists that buffer data,row
         # index,colindex information for each of the X,Y matrices
@@ -238,20 +238,19 @@ class Dataset(object):
         def getId(typeName,symbol):
           s = symbol if db.schema.hasId(typeName,symbol) else matrixdb.OOV_ENTITY_NAME
           return db.schema.getId(typeName,s)
-        with open(fileName) as fp:
-          for line in util.linesIn(fp):
-            pred,x,ys = Dataset._parseLine(line,proppr=proppr)
-            if pred:
-              xType = db.schema.getDomain(pred.getFunctor(),2)
-              yType = db.schema.getRange(pred.getFunctor(),2)
-              row_index = len(xDatabuf[pred])
-              xDatabuf[pred].append(1.0)
-              xRowbuf[pred].append(row_index)
-              xColbuf[pred].append(getId(xType,x))
-              for y in ys:
-                yDatabuf[pred].append( 1.0/len(ys) if conf.normalize_outputs else 1.0)
-                yRowbuf[pred].append(row_index)
-                yColbuf[pred].append(getId(yType,y))
+        for line in util.linesIn(fileName):
+          pred,x,ys = Dataset._parseLine(line,proppr=proppr)
+          if pred:
+            xType = db.schema.getDomain(pred.getFunctor(),2)
+            yType = db.schema.getRange(pred.getFunctor(),2)
+            row_index = len(xDatabuf[pred])
+            xDatabuf[pred].append(1.0)
+            xRowbuf[pred].append(row_index)
+            xColbuf[pred].append(getId(xType,x))
+            for y in ys:
+              yDatabuf[pred].append( 1.0/len(ys) if conf.normalize_outputs else 1.0)
+              yRowbuf[pred].append(row_index)
+              yColbuf[pred].append(getId(yType,y))
         for pred in xDatabuf.keys():
           xType = db.schema.getDomain(pred.getFunctor(),2)
           yType = db.schema.getRange(pred.getFunctor(),2)
