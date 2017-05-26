@@ -8,18 +8,17 @@ import logging
 #
 # Invoke this script with these sorts of command lines (for other options see the code)
 #
-#   python expt.py --action train --epochs 50 --num 10000 --batch_size 2500
-#   python expt.py --action test --num 1000
+#   python demo.py --action train --epochs 50 --num 10000 --batch_size 2500
+#   python demo.py --action test --num 1000
 #
 # In my experiments this particular sequence of command gets you an error of about 4.9%
 #
-#   python expt.py --action train --epochs 50 --num 10000
-#   python expt.py --action test --num 10000
+#   python demo.py --action train --epochs 50 --num 10000
+#   python demo.py --action test --num 10000
 #
 
 import tensorflow as tf
 from tensorlog import simple
-from tensorlog import matrixdb
 
 RELS = "directed_by has_genre has_imdb_rating has_imdb_votes has_tags release_year starred_actors written_by in_language".split(" ")
 
@@ -77,13 +76,6 @@ def generate_rules():
 
 def run_main():
   logging.basicConfig(level=logging.DEBUG)
-
-  # normally in a .cfacts file, the last column is interpreted as the
-  # weight for a fact if it can be turned into a number by Python (and
-  # otherwise the weight defaults to 1).  But the 'release_year'
-  # relation maps movies to years, like "2011", so this option is used
-  # to suppress behavior....
-  matrixdb.conf.allow_weighted_tuples = False
 
   t0 = time.time()
 

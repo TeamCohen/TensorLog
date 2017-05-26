@@ -240,9 +240,10 @@ class Compiler(object):
     X is a matrix that can be used as a batch input to the inference
     function, and Y is a matrix that is the desired output.
 
-    Note that X is 'unwrapped', which may make it much larger.  If
-    this exceeds memory Python usually just crashes.  In this case you
-    should use load_big_dataset instead.
+    Note that X is 'unwrapped', which may make it much larger than the
+    sparse matrix which is stored.  If this exceeds memory Python
+    usually just crashes.  In this case you should use
+    load_big_dataset instead.
 
     Args:
 
