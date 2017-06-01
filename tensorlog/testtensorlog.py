@@ -1064,7 +1064,7 @@ class TestTypes(unittest.TestCase):
     self.assertTrue(len(pd.keys())==1)
     self.assertTrue(len(db3.matEncoding.keys())==3)
     with open(os.path.join(direc,'db-params.mat')) as fp:
-      db3.importSerializeDataFrom(fp)
+      db3.importSerializedDataFrom(fp)
     self.db = db3
     self.testStabs()
     self.testDeclarations()

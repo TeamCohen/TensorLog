@@ -50,4 +50,9 @@ VERSION = '1.3.4'
 #       db.schema.serializeTo(filelike)
 #       db.serializeDataTo(filelike,filter=None|params|noparams)
 #       db.importSerializeDataFrom(filelike)
-#     pythonic syntax for parser
+#     pythonic syntax for parser (automatic for files with extension .tlog)
+# version 1.3.4:
+#     api typo fix: db.importSerializeDataFrom(filelike) -> importSerializedDataFrom(filelike)
+#     simple.compiler.load_xxx_examples can be passed file-like objects
+#     builder rules will print in pythonic syntax
+#     bug fixes

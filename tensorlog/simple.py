@@ -230,6 +230,14 @@ class Compiler(object):
   # expose other useful routines
   #
 
+  def _as_dataset(self,spec):
+    if type(spec)==str:
+      return comline.parseDatasetSpec(spec,self.db)
+    elif '__iter__' in dir(spec):
+      return dataset.Dataset.loadExamples(self.db,spec)
+    else:
+      assert False,'cannot load dataset from %r' % spec
+
   def load_dataset(self,dataset_spec):
     """Same as load_small_dataset, for backwards compatibility. """
     return self.load_small_dataset(dataset_spec)
@@ -261,7 +269,7 @@ class Compiler(object):
         foo.dset will be used if it exists, and otherwise bar.exam
         will be loaded, parsed, and serialized in foo.dset for later.
     """
-    dset = comline.parseDatasetSpec(dataset_spec,self.db)
+    dset = self._as_dataset(dataset_spec)
     m = dset.modesToLearn()[0]
     # convert to something bereft of tensorlog data structures: a
     # dictionary mapping strings like "p/io" to X,Y pairs, where X and
@@ -314,8 +322,7 @@ class Compiler(object):
       dataset_spec: a string specifying a tensorlog.dataset.Dataset.
     See documents for load_small_dataset.
     """
-
-    dset = comline.parseDatasetSpec(dataset_spec,self.db)
+    dset = self._as_dataset(dataset_spec)
     for m in dset.modesToLearn():
       x = dset.getX(m)
       y = dset.getY(m)
@@ -439,8 +446,11 @@ class Builder(object):
     return self
 
 class RuleCollectionWrapper(parser.RuleCollection):
-  """ Subclass RuleCollection to handle a += notation
+  """ Subclass RuleCollection to handle the += notation
   """
+  def __init__(self):
+    super(RuleCollectionWrapper,self).__init__(syntax='pythonic')
+
   def __iadd__(self,other):
     if isinstance(other,parser.Rule):
       self.add(other)

@@ -319,7 +319,7 @@ class MatrixDB(object):
       assert False,"illegal filter: legal ones are None, 'params', or 'fixed'"
     self._saveMatDictWithScipy(fileLike,d)
 
-  def importSerializeDataFrom(self,fileLike):
+  def importSerializedDataFrom(self,fileLike):
     """Read data stored using db.serializeDataTo(fp) and add it to the
     database.  This assumes the DB schema can hold this information.
     """
@@ -451,6 +451,8 @@ class MatrixDB(object):
 
   def _bufferTriplet(self,functor,arity,a1,a2,w,filename,k):
     key = (functor,arity)
+    if key==('is_incorrect',1) and a1=='/m/02l7c8':
+      print '*** _bufferTriplet',functor,arity,a1,a2,w,filename,k
     if (key in self.matEncoding):
       logging.error("predicate encoding is already completed for "+str(key)+ " at line: "+line)
       return
@@ -512,7 +514,7 @@ class MatrixDB(object):
       # must be functor,a1,a2,weight
       functor,a1,a2,weight_string = parts[0],parts[1],parts[2],parts[3]
       w = _atof(weight_string)
-      if w is None:
+      if w is None or w<0:
         logging.error('line %d of %s: illegal weight' % (k,filename,weight_string))
         return
       self._bufferTriplet(functor,2,a1,a2,w,filename,k)
@@ -532,16 +534,17 @@ class MatrixDB(object):
         functor,a1,a2 = parts[0],parts[1],parts[2]
         self._bufferTriplet(functor,2,a1,a2,1.0,filename,k)
       elif not self.schema.isTypeless():
+        if parts[0]=='is_incorrect' and parts[1]=='/m/02l7c8': print '*** _bufferLine',parts,'*** w',w,'conf.allow_weighted_tuples',conf.allow_weighted_tuples
         functor = parts[0]
         if self.schema.getDomain(functor,2) and not self.schema.getDomain(functor,1):
           # must be binary
           a1,a2 = parts[1],parts[2]
           self._bufferTriplet(functor,2,a1,a2,1.0,filename,k)
         elif self.schema.getDomain(functor,1) and not self.schema.getDomain(functor,2):
-          assert w is not None,'line %d file %s: illegal weight %s' % (k,filename,possible_weight_string)
+          assert w is not None and w>=0,'line %d file %s: illegal weight %s' % (k,filename,possible_weight_string)
           a1 = parts[1]
-          self._bufferTriplet(functor,1,a1,None,1.0,filename,k)
-        elif w is not None:
+          self._bufferTriplet(functor,1,a1,None,w,filename,k)
+        elif w is not None and w>0:
           a1 = parts[1]
           logging.warn('line %d file %s: assuming %s is a weight' % (k,filename,possible_weight_string))
           self._bufferTriplet(functor,1,a1,None,w,filename,k)

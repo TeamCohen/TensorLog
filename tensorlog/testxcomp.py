@@ -828,6 +828,37 @@ class TestSimple(unittest.TestCase):
 
     self.runTextCatLearner(simple.Compiler(db=b.db, prog=b.rules))
 
+class TestReparameterizationAndTypedLoading(unittest.TestCase):
+
+  def testBugWasFixed(self):
+    # use the untyped version of the facts to make sure the schema works
+    db = matrixdb.MatrixDB()
+    db.addLines(["# :- r(lo_or_hi_t)\n",
+                 "\t".join("r low 0.1".split()) + "\n",
+                 "\t".join("r hi 0.9".split()) + "\n"])
+    db.markAsParameter('r',1)
+    prog = program.Program(db=db)
+    typeName = db.schema.getArgType("r",1,0)
+    idLow = db.schema.getId(typeName,"low")
+    idHi = db.schema.getId(typeName,"hi")
+    db_r = db.matEncoding[('r',1)]
+    self.approxEqual(db_r[0,idLow], 0.1)
+    self.approxEqual(db_r[0,idHi], 0.9)
+
+    xc = tensorflowxcomp.SparseMatDenseMsgCrossCompiler(prog)
+    v_r = xc._vector(declare.asMode("r(i)"))
+
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
+    xc.exportAllLearnedParams()
+    print 'exported to xc',db.matEncoding[('r',1)]
+    db_r = db.matEncoding[('r',1)]
+    self.approxEqual(db_r[0,idLow], 0.1)
+    self.approxEqual(db_r[0,idHi], 0.9)
+
+  def approxEqual(self,a,b):
+    self.assertTrue(abs(float(a)-b) < 0.0001)
+
 class TestPlugins(unittest.TestCase):
 
   def test_identity_io(self):

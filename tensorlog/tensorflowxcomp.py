@@ -369,6 +369,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
   def _reparameterizeAndRecordVar(self,val,name,isTrainable):
     initVal = self._softPlusInverse(val) if (isTrainable and xcomp.conf.reparameterizeMatrices) else val
     v = tf.Variable(initVal, name="tensorlog/"+name, trainable=isTrainable)
+    #v = tf.Variable(val, name="tensorlog/"+name, trainable=isTrainable)
     self.summarize(name,v)
     self.tfVarsToInitialize.append(v)
     return v

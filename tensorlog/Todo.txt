@@ -1,9 +1,7 @@
 TODO easy: 
 
- new command: simple serialize --input x --output y
- fix builder rules so they print pythonic syntax
- let simple load routines use filelike objects
- importSerializeDataFrom => importSerializedDataFrom
+ - fix builder rules so they print pythonic syntax
+ - new command: simple serialize --input x --output y
 
 TODO easy cleanups?
  - comline to gflags?
