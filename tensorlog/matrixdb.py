@@ -451,8 +451,6 @@ class MatrixDB(object):
 
   def _bufferTriplet(self,functor,arity,a1,a2,w,filename,k):
     key = (functor,arity)
-    if key==('is_incorrect',1) and a1=='/m/02l7c8':
-      print '*** _bufferTriplet',functor,arity,a1,a2,w,filename,k
     if (key in self.matEncoding):
       logging.error("predicate encoding is already completed for "+str(key)+ " at line: "+line)
       return
@@ -534,7 +532,6 @@ class MatrixDB(object):
         functor,a1,a2 = parts[0],parts[1],parts[2]
         self._bufferTriplet(functor,2,a1,a2,1.0,filename,k)
       elif not self.schema.isTypeless():
-        if parts[0]=='is_incorrect' and parts[1]=='/m/02l7c8': print '*** _bufferLine',parts,'*** w',w,'conf.allow_weighted_tuples',conf.allow_weighted_tuples
         functor = parts[0]
         if self.schema.getDomain(functor,2) and not self.schema.getDomain(functor,1):
           # must be binary
