@@ -109,7 +109,6 @@ class Rule(object):
         features = ' // ' + " & ".join(map(str,self.features)) + findalls if self.features else ''
         return str(self.lhs) + " <= " + " & ".join(map(str,self.rhs)) + features + vars
 
-
 class RuleCollection(object):
     """A set of prolog rules, indexed by functor and arity."""
 

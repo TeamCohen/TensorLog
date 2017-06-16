@@ -683,6 +683,24 @@ class TestMatParams(unittest.TestCase):
 
 class TestSimple(unittest.TestCase):
 
+  def testEmptyRules(self):
+    # should not throw an error
+    tlog = simple.Compiler(
+        db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"))
+
+  def testIncrementalDBLoad(self):
+    b = simple.Builder()
+    predict,label,hasWord,posPair,negPair = b.predicates("predict,label,hasWord,posPair,negPair")
+    doc_t,label_t,word_t,labelWordPair_t = b.types("doc_t,label_t,word_t,labelWordPair_t")
+    b.schema += predict(doc_t,label_t) & label(label_t)
+    b.schema += hasWord(doc_t,word_t) & posPair(word_t,labelWordPair_t) & negPair(word_t,labelWordPair_t)
+    for basename in "textcattoy_corpus.cfacts textcattoy_labels.cfacts textcattoy_pairs.cfacts".split(" "):
+      b.db += os.path.join(testtensorlog.TEST_DATA_DIR, basename)
+    tlog = simple.Compiler(db=b.db)
+    for (functor,arity,nnz) in [('hasWord',2,99),('label',1,2),('negPair',2,56)]:
+      m = tlog.db.matEncoding[(functor,arity)]
+      self.assertTrue(m.nnz == nnz)
+
   def testBatch(self):
     tlog = simple.Compiler(
         db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),

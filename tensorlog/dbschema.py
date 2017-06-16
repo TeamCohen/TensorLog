@@ -52,7 +52,9 @@ class AbstractSchema(object):
     assert False, 'abstract method called'
 
   def getArgType(self,functor,arity,i):
-    """ Return the type associated with argument i of a predicate"""
+    """Return the type associated with argument i of a predicate, where
+    0<=i<arity.
+    """
     assert False, 'abstract method called'
 
   def declarePredicateTypes(self,functor,types):

@@ -1,7 +1,8 @@
 TODO easy: 
 
- - fix builder rules so they print pythonic syntax
  - new command: simple serialize --input x --output y
+ - general tools for debug/explanation?
+ - simple.Compiler().[de]serialize?
 
 SAMPLING LOSS:
 
@@ -32,7 +33,6 @@ SAMPLING LOSS:
     name='nce_loss'
    )
   
-
 TODO easy cleanups?
  - comline to gflags?
 

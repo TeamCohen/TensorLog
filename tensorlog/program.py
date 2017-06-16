@@ -282,20 +282,17 @@ class ProPPRProgram(Program):
 
     def _moveFeaturesToRHS(self,rule0):
         rule = parser.Rule(rule0.lhs, rule0.rhs)
-        if not rule0.findall:
+        if not rule0.findall and (rule0.features is not None):
             #parsed format is {f1,f2,...} but we only support {f1}
-            if rule0.features is None:
-              logging.warn('this rule has no features: %s' % str(rule))
-            else:
-              assert len(rule0.features)==1,'multiple constant features not supported'
-              assert rule0.features[0].arity==0, '{foo(A,...)} not allowed, use {foo(A,...):true}'
-              constFeature = rule0.features[0].functor
-              constAsVar = constFeature.upper()
-              rule.rhs.append( parser.Goal(bpcompiler.ASSIGN, [constAsVar,constFeature]) )
-              rule.rhs.append( parser.Goal('weighted',[constAsVar]) )
-              # record the rule name, ie the constant feature
-              self.ruleIds.append(constFeature)
-        else:
+            assert len(rule0.features)==1,'multiple constant features not supported'
+            assert rule0.features[0].arity==0, '{foo(A,...)} not allowed, use {foo(A,...):true}'
+            constFeature = rule0.features[0].functor
+            constAsVar = constFeature.upper()
+            rule.rhs.append( parser.Goal(bpcompiler.ASSIGN, [constAsVar,constFeature]) )
+            rule.rhs.append( parser.Goal('weighted',[constAsVar]) )
+            # record the rule name, ie the constant feature
+            self.ruleIds.append(constFeature)
+        elif rule0.features is not None:
             #format is {foo(F):-...}
             assert len(rule0.features)==1,'feature generators of the form {a,b: ... } not supported'
             featureLHS = rule0.features[0]

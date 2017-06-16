@@ -84,7 +84,9 @@ class Compiler(object):
       assert False,'cannot convert %r to a database' % db
 
     # parse the program argument
-    if isinstance(prog,program.Program):
+    if prog is None:
+      self.prog = program.ProPPRProgram(db=self.db, rules=RuleCollectionWrapper())
+    elif isinstance(prog,program.Program):
       self.prog = prog
     elif isinstance(prog,Builder):
       self.prog = program.ProPPRProgram(db=self.db, rules=prog.rules)
@@ -386,6 +388,7 @@ class Builder(object):
     self.db = DBWrapper(self)
 
   def __setattr__(self,name,value):
+    # this overrides b.db = ....
     if name=='db':
       if 'db' not in self.__dict__:
         # the assignment in Builder.__init__
@@ -480,14 +483,17 @@ class DBWrapper(object):
       self.inner_db = matrixdb.MatrixDB.deserialize(other)
     elif isinstance(other,str):
       self.inner_db = matrixdb.MatrixDB.loadFile(other,initSchema=init_schema)
+    elif isinstance(other,DBWrapper) and other is self:
+      pass
     else:
-      assert False,'builder.db can only be assigned to a string, or a tensorlog.matrixdb.MatrixDB'
+      assert False,'builder.db can only be assigned to a string, or a tensorlog.matrixdb.MatrixDB: tried to assign %r' % other
 
   def __iadd__(self,other):
     if self.inner_db is None:
       init_schema = None if self.builder.schema.empty() else self.builder.schema
       self.inner_db = matrixdb.MatrixDB(initSchema=init_schema)
     self.inner_db.addFile(other)
+    return self
 
 class SchemaWrapper(dbschema.TypedSchema):
   """ Subclass a schema to handle a += notation
