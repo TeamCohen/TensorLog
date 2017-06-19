@@ -23,12 +23,6 @@ class AbstractSchema(object):
     """
     assert False, 'abstract method called'
 
-  def empty(self):
-    """Returns true if nothing has been declared and no constants have
-    been added to any symbol table.
-    """
-    assert False, 'abstract method called'
-
   def defaultType(self):
     """ Return the name of the default type, if there is one.
     """
@@ -111,7 +105,7 @@ class AbstractSchema(object):
     result.insert(NULL_ENTITY_NAME)
     assert result.getId(NULL_ENTITY_NAME)==1
     result.insert(OOV_ENTITY_NAME)
-    result.empty = True
+    result._empty = True
     return result
 
   def _checkAndInsertSymbols(self,typeName,symbolFile):
@@ -138,14 +132,14 @@ class UntypedSchema(AbstractSchema):
   def isTypeless(self):
     return True
 
+  def empty(self):
+    return self._stab[THING]._empty
+
   def defaultType(self):
     return THING
 
   def getTypes(self):
     return [THING]
-
-  def empty(self):
-    return self._stab[THING].empty
 
   def insertType(self,typeName):
     assert False,'inserting new type in untyped schema'
@@ -236,11 +230,6 @@ class TypedSchema(AbstractSchema):
 
   def isTypeless(self):
     return False
-
-  def empty(self):
-    for stab in self._stab.values():
-      if not stab.empty: return False
-    return True
 
   def insertType(self,typeName):
     self._stab[typeName] = self._safeSymbTab()
@@ -369,7 +358,7 @@ class SymbolTable(object):
     self._idDict = {}
     for s in initSymbols:
       self.insert(s)
-    self.empty = True
+    self._empty = True
 
   def insert(self,symbol):
     """Insert a symbol."""
@@ -377,7 +366,7 @@ class SymbolTable(object):
       self._nextId += 1
       self._idDict[symbol] = self._nextId
       self._symbolList += [symbol]
-      self.empty = False
+      self._empty = False
 
   def getSymbolList(self):
     """Get an array of all defined symbols."""

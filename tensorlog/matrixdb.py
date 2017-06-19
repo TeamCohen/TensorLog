@@ -499,9 +499,10 @@ class MatrixDB(object):
           self.markAsParameter(trainableFunctor,trainableArity)
         else:
           # if possible, over-ride the default 'untyped' schema with one that can handle the type declaration
-          if self.schema.isTypeless():
-            if self.schema.empty() and not conf.ignore_types:
-              self.schema = dbschema.TypedSchema()
+          if self.schema.isTypeless() and not conf.ignore_types:
+            if not self.schema.empty():
+              logging.error('discarding non-empty typeless schema to accomodate declaration: %s line %d' % (filename,k))
+            self.schema = dbschema.TypedSchema()
           if not conf.ignore_types:
             self.schema.declarePredicateTypes(decl.functor,decl.args())
       return

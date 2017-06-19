@@ -471,7 +471,7 @@ class DBWrapper(object):
     self.inner_db = None
 
   def _set_to_value(self,other):
-    init_schema = None if self.builder.schema.empty() else self.builder.schema
+    init_schema = None if self.builder.schema.empty else self.builder.schema
     if isinstance(other,matrixdb.MatrixDB):
       if init_schema is not None:
         logging.warn('schema definition is discarded when you assign a database to builder.db')
@@ -490,7 +490,7 @@ class DBWrapper(object):
 
   def __iadd__(self,other):
     if self.inner_db is None:
-      init_schema = None if self.builder.schema.empty() else self.builder.schema
+      init_schema = None if self.builder.schema.empty else self.builder.schema
       self.inner_db = matrixdb.MatrixDB(initSchema=init_schema)
     self.inner_db.addFile(other)
     return self
@@ -500,9 +500,11 @@ class SchemaWrapper(dbschema.TypedSchema):
   """
   def __init__(self,builder):
     super(SchemaWrapper,self).__init__()
+    self.empty = False
     self.builder = builder
 
   def __iadd__(self,other):
+    self.empty = False
     if self.builder.db.inner_db is not None:
       logging.warn('Adding to builder.schema after builder.db is initialized, this is dangerous')
     if isinstance(other,parser.Rule):

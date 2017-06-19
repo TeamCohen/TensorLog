@@ -838,8 +838,8 @@ class TestSimple(unittest.TestCase):
     b.schema += label(label_t)
 
     X,Pos,Neg,F,W = b.variables("X Pos Neg F W")
-    b.rules += predict(X,Pos) <= assign(Pos,'pos','label') // (weighted(F) | hasWord(X,W) & posPair(W,F))
-    b.rules += predict(X,Neg) <= assign(Neg,'neg','label') // (weighted(F) | hasWord(X,W) & negPair(W,F))
+    b.rules += predict(X,Pos) <= assign(Pos,'pos','label_t') // (weighted(F) | hasWord(X,W) & posPair(W,F))
+    b.rules += predict(X,Neg) <= assign(Neg,'neg','label_t') // (weighted(F) | hasWord(X,W) & negPair(W,F))
 
     # use the untyped version of the facts to make sure the schema works
     b.db = os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy.cfacts")
