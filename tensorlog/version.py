@@ -58,4 +58,4 @@ VERSION = '1.3.5'
 #     now working
 #        builder.db = "dbspec"
 #        builder.db += "file"
-#     bug fixes
+#     bug fixes for db += file, remove matrixdb.addFile which doesn't work well
