@@ -82,6 +82,7 @@ class Compiler(object):
       self.db = comline.parseDBSpec(db)
     else:
       assert False,'cannot convert %r to a database' % db
+    self.db.flushBuffers() # needed for DBWrappers
 
     # parse the program argument
     if prog is None:
@@ -492,7 +493,8 @@ class DBWrapper(object):
     if self.inner_db is None:
       init_schema = None if self.builder.schema.empty else self.builder.schema
       self.inner_db = matrixdb.MatrixDB(initSchema=init_schema)
-    self.inner_db.addFile(other)
+      self.inner_db.startBuffers()
+    self.inner_db.bufferFile(other) # remember to flush when you use the db!
     return self
 
 class SchemaWrapper(dbschema.TypedSchema):

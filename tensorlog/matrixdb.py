@@ -48,6 +48,7 @@ class MatrixDB(object):
       self.schema = dbschema.TypedSchema()
     else:
       self.schema = dbschema.UntypedSchema()
+    self.startBuffers()
 
   def checkTyping(self):
     self.schema.checkTyping(self.matEncoding.keys())
@@ -386,14 +387,6 @@ class MatrixDB(object):
     self.startBuffers()
     for line in lines:
       self._bufferLine(line,'<no file>',0)
-    self.flushBuffers()
-
-  def addFile(self,filename):
-    """ Clear the buffers, add lines, and flush the buffers.
-    """
-    self.startBuffers()
-    for k,line in enumerate(util.linesIn(filename)):
-      self._bufferLine(line,filename,k+1)
     self.flushBuffers()
 
   @staticmethod
