@@ -1,8 +1,10 @@
 TODO easy: 
 
+ - summaryfile exposed to simple?
  - new command: simple serialize --input x --output y
  - general tools for debug/explanation?
  - simple.Compiler().[de]serialize?
+ - b.db = file-like-object should work
 
 SAMPLING LOSS:
 

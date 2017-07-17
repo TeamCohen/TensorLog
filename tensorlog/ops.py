@@ -137,7 +137,8 @@ class DefinedPredOp(Op):
     return self.subfun.install(nextId+1)
   def copy(self):
     return DefinedPredOp(self.tensorlogProg,self.dst,self.src,self.funMode,self.depth)
-
+  def children(self):
+    return [self.subfun]
 
 class AssignPreimageToVar(Op):
   """Mat is something like p(X,Y) where Y is not used 'downstream' or

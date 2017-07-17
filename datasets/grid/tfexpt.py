@@ -1,3 +1,4 @@
+import time
 import tensorflow as tf
 
 from tensorlog import simple
@@ -26,9 +27,11 @@ def trainAndTest(tlog,trainData,testData,epochs):
   session.run(tf.global_variables_initializer())
   (tx,ty) = trainData[mode]
   train_fd = {tlog.input_placeholder_name(mode):tx, tlog.target_output_placeholder_name(mode):ty}
+  t0 = time.time()
   for i in range(epochs):
     print 'epoch',i+1
     session.run(train_step, feed_dict=train_fd)
+  print 'learning takes',time.time()-t0,'sec'
   (ux,uy) = testData[mode]
   test_fd = {tlog.input_placeholder_name(mode):ux, tlog.target_output_placeholder_name(mode):uy}
   acc = session.run(accuracy, feed_dict=test_fd)
