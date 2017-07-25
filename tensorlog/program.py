@@ -7,6 +7,7 @@ import sys
 import logging
 import collections
 import numpy as np
+import os
 
 from tensorlog import bpcompiler
 from tensorlog import config
@@ -164,6 +165,38 @@ class Program(object):
     @staticmethod
     def loadRules(fileNames,db,plugins=None):
         return Program(db,Program._loadRules(fileNames),plugins=plugins)
+
+    def serialize(self,direc):
+      """ Serialize the rules to a file-like object
+      """
+      if self.plugins:
+        logging.warn('plugins can NOT be serialized in %r, so semantics after deserialization might be different!' % direc)
+      if not os.path.exists(direc):
+        os.makedirs(direc)
+      with open(os.path.join(direc,"rules.tlog"),'w') as fp:
+        self.serializeRulesTo(fp)
+      self.db.serialize(os.path.join(direc,"database.db"))
+
+    @staticmethod
+    def deserialize(direc):
+      """ Serialize the rules to a file-like object
+      """
+      db =  matrixdb.MatrixDB.deserialize(os.path.join(direc,"database.db"))
+      with open(os.path.join(direc,"rules.tlog")) as fp:
+        rules = Program.deserializeRulesFrom(fp)
+      return Program(db,rules=rules)
+
+    def serializeRulesTo(self,fileLike):
+      """ Serialize the rules to a file-like object
+      """
+      for r in self.rules:
+        fileLike.write(r.asString(syntax='pythonic'))
+
+    @staticmethod
+    def deserializeRulesFrom(fileLike):
+      """ Read the rules associated with the program from a filelike
+      """
+      return parser.Parser(syntax='pythonic').parseStream(fileLike)
 
 
 #

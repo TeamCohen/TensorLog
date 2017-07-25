@@ -228,6 +228,10 @@ class Compiler(object):
     """Save a serialized, quick-to-load version of the database."""
     self.db.serialize(dir_name)
 
+  def serialize_program(self,dir_name):
+    """Save a serialized, quick-to-load version of the program."""
+    self.prog.serialize(dir_name)
+
   #
   # expose other useful routines
   #
