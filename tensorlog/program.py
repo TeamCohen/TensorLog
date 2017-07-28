@@ -169,7 +169,7 @@ class Program(object):
     def serialize(self,direc):
       """ Serialize the rules to a file-like object
       """
-      if self.plugins:
+      if self.plugins and not self.plugins.isempty():
         logging.warn('plugins can NOT be serialized in %r, so semantics after deserialization might be different!' % direc)
       if not os.path.exists(direc):
         os.makedirs(direc)
@@ -190,7 +190,7 @@ class Program(object):
       """ Serialize the rules to a file-like object
       """
       for r in self.rules:
-        fileLike.write(r.asString(syntax='pythonic'))
+        fileLike.write(r.asString(syntax='pythonic') + '\n')
 
     @staticmethod
     def deserializeRulesFrom(fileLike):
@@ -362,6 +362,9 @@ class Plugins(object):
     self.definedFunctorArity = {}
     self.outputFun = {}
     self.outputTypeFun = {}
+
+  def isempty(self):
+    return not self.definedFunctorArity
 
   def define(self,mode,outputFun,outputTypeFun=None):
     """Define the function associated with a mode.  The definition is a

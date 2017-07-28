@@ -5,7 +5,7 @@ short-tests:
 	python -m unittest testxcomp
 	python -m unittest testtf
 
-all-automatic-tests: short-tests grid-test cora-test wikimovies-test simple-comline-test smokers-test fb-benchmark-test
+all-automatic-tests: short-tests grid-test cora-test wikimovies-test simple-comline-test smokers-test fb-benchmark-test socialgraphs-test
 
 # tests that take a few minutes to run
 # run 'make prepare-for-long-tests' in a fresh install before you run these
@@ -21,6 +21,9 @@ prepare-for-long-tests:
 
 grid-test:
 	(cd ../datasets/grid/; make clean; make check; make clean; make unittest)
+
+socialgraphs-test:
+	(cd ../datasets/socialgraphs/; make clean; make unittest)
 
 cora-test:
 	(cd ../datasets/cora/; make clean; make check; make clean; make unittest)

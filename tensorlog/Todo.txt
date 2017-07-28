@@ -1,5 +1,7 @@
 TODO easy: 
 
+ - clean up cora example - make demo? check deeper programs?
+ - add royal family data - with all rules
  - simple.Compiler().[de]serialize? that would serialize a program as well as a DB
  should decide how to have this interact with session, set_all_db_params_to_learned_values, etc
  - new command: simple serialize --input x --output y
