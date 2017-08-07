@@ -751,6 +751,39 @@ class TestProPPR(unittest.TestCase):
         self.assertAlmostEqual(actual[k], expected[k], delta=0.05)
 
 
+class TestProgramSerialization(unittest.TestCase):
+
+  def setUp(self):
+    self.cacheDir = tempfile.mkdtemp()
+
+  def cacheFile(self,fileName):
+    return os.path.join(self.cacheDir,fileName)
+
+  def testFullSerialization(self):
+    db = matrixdb.MatrixDB.uncache(
+        self.cacheFile('textcat.db'),
+        str(os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')))
+    prog = program.ProPPRProgram.loadRules(
+        os.path.join(TEST_DATA_DIR,"textcat.ppr"),
+        db=db)
+    prog.serialize(self.cacheFile('textcat.prog'))
+    roundtripProg = program.Program.deserialize(self.cacheFile('textcat.prog'))
+    self.assertTrue(prog.rules.equals(roundtripProg.rules))
+    self.assertTrue(sorted(prog.db.matEncoding.keys()) == sorted(roundtripProg.db.matEncoding.keys()))
+    self.assertTrue(prog.db.size() == roundtripProg.db.size())
+
+  def testRulesSerialization(self):
+    db = matrixdb.MatrixDB.uncache(
+        self.cacheFile('textcat.db'),
+        str(os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')))
+    prog = program.ProPPRProgram.loadRules(
+        os.path.join(TEST_DATA_DIR,"textcat.ppr"),
+        db=db)
+    with open(self.cacheFile('rules.tlog'),'w') as fp:
+      prog.serializeRulesTo(fp)
+    with open(self.cacheFile('rules.tlog')) as fp:
+      roundtripRules = program.Program.deserializeRulesFrom(fp)
+    self.assertTrue(prog.rules.equals(roundtripRules))
 
 class TestExpt(unittest.TestCase):
 

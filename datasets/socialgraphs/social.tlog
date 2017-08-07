@@ -1,0 +1,5 @@
+inferred_label(X,Y) <= influenced_by(X,Z) & label(Z,Y)
+
+influenced_by(A,B) <= friend(A,Z) & influenced_by(Z,B)
+influenced_by(A,B) <= friend(A,B)
+

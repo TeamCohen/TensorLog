@@ -2,7 +2,7 @@
 #
 # version number tracking for Tensorlog
 
-VERSION = '1.3.5'
+VERSION = '1.3.6'
 
 # externally visible changes:
 #
@@ -59,3 +59,7 @@ VERSION = '1.3.5'
 #        builder.db = "dbspec"
 #        builder.db += "file"
 #     bug fixes for db += file, remove matrixdb.addFile which doesn't work well
+# version 1.3.6:
+#     program.serialize, Program.deserialize
+#     datasets/socialgraphs
+

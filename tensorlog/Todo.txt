@@ -1,42 +1,30 @@
 TODO easy: 
 
+ - clean up cora example - make demo? check deeper programs?
+ - add royal family data - with all rules
+ - simple.Compiler().[de]serialize? that would serialize a program as well as a DB
+ should decide how to have this interact with session, set_all_db_params_to_learned_values, etc
  - new command: simple serialize --input x --output y
- - general tools for debug/explanation?
- - simple.Compiler().[de]serialize?
-
-SAMPLING LOSS:
-
- - tf's implemented methods listed here:
-   https://www.tensorflow.org/extras/candidate_sampling.pdf roughly,
-   tf.nn.sampled_softmax_loss is for cases where you want a
-   distribution over labels and tf.nn.nce_loss is for cases where you
-   don't (but nce_loss requires you to have some fixed number of true
-   labels K in every example).  Examples of train/test implementation
-   are here https://www.tensorflow.org/api_docs/python/tf/nn/nce_loss.
-
-   all require a low-dimensional input (dimension D) which is then
-   passed through a linear map + bias to produce the N output classes.
-   so they only can be used if we first compress the output to D bits.
-   maybe that's ok though? maybe as a bllom filter?
-
-   nce_loss(
-    weights,     // learned matrix [num_classes, D]
-    biases,      // learned vector [num_classes]
-    labels,      // shape [batch_size, num_true]
-    inputs,      // shape [batch_size, D]
-    num_sampled, // scalar
-    num_classes, // scalar
-    num_true=1,
-    sampled_values=None, // or produce with a sampler
-    remove_accidental_hits=False,
-    partition_strategy='mod',
-    name='nce_loss'
-   )
-  
-TODO easy cleanups?
  - comline to gflags?
 
 TODO major:
+
+ - multi-task datasets: test one
+ - extensions (to matrixDB? in dbschema? in simple? in new package?) to preprocess matrices
+  -- tfidf weighting: 
+  -- cm-embedding:
+  --- create matrices that embed a type, or convert a matrix from types to embedded types
+  --- use plugins to de-embed a type
+
+ - general tools for debug/explanation?
+ -- current: given input, function --> outputs
+ -- drill down: given input, function, given output + intermediate proof variable --> values intermediate variable takes on
+ -- drill down: given input, function, given output + given intermediate variable1,var2 ... varK-1 + varK --> values intermediate variable varK takes on
+ -- drill down by modifying the program....
+
+ - scheme for adding tensorboard summaries somehow, for debugging
+ -- maybe scope graph nodes with rule names/ids?
+ -- maybe include api for specifying summaries to add to rules or database predicates?
  - alternative to calling out to tensorlog would be to
  iteratively process multiple-input, single-output plugins.
  for i in plugInGoalPositions:
@@ -52,11 +40,6 @@ TODO major:
  - tlog(autoset_db_params=True) will only set UNDEFINED params
  - you can load just parameters, not a whole DB
 
- - onhold (see below): looking at sparse implementation of softmax....but it
-   doesn't seem to be differentiable the way I set it up. can it be?
-   maybe I should be using a sampling softmax? or nce_loss?
-
- - multi-task datasets
 
 
 NATIVE:

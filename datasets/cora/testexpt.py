@@ -12,7 +12,7 @@ class TestAccTF(unittest.TestCase):
 
   def testIt(self):
     acc = tfexpt.runMain(saveInPropprFormat=False)
-    self.assertTrue(acc >= 0.29)
+    self.assertTrue(acc >= 0.28)
 
 if __name__ == "__main__":
   unittest.main()

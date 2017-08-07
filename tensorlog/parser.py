@@ -144,6 +144,13 @@ class RuleCollection(object):
             for r in self.index[key]:
                 yield r
 
+    def equals(self,other):
+      for r1,r2 in zip(self,other):
+        if not r1 and r2: return False
+        if not r2 and r1: return False
+        if r1.asString(syntax='pythonic')!=r2.asString(syntax='pythonic'): return False
+      return True
+
 ##############################################################################
 ## the parser
 ##############################################################################
@@ -212,12 +219,17 @@ class Parser(object):
     result.lhs = None
     return result
 
-  def parseFile(self,filename,rules = None):
+  def parseFile(self,filename,rules=None):
     """Extract a series of rules from a file."""
     if filename.endswith("tlog"): self.setSyntax('pythonic')
+    with open(filename) as fp:
+      return self.parseStream(fp,rules=rules)
+
+  def parseStream(self,fileLike,rules=None):
+    """Extract a series of rules from a stream."""
     if not rules: rules = RuleCollection(syntax=self.syntax)
     linebuf = []
-    for line in open(filename):
+    for line in fileLike:
       if not line[0]=='#':
         linebuf.append(line)
     buf = "".join(linebuf)
