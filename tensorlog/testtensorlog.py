@@ -175,6 +175,13 @@ class TestSmallProofs(unittest.TestCase):
   def test_back2(self):
     self.inference_check(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
 
+  def test_reorder(self):
+    # X susan, X1 william, Y1 rachel/lottie/sarah, Y william
+    # this ordering is ok
+    self.inference_check(['p(X,Y):-spouse(X,X1),sister(X1,Y1),sister(Y,Y1).'],'p(i,o)','susan',{'william': 3.0})
+    # this needs to be fixed
+    self.inference_check(['p(X,Y):-spouse(X,X1),sister(Y,Y1),sister(X1,Y1).'],'p(i,o)','susan',{'william': 3.0})
+
   def test_rec1(self):
     program.conf.max_depth=4
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})

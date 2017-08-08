@@ -70,7 +70,7 @@ class BPCompiler(object):
     #used for recursively compiling subpredicates with tensorlogProg
     self.depth = depth
     #rule to be compiled
-    self.rule = rule
+    self.rule = self.reorderRHS(rule,lhsMode)
 
     #generated list of operations used for BP
     self.ops = []
@@ -171,6 +171,32 @@ class BPCompiler(object):
   #
   # simpler subroutines of compile
   #
+  def reorderRHS(self,rule,lhsMode):
+    """ Return a copy of the rule with the goals in the rhs of the rule re-ordered
+    so that execution can be mostly left-to-right
+    """
+    boundVars = set([rule.lhs.args[i] for i in range(rule.lhs.arity) if lhsMode.isInput(i)])
+    reorderedRHS = []
+    goalsToInclude = rule.rhs
+    def readyToExecute(goal):
+      inputVars = [a for a in goal.args if (parser.isVariableAtom(a) and (a in boundVars))]
+      return inputVars or (goal.functor==ASSIGN and (2 <= goal.arity <= 3)) or goal.arity==1
+    def varsIn(goal):
+      return set([a for a in goal.args if parser.isVariableAtom(a)])
+    while goalsToInclude:
+      postponedGoals = []
+      progessMade = False
+      for goal in goalsToInclude:
+        if not readyToExecute(goal):
+          postponedGoals.append(goal)
+        else:
+          reorderedRHS.append(goal)
+          boundVars = boundVars.union(varsIn(goal))
+          progessMade = True
+      goalsToInclude = postponedGoals
+      assert progessMade,'cannot order goals for mode %r and rule %s' % (lhsMode,rule.asString())
+    result = parser.Rule(rule.lhs,reorderedRHS,rule.features,rule.findall)
+    return result
 
   def validateRuleBeforeAnalysis(self):
     """Raises error if the rule doesn't satisfy the assumptions made by

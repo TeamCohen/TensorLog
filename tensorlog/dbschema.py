@@ -177,7 +177,7 @@ class UntypedSchema(AbstractSchema):
     for line in util.linesIn(fileLike):
       sym = line.strip()
       i = result.getId(THING,sym)
-      assert i==k,'symbols out of sync for symbol "%s" type %d: expected index %d actual %d' % (sym,typeName,i,k)
+      assert i==k,'symbols out of sync for symbol "%s": expected index %d actual %d' % (sym,i,k)
       k += 1
     return result
 

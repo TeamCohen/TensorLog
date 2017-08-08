@@ -1,5 +1,6 @@
 TODO easy: 
 
+ - bug: check why TestTypes.testTCToyExptTypes gives mode predict/oi 
  - clean up cora example - make demo? check deeper programs?
  - add royal family data - with all rules
  - simple.Compiler().[de]serialize? that would serialize a program as well as a DB
