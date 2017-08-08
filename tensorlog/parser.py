@@ -244,7 +244,7 @@ class Parser(object):
           first_time = False
       unread_text = buf[hi:].strip() if rules.size()>0 else buf
       if len(unread_text)>0:
-        logging.error('unparsed text at end of %s: "...%s"' % (filename,unread_text))
+        logging.error('unparsed text at end of %s: "...%s"' % (fileLike,unread_text))
       return rules
     except KeyError:
       print 'error near ',lo,'in',filename

@@ -361,7 +361,7 @@ class BPCompiler(object):
         if not gin.inputs:
           # special case - binding a variable to a constant with assign(Var,const) or assign(Var,type,const)
           # TODO: should unary predicates in general be an input?
-          errorMsg = 'output variables without inputs are only allowed for assign/2 or assign/3: %s' % str(self.rule.rhs[gin.index-1])
+          errorMsg = 'output variables without inputs are only allowed for assign/2 or assign/3: goal %r rule %r' % (str(self.rule.rhs[gin.index-1]),self.rule.asString())
           assert (mode.functor==ASSIGN and mode.arity>=2 and mode.isOutput(0)), errorMsg
           addOp(ops.AssignOnehotToVar(msgName,mode), traceDepth,j,v)
           return msgName

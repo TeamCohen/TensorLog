@@ -68,6 +68,15 @@ DESIGN FLAWS: 1 fails but 2 is ok even tho both are polytrees.
  1 p(X,Y) :- q(X,X1),r(Y,Y1),s(X1,Y1)
  2 p(X,Y) :- q(X,X1),s(X1,Y1),r(Y,Y1)
 
+This is actually a problem for the royal-family task.  I guess I can
+do this with a reordering step in bpcompiler but that seems sort of
+kludgy....for new ordering, you could repeatedly scan forward to find
+the first rhs literal that's allowable? or .... have queue of
+disallowed literals that you build up, and insert them whenever their
+inputs are ready.
+
+You can always do this manually if predicates are called in a single
+mode, of course.
 
 USE CASES FOR TF/TLOG interface:
 
