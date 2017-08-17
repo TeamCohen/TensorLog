@@ -1,4 +1,0 @@
-actual results on Tue Aug 30 14:53:25 EDT 2016: yago2-sample
-training ParallelFixedRateGDLearner ... done in 316.791 sec
-eval untrained theory on test : acc 0.0409980962741 xent/ex 17.0697188552
-eval ..trained theory on test : acc 0.0443976067446 xent/ex 4.52917974542

@@ -43,15 +43,15 @@ hasword	a4	dept
 same	bill	bill
 same	carnegie-mellon-univ	carnegie-mellon-univ
 same	central-michigan-univ	central-michigan-univ
-same	cmu		cmu
-same	cohen		cohen
-same	cohn		cohn
+same	cmu	cmu
+same	cohen	cohen
+same	cohn	cohn
 same	computer-science	computer-science
 same	department	department
-same	dept		dept
+same	dept	dept
 same	machine-learning	machine-learning
-same	pablo		pablo
-same	william		william
+same	pablo	pablo
+same	william	william
 
 rule	f
 rule	l

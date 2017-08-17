@@ -19,7 +19,8 @@ from tensorlog import matrixdb
 from tensorlog import mutil
 from tensorlog import plearn
 
-conf = config.Config()
+def fulltype(o):
+  return o.__module__ + "." + o.__class__.__name__
 
 class Expt(object):
 
@@ -31,11 +32,11 @@ class Expt(object):
         return self._run(**self.config)
 
     def _run(self,
-             prog=None, trainData=None, testData=None, targetMode=None, 
+             prog=None, trainData=None, testData=None, targetMode=None,
              savedTestPredictions=None, savedTestExamples=None, savedTrainExamples=None, savedModel=None,
              learner=None):
 
-        """ Run an experiment.  
+        """ Run an experiment.
 
         The stages are
         - if targetMode is specified, extract just the examples from that mode from trainData and testData
@@ -47,55 +48,62 @@ class Expt(object):
         - if savedTestExamples (savedTrainExamples) is given, save the training/test examples in ProPPR format
         """
 
-        if targetMode: 
+        if targetMode:
             targetMode = declare.asMode(targetMode)
             trainData = trainData.extractMode(targetMode)
-            testData = testData.extractMode(targetMode)
+            if testData is not None: 
+                testData = testData.extractMode(targetMode)
 
         if not learner: learner = learn.FixedRateGDLearner(prog)
 
+        
         TP0 = Expt.timeAction(
             'running untrained theory on train data',
             lambda:learner.datasetPredict(trainData))
-        UP0 = Expt.timeAction(
-            'running untrained theory on test data',
-            lambda:learner.datasetPredict(testData))
         Expt.printStats('untrained theory','train',trainData,TP0)
-        Expt.printStats('untrained theory','test',testData,UP0)
+        if testData is not None:
+          UP0 = Expt.timeAction(
+              'running untrained theory on test data',
+              lambda:learner.datasetPredict(testData))
+          Expt.printStats('untrained theory','test',testData,UP0)
 
-        Expt.timeAction('training %s' % type(learner).__name__, lambda:learner.train(trainData))
+        Expt.timeAction('training %s' % fulltype(learner), lambda:learner.train(trainData))
 
         TP1 = Expt.timeAction(
             'running trained theory on train data',
             lambda:learner.datasetPredict(trainData))
-        UP1 = Expt.timeAction(
-            'running trained theory on test data',
-            lambda:learner.datasetPredict(testData))
+        if testData is not None:
+          UP1 = Expt.timeAction(
+              'running trained theory on test data',
+              lambda:learner.datasetPredict(testData))
 
         Expt.printStats('..trained theory','train',trainData,TP1)
-        testAcc,testXent = Expt.printStats('..trained theory','test',testData,UP1)
+        if testData is not None:
+          testAcc,testXent = Expt.printStats('..trained theory','test',testData,UP1)
+        else:
+          testAcc,testXent = None,None
 
         if savedModel:
             Expt.timeAction('saving trained model', lambda:prog.db.serialize(savedModel))
 
-        if savedTestPredictions:
+        if savedTestPredictions and testData:
             #todo move this logic to a dataset subroutine
             open(savedTestPredictions,"w").close() # wipe file first
             def doit():
                 qid=0
                 for mode in testData.modesToLearn():
-                    qid+=Expt.predictionAsProPPRSolutions(savedTestPredictions,mode.functor,prog.db,UP1.getX(mode),UP1.getY(mode),True,qid) 
+                    qid+=Expt.predictionAsProPPRSolutions(savedTestPredictions,mode.functor,prog.db,UP1.getX(mode),UP1.getY(mode),True,qid)
             Expt.timeAction('saving test predictions', doit)
 
-        if savedTestExamples:
-            Expt.timeAction('saving test examples', 
+        if savedTestExamples and testData:
+            Expt.timeAction('saving test examples',
                             lambda:testData.saveProPPRExamples(savedTestExamples,prog.db))
 
         if savedTrainExamples:
-            Expt.timeAction('saving train examples', 
+            Expt.timeAction('saving train examples',
                             lambda:trainData.saveProPPRExamples(savedTrainExamples,prog.db))
-                
-        if savedTestPredictions and savedTestExamples:
+
+        if savedTestPredictions and savedTestExamples and testData:
             print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' \
                 % (savedTestExamples,savedTestPredictions)
 
@@ -106,14 +114,17 @@ class Expt(object):
     def predictionAsProPPRSolutions(fileName,theoryPred,db,X,P,append=False,start=0):
         """Print X and P in the ProPPR solutions.txt format."""
         fp = open(fileName,'a' if append else 'w')
-        dx = db.matrixAsSymbolDict(X)
-        dp = db.matrixAsSymbolDict(P)
+        dx = db.matrixAsSymbolDict(X,typeName=db.schema.getDomain(theoryPred,2))
+        dp = db.matrixAsSymbolDict(P,typeName=db.schema.getRange(theoryPred,2))
         n=max(dx.keys())
         for i in range(n+1):
+            #assert i in dp, "keys dp: %s\nkeys dx: %s" % (dp.keys(),dx.keys())
             dix = dx[i]
-            dip = dp[i]
+            dip = {}
+            if i in dp:
+                dip = dp[i]
             assert len(dix.keys())==1,'X %s row %d is not onehot: %r' % (theoryPred,i,dix)
-            x = dix.keys()[0]    
+            x = dix.keys()[0]
             fp.write('# proved %d\t%s(%s,X1).\t999 msec\n' % (i+1+start,theoryPred,x))
             scoresdPs = reversed(sorted([(py,y) for (y,py) in dip.items()]))
             for (r,(py,y)) in enumerate(scoresdPs):
@@ -142,7 +153,6 @@ class Expt(object):
 
 if __name__=="__main__":
 
-    
     usageLines = [
         'expt-specific options, given after the argument +++:',
         '    --savedModel e      # where e is a filename',
@@ -165,7 +175,7 @@ if __name__=="__main__":
         paramSpecs = optdict['--params'].split(",")
         for spec in paramSpecs:
             functor,arity = spec.split("/")
-            optdict['db'].markAsParam(functor,int(arity))
+            optdict['db'].markAsParameter(functor,int(arity))
     optdict['prog'].setFeatureWeights(epsilon=weightEpsilon)
     optdict['prog'].setRuleWeights(epsilon=weightEpsilon)
     learner = None

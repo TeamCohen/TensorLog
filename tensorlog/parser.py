@@ -1,18 +1,18 @@
 # (C) William W. Cohen and Carnegie Mellon University, 2016
 
+import sys
 import collections
-
-from tensorlog import symtab
+import logging
 
 #
 # Parse prolog rules in one of these sample formats
 #
 # p(X,Y) :- q(X,Z), r(Z,X).         # normal prolog clause
 # p(X,Y,Z) :- .                     # unit clause
-# p(X,Y) :- q(X,Z) {f(Y,X)}.        # normal prolog clause plus a 'feature'  
-# p(X,Y) :- q(X,Z) {f(Y,X),g(Y)}.   # multiple 'features'  
+# p(X,Y) :- q(X,Z) {f(Y,X)}.        # normal prolog clause plus a 'feature'
+# p(X,Y) :- q(X,Z) {f(Y,X),g(Y)}.   # multiple 'features'
 # p(X,Y) :- q(X,Z) {f(W) : g(Y,W)}. # features geberated by a 'findall'
-#                                   #  ie for all solutions of g(Y,W), 
+#                                   #  ie for all solutions of g(Y,W),
 #                                   #  produce a feature f(W)
 #
 # TODO: remove the stuff that's not supported in TensorLog
@@ -28,14 +28,14 @@ def isProcessedVariable(a):
     return type(a)==type(0)
 
 def isVariableAtom(a):
-    return a[0].isupper() or a[0]=='_' 
+    return a[0].isupper() or a[0]=='_'
 
 class Goal(object):
     """A prolog goal, eg brotherOf(X,Y)."""
     def __init__(self,functor,args):
         self.functor = functor
         self._setArgs(args)
-        
+
     def _setArgs(self,args):
         self.args = args
         self.arity = len(args)
@@ -46,7 +46,7 @@ class Goal(object):
 
     def __repr__(self):
         return 'Goal(%r,%r)' % (self.functor,self.args)
-        
+
 
 class Rule(object):
     """A prolog rule.  The lhs is a goal, the rhs a list of goals, so the
@@ -84,7 +84,7 @@ class Rule(object):
             if self.features:
                 self.features = map(convertGoal, self.features)
             if self.findall:
-                self.findall = map(convertGoal, self.findall)                
+                self.findall = map(convertGoal, self.findall)
             self.variableList = varTab.getSymbolList()
             self.nvars = len(self.variableList)
 
@@ -96,12 +96,12 @@ class Rule(object):
 
 class RuleCollection(object):
     """A set of prolog rules, indexed by functor and arity."""
-    
+
     def __init__(self):
         self.index = collections.defaultdict(list)
-    
+
     def _key(self,g):
-        return '%s/%d' % (g.functor,g.arity) 
+        return '%s/%d' % (g.functor,g.arity)
 
     def add(self,r):
         key = self._key(r.lhs)
@@ -115,13 +115,22 @@ class RuleCollection(object):
 
     def mapRules(self,mapfun):
         for key in self.index:
-            self.index[key] = map(mapfun, self.index[key]) 
+            try:
+              self.index[key] = map(mapfun, self.index[key])
+            except:
+              print "Trouble mapping rule %s:"%key
+              raise
 
     def listing(self):
         for key in self.index:
             print'% rules for',key
             for r in self.index[key]:
                 print r
+
+    def __iter__(self):
+        for key in self.index:
+            for r in self.index[key]:
+                yield r
 
 ##############################################################################
 ## the parser
@@ -145,34 +154,34 @@ class Parser(object):
 
     @staticmethod
     def _convertRule(ptree):
-        if 'rhs' in ptree: 
+        if 'rhs' in ptree:
             tmpRhs = map(Parser._convertGoal, ptree['rhs'].asList())
-        else: 
+        else:
             tmpRhs = []
         if not 'features' in ptree:
-            return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,None,None) 
+            return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,None,None)
         else:
             if not 'ffindall' in ptree:
                 featureList = ptree['ftemplate'].asList()
                 tmpFeatures = map(Parser._convertGoal, featureList)
-                return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,None) 
+                return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,None)
             else:
                 featureList = ptree['ftemplate'].asList()
                 tmpFeatures = map(Parser._convertGoal, featureList)
                 findallList = ptree['ffindall'].asList()[1:]
-                tmpFindall = map(Parser._convertGoal, findallList)                
-                return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,tmpFindall) 
+                tmpFindall = map(Parser._convertGoal, findallList)
+                return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,tmpFindall)
 
     @staticmethod
     def parseGoal(s):
         """Convert a string to a goal."""
         return Parser._convertGoal(goalNT.parseString(s))
-	
+
     @staticmethod
     def parseGoalList(s):
         """Convert a string to a goal list."""
         return map(Parser._convertGoal, goalListNT.parseString(s).asList())
-		
+
     @staticmethod
     def parseRule(s):
         """Convert a string to a rule."""
@@ -186,18 +195,29 @@ class Parser(object):
         return result
 
     @staticmethod
-    def parseFile(file,rules = None):
+    def parseFile(filename,rules = None):
         """Extract a series of rules from a file."""
         if not rules: rules = RuleCollection()
         buf = ""
-        for line in open(file,'r'):
+        for line in open(filename,'r'):
             if not line[0]=='#':
                 buf += line
         try:
+            first_time = True
             for (ptree,lo,hi) in ruleNT.scanString(buf):
                 rules.add(Parser._convertRule(ptree))
+                if first_time:
+                  unread_text = buf[:lo].strip()
+                  if len(unread_text)>0:
+                    logging.error('unparsed text at start of %s: "%s..."' % (filename,unread_text))
+                  first_time = False
+            unread_text = buf[hi:].strip()
+            if len(unread_text)>0:
+              logging.error('unparsed text at end of %s: "...%s"' % (filename,unread_text))
             return rules
         except KeyError:
-            print 'error near ',lo,'in',file
+            print 'error near ',lo,'in',filename
         return rules
 
+if __name__ == "__main__":
+  Parser().parseFile(sys.argv[1]).listing()

@@ -1,28 +1,44 @@
+Random howto:
  - export PYTHONPATH=/usr/local/google/home/cohenw/code/TensorLog:$PYTHONPATH
  - live theano add /usr/local/google/home/cohenw/code/Theano
 
-Next actions:
+Next actions (KR):
 
  - revive debug.py - how can testing this be automated? should I bother? w/ Katie?
- - fix pyparsing
  - look at sparse messages in theano-based learner?
 
-Bigger steps:
+Medium jobs:
+ - simple.regularized_loss(regularization_scale=0.1, regularizer='l2')
+ - simple.train?
+ - demo/... 
+ - move native stuff into a subdirectory?
+ - move dataset examples to demo/...?
+ - allow you to write some extra information into a serialized database/model
+ -- just serialize the parameters?
+ -- serialize the rules as well?
+ -- have a readme file that includes time, process, ....
 
- - repackage (see below)
+Little jobs (WC):
+ - output types as typename/id
  - benchmark tests on tensorflow
- - learning for xcomp 
- -- more serious examples, expt harness
- -- xc.updateDB() to move trained variable values into matrixDB
- - adding tensorflow 'builtins'
- -- p(i,o) -> lambda inputExpression:outputExpression 
- -- p(o)   -> lambda outputExpression 
- - typing for tensorlog  
- -- cfacts parser allows #declare foo type1 type2 (insist everything typed or nothing, based on config?)
-    (see bufferFile/bufferLine in matrixDB
- -- matrixDB keeps a symtab for each type
- -- bpcompiler infers type of every variable
- -- funs maintains/returns type
+ - have --proppr as the default option for programs
+ - test document plugins, simple.Compiler(plugins=....)
+ - docs/tutorial
+  -- plugins, simple
+ - ?clean up autoweighting for rule weights and types
+ - ?get rid of typeless option
+ - ?tests and etc for {id} features.  Should I have these? they are just {weighted(R1): assign(R1,r1,ruleid_t)}
+ - ?cleanup sessions in tensorflowxcomp
+ - ?cleanup modes? should they always be written pred/io, and i,o no longer be reserved words?
+ - ? lazy DB/program compilation - should be able to load a program w/o DB, and have
+   declarations be embedded in in the program, before loading the DB.
+   maybe.
+ - ? automatically move program constants into the database and introduce assign clauses when needed?
+ - ? move testability code to subclass "testabletensorflowxcompiler"
+ - ? move "native" code to tensorlog.native
+ - ?? snake_case fixes in testing????
+ - ?? repackage (see below)???
+ - ?? optimize compilation???
 
 Overall package structure:
   tensorlog: config, matrixdb, parser, bpcomp(iler), program, funs, ops (-eval and bprop), xcomp
@@ -30,6 +46,7 @@ Overall package structure:
     .native: mutil, autodiff (eval and bprop), learn, plearn, putil, dataset
     .th: theanoxcomp
     .tf: tensorflowxcomp
+  or maybe just stick a bunch of stuff in tlg.native: native.learn, ...
 
 Question->query idea
 
@@ -46,3 +63,48 @@ Question->query idea
  pi_query_tag(Q,T) : tag T for property pi is in query, eg "T=red" for pi=color in "a red sweater vest"
  query_feature(Q,F) : words/ngrams etc in query
  
+--------------------
+
+movie app idea: 
+ - train inference using provenance features
+
+triple Trip has: head(Trip,H),tail(Trip,H),rel(Trip,R),creator(Trip,C)
+
+ | head	rxy	x
+ | tail	rxy	y
+ | creator	rxy	nyt
+ | creator	rxy	fox
+ | rel	rxy	r
+
+
+for predicate p(Slot,Filler):-r(Slot,Filler) inference rule is:
+
+ | p(Slot,Filler) :- 
+ |   head(Trip,Slot),assign(R,r),rel(Trip,R),tail(Trip,Filler) 
+ |   creator(Trip,C), weighted(C).
+
+for predicate p(Slot,Filler):-r1(Slot,Z),r2(Z,Filler) inference rule is:
+
+ | p(Slot,Filler) :- 
+ |     head(Trip1,Slot),assign(R1,r1), rel(Trip1,R1), tail(Trip1,Z)
+ |     head(Trip2,Z),   assign(R2,r2), rel(Trip2,R2), tail(Trip2,Filler)
+ |     creator(Trip1,C1), weighted(C1), creator(Trip2,C2), weighted(C2).
+ 
+Then train high-confidence results against low-confidence ones.
+
+ - might be better to include relation name 'rel' in the
+  head/tail/creator triple, eg r1_head(Trip,H), r1_tail(Trip,H),
+  r1_creator(Trip,C)
+
+ - if I get multi-mode training working then you could do a bit more,
+ eg train against several preds at once, or include ssl-like
+ constraints... except, will they work in Tensorlog? not sure...but
+ you could introduce an explicit entropy penalty for answer to
+ p_conflict
+
+ p_conflict(Slot,Filler) :- p(Slot,Filler)
+(tensorflow) WilliamMacBook2:tensorlog wcohen$ echo $PYTHONPATH
+/Users/wcohen/Documents/code/TensorLog:.
+(tensorflow) WilliamMacBook2:tensorlog wcohen$ history | grep activate
+  522  source ~/tensorflow/bin/activate
+  528  history | grep activate

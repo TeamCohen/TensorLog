@@ -11,16 +11,20 @@ import numpy as NP
 import numpy.random as NR
 import logging
 
+from tensorlog import config
 from tensorlog import mutil
 from tensorlog import matrixdb
 from tensorlog import declare
+
+conf = config.Config()
+conf.normalize_outputs = True;  conf.help.normalize_outputs =  "In .exam files, l1-normalize the weights of valid outputs"
 
 #
 # dealing with labeled training data
 #
 
 class Dataset(object):
-    
+
     def __init__(self,xDict,yDict):
         # dict which maps mode declaration to X matrices for training
         self.xDict = xDict
@@ -91,7 +95,7 @@ class Dataset(object):
 
     #
     # i/o and conversions
-    # 
+    #
 
     def serialize(self,dir):
         """Save the dataset on disk."""
@@ -101,7 +105,7 @@ class Dataset(object):
         dy = dict(map(lambda (k,v):(str(k),v), self.yDict.items()))
         SIO.savemat(os.path.join(dir,"xDict"),dx,do_compression=True)
         SIO.savemat(os.path.join(dir,"yDict"),dy,do_compression=True)
-        
+
     @staticmethod
     def deserialize(dir):
         """Recover a saved dataset."""
@@ -119,7 +123,7 @@ class Dataset(object):
                    d[declare.asMode(stringKey)] = SS.csr_matrix(mat)
         dset = Dataset(xDict,yDict)
         logging.info('deserialized dataset has %d modes and %d non-zeros' % (len(dset.modesToLearn()), dset.size()))
-        return dset           
+        return dset
 
 
     @staticmethod
@@ -129,7 +133,7 @@ class Dataset(object):
         just deserialize it.
         """
         if not os.path.exists(dsetFile) or os.path.getmtime(exampleFile)>os.path.getmtime(dsetFile):
-            print 'Storing cached dataset in',dsetFile
+            logging.info('serializing examples in %s to %s' % (exampleFile,dsetFile))
             dset = Dataset.loadExamples(db,exampleFile,proppr=proppr)
             dset.serialize(dsetFile)
             os.utime(dsetFile,None) #update the modification time for the directory
@@ -153,6 +157,7 @@ class Dataset(object):
             print 'de-serializing dsetFile',dsetFile,'...'
             return Dataset.deserialize(dsetFile)
 
+    # TODO remove or make type-aware
     @staticmethod
     def loadMatrix(db,functorToLearn,functorInDB):
         """Convert a DB matrix containing pairs x,f(x) to training data for a
@@ -160,19 +165,20 @@ class Dataset(object):
         to Y, and and also append a one-hot representation of x to the
         corresponding row of X.
         """
+        assert db.isTypeless(),'cannot run loadMatrix on database with defined types'
         functorToLearn = declare.asMode(functorToLearn)
         xrows = []
         yrows = []
         m = db.matEncoding[(functorInDB,2)].tocoo()
         n = db.dim()
         for i in range(len(m.data)):
-            x = m.row[i]            
+            x = m.row[i]
             xrows.append(SS.csr_matrix( ([1.0],([0],[x])), shape=(1,n) ))
             rx = m.getrow(x)
             yrows.append(rx * (1.0/rx.sum()))
         return Dataset({functorToLearn:mutil.stack(xrows)},{functorToLearn:mutil.stack(yrows)})
 
-    @staticmethod 
+    @staticmethod
     def _parseLine(line,proppr=True):
         #returns mode, x, positive y's where x and ys are symbols
         if not line.strip() or line[0]=='#':
@@ -199,13 +205,12 @@ class Dataset(object):
                     if label=='+':
                         pos.append(my.group(3))
                 return mode,x,pos
-        
 
     @staticmethod
     def loadProPPRExamples(db,fileName):
         """Convert a proppr-style foo.examples file to a two dictionaries of
         modename->matrix pairs, one for the Xs, one for the Ys"""
-        return loadExamples(db,fileName,proppr=True)
+        return Dataset.loadExamples(db,fileName,proppr=True)
 
     @staticmethod
     def loadExamples(db,fileName,proppr=False):
@@ -232,21 +237,25 @@ class Dataset(object):
                     ysTmp[pred].append(pos)
             logging.info("loading %d predicates from %s..." % (len(xsTmp),fileName))
             for pred in xsTmp.keys():
-                xRows = map(lambda x:db.onehot(x), xsTmp[pred])
+                xType = db.schema.getDomain(pred.getFunctor(),2)
+                xRows = map(lambda x:db.onehot(x,xType,outOfVocabularySymbolsAllowed=True), xsTmp[pred])
                 xsResult[pred] = mutil.stack(xRows)
             for pred in ysTmp.keys():
                 def yRow(ys):
-                    accum = db.onehot(ys[0])
-                    for y in ys[1:]:
-                        accum = accum + db.onehot(y)
+                  assert len(ys)>0, 'empty output list for example %s %s in file %s' % (pred,x,fileName)
+                  yType = db.schema.getRange(pred.getFunctor(),2)
+                  accum = db.onehot(ys[0],yType,outOfVocabularySymbolsAllowed=True)
+                  for y in ys[1:]:
+                    accum = accum + db.onehot(y,yType,outOfVocabularySymbolsAllowed=True)
+                  if conf.normalize_outputs:
                     accum = accum * 1.0/len(ys)
-                    return accum
+                  return accum
                 yRows = map(yRow, ysTmp[pred])
                 ysResult[pred] = mutil.stack(yRows)
         dset = Dataset(xsResult,ysResult)
         logging.info('loaded dataset has %d modes and %d non-zeros' % (len(dset.modesToLearn()), dset.size()))
+        logging.info('in loaded dataset, example normalization (so sum_{y} score[pred(x,y)] == 1) is %r' % conf.normalize_outputs)
         return dset
-                   
 
     #TODO refactor to also save examples in form: 'functor X Y1
     #... Yk'
@@ -256,8 +265,9 @@ class Dataset(object):
         modeKeys = [mode] if mode else self.xDict.keys()
         for mode in modeKeys:
             assert mode in self.yDict, "No mode '%s' in yDict" % mode
-            dx = db.matrixAsSymbolDict(self.xDict[mode])
-            dy = db.matrixAsSymbolDict(self.yDict[mode])
+            functor,arity = mode.getFunctor(),mode.getArity()
+            dx = db.matrixAsSymbolDict(self.xDict[mode],db.schema.getDomain(functor,arity))
+            dy = db.matrixAsSymbolDict(self.yDict[mode],db.schema.getRange(functor,arity))
             theoryPred = mode.functor
             for i in range(max(dx.keys())+1):
                 dix = dx[i]

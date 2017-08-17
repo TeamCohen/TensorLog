@@ -1,0 +1,31 @@
+# actual result on Wed May 10 12:50:16 EDT 2017
+file tmp-cache/kinship-test.solutions.txt
+queries 33 answers 117 labeled answers 117
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.987878787879
+. macro: 0.72381431205
+file tmp-cache/kinship-test.tensorlog.tensorflowxcomp.DenseMatDenseMsgCrossCompiler.solutions.txt
+queries 33 answers 5973 labeled answers 5973
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.999776773257
+. macro: 0.521047327352
+file tmp-cache/kinship-test.tensorlog.tensorflowxcomp.SparseMatDenseMsgCrossCompiler.solutions.txt
+queries 33 answers 5973 labeled answers 5973
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.999776773257
+. macro: 0.521047327352
+file tmp-cache/kinship-test.tensorlog.theanoxcomp.DenseMatDenseMsgCrossCompiler.solutions.txt
+queries 33 answers 5973 labeled answers 5973
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.999776773257
+. macro: 0.521047327352
+file tmp-cache/kinship-test.tensorlog.theanoxcomp.SparseMatDenseMsgCrossCompiler.solutions.txt
+queries 33 answers 5973 labeled answers 5973
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.999776773257
+. macro: 0.521047327352

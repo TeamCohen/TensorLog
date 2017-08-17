@@ -191,6 +191,7 @@ if __name__ == "__main__":
         Debugger(optdict['prog'],mode,dset,gradient=True).mainloop()
     else:
         mode = declare.asMode(args[0])
+        assert db.isTypeless(),'cannot debug a database with declared types'
         X = optdict['prog'].db.onehot(args[1])
         dset = dataset.Dataset({mode:X},{mode:optdict['prog'].db.zeros()})
         Debugger(optdict['prog'],mode,dset,gradient=False).mainloop()

@@ -1,8 +1,11 @@
 import getopt
+import time
 import logging
+import os
 
 from tensorlog import dataset
 from tensorlog import matrixdb
+from tensorlog import version
 
 #
 # utilities for reading command lines
@@ -24,6 +27,7 @@ def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]
 
     argspec = ["db=", "proppr", "prog=", "trainData=", "testData=", "help", "logging="]
     try:
+        print "Tensorlog v%s (C) William W. Cohen and Carnegie Mellon University, 2016-2017" % version.VERSION
         optlist,args = getopt.getopt(argv, 'x', argspec)
         if extraArgConsumer:
             if args:
@@ -76,21 +80,30 @@ def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]
         usage()
         assert False,'--db and --prog are required options'
 
+    startTime = time.time()
+    def status(msg): logging.info('%s time %.3f sec mem %.3f Gb' % (msg,time.time()-startTime,memusage()))
+
+    status('loading db')
     db = parseDBSpec(optdict['--db'])
     optdict['--db'] = db
+    status('loading prog')
     optdict['--prog'] = parseProgSpec(optdict['--prog'],db,proppr=('--proppr' in optdict))
+    status('loading prog')
     for key in ('--trainData','--testData'):
         if key in optdict:
-            optdict[key] = parseDatasetSpec(optdict[key],db)
+          status('loading %s' % key[2:])
+          optdict[key] = parseDatasetSpec(optdict[key],db)
 
     # let these be also indexed by 'train', 'prog', etc, not just '--train','--prog'
     for key,val in optdict.items():
         optdict[key[2:]] = val
 
+    status('command line parsed')
     return optdict,args
 
 def isUncachefromSrc(s): return s.find("|")>=0
 def getCacheSrcPair(s): return s.split("|")
+def makeCacheSrcPair(s1,s2): return "%s|%s" % (s1,s2)
 
 def parseDatasetSpec(spec,db):
     """Parse a specification for a dataset, see usage() for parseCommandLine"""
@@ -98,6 +111,8 @@ def parseDatasetSpec(spec,db):
         cache,src = getCacheSrcPair(spec)
         assert src.endswith(".examples") or src.endswith(".exam"), 'illegal --train or --test file'
         return dataset.Dataset.uncacheExamples(cache,db,src,proppr=src.endswith(".examples"))
+    elif spec.endswith(".dset"):
+        return dataset.Dataset.deserialize(spec)
     else:
         assert spec.endswith(".examples") or spec.endswith(".exam"), 'illegal --train or --test file'
         return dataset.Dataset.loadExamples(db,spec,proppr=spec.endswith(".examples"))
@@ -106,15 +121,32 @@ def parseDBSpec(spec):
     """Parse a specification for a database, see usage() for parseCommandLine"""
     if isUncachefromSrc(spec):
         cache,src = getCacheSrcPair(spec)
-        return matrixdb.MatrixDB.uncache(cache,src)
+        result = matrixdb.MatrixDB.uncache(cache,src)
     elif spec.endswith(".db"):
-        return matrixdb.MatrixDB.deserialize(spec)
+        result = matrixdb.MatrixDB.deserialize(spec)
     elif spec.endswith(".cfacts"):
-        return matrixdb.MatrixDB.loadFile(spec)
+        result = matrixdb.MatrixDB.loadFile(spec)
     else:
         assert False,'illegal --db spec %s' %spec
+    result.checkTyping()
+    return result
 
 def parseProgSpec(spec,db,proppr=False):
     """Parse a specification for a Tensorlog program,, see usage() for parseCommandLine"""
     from tensorlog import program
     return program.ProPPRProgram.loadRules(spec,db) if proppr else program.Program.loadRules(spec,db)
+
+def memusage():
+    """ Memory used by the current process in Gb
+    """
+    proc_status = '/proc/%d/status' % os.getpid()
+    try:
+        t = open(proc_status)
+        v = t.read()
+        t.close()
+        i = v.index('VmSize:')
+        v = v[i:].split(None,3)
+        scale = {'kB': 1024.0, 'mB': 1024.0*1024.0, 'KB': 1024.0, 'MB': 1024.0*1024.0}
+        return (float(v[1]) * scale[v[2]]) / (1024.0*1024.0*1024.0)
+    except IOError:
+        return 0.0

@@ -2,10 +2,18 @@
 
 VPATH= raw
 
-all: kinship-rule.cfacts
-	python family.py
+expt.log: 
+	python family.py > expt.log
 
-kinship-rule.cfacts: kinship-train-isg.ppr
-	grep -v ^# $< | \
-	sed 's/.*{//;s/[)]*}.*//;s/[(,]/\t/g' | \
-	sort | uniq > $@
+setup:
+	mkdir -p temp-cache
+
+actual.txt: expt.log
+	echo \# actual result on `date` > actual.txt
+	for f in tmp-cache/*.solutions.txt; do \
+	echo file $$f >> actual.txt ; \
+	proppr eval tmp-cache/kinship-test.examples $$f --metric auc --defaultNeg >> actual.txt ; \
+	done
+
+check: actual.txt
+	diff $< expected.txt

@@ -1,0 +1,117 @@
+Should I switch from comline to gflags?
+
+
+
+How do I set up examples and tests? do I want to move them from datasets?
+ - cora -done
+ - wordnet -slow! maybe look at a smaller sample? maybe just the nouns or something?
+ - smokers
+ - grid - done
+ - wikimovies
+ - amie-qa?
+ - fb15k? - scalability TODO
+ - added inputs argument to proofCount, etc.
+
+EASY:
+ - conf move to schema
+
+calling back and forth: should be able to specify input placeholder
+ for a proofCount/inference function (passed thru to _doCompile, then
+ _fun2Expr as sharedInputs.  should be able to create an inference function
+ and loss function from a proofCount function.  This will let you
+ build up Tensorlog/Tensorflow expressions more easily.
+
+ use cases: 
+ -- training from partial information, known pos and known negatives. 
+ --- define two prediction predicates: predict(X,Y) and predictComplement(X,Y)
+ --- data for predict is known pos, for predictComplement, known neg
+ set up optimization as follows:
+   shared_input = tf.PlaceHolder(....)
+   f1 = tlog.inference("predict/io", input=shared_input)
+   f2 = tlog.inference("predictComplement/io", input=shared_input)
+   loss = tlog.loss("predict/io") - tlog.loss("predictComplement/io")
+   ...
+ -- learn conjunction of properties
+   answer1(Q,Y) <= mention(Q,EC), entity(EC,E), chain1(E,Y) // (w1(F) | context(EC,C), feature(C,F))
+   answer2(...) <= ...
+   shared_input = tf.PlaceHolder(....)   
+   f1 = tlog.inference("answer1/io", input=shared_input)
+   f2 = tlog.inference("answer2/io", input=shared_input)
+   ...
+   f = f1 * ... * fk
+   loss = tlog.loss_for("answer/io", inference=f, input=shared_input, target_output=...)
+
+ - alternative to calling out to tensorlog would be to
+ iteratively process multiple-input, single-output plugins.
+ for i in plugInGoalPositions:
+   compile opsequence for A<=B1,...,B[i-1]
+   add op to compute output of B[i] from input
+   syntactic rule: links in polytree cannot cross boundaries
+    defined by plugin literals
+
+- having multiple inputs in bpcompiler would also be nice....
+ hard would this be to do?
+
+ - types: maybe types are defined in by the simple.RuleBuilder? (do I need a parser?)
+ and can the RuleBuilder handle constants and 'assign' statements, or do I need a 
+ b.assign predicate?
+
+    person_t, movie_t, word_t = b.types("person_t movie_t word_t)
+    starred_in,directed_by = b.predicate("starred_in directed_by")
+    b.rules += ... 
+    b.schema += starred_in(person_t,movie_t)  # define one of these for each DB predicate
+    b.schema += weight(ruleid_t)
+    b.schema += ...
+    b.schema += None # for typeless
+    b.constants += 'r1'
+    b.rules += (a <= ..... // weight('r1'))
+    b.db += 'file.tsv'  # why not just do this, and not have a separate "builder"
+
+ - autoset_db_params: schema predicates can be marked 'trainable' when you
+ declare their types, OR will be automarked if they appear after a //
+ - tlog(autoset_db_params=True) will only set UNDEFINED params
+ - you can load just parameters, not a whole DB
+ - ????maybe caching/uncaching is done by specifying a cache directory, instead of
+ complicated "cache|src" syntax????
+
+Cleanup:
+ - clean up mutil: densify
+ - clean up dataset: matrix examples and proppr nonsense (move proppr to extras)
+ - clean up funs, ops: refactor bprop and eval into 'native'
+ - clean up program: autoweighting, ProPPRProgram vs program
+
+__init__.py
+test (2k lines)
+  benchmark.py
+  testtensorlog.py
+  testxcomp.py
+core: (maybe 2k lines)
+  bpcompiler.py
+  comline.py - should add my super simple option holder
+  config.py
+  dataset.py
+  declare.py - do I really need something so complicated as a Goal?
+  funs.py - a lot is backprop or eval
+  masterconfig.py
+  matrixdb.py
+  ops.py - a lot is backprop or eval
+  parser.py - 200 lines and do I need it?
+  program.py - autoweighting
+  symtab.py - should start at 0 or 1? do I need reserved words?
+  simple.py
+  tensorflowxcomp.py - *Function, *Grad, runExpt and support is test, this is a few hundred lines
+  theanoxcomp.py - *Function, *Grad, runExpt and support is test
+  xcomp.py - *Function, ...
+  opfunutil.py - scratchpad crap
+extra (200)
+  interp.py
+  list.py
+native (1500)
+  learn.py
+  debug.py
+  expt.py
+  plearn.py
+  putil.py
+  mutil.py - shuffleRows, selectRows used in dataset only; stack, numRows and checkCSR a lot; mapData a lot,
+    mostly for clipping; but it's ony 300 lines or so
+

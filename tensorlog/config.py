@@ -9,8 +9,7 @@ class Config(object):
 
     """A container for configuration options"""
     def pprint(self,depth=0):
-        if not depth: print '===='
-        for key,val in self.__dict__.items():
+        for key,val in sorted(self.__dict__.items()):
             if key!='help':
                 self._explain(depth,key,val)
                 if type(val)==type(Config()):
@@ -22,9 +21,7 @@ class Config(object):
             tmp += ' '+repr(val)
         if key in self.help.__dict__:
             print '%-40s %s' % (tmp,self.help.__dict__[key])
-            
 
 class ConfigHelp(object):
     """A parallel object that stores help about configurations."""
     pass
-

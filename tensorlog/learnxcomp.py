@@ -1,59 +1,59 @@
-import theanoxcomp as X
 import learn as L
-import theano
-import theano.tensor as TT
-import funs
-#from termios import XCASE
+import time
+import sys
+import logging
 
-#theano.config.exception_verbosity='high'
-
-class XLearner(object):
-  def __init__(self,tlprog,xc=None,compilerClass=X.DenseMatDenseMsgCrossCompiler):
+class XLearner(L.Learner):
+  def __init__(self,prog,xc,compilerClass=None,regularizer=None,tracer=None,epochTracer=None):
+    super(XLearner,self).__init__(prog,regularizer=regularizer,tracer=tracer,epochTracer=epochTracer)
     if xc: self.xc = xc
-    else: self.xc = compilerClass(tlprog.db)
-    self.prog = tlprog
+    else: self.xc = compilerClass(prog.db)
   def predict(self,mode,X,pad=None):
     """Make predictions on a data matrix associated with the given mode."""
-    #if not pad: pad = opfunutil.Scratchpad() 
-    result = self.xc.eval([X])[0]
+    logging.debug("XLearner predict %s"%mode)
+    try:
+      inferenceFun = self.xc.inferenceFunction(mode)
+      result = inferenceFun(X)
+    except:
+      print "tlogfun:","\n".join(self.xc.ws.tensorlogFun.pprint())
+      raise
     return result
-  def crossEntropy(Y,P,perExample=False):
-    """Compute cross entropy some predications relative to some labels."""
-    if perExample: return self.xc.dataLossFun([Y,P])
-    else: assert 'No per example xe yet' #return self.xe_all([Y,P])
   def crossEntropyGrad(self,mode,X,Y,tracerArgs={},pad=None):
     """Compute the parameter gradient associated with softmax
     normalization followed by a cross-entropy cost function.  If a
     scratchpad is passed in, then intermediate results of the
     gradient computation will be saved on that scratchpad.
     """
-    #if not pad: pad = opfunutil.Scratchpad()
-
-    # More detail: in learning we use a softmax normalization
-    # followed immediately by a crossEntropy loss, which has a
-    # simple derivative when combined - see
-    # http://peterroelants.github.io/posts/neural_network_implementation_intermezzo02/
-    # So in doing backprop, you don't call backprop on the outer
-    # function, instead you compute the initial delta of P-Y, the
-    # derivative for the loss of the (softmax o crossEntropy)
-    # function, and it pass that delta down to the inner function
-    # for softMax
-
-    # do the prediction, saving intermediate outputs on the scratchpad
-    predictFun = self.prog.getPredictFunction(mode)
-    assert isinstance(predictFun,funs.SoftmaxFunction),'crossEntropyGrad specialized to work for softmax normalization'
-    #P = self.predict(mode,X,pad)
-
-    # compute gradient
-    #paramGrads = L.GradAccumulator()
-    #TODO assert rowSum(Y) = all ones - that's assumed here in
-    #initial delta of Y-P
-    #xc.fun.backprop(Y-P,paramGrads,pad)
-    paramGrads = self.xc.evalDataLossGrad(X,Y)
-
-    # the tracer function may output status, and may also write
-    # information to the counters in paramGrads
-    #self.tracer(self,paramGrads,Y,P,**tracerArgs)
-
-    return paramGrads
+    gradFun = self.xc.dataLossGradFunction(mode)
+    paramsWithUpdates = gradFun(X,Y)
+    return paramsWithUpdates
+  def applyUpdate(self, paramGrads, rate):
+    assert "Cross-compilers don't apply updates"
+  def meanUpdate(self, functor, arity, delta, n, totalN=0):
+    assert "Cross-compilers don't do mean updates"
+  def train(self,dset):
+    assert False, 'abstract method called'
+    
+class BatchEpochsLearner(XLearner):
+  def __init__(self,prog,xc,epochs=10,compilerClass=None,regularizer=None,tracer=None,epochTracer=None):
+    super(BatchEpochsLearner,self).__init__(prog,xc,compilerClass=compilerClass,regularizer=regularizer,tracer=tracer,epochTracer=epochTracer)
+    self.epochs=epochs
+  def trainMode(self,mode,X,Y,epochs=-1):
+    assert False, 'abstract method called'
+  def train(self,dset):
+    trainStartTime = time.time()
+    modes = dset.modesToLearn()
+    numModes = len(modes)
+    for i in range(self.epochs):
+      startTime = time.time()
+      for j,mode in enumerate(dset.modesToLearn()):
+        args = {'i':i,'startTime':startTime,'mode':str(mode)}
+        try:
+          self.trainMode(mode,dset.getX(mode),dset.getY(mode),epochs=1)
+        except:
+          print "Unexpected error at %s:" % str(args), sys.exc_info()[:2]
+          raise
+      #self.epochTracer(self,)
+    
+  
         

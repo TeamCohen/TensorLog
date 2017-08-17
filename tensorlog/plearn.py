@@ -7,15 +7,13 @@ import os
 import time
 import collections
 import multiprocessing
-import multiprocessing.pool    
+import multiprocessing.pool
 import logging
 import numpy as NP
 
 from tensorlog import mutil
 from tensorlog import learn
 from tensorlog import dataset
-
-#TODO iterate, don't make lists
 
 ##############################################################################
 # These functions are defined at the top-level of a module so that
@@ -131,7 +129,7 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
         """" Broadcast the new parameters to the subprocesses """
         paramDict = dict(
             ((functor,arity),self.prog.db.getParameter(functor,arity))
-            for (functor,arity) in self.prog.db.params)
+            for (functor,arity) in self.prog.db.paramList)
         #send one _doAcceptNewParams task to each worker. warning:
         # this seems to work fine....but it is not guaranteed to
         # work from the API, but
@@ -207,7 +205,7 @@ class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
                 totalGradient[(functor,arity)] = grad.multiply(ratePerParam[(functor,arity)])
 
             self.regularizer.regularizeParams(self.prog,totalN)
-            for (functor,arity) in self.prog.db.params:
+            for (functor,arity) in self.prog.db.paramList:
                 m = self.prog.db.getParameter(functor,arity)
                 print 'reg',functor,'/',arity,'m shape',m.shape
                 if (functor,arity) in totalGradient.keys():
@@ -220,7 +218,7 @@ class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
             for (functor,arity),grad in totalGradient.items():
                 m0 = self.prog.db.getParameter(functor,arity)
                 m1 = m0 + self.rate * grad
-                m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float64').max), m1)
+                m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float32').max), m1)
                 self.prog.db.setParameter(functor,arity,m)
 
             # send params to workers

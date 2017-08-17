@@ -12,3 +12,34 @@
 | saving test examples ...
 | saving test examples ... done in 0.073 sec
 | ready for commands like: proppr eval tmp-cache/test.examples tmp-cache/test.solutions.txt --metric auc --defaultNeg
+# actual result on Wed May 10 13:06:31 EDT 2017
+file tmp-cache/test.solutions.txt
+queries 78 answers 20046 labeled answers 20046
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.999900229472
+. macro: 0.508329559961
+file tmp-cache/test.tensorlog.tensorflowxcomp.DenseMatDenseMsgCrossCompiler.solutions.txt
+queries 78 answers 78 labeled answers 78
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.333333333333
+. macro: 0.240959894806
+file tmp-cache/test.tensorlog.tensorflowxcomp.SparseMatDenseMsgCrossCompiler.solutions.txt
+queries 78 answers 78 labeled answers 78
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.333333333333
+. macro: 0.240959894806
+file tmp-cache/test.tensorlog.theanoxcomp.DenseMatDenseMsgCrossCompiler.solutions.txt
+queries 78 answers 20202 labeled answers 20202
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.999900999901
+. macro: 0.508314739084
+file tmp-cache/test.tensorlog.theanoxcomp.SparseMatDenseMsgCrossCompiler.solutions.txt
+queries 78 answers 20202 labeled answers 20202
+==============================================================================
+metric auc (AUC): The probability of a positive example scoring higher than a negative example; or the area under the ROC curve
+. micro: 0.999900999901
+. macro: 0.508314739084
