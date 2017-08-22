@@ -15,6 +15,7 @@ from tensorlog import config
 from tensorlog import mutil
 from tensorlog import matrixdb
 from tensorlog import declare
+from tensorlog import util
 
 conf = config.Config()
 conf.normalize_outputs = True;  conf.help.normalize_outputs =  "In .exam files, l1-normalize the weights of valid outputs"
@@ -222,36 +223,42 @@ class Dataset(object):
         one for the Ys.
 
         """
-        logging.info('loading examples file '+ fileName)
+        logging.info('loading examples from '+ str(fileName))
 
-        xsTmp = collections.defaultdict(list)
-        ysTmp = collections.defaultdict(list)
-        regex = re.compile('(\w+)\((\w+),(\w+)\)')
+        # map from relation to lists that buffer data,row
+        # index,colindex information for each of the X,Y matrices
+        xDatabuf = collections.defaultdict(list)
+        xRowbuf = collections.defaultdict(list)
+        xColbuf = collections.defaultdict(list)
+        yDatabuf = collections.defaultdict(list)
+        yRowbuf = collections.defaultdict(list)
+        yColbuf = collections.defaultdict(list)
         xsResult = {}
         ysResult = {}
-        with open(fileName) as fp:
-            for line in fp:
-                pred,x,pos = Dataset._parseLine(line,proppr=proppr)
-                if pred:
-                    xsTmp[pred].append(x)
-                    ysTmp[pred].append(pos)
-            logging.info("loading %d predicates from %s..." % (len(xsTmp),fileName))
-            for pred in xsTmp.keys():
-                xType = db.schema.getDomain(pred.getFunctor(),2)
-                xRows = map(lambda x:db.onehot(x,xType,outOfVocabularySymbolsAllowed=True), xsTmp[pred])
-                xsResult[pred] = mutil.stack(xRows)
-            for pred in ysTmp.keys():
-                def yRow(ys):
-                  assert len(ys)>0, 'empty output list for example %s %s in file %s' % (pred,x,fileName)
-                  yType = db.schema.getRange(pred.getFunctor(),2)
-                  accum = db.onehot(ys[0],yType,outOfVocabularySymbolsAllowed=True)
-                  for y in ys[1:]:
-                    accum = accum + db.onehot(y,yType,outOfVocabularySymbolsAllowed=True)
-                  if conf.normalize_outputs:
-                    accum = accum * 1.0/len(ys)
-                  return accum
-                yRows = map(yRow, ysTmp[pred])
-                ysResult[pred] = mutil.stack(yRows)
+        def getId(typeName,symbol):
+          s = symbol if db.schema.hasId(typeName,symbol) else matrixdb.OOV_ENTITY_NAME
+          return db.schema.getId(typeName,s)
+        for line in util.linesIn(fileName):
+          pred,x,ys = Dataset._parseLine(line,proppr=proppr)
+          if pred:
+            xType = db.schema.getDomain(pred.getFunctor(),2)
+            yType = db.schema.getRange(pred.getFunctor(),2)
+            row_index = len(xDatabuf[pred])
+            xDatabuf[pred].append(1.0)
+            xRowbuf[pred].append(row_index)
+            xColbuf[pred].append(getId(xType,x))
+            for y in ys:
+              yDatabuf[pred].append( 1.0/len(ys) if conf.normalize_outputs else 1.0)
+              yRowbuf[pred].append(row_index)
+              yColbuf[pred].append(getId(yType,y))
+        for pred in xDatabuf.keys():
+          xType = db.schema.getDomain(pred.getFunctor(),2)
+          yType = db.schema.getRange(pred.getFunctor(),2)
+          nrows = len(xDatabuf[pred])
+          coo_x = SS.coo_matrix((xDatabuf[pred],(xRowbuf[pred],xColbuf[pred])), shape=(nrows,db.dim(xType)))
+          xsResult[pred] = SS.csr_matrix(coo_x,dtype='float32')
+          coo_y = SS.coo_matrix((yDatabuf[pred],(yRowbuf[pred],yColbuf[pred])), shape=(nrows,db.dim(yType)))
+          ysResult[pred] = SS.csr_matrix(coo_y,dtype='float32')
         dset = Dataset(xsResult,ysResult)
         logging.info('loaded dataset has %d modes and %d non-zeros' % (len(dset.modesToLearn()), dset.size()))
         logging.info('in loaded dataset, example normalization (so sum_{y} score[pred(x,y)] == 1) is %r' % conf.normalize_outputs)

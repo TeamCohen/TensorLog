@@ -20,6 +20,7 @@ import scipy
 
 from tensorlog import comline
 from tensorlog import dataset
+from tensorlog import dbschema
 from tensorlog import declare
 from tensorlog import expt
 from tensorlog import funs
@@ -30,6 +31,8 @@ from tensorlog import mutil
 from tensorlog import parser
 from tensorlog import plearn
 from tensorlog import program
+from tensorlog import util
+
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__),"test-data/")
 
@@ -48,7 +51,7 @@ def rules_from_strings(rule_strings):
     print '>',r
     rules = parser.RuleCollection()
     for r in rule_strings:
-      rules.add(parser.Parser.parseRule(r))
+      rules.add(parser.Parser().parseRule(r))
   return rules
 
 class DataBuffer(object):
@@ -283,7 +286,7 @@ class TestMultiRowOps(unittest.TestCase):
       print '>',r
     rules = parser.RuleCollection()
     for r in rule_strings:
-      rules.add(parser.Parser.parseRule(r))
+      rules.add(parser.Parser().parseRule(r))
     prog = program.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
 
@@ -298,7 +301,7 @@ class TestMultiRowOps(unittest.TestCase):
       print '>',r
     rules = parser.RuleCollection()
     for r in rule_strings:
-      rules.add(parser.Parser.parseRule(r))
+      rules.add(parser.Parser().parseRule(r))
     prog = program.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
 
@@ -728,7 +731,7 @@ class TestProPPR(unittest.TestCase):
     xsyms = []
     xs = []
     ys = []
-    for line in open(filename):
+    for line in util.linesIn(filename):
       sx,sy = line.strip().split("\t")
       xsyms.append(sx)
       xs.append(db.onehot(sx))
@@ -762,6 +765,9 @@ class TestExpt(unittest.TestCase):
     acc,xent = self.runMToyExpt2()
     acc,xent = self.runMToyExpt3()
     #TODO check performance
+
+  def testMToyExptMatParam(self):
+    acc,xent = self.runMToyMatParam()
 
   def testMToyParallel(self):
     acc,xent = self.runMToyParallel()
@@ -857,16 +863,6 @@ class TestExpt(unittest.TestCase):
     prog.setRuleWeights(db.ones())
     params = {'prog':prog,'trainData':trainData, 'testData':testData}
     result = expt.Expt(params).run()
-#    for mode in testData.modesToLearn():
-#      X = testData.getX(mode)
-#      Y = testData.getY(mode)
-#      Y_ = prog.eval(mode,[X])
-#      print 'mode',mode
-#      dX = db.matrixAsSymbolDict(X)
-#      dY = db.matrixAsSymbolDict(Y)
-#      dY_ = db.matrixAsSymbolDict(Y_)
-#      for i in sorted(dX.keys()):
-#        print i,'X',dX[i],'Y',dY[i],'Y_',sorted(dY_[i].items(),key=lambda (key,val):-val)
     return result
 
   def runMToyExpt2(self):
@@ -911,6 +907,34 @@ class TestExpt(unittest.TestCase):
           'testData':testData,
           'learner':plearn.ParallelFixedRateGDLearner(prog)}
     return expt.Expt(params).run()
+
+  def runMToyMatParam(self):
+    db = matrixdb.MatrixDB.uncache(
+        self.cacheFile('matchtoy.db'),
+        str(os.path.join(TEST_DATA_DIR,'matchtoy.cfacts')))
+    trainData = dataset.Dataset.uncacheExamples(
+        self.cacheFile('mtoy-train.dset'),db,
+        os.path.join(TEST_DATA_DIR,'matchtoy-train.exam'),proppr=False)
+    testData = trainData
+    prog = program.ProPPRProgram.loadRules(os.path.join(TEST_DATA_DIR,"matchtoy.ppr"),db=db)
+    prog.setRuleWeights(db.ones())
+    db.markAsParameter('dabbrev',2)
+    factDict = db.matrixAsPredicateFacts('dabbrev',2,db.matEncoding[('dabbrev',2)])
+    print 'before learning',len(factDict),'dabbrevs'
+    self.assertTrue(len(factDict)==5)
+#    for f in sorted(factDict.keys()):
+#      print '>',str(f),factDict[f]
+
+    params = {'prog':prog,'trainData':trainData, 'testData':testData}
+    result = expt.Expt(params).run()
+    factDict = db.matrixAsPredicateFacts('dabbrev',2,db.matEncoding[('dabbrev',2)])
+    print 'after learning',len(factDict),'dabbrevs'
+#    for f in sorted(factDict.keys()):
+#      print '>',str(f),factDict[f]
+    self.assertTrue(len(factDict)>5)
+
+    return result
+
 
 class TestDataset(unittest.TestCase):
 
@@ -988,12 +1012,12 @@ class TestMatrixUtils(unittest.TestCase):
 class TestTypes(unittest.TestCase):
 
   def setUp(self):
-    self.db = matrixdb.MatrixDB(typed=True)
+    self.db = matrixdb.MatrixDB(initSchema=dbschema.TypedSchema())
     self.testLines = [
-        '# :- head(triple,entity)\n',
-        '# :- tail(triple,entity)\n',
-        '# :- creator(triple,source)\n',
-        '# :- rel(triple,relation)\n',
+        '# :- head(triple_t,entity_t)\n',
+        '# :- tail(triple_t,entity_t)\n',
+        '# :- creator(triple_t,source_t)\n',
+        '# :- rel(triple_t,relation_t)\n',
         '\t'.join(['head','rxy','x']) + '\n',
         '\t'.join(['tail','rxy','y']) + '\n',
         '\t'.join(['creator','rxy','nyt']) + '\n',
@@ -1010,12 +1034,64 @@ class TestTypes(unittest.TestCase):
     self.testStabs()
     self.testDeclarations()
 
+  def testPartialSerialization(self):
+    direc = tempfile.mkdtemp()
+    with open(os.path.join(direc,'typed-schema.txt'),'w') as fp:
+      self.db.schema.serializeTo(fp)
+    with open(os.path.join(direc,'db-all.mat'),'w') as fp:
+      self.db.serializeDataTo(fp)
+
+    with open(os.path.join(direc,'typed-schema.txt')) as fp:
+      schema2 = dbschema.TypedSchema.deserializeFrom(fp)
+    db2 = matrixdb.MatrixDB(schema2)
+    with open(os.path.join(direc,'db-all.mat')) as fp:
+      db2.matEncoding = matrixdb.MatrixDB.deserializeDataFrom(fp)
+    self.db = db2
+    self.testStabs()
+    self.testDeclarations()
+
+    self.db.markAsParameter('rel',2)
+    with open(os.path.join(direc,'db-params.mat'),'w') as fp:
+      self.db.serializeDataTo(fp,filter='params')
+    with open(os.path.join(direc,'db-fixed.mat'),'w') as fp:
+      self.db.serializeDataTo(fp,filter='fixed')
+
+    db3 = matrixdb.MatrixDB(schema2)
+    with open(os.path.join(direc,'db-fixed.mat')) as fp:
+      db3.matEncoding = matrixdb.MatrixDB.deserializeDataFrom(fp)
+    with open(os.path.join(direc,'db-params.mat')) as fp:
+      pd = matrixdb.MatrixDB.deserializeDataFrom(fp)
+    self.assertTrue(len(pd.keys())==1)
+    self.assertTrue(len(db3.matEncoding.keys())==3)
+    with open(os.path.join(direc,'db-params.mat')) as fp:
+      db3.importSerializedDataFrom(fp)
+    self.db = db3
+    self.testStabs()
+    self.testDeclarations()
+
+
+  def testUntypedSerialization(self):
+    db = matrixdb.MatrixDB()
+    testLines = [
+        '\t'.join(['head','rxy','x']) + '\n',
+        '\t'.join(['tail','rxy','y']) + '\n',
+        '\t'.join(['creator','rxy','nyt']) + '\n',
+        '\t'.join(['creator','rxy','fox']) + '\n',
+        '\t'.join(['rel','rxy','r']) + '\n',
+    ]
+    db.addLines(self.testLines)
+    direc = tempfile.mkdtemp()
+    db.serialize(direc)
+    self.db = matrixdb.MatrixDB.deserialize(direc)
+    self.testStabs()
+    self.testDeclarations()
+
   def testStabs(self):
     expectedSymLists = {
-        'source':['__NULL__', '__OOV__', 'nyt', 'fox'],
-        'relation':['__NULL__', '__OOV__', 'r'],
-        'triple':['__NULL__', '__OOV__', 'rxy'],
-        'entity':['__NULL__', '__OOV__', 'x', 'y'],
+        'source_t':['__NULL__', '__OOV__', 'nyt', 'fox'],
+        'relation_t':['__NULL__', '__OOV__', 'r'],
+        'triple_t':['__NULL__', '__OOV__', 'rxy'],
+        'entity_t':['__NULL__', '__OOV__', 'x', 'y'],
     }
     self.assertEqual(len(expectedSymLists.keys()), len(self.db.schema._stab.keys()))
     for typeName in expectedSymLists:
@@ -1027,12 +1103,12 @@ class TestTypes(unittest.TestCase):
 
   def testDeclarations(self):
     for r in ['head','tail']:
-      self.assertEqual(self.db.schema.getDomain(r,2), 'triple')
-      self.assertEqual(self.db.schema.getRange(r,2), 'entity')
+      self.assertEqual(self.db.schema.getDomain(r,2), 'triple_t')
+      self.assertEqual(self.db.schema.getRange(r,2), 'entity_t')
     for r in ['creator','rel']:
-      self.assertEqual(self.db.schema.getDomain(r,2), 'triple')
-    self.assertEqual(self.db.schema.getRange('creator',2), 'source')
-    self.assertEqual(self.db.schema.getRange('rel',2), 'relation')
+      self.assertEqual(self.db.schema.getDomain(r,2), 'triple_t')
+    self.assertEqual(self.db.schema.getRange('creator',2), 'source_t')
+    self.assertEqual(self.db.schema.getRange('rel',2), 'relation_t')
     for f in [self.db.schema.getRange,self.db.schema.getDomain]:
       self.assertEqual(f('undeclared',2), None)
 
@@ -1072,7 +1148,7 @@ class TestTypeSemantics(unittest.TestCase):
 class TestTrainableDeclarations(unittest.TestCase):
 
   def testIt(self):
-    db = matrixdb.MatrixDB(typed=True)
+    db = matrixdb.MatrixDB(initSchema=dbschema.TypedSchema())
     db.addLines([
         "# :- trainable(w1,1)\n",
         "# :- trainable(w2,2)\n",
@@ -1092,6 +1168,53 @@ class TestTrainableDeclarations(unittest.TestCase):
     self.assertTrue(str(w1.keys()[0])=="w1(hello)")
     self.assertTrue(len(w2.keys())==1)
     self.assertTrue(str(w2.keys()[0])=="w2(hello,there)")
+
+class TestParser(unittest.TestCase):
+
+  def testIt(self):
+    def equalGoal(g1,g2):
+      self.assertEqual(g1.functor,g2.functor)
+      self.assertEqual(g1.arity,g2.arity)
+      self.assertEqual(g1.args,g2.args)
+    def equalRule(r1,r2):
+      equalGoal(r1.lhs,r2.lhs)
+      self.assertEqual(len(r1.rhs),len(r2.rhs))
+      for g1,g2 in zip(r1.rhs,r2.rhs):
+        equalGoal(g1,g2)
+
+    pprParser = parser.Parser(syntax='proppr')
+    tlogParser = parser.Parser(syntax='pythonic')
+    for stem in "matchtoy testgrad textcat textcat2 textcat3".split():
+      rules1 = pprParser.parseFile(os.path.join(TEST_DATA_DIR,stem+".ppr"))
+      rules2 = tlogParser.parseFile(os.path.join(TEST_DATA_DIR,stem+".tlog"))
+      keys1 = set(r.lhs for r in rules1)
+      for key in keys1:
+        keydef1 = rules1.rulesFor(key)
+        keydef2 = rules2.rulesFor(key)
+        self.assertTrue(len(keydef1)==len(keydef2))
+        for r1,r2 in zip(keydef1,keydef2):
+          equalRule(r1,r2)
+
+class TestExampleLoading(unittest.TestCase):
+
+  def testIt(self):
+    db = matrixdb.MatrixDB.loadFile(os.path.join(TEST_DATA_DIR,'textcattoy.cfacts'))
+    dset1 = dataset.Dataset.loadExamples(db, os.path.join(TEST_DATA_DIR,"toytrain.examples"))
+    with open(os.path.join(TEST_DATA_DIR,"toytrain.examples")) as fp:
+      dset2 = dataset.Dataset.loadExamples(db, fp)
+    modes2 = set(dset2.modesToLearn())
+    for mode in dset1.modesToLearn():
+      self.assertTrue(mode in modes2)
+      X1 = dset1.getX(mode)
+      Y1 = dset1.getY(mode)
+      X2 = dset2.getX(mode)
+      Y2 = dset2.getY(mode)
+      self.assertEqual(X1.shape,X2.shape)
+      self.assertEqual(Y1.shape,Y2.shape)
+      self.assertEqual(X1.nnz,X2.nnz)
+      self.assertEqual(Y1.nnz,Y2.nnz)
+      self.assertEqual(X1.data,X2.data)
+      self.assertEqual(Y1.data,Y2.data)
 
 if __name__=="__main__":
   if len(sys.argv)==1:

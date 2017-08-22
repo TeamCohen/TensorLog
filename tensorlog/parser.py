@@ -15,7 +15,13 @@ import logging
 #                                   #  ie for all solutions of g(Y,W),
 #                                   #  produce a feature f(W)
 #
+
 # TODO: remove the stuff that's not supported in TensorLog
+
+from tensorlog import config
+
+conf = config.Config()
+conf.syntax = 'proppr';        conf.help.syntax = "Should be 'pythonic' or 'proppr'"
 
 ##############################################################################
 ## data structures to encode rules
@@ -89,16 +95,26 @@ class Rule(object):
             self.nvars = len(self.variableList)
 
     def __str__(self):
-        vars = "  #v:"+str(self.variableList) if self.variableList else ''
+      return self.asString()
+
+    def asString(self,syntax=None):
+      if syntax is None: syntax=conf.syntax
+      vars = "  #v:"+str(self.variableList) if self.variableList else ''
+      if syntax == 'proppr':
         findalls = ' : '+",".join(map(str,self.findall)) if self.findall else ''
         features = ' {' + ",".join(map(str,self.features)) + findalls + '}' if self.features else ''
         return str(self.lhs) + " :- " + ", ".join(map(str,self.rhs)) + features + vars + '.'
+      else:
+        findalls = ' | '+" & ".join(map(str,self.findall)) if self.findall else ''
+        features = ' // ' + " & ".join(map(str,self.features)) + findalls if self.features else ''
+        return str(self.lhs) + " <= " + " & ".join(map(str,self.rhs)) + features + vars
 
 class RuleCollection(object):
     """A set of prolog rules, indexed by functor and arity."""
 
-    def __init__(self):
+    def __init__(self,syntax=None):
         self.index = collections.defaultdict(list)
+        self.syntax = syntax or conf.syntax
 
     def _key(self,g):
         return '%s/%d' % (g.functor,g.arity)
@@ -111,7 +127,7 @@ class RuleCollection(object):
         return sum(len(self.index[k]) for k in self.index.keys())
 
     def rulesFor(self,g):
-        return self.index[self._key(g)]
+        return self.index.get(self._key(g))
 
     def mapRules(self,mapfun):
         for key in self.index:
@@ -125,7 +141,7 @@ class RuleCollection(object):
         for key in self.index:
             print'% rules for',key
             for r in self.index[key]:
-                print r
+                print r.asString(syntax=self.syntax)
 
     def __iter__(self):
         for key in self.index:
@@ -138,86 +154,97 @@ class RuleCollection(object):
 
 from pyparsing import Word, CharsNotIn, alphas, alphanums, delimitedList, nestedExpr, Optional, Group, QuotedString
 
-atomNT = Word( alphanums+"_$" ) |  QuotedString(quoteChar="'",escChar="\\")
-goalNT = atomNT + Optional("(" + delimitedList(atomNT) + ")")
-goalListNT = Optional(delimitedList(Group(goalNT)))
-featureFindAllNT = Optional(":" + delimitedList(Group(goalNT)))
-featureTemplateNT = delimitedList(Group(goalNT))
-featureBlockNT = Optional("{" + featureTemplateNT('ftemplate') + featureFindAllNT('ffindall') + "}")
-ruleNT = goalNT("lhs") + ":-" + goalListNT("rhs") +  featureBlockNT("features") + "."
-
 class Parser(object):
 
-    @staticmethod
-    def _convertGoal(ptree):
-        return Goal(ptree[0], ptree[2:-1])
+  def __init__(self,syntax=None):
+    self.setSyntax(syntax or conf.syntax)
 
-    @staticmethod
-    def _convertRule(ptree):
-        if 'rhs' in ptree:
-            tmpRhs = map(Parser._convertGoal, ptree['rhs'].asList())
-        else:
-            tmpRhs = []
-        if not 'features' in ptree:
-            return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,None,None)
-        else:
-            if not 'ffindall' in ptree:
-                featureList = ptree['ftemplate'].asList()
-                tmpFeatures = map(Parser._convertGoal, featureList)
-                return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,None)
-            else:
-                featureList = ptree['ftemplate'].asList()
-                tmpFeatures = map(Parser._convertGoal, featureList)
-                findallList = ptree['ffindall'].asList()[1:]
-                tmpFindall = map(Parser._convertGoal, findallList)
-                return Rule(Parser._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,tmpFindall)
+  def setSyntax(self,syntax):
+    self.syntax = syntax
+    self.atomNT = Word( alphanums+"_$" ) |  QuotedString(quoteChar="'",escChar="\\")
+    self.goalNT = self.atomNT + Optional("(" + delimitedList(self.atomNT) + ")")
+    if self.syntax=='proppr':
+      self.goalListNT = Optional(delimitedList(Group(self.goalNT)))
+      self.featureFindAllNT = Optional(":" + delimitedList(Group(self.goalNT)))
+      self.featureTemplateNT = delimitedList(Group(self.goalNT))
+      self.featureBlockNT = Optional("{" + self.featureTemplateNT('ftemplate') + self.featureFindAllNT('ffindall') + "}")
+      self.ruleNT = self.goalNT("lhs") + ":-" + self.goalListNT("rhs") +  self.featureBlockNT("features") + "."
+    else:
+      self.goalListNT = Optional(delimitedList(Group(self.goalNT), delim="&"))
+      self.featureFindAllNT = Optional("|" + delimitedList(Group(self.goalNT), delim="&"))
+      self.featureTemplateNT = delimitedList(Group(self.goalNT), delim="&")
+      self.featureBlockNT = Optional("//" + self.featureTemplateNT('ftemplate') + self.featureFindAllNT('ffindall'))
+      self.ruleNT = self.goalNT("lhs") + "<=" + self.goalListNT("rhs") +  self.featureBlockNT("features")
 
-    @staticmethod
-    def parseGoal(s):
-        """Convert a string to a goal."""
-        return Parser._convertGoal(goalNT.parseString(s))
+  def _convertGoal(self,ptree):
+    return Goal(ptree[0], ptree[2:-1])
 
-    @staticmethod
-    def parseGoalList(s):
-        """Convert a string to a goal list."""
-        return map(Parser._convertGoal, goalListNT.parseString(s).asList())
+  def _convertRule(self,ptree):
+    if 'rhs' in ptree:
+      tmpRhs = map(self._convertGoal, ptree['rhs'].asList())
+    else:
+      tmpRhs = []
+    if not 'features' in ptree:
+      return Rule(self._convertGoal(ptree['lhs']),tmpRhs,None,None)
+    else:
+      if not 'ffindall' in ptree:
+        featureList = ptree['ftemplate'].asList()
+        tmpFeatures = map(self._convertGoal, featureList)
+        return Rule(self._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,None)
+      else:
+        featureList = ptree['ftemplate'].asList()
+        tmpFeatures = map(self._convertGoal, featureList)
+        findallList = ptree['ffindall'].asList()[1:]
+        tmpFindall = map(self._convertGoal, findallList)
+        return Rule(self._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,tmpFindall)
 
-    @staticmethod
-    def parseRule(s):
-        """Convert a string to a rule."""
-        return Parser._convertRule(ruleNT.parseString(s))
+  def parseGoal(self,s):
+    """Convert a string to a goal."""
+    return self._convertGoal(self.goalNT.parseString(s))
 
-    @staticmethod
-    def parseQuery(s):
-        """Convert a string to a headless rule (no lhs)"""
-        result = Parser.parseRule('dummy :- %s\n' % s)
-        result.lhs = None
-        return result
+  def parseGoalList(self,s):
+    """Convert a string to a goal list."""
+    return map(self._convertGoal, self.goalListNT.parseString(s).asList())
 
-    @staticmethod
-    def parseFile(filename,rules = None):
-        """Extract a series of rules from a file."""
-        if not rules: rules = RuleCollection()
-        buf = ""
-        for line in open(filename,'r'):
-            if not line[0]=='#':
-                buf += line
-        try:
-            first_time = True
-            for (ptree,lo,hi) in ruleNT.scanString(buf):
-                rules.add(Parser._convertRule(ptree))
-                if first_time:
-                  unread_text = buf[:lo].strip()
-                  if len(unread_text)>0:
-                    logging.error('unparsed text at start of %s: "%s..."' % (filename,unread_text))
-                  first_time = False
-            unread_text = buf[hi:].strip()
-            if len(unread_text)>0:
-              logging.error('unparsed text at end of %s: "...%s"' % (filename,unread_text))
-            return rules
-        except KeyError:
-            print 'error near ',lo,'in',filename
-        return rules
+  def parseRule(self,s):
+    """Convert a string to a rule."""
+    return self._convertRule(self.ruleNT.parseString(s))
+
+  def parseQuery(self,s):
+    """Convert a string to a headless rule (no lhs)"""
+    result = Parser().parseRule('dummy :- %s\n' % s)
+    result.lhs = None
+    return result
+
+  def parseFile(self,filename,rules = None):
+    """Extract a series of rules from a file."""
+    if filename.endswith("tlog"): self.setSyntax('pythonic')
+    if not rules: rules = RuleCollection(syntax=self.syntax)
+    linebuf = []
+    for line in open(filename):
+      if not line[0]=='#':
+        linebuf.append(line)
+    buf = "".join(linebuf)
+    try:
+      first_time = True
+      for (ptree,lo,hi) in self.ruleNT.scanString(buf):
+        rules.add(self._convertRule(ptree))
+        if first_time:
+          unread_text = buf[:lo].strip()
+          if len(unread_text)>0:
+            logging.error('unparsed text at start of %s: "%s..."' % (filename,unread_text))
+          first_time = False
+      unread_text = buf[hi:].strip() if rules.size()>0 else buf
+      if len(unread_text)>0:
+        logging.error('unparsed text at end of %s: "...%s"' % (filename,unread_text))
+      return rules
+    except KeyError:
+      print 'error near ',lo,'in',filename
+      return rules
 
 if __name__ == "__main__":
-  Parser().parseFile(sys.argv[1]).listing()
+  p = Parser(syntax='pythonic')
+
+  for f in sys.argv[1:]:
+    print '\nparsed from file %r:' % f
+    Parser().parseFile(f).listing()

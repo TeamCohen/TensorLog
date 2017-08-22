@@ -164,7 +164,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     testtensorlog.softmax_normalize(expected_result_dict)
     rules = parser.RuleCollection()
     for r in ruleStrings:
-      rules.add(parser.Parser.parseRule(r))
+      rules.add(parser.Parser().parseRule(r))
     if progType=='proppr':
       prog = program.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
     else:
@@ -185,6 +185,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       self.check_maxes_in_dicts(actual_result_dict, expected_result_dict)
       # check it's normalized
       l1_error = abs(sum(actual_result_dict.values()) - 1.0)
+      #print 'l1_error',l1_error,'actual_result_dict',actual_result_dict,'expected_result_dict',expected_result_dict
       self.assertTrue( l1_error < 0.0001)
       # also test proofCountFun
       proofCountFun = xc.proofCountFunction(mode_string)
@@ -867,8 +868,70 @@ class TestMultiModeXC(unittest.TestCase):
       session.close()
       close_cross_compiler(xc)
 
+class TestMatParams(unittest.TestCase):
+
+  def setUp(self):
+    self.cacheDir = tempfile.mkdtemp()
+
+  def cacheFile(self,fileName):
+    return os.path.join(self.cacheDir,fileName)
+
+  def testMToyMatParam(self):
+    tlog = simple.Compiler(
+        db=os.path.join(testtensorlog.TEST_DATA_DIR,"matchtoy.cfacts"),
+        prog=os.path.join(testtensorlog.TEST_DATA_DIR,"matchtoy.ppr"))
+    trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"matchtoy-train.exam"))
+    tlog.db.markAsParameter('dabbrev',2)
+    factDict = tlog.db.matrixAsPredicateFacts('dabbrev',2,tlog.db.matEncoding[('dabbrev',2)])
+    print 'before learning',len(factDict),'dabbrevs'
+    self.assertTrue(len(factDict)==5)
+    for f in sorted(factDict.keys()):
+      print '>',str(f),factDict[f]
+
+    # expt pipeline
+    mode = trainData.keys()[0]
+    TX,TY = trainData[mode]
+    inference = tlog.inference(mode)
+    trueY = tf.placeholder(tf.float32, shape=TY.shape, name='tensorlog/trueY')
+    loss = tlog.loss(mode)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+    train_step = optimizer.minimize(loss)
+    train_batch_fd = {tlog.input_placeholder_name(mode):TX, tlog.target_output_placeholder_name(mode):TY}
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
+    for i in range(5):
+      print 'epoch',i+1
+      session.run(train_step, feed_dict=train_batch_fd)
+    tlog.set_all_db_params_to_learned_values(session)
+#    params = {'prog':prog,'trainData':trainData, 'testData':testData}
+#    result = expt.Expt(params).run()
+#    factDict = db.matrixAsPredicateFacts('dabbrev',2,db.matEncoding[('dabbrev',2)])
+#    print 'after learning',len(factDict),'dabbrevs'
+#    for f in sorted(factDict.keys()):
+#      print '>',str(f),factDict[f]
+#    self.assertTrue(len(factDict)>5)
+
 @unittest.skipUnless(xctargets.tf,"Tensorflow not available")
 class TestSimple(unittest.TestCase):
+
+  def testEmptyRules(self):
+    # should not throw an error
+    tlog = simple.Compiler(
+        db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"))
+
+  def testIncrementalDBLoad(self):
+    b = simple.Builder()
+    predict,label,hasWord,posPair,negPair = b.predicates("predict,label,hasWord,posPair,negPair")
+    doc_t,label_t,word_t,labelWordPair_t = b.types("doc_t,label_t,word_t,labelWordPair_t")
+    b.schema += predict(doc_t,label_t) & label(label_t)
+    b.schema += hasWord(doc_t,word_t) & posPair(word_t,labelWordPair_t) & negPair(word_t,labelWordPair_t)
+    for basename in "textcattoy_corpus.cfacts textcattoy_labels.cfacts textcattoy_pairs.cfacts".split(" "):
+      b.db += os.path.join(testtensorlog.TEST_DATA_DIR, basename)
+    tlog = simple.Compiler(db=b.db)
+    for (functor,arity,nnz) in [('hasWord',2,99),('label',1,2),('negPair',2,56)]:
+      m = tlog.db.matEncoding[(functor,arity)]
+      self.assertTrue(m.nnz == nnz)
+
   def testBatch(self):
     tlog = simple.Compiler(
         db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
@@ -961,8 +1024,8 @@ class TestSimple(unittest.TestCase):
     self.assertTrue(acc1>=0.9)
     session.close()
 
-  def testRuleBuilder1(self):
-    b = simple.RuleBuilder()
+  def testBuilder1(self):
+    b = simple.Builder()
     X,Y,Z = b.variables("X Y Z")
     aunt,parent,sister,wife = b.predicates("aunt parent sister wife")
     uncle = b.predicate("uncle")
@@ -985,14 +1048,65 @@ class TestSimple(unittest.TestCase):
     self.assertEqual(str(rs[3]), "aunt(X,Y) :- parent(X,Z), sister(Z,Y) {weight(R2) : assign(R2,r2,ruleid_t)}.")
     self.assertEqual(str(rs[4]), "aunt(X,Y) :- uncle(X,Z), wife(Z,Y) {weight(F) : description(X,D),feature(X,F)}.")
 
-  def testRuleBuilder2(self):
-    b = simple.RuleBuilder()
+  def testBuilder2(self):
+    b = simple.Builder()
     predict,assign,weighted,hasWord,posPair,negPair = b.predicates("predict assign weighted hasWord posPair negPair")
     X,Pos,Neg,F,W = b.variables("X Pos Neg F W")
     b += predict(X,Pos) <= assign(Pos,'pos','label') // (weighted(F) | hasWord(X,W) & posPair(W,F))
     b += predict(X,Neg) <= assign(Neg,'neg','label') // (weighted(F) | hasWord(X,W) & negPair(W,F))
     dbSpec = os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts")
     self.runTextCatLearner(simple.Compiler(db=dbSpec,prog=b.rules))
+
+  def testBuilder3(self):
+    b = simple.Builder()
+    predict,assign,weighted,hasWord,posPair,negPair,label = b.predicates("predict assign weighted hasWord posPair negPair label")
+    doc_t,label_t,word_t,labelWordPair_t = b.types("doc_t label_t word_t labelWordPair_t")
+
+    b.schema += predict(doc_t,label_t)
+    b.schema += hasWord(doc_t,word_t)
+    b.schema += posPair(word_t,labelWordPair_t)
+    b.schema += negPair(word_t,labelWordPair_t)
+    b.schema += label(label_t)
+
+    X,Pos,Neg,F,W = b.variables("X Pos Neg F W")
+    b.rules += predict(X,Pos) <= assign(Pos,'pos','label_t') // (weighted(F) | hasWord(X,W) & posPair(W,F))
+    b.rules += predict(X,Neg) <= assign(Neg,'neg','label_t') // (weighted(F) | hasWord(X,W) & negPair(W,F))
+
+    # use the untyped version of the facts to make sure the schema works
+    b.db = os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy.cfacts")
+
+    self.runTextCatLearner(simple.Compiler(db=b.db, prog=b.rules))
+
+class TestReparameterizationAndTypedLoading(unittest.TestCase):
+
+  def testBugWasFixed(self):
+    # use the untyped version of the facts to make sure the schema works
+    db = matrixdb.MatrixDB()
+    db.addLines(["# :- r(lo_or_hi_t)\n",
+                 "\t".join("r low 0.1".split()) + "\n",
+                 "\t".join("r hi 0.9".split()) + "\n"])
+    db.markAsParameter('r',1)
+    prog = program.Program(db=db)
+    typeName = db.schema.getArgType("r",1,0)
+    idLow = db.schema.getId(typeName,"low")
+    idHi = db.schema.getId(typeName,"hi")
+    db_r = db.matEncoding[('r',1)]
+    self.approxEqual(db_r[0,idLow], 0.1)
+    self.approxEqual(db_r[0,idHi], 0.9)
+
+    xc = tensorflowxcomp.SparseMatDenseMsgCrossCompiler(prog)
+    v_r = xc._vector(declare.asMode("r(i)"))
+
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
+    xc.exportAllLearnedParams()
+    print 'exported to xc',db.matEncoding[('r',1)]
+    db_r = db.matEncoding[('r',1)]
+    self.approxEqual(db_r[0,idLow], 0.1)
+    self.approxEqual(db_r[0,idHi], 0.9)
+
+  def approxEqual(self,a,b):
+    self.assertTrue(abs(float(a)-b) < 0.0001)
 
 class TestPlugins(unittest.TestCase):
 

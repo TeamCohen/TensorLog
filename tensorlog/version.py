@@ -2,7 +2,7 @@
 #
 # version number tracking for Tensorlog
 
-VERSION = '1.3.3'
+VERSION = '1.3.5'
 
 # externally visible changes:
 #
@@ -42,3 +42,20 @@ VERSION = '1.3.3'
 #     simple.RuleBuilder
 # version 1.3.3:
 #     split of version.py into different file
+#     refactored schema
+#     simple.RuleBuilder -> simple.Builder
+# version 1.3.4:
+#     bug fix in type inference
+#     new serialization and use of file-like objects for load* methods
+#       db.schema.serializeTo(filelike)
+#       db.serializeDataTo(filelike,filter=None|params|noparams)
+#       db.importSerializeDataFrom(filelike)
+#     pythonic syntax for parser (automatic for files with extension .tlog)
+# version 1.3.5:
+#     api typo fix: db.importSerializeDataFrom(filelike) -> importSerializedDataFrom(filelike)
+#     simple.compiler.load_xxx_examples can be passed file-like objects
+#     builder rules will print in pythonic syntax
+#     now working
+#        builder.db = "dbspec"
+#        builder.db += "file"
+#     bug fixes for db += file, remove matrixdb.addFile which doesn't work well

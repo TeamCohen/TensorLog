@@ -9,6 +9,7 @@ from tensorlog import declare
 from tensorlog import funs
 from tensorlog import matrixdb
 from tensorlog import ops
+from tensorlog import util
 
 conf = config.Config()
 conf.reparameterizeMatrices = True; conf.help.reparameterizeMatrices = 'pass parameter matrices through a softplus to make keep them positive'
@@ -52,7 +53,7 @@ class AbstractCrossCompiler(object):
     # handle expression, but not always.  These are indexed by
     # functor,arity key.
     self._handleExprVar = {}
-    logging.debug('AbstractCrossCompiler initialized %.3f Gb' % comline.memusage())
+    logging.debug('AbstractCrossCompiler initialized %.3f Gb' % util.memusage())
 
   #
   # external UI
@@ -359,7 +360,7 @@ class AbstractCrossCompiler(object):
     if mode not in self._wsDict:
       self.ws = self._wsDict[mode] = Workspace(self)
       startTime = time.time()
-      def status(msg): logging.info('%s time %.3f sec mem %.3f Gb' % (msg,time.time()-startTime,comline.memusage()))
+      def status(msg): logging.info('%s time %.3f sec mem %.3f Gb' % (msg,time.time()-startTime,util.memusage()))
       status('compiling %s'%str(mode))
       fun = self.ws.tensorlogFun = self.prog.compile(mode)
       status('tensorlog compilation complete; cross-compiling %s'%str(mode))

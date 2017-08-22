@@ -13,23 +13,28 @@ import logging
 
 from tensorlog import config
 from tensorlog import declare
-from tensorlog import schema
+from tensorlog import dbschema
 from tensorlog import parser
 from tensorlog import mutil
+from tensorlog import util
+
 
 conf = config.Config()
-conf.allow_weighted_tuples = True; conf.help.allow_weighted_tuples = 'Allow last column of cfacts file to be a weight for the fact'
-conf.ignore_types = False;         conf.help.ignore_types = 'Ignore type declarations'
+conf.allow_weighted_tuples = True;     conf.help.allow_weighted_tuples = 'Allow last column of cfacts file to be a weight for the fact'
+conf.default_to_typed_schema = False;  conf.help.default_to_typed_schema = 'If true use TypedSchema() as default schema in MatrixDB'
+conf.ignore_types = False;             conf.help.ignore_types = 'Ignore type declarations, even if they are present'
 
-NULL_ENTITY_NAME = schema.NULL_ENTITY_NAME
-THING = schema.THING
+NULL_ENTITY_NAME = dbschema.NULL_ENTITY_NAME
+THING = dbschema.THING
+OOV_ENTITY_NAME = dbschema.OOV_ENTITY_NAME
+
 #functor in declarations of trainable relations, eg trainable(posWeight,1)
 TRAINABLE_DECLARATION_FUNCTOR = 'trainable'
 
 class MatrixDB(object):
   """ A logical database implemented with sparse matrices """
 
-  def __init__(self,typed=False):
+  def __init__(self,initSchema=None):
     #matEncoding[(functor,arity)] encodes predicate as a matrix
     self.matEncoding = {}
     # mark which matrices are 'parameters' by (functor,arity) pair
@@ -37,8 +42,13 @@ class MatrixDB(object):
     self.paramList = []
     # buffers for reading in facts in tab-sep form
     self._databuf = self._rowbuf = self._colbuf = None
-    # typing information
-    self.schema = schema.UntypedSchema() if ((not typed) or (conf.ignore_types)) else schema.TypedSchema()
+    if initSchema is not None:
+      self.schema = initSchema
+    elif conf.default_to_typed_schema and not conf.ignore_types:
+      self.schema = dbschema.TypedSchema()
+    else:
+      self.schema = dbschema.UntypedSchema()
+    self.startBuffers()
 
   def checkTyping(self):
     self.schema.checkTyping(self.matEncoding.keys())
@@ -62,7 +72,7 @@ class MatrixDB(object):
     typeName = self._fillDefault(typeName)
     """A onehot row representation of a symbol."""
     if outOfVocabularySymbolsAllowed and not self.schema.hasId(typeName,s):
-        return self.onehot(schema.OOV_ENTITY_NAME,typeName)
+        return self.onehot(OOV_ENTITY_NAME,typeName)
     assert self.schema.hasId(typeName,s),'constant %s (type %s) not in db' % (s,typeName)
     n = self.dim(typeName)
     i = self.schema.getId(typeName,s)
@@ -301,26 +311,67 @@ class MatrixDB(object):
     if not os.path.exists(direc):
       os.makedirs(direc)
     self.schema.serialize(direc)
-    scipy.io.savemat(os.path.join(direc,"db.mat"),self.matEncoding,do_compression=True)
+    self.serializeDataTo(os.path.join(direc,"db.mat"))
+
+  def serializeDataTo(self,fileLike,filter=None):
+    """ Serialize a subset of the data into a file-like object.
+    Values of the filter are None (save everything), 'fixed' (save non-parameters)
+    or 'params' (save parameters only).
+    """
+    if filter is None:
+      d = self.matEncoding
+    elif filter=='params':
+      d = dict([(key,m) for (key,m) in self.matEncoding.items() if key in self.paramSet])
+    elif filter=='fixed':
+      d = dict([(key,m) for (key,m) in self.matEncoding.items() if key not in self.paramSet])
+    else:
+      assert False,"illegal filter: legal ones are None, 'params', or 'fixed'"
+    self._saveMatDictWithScipy(fileLike,d)
+
+  def importSerializedDataFrom(self,fileLike):
+    """Read data stored using db.serializeDataTo(fp) and add it to the
+    database.  This assumes the DB schema can hold this information.
+    """
+    d = MatrixDB._restoreMatDictWithScipy(fileLike)
+    for key in d:
+      self.matEncoding[key] = d[key]
 
   @staticmethod
-  def deserialize(direc):
-    db = MatrixDB()
-    db.schema = schema.AbstractSchema.deserialize(direc)
-    scipy.io.loadmat(os.path.join(direc,"db.mat"),db.matEncoding)
+  def deserializeDataFrom(fileLike):
+    """ Read data stored using db.serializeDataTo(fp) and return it as a dictionary
+    mapping (functor,arity) to a matEncoding.
+    """
+    return MatrixDB._restoreMatDictWithScipy(fileLike)
+
+  @staticmethod
+  def _saveMatDictWithScipy(fileLike,d):
+    scipy.io.savemat(fileLike,d,do_compression=True)
+
+  @staticmethod
+  def _restoreMatDictWithScipy(fileLike):
+    d = {}
+    scipy.io.loadmat(fileLike,d)
     #serialization/deserialization ends up converting
     #(functor,arity) pairs to strings and csr_matrix to csc_matrix
     #so convert them back....
-    for stringKey,mat in db.matEncoding.items():
-      del db.matEncoding[stringKey]
+    for stringKey,mat in d.items():
+      del d[stringKey]
       if not stringKey.startswith('__'):
-        db.matEncoding[eval(stringKey)] = scipy.sparse.csr_matrix(mat,dtype='float32')
+        d[eval(stringKey)] = scipy.sparse.csr_matrix(mat,dtype='float32')
+    return d
+
+  @staticmethod
+  def deserialize(direc):
+    logging.info('deserializing database from %s' % direc)
+    db = MatrixDB()
+    db.schema = dbschema.AbstractSchema.deserialize(direc)
+    db.matEncoding = db._restoreMatDictWithScipy(os.path.join(direc,"db.mat"))
     logging.info('deserialized database has %d relations and %d non-zeros' % (db.numMatrices(),db.size()))
     db.checkTyping()
     return db
 
   @staticmethod
-  def uncache(dbFile,factFile):
+  def uncache(dbFile,factFile,initSchema=None):
     """Build a database file from a factFile, serialize it, and return
     the de-serialized database.  Or if that's not necessary, just
     deserialize it.  As always the factFile can be a
@@ -328,7 +379,7 @@ class MatrixDB(object):
     """
     if not os.path.exists(dbFile) or any([os.path.getmtime(f)>os.path.getmtime(dbFile) for f in factFile.split(":")]):
       logging.info('serializing fact file %s to %s' % (factFile,dbFile))
-      db = MatrixDB.loadFile(factFile)
+      db = MatrixDB.loadFile(factFile,initSchema=initSchema)
       db.serialize(dbFile)
       os.utime(dbFile,None) #update the modification time for the directory
       return db
@@ -347,11 +398,11 @@ class MatrixDB(object):
     self.flushBuffers()
 
   @staticmethod
-  def loadFile(filenames):
+  def loadFile(filenames,initSchema=None):
     """Return a MatrixDB created by loading a file, or colon-separated
     list of files.
     """
-    db = MatrixDB()
+    db = MatrixDB(initSchema=initSchema)
     db.startBuffers()
     for f in filenames.split(":"):
       db.bufferFile(f)
@@ -363,11 +414,7 @@ class MatrixDB(object):
   # manage buffers used to store matrix data before it is inserted
 
   def startBuffers(self):
-    #buffer data for a sparse matrix: buf[pred][i][j] = f
-    #TODO: would lists and a coo matrix make a nicer buffer?
-    #def dictOfFloats(): return collections.defaultdict(float)
-    #def dictOfFloatDicts(): return collections.defaultdict(dictOfFloats)
-    #self._buf = collections.defaultdict(dictOfFloatDicts)
+    #buffer data for a sparse matrix
     self._databuf = collections.defaultdict(list)
     self._rowbuf = collections.defaultdict(list)
     self._colbuf = collections.defaultdict(list)
@@ -375,7 +422,7 @@ class MatrixDB(object):
   def bufferFile(self,filename):
     """Load triples from a file and buffer them internally."""
     k = 0
-    for line in open(filename):
+    for line in util.linesIn(filename):
       k += 1
       if not k%10000: logging.info('read %d lines' % k)
       self._bufferLine(line,filename,k)
@@ -452,10 +499,11 @@ class MatrixDB(object):
           trainableArity = int(decl.arg(1))
           self.markAsParameter(trainableFunctor,trainableArity)
         else:
-          # if possible, over-ride the default 'untyped' schema
-          if self.schema.isTypeless():
-            if self.schema.empty() and not conf.ignore_types:
-              self.schema = schema.TypedSchema()
+          # if possible, over-ride the default 'untyped' schema with one that can handle the type declaration
+          if self.schema.isTypeless() and not conf.ignore_types:
+            if not self.schema.empty():
+              logging.error('discarding non-empty typeless schema to accomodate declaration: %s line %d' % (filename,k))
+            self.schema = dbschema.TypedSchema()
           if not conf.ignore_types:
             self.schema.declarePredicateTypes(decl.functor,decl.args())
       return
@@ -466,7 +514,7 @@ class MatrixDB(object):
       # must be functor,a1,a2,weight
       functor,a1,a2,weight_string = parts[0],parts[1],parts[2],parts[3]
       w = _atof(weight_string)
-      if w is None:
+      if w is None or w<0:
         logging.error('line %d of %s: illegal weight' % (k,filename,weight_string))
         return
       self._bufferTriplet(functor,2,a1,a2,w,filename,k)
@@ -492,10 +540,10 @@ class MatrixDB(object):
           a1,a2 = parts[1],parts[2]
           self._bufferTriplet(functor,2,a1,a2,1.0,filename,k)
         elif self.schema.getDomain(functor,1) and not self.schema.getDomain(functor,2):
-          assert w is not None,'line %d file %s: illegal weight %s' % (k,filename,possible_weight_string)
+          assert w is not None and w>=0,'line %d file %s: illegal weight %s' % (k,filename,possible_weight_string)
           a1 = parts[1]
-          self._bufferTriplet(functor,1,a1,None,1.0,filename,k)
-        elif w is not None:
+          self._bufferTriplet(functor,1,a1,None,w,filename,k)
+        elif w is not None and w>0:
           a1 = parts[1]
           logging.warn('line %d file %s: assuming %s is a weight' % (k,filename,possible_weight_string))
           self._bufferTriplet(functor,1,a1,None,w,filename,k)
@@ -505,39 +553,3 @@ class MatrixDB(object):
     else:
       logging.error('line %d file %s: illegal line %r' % (k,filename,line))
       return
-
-
-#
-# test main
-#
-
-if __name__ == "__main__":
-  if len(sys.argv) < 2:
-    pass
-  elif sys.argv[1]=='--serialize':
-    print 'loading cfacts from',sys.argv[2]
-    if sys.argv[2].find(":")>=0:
-      db = MatrixDB()
-      for f in sys.argv[2].split(":"):
-        db.addFile(f)
-    else:
-      db = MatrixDB.loadFile(sys.argv[2])
-    print 'saving to',sys.argv[3]
-    db.serialize(sys.argv[3])
-  elif sys.argv[1]=='--deserialize':
-    print 'loading saved db from ',sys.argv[2]
-    db = MatrixDB.deserialize(sys.argv[2])
-  elif sys.argv[1]=='--uncache':
-    print 'uncaching facts',sys.argv[3],'from',sys.argv[2]
-    db = MatrixDB.uncache(sys.argv[2],sys.argv[3])
-  elif sys.argv[1]=='--loadEcho':
-    logging.basicConfig(level=logging.INFO)
-    print 'loading cfacts from ',sys.argv[2]
-    db = MatrixDB.loadFile(sys.argv[2])
-    print db.matEncoding
-    for (f,a),m in db.matEncoding.items():
-      print f,a,m
-      d = db.matrixAsPredicateFacts(f,a,m)
-      print 'd for ',f,a,'is',d
-      for k,w in d.items():
-        print k,w

@@ -1,0 +1,16 @@
+match(R,S) <= fname(R,FR) & fmatch(FR,FS) & fname(S,FS) // f
+match(R,S) <= lname(R,LR) & lmatch(LR,LS) & lname(S,LS) // l
+match(R,S) <= addr(R,AR) & amatch(AR,AS) & addr(S,AS) // a
+
+fmatch(X,Y) <= same(X,Y) // f1
+fmatch(X,Y) <= dnick(X,Y) // f2
+fmatch(X,Y) <= dnick(Y,X) // f2
+
+lmatch(X,Y) <= same(X,Y) // l1
+lmatch(X,Y) <= dvar(X,Y) // l2
+lmatch(X,Y) <= dvar(Y,X) // l2
+
+amatch(X,Y) <= hasword(X,A) & wmatch(A,B) & hasword(Y,B) // a1
+wmatch(A,B) <= same(A,B) // w1
+wmatch(A,B) <= dabbrev(A,B) // w2
+wmatch(A,B) <= dabbrev(B,A) // w2

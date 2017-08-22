@@ -9,7 +9,7 @@ import factplugin
 if __name__ == "__main__":
 
     rules = parser.RuleCollection()
-    rules.add(parser.Parser.parseRule('p(X,Y) :- spouse(X,Y) {r}.'))
+    rules.add(parser.Parser().parseRule('p(X,Y) :- spouse(X,Y) {r}.'))
     rules.listing()
     wp = wamcompiler.Compiler().compileRules(rules)
     wp.listing()

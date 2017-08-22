@@ -80,7 +80,7 @@ class Interp(object):
     def _listRules(self,functor,arity):
         mode = declare.ModeDeclaration(parser.Goal(functor,['x']*arity),strict=False)
         rules = self.prog.rules.rulesFor(mode)
-        if rules:
+        if rules is not None:
             for r in rules: print r
             return True
         return False

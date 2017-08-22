@@ -144,7 +144,7 @@ def getargs():
     maxD = round(n/2.0)
     if len(sys.argv)>3:
         maxD = int(sys.argv[3])
-    epochs = 20
+    epochs = 30
     if len(sys.argv)>4:
         epochs = int(sys.argv[4])
     return (goal,n,maxD,epochs)
@@ -184,6 +184,7 @@ def accExpt(prog,trainData,testData,n,maxD,epochs):
     prog.maxDepth = maxD
     # 20 epochs and rate=0.1 is ok for grid size up to about 10-12
     # then it gets sort of chancy
+    #learner = learn.FixedRateGDLearner(prog,epochs=epochs,epochTracer=learn.EpochTracer.cheap)
     learner = plearn.ParallelFixedRateGDLearner(
         prog,
         epochs=epochs,
@@ -226,6 +227,7 @@ def runMain():
     # usage: acc [grid-size] [maxDepth] [epochs]"
     #        time [grid-size] [maxDepth] "
     (goal,n,maxD,epochs) = getargs()
+    print 'args',(goal,n,maxD,epochs)
     (factFile,trainFile,testFile) = genInputs(n)
 
     db = matrixdb.MatrixDB.loadFile(factFile)

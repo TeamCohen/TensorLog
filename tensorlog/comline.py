@@ -1,15 +1,16 @@
 import getopt
 import time
 import logging
-import os
 
 from tensorlog import dataset
 from tensorlog import matrixdb
+from tensorlog import util
 from tensorlog import version
 
 #
 # utilities for reading command lines
 #
+
 
 def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]):
 
@@ -81,7 +82,7 @@ def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]
         assert False,'--db and --prog are required options'
 
     startTime = time.time()
-    def status(msg): logging.info('%s time %.3f sec mem %.3f Gb' % (msg,time.time()-startTime,memusage()))
+    def status(msg): logging.info('%s time %.3f sec mem %.3f Gb' % (msg,time.time()-startTime,util.memusage()))
 
     status('loading db')
     db = parseDBSpec(optdict['--db'])
@@ -135,18 +136,3 @@ def parseProgSpec(spec,db,proppr=False):
     """Parse a specification for a Tensorlog program,, see usage() for parseCommandLine"""
     from tensorlog import program
     return program.ProPPRProgram.loadRules(spec,db) if proppr else program.Program.loadRules(spec,db)
-
-def memusage():
-    """ Memory used by the current process in Gb
-    """
-    proc_status = '/proc/%d/status' % os.getpid()
-    try:
-        t = open(proc_status)
-        v = t.read()
-        t.close()
-        i = v.index('VmSize:')
-        v = v[i:].split(None,3)
-        scale = {'kB': 1024.0, 'mB': 1024.0*1024.0, 'KB': 1024.0, 'MB': 1024.0*1024.0}
-        return (float(v[1]) * scale[v[2]]) / (1024.0*1024.0*1024.0)
-    except IOError:
-        return 0.0

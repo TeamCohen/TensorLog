@@ -17,6 +17,7 @@ from tensorlog import matrixdb
 from tensorlog import mutil
 from tensorlog import opfunutil
 from tensorlog import parser
+from tensorlog import util
 
 conf = config.Config()
 conf.max_depth = 10;        conf.help.max_depth = "Maximum depth of program recursion"
@@ -61,7 +62,7 @@ class Program(object):
             self.function[(mode,depth)] = funs.NullFunction(mode)
         else:
             predDef = self.findPredDef(mode)
-            if len(predDef)==0:
+            if predDef is None or len(predDef)==0:
                 assert False,'no rules match mode %s' % mode
             elif len(predDef)==1:
                 #instead of a sum of one function, just find the function
@@ -136,9 +137,9 @@ class Program(object):
     def setAllWeights(self):
         """ Set all parameter weights to a plausible value - mostly useful for proppr programs,
         where parameters are known. """
-        logging.debug('setting feature weights %.3f Gb' % comline.memusage())
+        logging.debug('setting feature weights %.3f Gb' % util.memusage())
         self.setFeatureWeights()
-        logging.debug('setting rule weights %.3f Gb' % comline.memusage())
+        logging.debug('setting rule weights %.3f Gb' % util.memusage())
         self.setRuleWeights()
         self.db.checkTyping()
 
@@ -155,9 +156,9 @@ class Program(object):
     @staticmethod
     def _loadRules(fileNames):
         ruleFiles = fileNames.split(":")
-        rules = parser.Parser.parseFile(ruleFiles[0])
+        rules = parser.Parser().parseFile(ruleFiles[0])
         for f in ruleFiles[1:]:
-            rules = parser.Parser.parseFile(f,rules)
+            rules = parser.Parser().parseFile(f,rules)
         return rules
 
     @staticmethod
@@ -229,13 +230,13 @@ class ProPPRProgram(Program):
             inferredParamType = {}
             # don't assume types for weights have been declared
             for rule in self.rules:
-                for m in possibleModes(rule):
-                    varTypes = bpcompiler.BPCompiler(m,self,0,rule).inferredTypes()
-                    for goal in rule.rhs:
-                        if goal.arity==1 and (goal.functor,goal.arity) in self.db.paramSet:
-                            newType = varTypes.get(goal.args[0])
-                            decl = declare.TypeDeclaration(parser.Goal(goal.functor,[newType]))
-                            self.db.schema.declarePredicateTypes(decl.functor,decl.args())
+              for m in possibleModes(rule):
+                varTypes = bpcompiler.BPCompiler(m,self,0,rule).inferredTypes()
+                for goal in rule.rhs:
+                  if goal.arity==1 and (goal.functor,goal.arity) in self.db.paramSet:
+                    newType = varTypes.get(goal.args[0])
+                    decl = declare.TypeDeclaration(parser.Goal(goal.functor,[newType]))
+                    self.db.schema.declarePredicateTypes(decl.functor,decl.args())
             for (functor,arity) in self.db.paramList:
                 if arity==1:
                     typename = self.db.schema.getArgType(functor,arity,0)
@@ -281,20 +282,17 @@ class ProPPRProgram(Program):
 
     def _moveFeaturesToRHS(self,rule0):
         rule = parser.Rule(rule0.lhs, rule0.rhs)
-        if not rule0.findall:
+        if not rule0.findall and (rule0.features is not None):
             #parsed format is {f1,f2,...} but we only support {f1}
-            if rule0.features is None:
-              logging.warn('this rule has no features: %s' % str(rule))
-            else:
-              assert len(rule0.features)==1,'multiple constant features not supported'
-              assert rule0.features[0].arity==0, '{foo(A,...)} not allowed, use {foo(A,...):true}'
-              constFeature = rule0.features[0].functor
-              constAsVar = constFeature.upper()
-              rule.rhs.append( parser.Goal(bpcompiler.ASSIGN, [constAsVar,constFeature]) )
-              rule.rhs.append( parser.Goal('weighted',[constAsVar]) )
-              # record the rule name, ie the constant feature
-              self.ruleIds.append(constFeature)
-        else:
+            assert len(rule0.features)==1,'multiple constant features not supported'
+            assert rule0.features[0].arity==0, '{foo(A,...)} not allowed, use {foo(A,...):true}'
+            constFeature = rule0.features[0].functor
+            constAsVar = constFeature.upper()
+            rule.rhs.append( parser.Goal(bpcompiler.ASSIGN, [constAsVar,constFeature]) )
+            rule.rhs.append( parser.Goal('weighted',[constAsVar]) )
+            # record the rule name, ie the constant feature
+            self.ruleIds.append(constFeature)
+        elif rule0.features is not None:
             #format is {foo(F):-...}
             assert len(rule0.features)==1,'feature generators of the form {a,b: ... } not supported'
             featureLHS = rule0.features[0]

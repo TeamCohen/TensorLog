@@ -6,10 +6,12 @@ import tensorflow as tf
 import time
 
 from tensorlog import comline
+from tensorlog import config
 from tensorlog import funs
 from tensorlog import ops
 from tensorlog import xcomp
 from tensorlog import expt
+from tensorlog import util
 from tensorlog import learnxcomp
 from tensorlog import dataset
 from tensorlog import declare
@@ -25,7 +27,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     self.summaryFile = summaryFile
     self.session = None
     self.sessionInitialized = None
-    logging.debug('TensorFlowCrossCompiler initialized %.3f Gb' % comline.memusage())
+    logging.debug('TensorFlowCrossCompiler initialized %.3f Gb' % util.memusage())
 
   def close(self):
     if self.session is not None:
@@ -48,16 +50,17 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     initializing them if needed
     """
     if self.session is None:
-      logging.debug('creating session %.3f Gb' % comline.memusage())
+      logging.debug('creating session %.3f Gb' % util.memusage())
       self.session = tf.Session()
-      logging.debug('session created %.3f Gb' % comline.memusage())
+      logging.debug('session created %.3f Gb' % util.memusage())
     if not self.sessionInitialized:
-      logging.debug('initializing session %.3f Gb' % comline.memusage())
-      #for var in self.tfVarsToInitialize:
-      #  self.session.run(var.initializer)
-      self.session.run(tf.global_variables_initializer())
+      logging.debug('initializing session %.3f Gb' % util.memusage())
+      for var in self.tfVarsToInitialize:
+        self.session.run(var.initializer)
+      #self.session.run(tf.global_variables_initializer()) #-kmm
+
       self.sessionInitialized = True
-      logging.debug('session initialized %.3f Gb' % comline.memusage())
+      logging.debug('session initialized %.3f Gb' % util.memusage())
 
   def getInputName(self,mode,inputs=None):
     """ String key for the input placeholder
@@ -144,9 +147,9 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     """
     assert targetMode is not None,'targetMode must be specified'
     assert prog is not None,'prog must be specified'
-    logging.debug('runExpt calling setAllWeights %.3f Gb' % comline.memusage())
+    logging.debug('runExpt calling setAllWeights %.3f Gb' % util.memusage())
     prog.setAllWeights()
-    logging.debug('runExpt finished setAllWeights %.3f Gb' % comline.memusage())
+    logging.debug('runExpt finished setAllWeights %.3f Gb' % util.memusage())
 
     expt.Expt.timeAction('compiling and cross-compiling', lambda:self.ensureCompiled(targetMode,inputs=None))
 
@@ -367,6 +370,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
   def _reparameterizeAndRecordVar(self,val,name,isTrainable):
     initVal = self._softPlusInverse(val) if (isTrainable and xcomp.conf.reparameterizeMatrices) else val
     v = tf.Variable(initVal, name="tensorlog/"+name, trainable=isTrainable)
+    #v = tf.Variable(val, name="tensorlog/"+name, trainable=isTrainable)
     self.summarize(name,v)
     self.tfVarsToInitialize.append(v)
     return v
@@ -411,12 +415,12 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 
   def _softmaxFun2Expr(self,subExpr,typeName):
     # zeros are actually big numbers for the softmax,
-    # so replace them with -20
-    subExprReplacing0WithNeg20 = tf.where(
-      subExpr>0.0,
-      subExpr,
-      tf.ones(tf.shape(subExpr), tf.float32)*(-10.0))
-    return tf.nn.softmax(subExprReplacing0WithNeg20 + self._nullSmoother[typeName])
+    # so replace them with a big negative number
+    subExprReplacing0WithNeg10 = tf.where(
+        subExpr>0.0,
+        subExpr,
+        tf.ones(tf.shape(subExpr), tf.float32)*(-10.0))
+    return tf.nn.softmax(subExprReplacing0WithNeg10 + self._nullSmoother[typeName])
 
   def _transposeMatrixExpr(self,m):
     return tf.transpose(m)
@@ -437,13 +441,13 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
 
   def __init__(self,db,summaryFile=None):
-    logging.debug('SparseMatDenseMsgCrossCompiler calling %r %.3f Gb' % (super(SparseMatDenseMsgCrossCompiler,self).__init__,comline.memusage()))
+    logging.debug('SparseMatDenseMsgCrossCompiler calling %r %.3f Gb' % (super(SparseMatDenseMsgCrossCompiler,self).__init__,util.memusage()))
     super(SparseMatDenseMsgCrossCompiler,self).__init__(db,summaryFile=summaryFile)
-    logging.debug('SparseMatDenseMsgCrossCompiler finished super.__init__ %.3f Gb' % comline.memusage())
+    logging.debug('SparseMatDenseMsgCrossCompiler finished super.__init__ %.3f Gb' % util.memusage())
     # we will need to save the original indices/indptr representation
     # of each sparse matrix
     self.sparseMatInfo = {}
-    logging.debug('SparseMatDenseMsgCrossCompiler initialized %.3f Gb' % comline.memusage())
+    logging.debug('SparseMatDenseMsgCrossCompiler initialized %.3f Gb' % util.memusage())
 
   def _insertHandleExpr(self,key,name,val,broadcast=False):
     (functor,arity) = key
@@ -489,7 +493,8 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
 
   def _unwrapDBMatrix(self,key,mat):
     (indices,indptr,shape) = self.sparseMatInfo[key]
-    return ss.csr_matrix((up,indices,indptr),shape=shape)
+    # note mat will be a SparseTensor in this case.....
+    return ss.csr_matrix((mat.values,indices,indptr),shape=shape)
 
 
   def _unwrapUpdate(self,key,up):

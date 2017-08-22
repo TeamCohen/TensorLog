@@ -1,39 +1,80 @@
-TODO: 
+TODO easy: 
 
+ - new command: simple serialize --input x --output y
+ - general tools for debug/explanation?
+ - simple.Compiler().[de]serialize?
+
+SAMPLING LOSS:
+
+ - tf's implemented methods listed here:
+   https://www.tensorflow.org/extras/candidate_sampling.pdf roughly,
+   tf.nn.sampled_softmax_loss is for cases where you want a
+   distribution over labels and tf.nn.nce_loss is for cases where you
+   don't (but nce_loss requires you to have some fixed number of true
+   labels K in every example).  Examples of train/test implementation
+   are here https://www.tensorflow.org/api_docs/python/tf/nn/nce_loss.
+
+   all require a low-dimensional input (dimension D) which is then
+   passed through a linear map + bias to produce the N output classes.
+   so they only can be used if we first compress the output to D bits.
+   maybe that's ok though? maybe as a bllom filter?
+
+   nce_loss(
+    weights,     // learned matrix [num_classes, D]
+    biases,      // learned vector [num_classes]
+    labels,      // shape [batch_size, num_true]
+    inputs,      // shape [batch_size, D]
+    num_sampled, // scalar
+    num_classes, // scalar
+    num_true=1,
+    sampled_values=None, // or produce with a sampler
+    remove_accidental_hits=False,
+    partition_strategy='mod',
+    name='nce_loss'
+   )
+  
+TODO easy cleanups?
+ - comline to gflags?
+
+TODO major:
+ - alternative to calling out to tensorlog would be to
+ iteratively process multiple-input, single-output plugins.
+ for i in plugInGoalPositions:
+   compile opsequence for A<=B1,...,B[i-1]
+   add op to compute output of B[i] from input
+   syntactic rule: links in polytree cannot cross boundaries
+    defined by plugin literals
+- having multiple inputs in bpcompiler would also be nice....
+ hard would this be to do?
+
+ - autoset_db_params: schema predicates can be marked 'trainable' when you
+ declare their types, OR will be automarked if they appear after a //
+ - tlog(autoset_db_params=True) will only set UNDEFINED params
+ - you can load just parameters, not a whole DB
+
+ - onhold (see below): looking at sparse implementation of softmax....but it
+   doesn't seem to be differentiable the way I set it up. can it be?
+   maybe I should be using a sampling softmax? or nce_loss?
+
+ - multi-task datasets
+
+
+NATIVE:
  - check y - p vs p - y in tensorlog (and gradient sign)
  - check family dataset
  - check subfunction reuse in grid
  - add __repr__ functions for learners so you can echo them in expt
-
  - cleanup gradient stuff:
  -- plearn tasks should postprocess the parameters via rowsum for the paramGrad weights - sort of like a combiner
  -- plearn postprocessing should do weighted average of the gradients - maybe do with with a bunch of pairwise addition tasks?
-
  - need to test Adagrad on real data
    - update: regularization runs but it possibly broken
 
- - faster database loader/fact buffer flushing
- - think about typed predicates and dense matrices
- -- maybe extend env so that env.matrixType[v] indicates type: sparse or dense+offset
- -- have ops dispatch to the correct operator as appropriate
-
- -- rather than types, I could just read in all constants in order so that
- you can group similar-typed ones together (eg, have 'foo.order' be 
- an extra input in programFiles and add a bit to the matrixdb to 
- loadConstants)
+NATIVE CLEANUPS: see Cleanup-notes.txt
 
 TUTORIAL/DOCS
 
   see wiki
-
-TODO: Thinking thru functions and re-use: I'm not sure that re-used functions are handled properly.
-They cache their outputs so if they are called multiple times at the same level with different
-inputs we really need a copy of each instance. Proposed test case:
-
- 	 p(X,Y) :- q(X,Y),r(Y,Z),r(X,W).
-	 q(a,b)
-	 r(X,Y) :- s(X,Y).  # so it's a re-used function
-	 s(a,c). s(b,c).
 
 BUGS: 
 
@@ -44,21 +85,46 @@ DESIGN FLAWS: 1 fails but 2 is ok even tho both are polytrees.
  1 p(X,Y) :- q(X,X1),r(Y,Y1),s(X1,Y1)
  2 p(X,Y) :- q(X,X1),s(X1,Y1),r(Y,Y1)
 
-EXTENSIONS:
- - throw sensible error when a novel rule constant is seen
 
-config:
- - might want to include, in config.py, an overall 'top' configuration
- which includes the others as subconfigurations.  also might want to
- serialize/deserialize them.
+USE CASES FOR TF/TLOG interface:
 
-learning:
- - serializable multi-task datasets
-  propprExamplesAsData(db,fileName): convert to provide (xdict,ydict) outputs
- - adagrad & holdout set for convergence
+ -- training from partial information, known pos and known negatives (try this out!)
+ --- define two prediction predicates: predict(X,Y) and predictComplement(X,Y)
+ --- data for predict is known pos, for predictComplement, known neg
+ set up optimization as follows:
+   shared_input = tf.PlaceHolder(....)
+   f1 = tlog.inference("predict/io", input=shared_input)
+   f2 = tlog.inference("predictComplement/io", input=shared_input)
+   loss = tlog.loss("predict/io") - tlog.loss("predictComplement/io")
+   ...
+ -- learn conjunction of properties (try this out!)
+   answer1(Q,Y) <= mention(Q,EC), entity(EC,E), chain1(E,Y) // (w1(F) | context(EC,C), feature(C,F))
+   answer2(...) <= ...
+   shared_input = tf.PlaceHolder(....)   
+   f1 = tlog.inference("answer1/io", input=shared_input)
+   f2 = tlog.inference("answer2/io", input=shared_input)
+   ...
+   f = f1 * ... * fk
+   loss = tlog.loss_for("answer/io", inference=f, input=shared_input, target_output=...)
 
-MORE EXPERIMENTS:
-
- - Rose's representation learning/recommendation
- - SSL
-
+--------------------
+  def _softmaxFun2Expr(self,subExpr,typeName):
+    if xcomp.conf.softmax_alg == 'dense':
+      # zeros are actually big numbers for the softmax,
+      # so replace them with a big negative number
+      subExprReplacing0WithNeg10 = tf.where(
+          subExpr>0.0,
+          subExpr,
+          tf.ones(tf.shape(subExpr), tf.float32)*(-10.0))
+      return tf.nn.softmax(subExprReplacing0WithNeg10 + self._nullSmoother[typeName])
+    elif xcomp.conf.softmax_alg == 'sparse':
+      # inference is ok but the gradients aren't there....problem is this use of 'where', it seems
+      smoothedSubexpr = subExpr + self._nullSmoother[typeName]
+      nz_indices = tf.where(tf.not_equal(smoothedSubexpr, tf.constant(0, dtype=tf.float32)))
+      nz_values = tf.gather_nd(smoothedSubexpr, nz_indices)
+      sparseSubexpr = tf.SparseTensor(nz_indices, nz_values, tf.cast(tf.shape(smoothedSubexpr),tf.int64))
+      sparseSoftmax = tf.sparse_softmax(sparseSubexpr)
+      denseSoftmax = tf.sparse_tensor_to_dense(sparseSoftmax)
+      return denseSoftmax
+    else:
+      assert False
