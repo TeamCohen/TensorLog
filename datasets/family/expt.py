@@ -31,16 +31,24 @@ if xctargets.tf:
     CROSSLEARNERS[c]=tensorflowxcomp.FixedRateGDLearner
 
 stem = "kinship"
-if __name__=="__main__":
-    if not os.path.exists("tmp-cache"): os.mkdir("tmp-cache")
+def setExptParams():
     db = comline.parseDBSpec('tmp-cache/{stem}.db|inputs/{stem}.cfacts:inputs/{stem}-rule.cfacts'.format(stem=stem))
     trainData = comline.parseDatasetSpec('tmp-cache/{stem}-train.dset|inputs/{stem}-train.examples'.format(stem=stem),db)
     testData = comline.parseDatasetSpec('tmp-cache/{stem}-test.dset|inputs/{stem}-test.examples'.format(stem=stem),db)
-    print 'train:','\n  '.join(trainData.pprint())
-    print 'test: ','\n  '.join(testData.pprint())
+    #print 'train:','\n  '.join(trainData.pprint())
+    #print 'test: ','\n  '.join(testData.pprint())
     prog = program.ProPPRProgram.loadRules("%s-train-isg.ppr" % stem,db=db)
     prog.setRuleWeights()
     prog.maxDepth=4
+    return (prog, trainData, testData)
+
+def runMain():
+    if not os.path.exists("tmp-cache"): os.mkdir("tmp-cache")
+    (prog, trainData, testData) = setExptParams()
+    print accExpt(prog,trainData,testData)
+    print "\n".join(["%s: %s" % i for i in xc_accExpt(prog,trainData,testData).items()])
+    
+def accExpt(prog,trainData,testData):
     params = {'prog':prog,
               'trainData':trainData,
               'testData':testData,
@@ -49,8 +57,10 @@ if __name__=="__main__":
               'savedTrainExamples':'tmp-cache/%s-train.examples' % stem,
               'savedTestExamples':'tmp-cache/%s-test.examples' % stem,
     }
-    expt.Expt(params).run()
-    
+    return expt.Expt(params).run()
+
+def xc_accExpt(prog,trainData,testData):
+    results = {}
     for compilerClass in CROSSCOMPILERS:
         xc = compilerClass(prog)
         print expt.fulltype(xc)
@@ -67,4 +77,8 @@ if __name__=="__main__":
                   'learner':learner,
         }
         
-        testAcc,testXent = expt.Expt(params).run()
+        results[expt.fulltype(xc)] = expt.Expt(params).run()
+    return results
+
+if __name__=="__main__":
+    runMain()

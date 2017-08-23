@@ -3,7 +3,7 @@
 VPATH= raw
 
 expt.log: 
-	python family.py > expt.log
+	python expt.py > expt.log
 
 setup:
 	mkdir -p temp-cache
@@ -16,4 +16,7 @@ actual.txt: expt.log
 	done
 
 check: actual.txt
-	diff $< expected.txt
+	diff -y $< expected.txt || true
+
+unittest:
+	python testexpt.py
