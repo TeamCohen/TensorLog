@@ -7,10 +7,10 @@ import expt
 
 def setup_tlog():
     (prog, native_trainData, native_testData) = expt.setExptParams()
-    tlog = simple.Compiler(db=prog.db, prog=prog, sutoset_db_params=False)
+    tlog = simple.Compiler(db=prog.db, prog=prog, autoset_db_params=False)
     train_data = tlog.annotate_big_dataset(native_trainData)
     test_data = tlog.annotate_small_dataset(native_testData)
-    return (tlog,train_data,test_data,native_trainData.modesToLearn)
+    return (tlog,train_data,test_data,native_trainData.modesToLearn())
 
 def trainAndTest(tlog,train_data,test_data,modes):
     result={}
