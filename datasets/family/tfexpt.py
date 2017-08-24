@@ -36,17 +36,21 @@ def trainAndTest(tlog,train_data,test_data,modes):
         actual_y = tlog.target_output_placeholder(mode)
         correct_predictions = tf.equal(tf.argmax(actual_y,1),tf.argmax(predicted_y,1))
         accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
-        if mode in test_data:
-            UX,UY = test_data[mode]
+        mode_str = str(mode)
+        if mode_str in test_data:
+            UX,UY = test_data[mode_str]
             test_fd = {tlog.input_placeholder_name(mode):UX, tlog.target_output_placeholder_name(mode):UY}
             acc = session.run(accuracy, feed_dict=test_fd)
-            print mode, 'test acc',acc
-            result[mode] = acc
+            print mode_str, 'test acc',acc
+            result[mode_str] = acc
     return result
 
 def runMain():
     params = setup_tlog()
-    trainAndTest(*params)
+    return trainAndTest(*params)
 
 if __name__=='__main__':
-    runMain()
+    #params = setup_tlog()
+    accs = runMain()
+    for mode,acc in accs.items():
+        print mode,'acc',acc
