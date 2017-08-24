@@ -16,14 +16,6 @@ if xctargets.theano:
     theanoxcomp.SparseMatDenseMsgCrossCompiler
     ]:
     CROSSCOMPILERS.append(c)
-if xctargets.tf:
-  from tensorlog import tensorflowxcomp
-  for c in [
-    tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-    tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
-    ]:
-    CROSSCOMPILERS.append(c)
-  import tensorflow as tf
 
 
 modes = ["t_stress/io", "t_influences/io","t_cancer_spont/io", "t_cancer_smoke/io"]
