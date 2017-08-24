@@ -41,7 +41,7 @@ def runMain(num=250):
 if __name__=="__main__":
   acc,loss = runMain() # expect 0.21,0.22
   print 'acc,loss',acc,loss
-  params = setExptParams(num)
+  params = setExptParams(250)
   for compilerClass in CROSSCOMPILERS:
       start0=time.time()
       xc = compilerClass(ti.prog)
