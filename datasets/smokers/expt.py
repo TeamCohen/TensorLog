@@ -60,9 +60,6 @@ if __name__=="__main__":
             xc.ensureCompiled(mode)
             print 'eval',modeString,
             start = time.time()
-            if expt.fulltype(xc).find("tensorflow")>=0:
-              xc.ensureSessionInitialized()
-              xc.session.run(tf.global_variables_initializer())
             xc.inferenceFunction(mode)(X)
             print 'time',time.time() - start,'sec'
         print 'total time',expt.fulltype(xc),time.time()-start0,'sec'
