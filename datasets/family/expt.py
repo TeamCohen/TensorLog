@@ -21,14 +21,6 @@ if xctargets.theano:
     ]:
     CROSSCOMPILERS.append(c)
     CROSSLEARNERS[c]=theanoxcomp.FixedRateGDLearner
-if xctargets.tf:
-  from tensorlog import tensorflowxcomp
-  for c in [
-    tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-    tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
-    ]:
-    CROSSCOMPILERS.append(c)
-    CROSSLEARNERS[c]=tensorflowxcomp.FixedRateGDLearner
 
 stem = "kinship"
 def setExptParams():
