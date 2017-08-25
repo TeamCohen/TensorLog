@@ -5,7 +5,21 @@ from tensorlog import expt
 from tensorlog import learn
 from tensorlog import plearn
 from tensorlog import comline
+from tensorlog import xctargets
+from tensorlog import declare
 
+CROSSCOMPILERS = []
+CROSSLEARNERS = {}
+if xctargets.theano:
+  from tensorlog import theanoxcomp
+  for c in [
+    theanoxcomp.DenseMatDenseMsgCrossCompiler,
+    theanoxcomp.SparseMatDenseMsgCrossCompiler
+    ]:
+    CROSSCOMPILERS.append(c)
+    CROSSLEARNERS[c]=theanoxcomp.FixedRateGDLearner
+    
+modeString = 'answer/io'
 def setExptParams(num):
     db = comline.parseDBSpec('tmp-cache/train-%d.db|inputs/train-%d.cfacts' % (num,num))
     trainData = comline.parseDatasetSpec('tmp-cache/train-%d.dset|inputs/train-%d.exam'  % (num,num), db)
@@ -16,7 +30,7 @@ def setExptParams(num):
     return {'prog':prog,
             'trainData':trainData,
             'testData':testData,
-            'targetMode':'answer/io',
+            'targetMode':modeString,
             'savedModel':'learned-model.db',
             'learner':learner
     }
@@ -30,3 +44,16 @@ def runMain(num=250):
 if __name__=="__main__":
   acc,loss = runMain() # expect 0.21,0.22
   print 'acc,loss',acc,loss
+  params = setExptParams(250)
+  for compilerClass in CROSSCOMPILERS:
+      xc = compilerClass(params['prog'])
+      print expt.fulltype(xc)
+      # compile everything
+      mode = declare.asMode(modeString)
+      xc.ensureCompiled(mode)
+      learner = CROSSLEARNERS[compilerClass](params['prog'],xc)
+      params.update({
+          'savedModel':'learned-model.%s.db' % (expt.fulltype(xc)),
+          'learner':learner,
+          })
+      print 'acc,loss',expt.Expt(params).run()

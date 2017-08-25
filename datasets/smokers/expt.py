@@ -16,14 +16,6 @@ if xctargets.theano:
     theanoxcomp.SparseMatDenseMsgCrossCompiler
     ]:
     CROSSCOMPILERS.append(c)
-if xctargets.tf:
-  from tensorlog import tensorflowxcomp
-  for c in [
-    tensorflowxcomp.DenseMatDenseMsgCrossCompiler,
-    tensorflowxcomp.SparseMatDenseMsgCrossCompiler,
-    ]:
-    CROSSCOMPILERS.append(c)
-  import tensorflow as tf
 
 
 modes = ["t_stress/io", "t_influences/io","t_cancer_spont/io", "t_cancer_smoke/io"]
@@ -68,9 +60,6 @@ if __name__=="__main__":
             xc.ensureCompiled(mode)
             print 'eval',modeString,
             start = time.time()
-            if expt.fulltype(xc).find("tensorflow")>=0:
-              xc.ensureSessionInitialized()
-              xc.session.run(tf.global_variables_initializer())
             xc.inferenceFunction(mode)(X)
             print 'time',time.time() - start,'sec'
         print 'total time',expt.fulltype(xc),time.time()-start0,'sec'
