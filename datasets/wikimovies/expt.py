@@ -1,4 +1,5 @@
 import logging
+import os
 
 from tensorlog import masterconfig
 from tensorlog import expt
@@ -36,6 +37,7 @@ def setExptParams(num):
     }
 
 def runMain(num=250):
+    if not os.path.exists("tmp-cache"): os.mkdir("tmp-cache")
     logging.basicConfig(level=logging.INFO)
     masterconfig.masterConfig().matrixdb.allow_weighted_tuples=False
     params = setExptParams(num)
