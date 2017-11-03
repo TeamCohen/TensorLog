@@ -70,8 +70,11 @@ def onehot(i,original_dim):
 # summary:
 #
 # let N be original space, M be embedding space
-# H maps k-hot vectors to CM embeddings:
+# H (h in code) maps k-hot vectors to CM embeddings:
 #   for all i, H[i,j_k]=1 for D distinct hashes of i, { j_1, ..., j_K }
+#   i.e., the J-th column of H indicates which indices [in the original N space] get hashed to index J in the c-m space
+#
+# m is a N-by-N matrix, intended to encode a relation p(X,Y)
 #
 # 1) to embed a one-hot vector v, compute ev = vH
 # 2) to embed a matrix M mapping i to i' in the original space,
@@ -82,9 +85,9 @@ def onehot(i,original_dim):
 # 4) to estimate (vM)[i,i1] from w = (ev eM), look at
 #    min{ w[ w >= (u_i1)H ] }  ---I think, not tested
 
-def run_main():
-  original_dim = 9
-  embedded_dim = 10
+def run_main1():
+  original_dim = 10
+  embedded_dim = 5
 
   #hash_salt = [hash("william"),hash("cohen"),hash("rubber duckie")]
   hash_salt = [hash("william"),hash("cohen")]
@@ -96,7 +99,6 @@ def run_main():
   show('mh',mh,code='embedded',h=h)
   #this isn't quite right since you need to allow for possibility
   #of hash collisions in h
-  #hTbyD =  h.transpose()*(1.0/len(hash_salt))
   oneByD = np.reciprocal(h.sum(1))
   hTbyD =  h.transpose()*oneByD
   show('h^T/D',hTbyD)
@@ -130,4 +132,14 @@ def run_main():
   print 'tot_collisions',tot_collisions,'tot',tot
 
 if __name__ == "__main__":
-  run_main()
+  original_dim = 10
+  embedded_dim = 5
+  hash_salt = [hash("william"),hash("cohen")]
+  H = embedder_matrix(original_dim,embedded_dim,hash_salt)
+  x = onehot(7,original_dim)
+  ex = np.dot(x,H)
+  print 'x',x
+  print 'ex',ex
+
+
+  
