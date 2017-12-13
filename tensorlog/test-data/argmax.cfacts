@@ -1,0 +1,16 @@
+# :- p(century,year)
+# :- nations(year)
+nations	1896	14
+nations	1900	24
+nations	1904	12
+nations	2004	201
+nations	2008	204
+nations	2012	204
+
+# :- olympics(century,year)
+olympics	1800	1896
+olympics	1900	1900
+olympics	1900	1904
+olympics	2000	2004
+olympics	2000	2008
+olympics	2000	2012
