@@ -1148,11 +1148,47 @@ class TestPlugins(unittest.TestCase):
     ruleStrings = ['predict(X,Y) :- hasWord(X,W),posPair(W,P1),negPair(W,P2),isect(P1,P2,Y).']
     plugins = program.Plugins()
     plugins.define('isect/iio', lambda x1,x2:x1*x2, lambda t1,t2:t1)
+    self.assertTrue(plugins.isDefined(declare.asMode('isect/iio')))
     self.check_learning_with_udp(ruleStrings,plugins)
+    
+  def argmax(self):
+    bpcompiler.conf.trace = True
+    ruleStrings = ['predict(X,Y):-olympics(X,Z),nations(Z),argmax(Z,Y).']
+    plugins = program.Plugins()
+    plugins.define('argmax/io',lambda x1:tf.nn.softmax(x1), lambda t1:t1)
+    db = matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,'argmax.cfacts'))
+    rules = testtensorlog.rules_from_strings(ruleStrings)
+    prog = program.ProPPRProgram(rules=rules,db=db,plugins=plugins)
+    prog.setAllWeights()
+    mode = declare.asMode("predict/io")
+    prog.compile(mode)
+    fun = prog.function[(mode,0)]
+    print "\n".join(fun.pprint())
+    tlog = simple.Compiler(db=db, prog=prog)
+    
+    data = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"argmax.exam"))
+    mode = data.keys()[0]
+    UX,UY = data[mode]
+    inference = tlog.inference(mode)
+    trueY = tf.placeholder(tf.float32, shape=UY.shape, name='tensorlog/trueY')
+    correct = tf.equal(tf.argmax(trueY,1), tf.argmax(inference,1))
+    accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+    test_batch_fd = {tlog.input_placeholder_name(mode):UX, trueY.name:UY}
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
+    #acc0 = session.run(accuracy, feed_dict=test_batch_fd)
+    #print 'initial accuracy',acc0
+    acc0 = session.run(inference, feed_dict=test_batch_fd)
+    print "inference results:"
+    print acc0
+    print np.argmax(acc0,1)
+    print "trueY:"
+    print UY
+    print np.argmax(UY,1)
 
   @unittest.skipUnless(xctargets.tf,"Tensorflow not available")
-  def check_learning_with_udp(self,ruleStrings,plugins):
-    db = matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"))
+  def check_learning_with_udp(self,ruleStrings,plugins,dbfile=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts")):
+    db = matrixdb.MatrixDB.loadFile(dbfile)
     rules = testtensorlog.rules_from_strings(ruleStrings)
     prog = program.ProPPRProgram(rules=rules,db=db,plugins=plugins)
     prog.setAllWeights()
