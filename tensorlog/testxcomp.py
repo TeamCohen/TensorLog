@@ -1176,15 +1176,18 @@ class TestPlugins(unittest.TestCase):
     test_batch_fd = {tlog.input_placeholder_name(mode):UX, trueY.name:UY}
     session = tf.Session()
     session.run(tf.global_variables_initializer())
-    #acc0 = session.run(accuracy, feed_dict=test_batch_fd)
-    #print 'initial accuracy',acc0
-    acc0 = session.run(inference, feed_dict=test_batch_fd)
-    print "inference results:"
-    print acc0
-    print np.argmax(acc0,1)
-    print "trueY:"
-    print UY
-    print np.argmax(UY,1)
+    acc0 = session.run(accuracy, feed_dict=test_batch_fd)
+    print 'initial accuracy',acc0
+    self.assertTrue(acc0>0.9)
+    session.close()
+    
+#     acc0 = session.run(inference, feed_dict=test_batch_fd)
+#     print "inference results:"
+#     print acc0
+#     print np.argmax(acc0,1)
+#     print "trueY:"
+#     print UY
+#     print np.argmax(UY,1)
 
   @unittest.skipUnless(xctargets.tf,"Tensorflow not available")
   def check_learning_with_udp(self,ruleStrings,plugins,dbfile=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts")):
