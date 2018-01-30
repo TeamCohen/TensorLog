@@ -1,0 +1,2 @@
+Term7(A,B) :- diffrule(A,B).
+Term16(A,B) :- diffrule(A,B).
