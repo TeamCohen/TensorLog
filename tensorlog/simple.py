@@ -311,8 +311,8 @@ class Compiler(object):
         x_dict[mode] = self.xc.unwrapInput(x)
         y_dict[mode] = self.xc.unwrapInput(y)
         dset = dataset.Dataset(x_dict,y_dict)
-      for mode,bx,by in dset.minibatchIterator(batchSize=batch_size,shuffleFirst=shuffle_first):
-        yield str(mode),(self.xc.wrapInput(bx),self.xc.wrapInput(by))
+        for mode,bx,by in dset.minibatchIterator(batchSize=batch_size,shuffleFirst=shuffle_first):
+          yield str(mode),(self.xc.wrapInput(bx),self.xc.wrapInput(by))
     elif isinstance(dataset_obj, dataset.Dataset):
       dset = dataset_obj
       for mode,bx,by in dset.minibatchIterator(batchSize=batch_size,shuffleFirst=shuffle_first):
