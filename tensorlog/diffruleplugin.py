@@ -2,9 +2,11 @@ import tensorflow as tf
 import numpy as np
 import argparse
 import os
+import time
 
 from tensorlog import xcomp
 from tensorlog import tensorflowxcomp as tfx
+from tensorlog import symtab
 
 _TFZERO=tf.constant(0,dtype=tf.float32)
 
@@ -25,6 +27,9 @@ class DiffRule(object):
     self.accuracy = option.accuracy
     self.seed = option.seed
     self.norm = not option.no_norm
+    self.typetab = symtab.SymbolTable(xc.db.schema.getTypes())
+    self.domain = xc.db.schema.getDomain(mode.getFunctor(),mode.getArity())
+    self.range = xc.db.schema.getRange(mode.getFunctor(),mode.getArity())
     
   def _random_uniform_unit(self, r, c):
     """ Initialize random and unit row norm matrix of size (r, c). """
@@ -32,17 +37,20 @@ class DiffRule(object):
     init_matrix = np.random.uniform(-bound, bound, (r, c))
     init_matrix = np.array(map(lambda row: row / np.linalg.norm(row), init_matrix))
     return init_matrix
-  def _onehot_to_indices(self,onehots):
-    return tf.where(tf.not_equal(onehots, _TFZERO))[:,1]
+  def _nhot_to_indices(self,nhots):
+    return tf.where(tf.not_equal(nhots, _TFZERO))
   def _build_input(self):
     self.sources = self.xc._createPlaceholder('diffrule_X','vector',None)
-    self.tails = self._onehot_to_indices(self.sources)
+    self.tails = self._nhot_to_indices(self.sources)[:,1]
 
     self.targets = self.xc._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',None)
-    self.heads = self._onehot_to_indices(self.targets)
+    target_indices = self._nhot_to_indices(self.targets)
+    self.heads = target_indices[:,1]
+    # matrix s.t. MP = prediction matrix with rows duplicated where a query has >1 solution
+    self.multiclass_adapter = tf.one_hot(indices=target_indices[:,0],depth=tf.shape(self.targets)[0])
     
-    # typeless for now; we just need the max size
-    self.num_operator = len(self.xc.possibleOps(self.sources))
+    
+    self.num_operator = len(self.xc.possibleOps(self.sources,self.domain))
         
     self.queries = tf.placeholder(tf.int32, [None, self.num_step], 'diffrule_query')
     query_embedding_params = tf.Variable(self._random_uniform_unit(
@@ -132,9 +140,11 @@ class DiffRule(object):
         database_results = []
         # possibleOps returns a list of expressions that have each been
         # multiplied by memory_read already
-        operators = self.xc.possibleOps(memory_read)
-        for r,op_expr in enumerate(operators):
+        operators = self.xc.possibleOps(memory_read, self.domain) # type here should be updated for later steps
+        for r,op_possibility in enumerate(operators):
           op_attn = attention_operators[t][r]
+          # just drop the output type on the floor for now
+          op_expr = op_possibility if self.xc.db.isTypeless() else op_possibility[0]
           dri = op_expr * op_attn
           database_results.append(dri)
 
@@ -153,17 +163,21 @@ class DiffRule(object):
       else:
         # predictions: tensor of size (batch_size, num_entity)
         self.predictions = memory_read
+        # mc_predictions: tensor of size (|self.heads|, num_entity
+        self.mc_predictions = tf.matmul(self.multiclass_adapter,self.predictions)
                        
     self.final_loss = -tf.reduce_sum(self.targets * tf.log(tf.maximum(self.predictions, self.thr)), 1)
      
     if not self.accuracy:
+      # (this is the default computation)
       self.in_top = tf.nn.in_top_k(
-                      predictions=self.predictions,
+                      predictions=self.mc_predictions,
                       targets=self.heads,
                       k=self.top_k)
     else: 
-      _, indices = tf.nn.top_k(self.predictions, self.top_k, sorted=False)
-      self.in_top = tf.equal(tf.squeeze(indices), self.heads)
+      _, indices = tf.nn.top_k(self.mc_predictions, self.top_k, sorted=False)
+      # NB: this will underestimate accuracy in proportion to the average number of solutions per query
+      self.in_top = tf.equal(tf.squeeze(indices), self.heads) 
      
     self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
     gvs = self.optimizer.compute_gradients(tf.reduce_mean(self.final_loss))
@@ -180,7 +194,6 @@ class DiffRule(object):
         return (tf.clip_by_value(g, low, high), v)
     else:
         return (g, v)
-
       
 class Option(object):
     def __init__(self, d):
@@ -229,7 +242,30 @@ def make_parser():
     parser.add_argument('--rand_break', default=False, action="store_true")
     parser.add_argument('--accuracy', default=False, action="store_true")
     parser.add_argument('--top_k', default=10, type=int)
-    return parser    
+    return parser
+
+def defaultOptions():
+  parser = make_parser()
+  d = vars(parser.parse_args())
+  option = Option(d)
+#   print "Config"
+#   print "\n".join("%s: %s" % (str(k),str(v)) for k,v in d.iteritems())
+  
+  option.max_epoch=10
+  option.min_epoch=5
+  option.tag = time.strftime("%y-%m-%d-%H-%M")
+  option.datadir="diffruleplugin"
+  option.this_expsdir = os.path.join(os.path.join(option.datadir, "exps"), option.tag)
+  if not os.path.exists(option.this_expsdir):
+      os.makedirs(option.this_expsdir)
+  option.ckpt_dir = os.path.join(option.this_expsdir, "ckpt")
+  if not os.path.exists(option.ckpt_dir):
+      os.makedirs(option.ckpt_dir)
+  option.model_path = os.path.join(option.ckpt_dir, "model")
+  option.print_per_batch=3
+  option.resplit=False
+  option.save()
+  return option
 
 def insertDRIntoXC(xc,drmode,options):
     """
