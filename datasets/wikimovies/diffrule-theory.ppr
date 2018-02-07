@@ -1,0 +1,1 @@
+answer(Q,A) :- diffrule(Q,A).

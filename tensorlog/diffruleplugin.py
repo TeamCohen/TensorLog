@@ -3,12 +3,17 @@ import numpy as np
 import argparse
 import os
 import time
+import logging
 
 from tensorlog import xcomp
 from tensorlog import tensorflowxcomp as tfx
 from tensorlog import symtab
+from tensorlog import config
+
+conf = config.Config()
 
 _TFZERO=tf.constant(0,dtype=tf.float32)
+_TFEYE2=tf.eye(2,dtype=tf.float32)
 
 class DiffRule(object):
   def __init__(self, xc, mode, option):
@@ -16,7 +21,6 @@ class DiffRule(object):
     self.mode = mode
     self.num_step = option.num_step
     self.num_query = xc.db.numMatrices()
-    self.num_entity = xc.db.dim()
     self.query_embed_size = option.query_embed_size
     self.rnn_state_size = option.rnn_state_size
     self.num_layer = option.num_layer
@@ -28,8 +32,10 @@ class DiffRule(object):
     self.seed = option.seed
     self.norm = not option.no_norm
     self.typetab = symtab.SymbolTable(xc.db.schema.getTypes())
-    self.domain = xc.db.schema.getDomain(mode.getFunctor(),mode.getArity())
-    self.range = xc.db.schema.getRange(mode.getFunctor(),mode.getArity())
+    self._domain = xc.db.schema.getDomain(mode.getFunctor(),mode.getArity())
+    self._range = xc.db.schema.getRange(mode.getFunctor(),mode.getArity())
+    logging.debug("DiffRule domain: %s"%self._domain)
+    logging.debug(" DiffRule range: %s"%self._range)
     
   def _random_uniform_unit(self, r, c):
     """ Initialize random and unit row norm matrix of size (r, c). """
@@ -40,18 +46,20 @@ class DiffRule(object):
   def _nhot_to_indices(self,nhots):
     return tf.where(tf.not_equal(nhots, _TFZERO))
   def _build_input(self):
-    self.sources = self.xc._createPlaceholder('diffrule_X','vector',None)
+    self.sources = self.xc._createPlaceholder('diffrule_X','vector',self._domain)
     self.tails = self._nhot_to_indices(self.sources)[:,1]
 
-    self.targets = self.xc._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',None)
+    self.targets = self.xc._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self._range)
     target_indices = self._nhot_to_indices(self.targets)
     self.heads = target_indices[:,1]
-    # matrix s.t. MP = prediction matrix with rows duplicated where a query has >1 solution
+    # multiclass_adapter: matrix s.t. MP duplicates the rows of
+    # the prediction matrix wherever a query has >1 solution
     self.multiclass_adapter = tf.one_hot(indices=target_indices[:,0],depth=tf.shape(self.targets)[0])
     
+    # use a dummy subExpr here; we just need the total size
+    self.num_operator = sum(len(self.xc.possibleOps(_TFEYE2,_type)) for _type in self.xc.db.schema.getTypes())
     
-    self.num_operator = len(self.xc.possibleOps(self.sources,self.domain))
-        
+    # NB: we probably don't need this subsystem anymore..?
     self.queries = tf.placeholder(tf.int32, [None, self.num_step], 'diffrule_query')
     query_embedding_params = tf.Variable(self._random_uniform_unit(
                                                   self.num_query + 1,  # <END> token 
@@ -110,14 +118,29 @@ class DiffRule(object):
     # Each tensor represents the attention over currently populated memory cells. 
     attention_memories = []
     
-    # memories: (will be) a tensor of size (batch_size, t+1, num_entity),
+    # memories: (will be) for each type,
+    # a tensor of size (batch_size, t+1, num_entity),
     # where t is the current step (zero indexed)
-    # Then tensor represents currently populated memory cells.
-    memories = tf.expand_dims(
+    # The tensor represents currently populated memory cells.
+    memories = {}
+    # fill all types with zero first
+    for _type in self.xc.db.schema.getTypes():
+      #                           batch_size             t+1  num_entity
+      memories[_type] = tf.zeros([tf.shape(self.tails)[0], 1, self.xc.db.dim(_type)])
+    # then initialize the domain memory with the input distribution
+    memories[self._domain]= tf.expand_dims(
                      tf.one_hot(
                             indices=self.tails,
-                            depth=self.num_entity), 1) 
+                            depth=self.xc.db.dim(self._domain)), 1) 
     
+    def read_from_memory(read_t,read_type):
+      """Get the memory matrix at a time t for a particular db type"""
+      return tf.squeeze(
+        tf.matmul(
+          tf.expand_dims(attention_memories[read_t], 1),
+          memories[read_type]),
+        squeeze_dims=[1]) 
+
     for t in xrange(self.num_step):
       attention_memories.append(
                       tf.nn.softmax(
@@ -127,45 +150,69 @@ class DiffRule(object):
                               tf.stack(rnn_outputs[0:t + 1], axis=2)),
                       squeeze_dims=[1])))
       
-      # memory_read: tensor of size (batch_size, num_entity)
-      memory_read = tf.squeeze(
-                      tf.matmul(
-                          tf.expand_dims(attention_memories[t], 1),
-                          memories),
-                      squeeze_dims=[1])
+      logging.debug( "t= %d of %d"%(t,self.num_step-1))
+      logging.debug( " attention_memories %d %s"%(len(attention_memories),str(attention_memories[-1].shape)))
+      logging.debug( " memories\n *%s"%"\n *".join(str(m.shape) for m in memories.values()))
+      
+      offset=0 # keep track of our place in attention_operators
       
       if t < self.num_step - 1:
-        # database_results: (will be) a list of num_operator tensors,
-        # each of size (batch_size, num_entity).
-        database_results = []
-        # possibleOps returns a list of expressions that have each been
-        # multiplied by memory_read already
-        operators = self.xc.possibleOps(memory_read, self.domain) # type here should be updated for later steps
-        for r,op_possibility in enumerate(operators):
-          op_attn = attention_operators[t][r]
-          # just drop the output type on the floor for now
-          op_expr = op_possibility if self.xc.db.isTypeless() else op_possibility[0]
-          dri = op_expr * op_attn
-          database_results.append(dri)
+        logging.debug( " chaining through the database")
 
-        added_database_results = tf.add_n(database_results)
-        if self.norm:
-            added_database_results /= tf.maximum(self.thr, tf.reduce_sum(added_database_results, axis=1, keep_dims=True))                
-        
-        if self.dropout > 0.:
-          added_database_results = tf.nn.dropout(added_database_results, keep_prob=1. - self.dropout)
+        # database_results: (will be) 
+        # for each output type,
+        # a list of num_operator tensors,
+        # each of size (batch_size, num_entity).
+        #
+        # we need to accumulate weight on output types 
+        # from all available input types, so this has to persist across 
+        # the input type loop.
+        database_results = {}
+        for input_type in memories.keys():
+          logging.debug( "  from %s"% input_type)
+          # memory_read: a tensor of size (batch_size, num_entity[input_type])
+          memory_read = read_from_memory(t,input_type)
+
+          # possibleOps returns a list of expressions that have each been
+          # multiplied by memory_read already
+          operators = self.xc.possibleOps(memory_read, input_type)
+          for r,op_possibility in enumerate(operators):
+            # offset ensures operators don't overlap between input types
+            op_attn = attention_operators[t][offset+r]
+            op_expr,op_outputType = (op_possibility,self._range) if self.xc.db.isTypeless() else op_possibility
+            if op_outputType not in database_results:
+              database_results[op_outputType] = []
+            dri = op_expr * op_attn
+            database_results[op_outputType].append(dri)
+          offset += len(operators)
+        # endfor input type 
+
+        # now sum over all results for each output type
+        # regardless of input type
+        added_database_results = {}
+        for _ot in database_results:
+          added_database_results[_ot]=tf.add_n(database_results[_ot])
+          
+          if self.norm:
+            added_database_results[_ot] /= tf.maximum(self.thr, tf.reduce_sum(added_database_results[_ot], axis=1, keep_dims=True))                
+
+          if self.dropout > 0.:
+            added_database_results[_ot] = tf.nn.dropout(added_database_results[_ot], keep_prob=1. - self.dropout)
 
         # Populate a new cell in memory by concatenating.  
-        memories = tf.concat(
-            [memories,
-            tf.expand_dims(added_database_results, 1)],
+        for _ot in added_database_results:
+          logging.debug( "  to %s"%_ot)
+          memories[_ot] = tf.concat(
+            [memories[_ot],
+             tf.expand_dims(added_database_results[_ot], 1)],
             axis=1)
-      else:
-        # predictions: tensor of size (batch_size, num_entity)
-        self.predictions = memory_read
-        # mc_predictions: tensor of size (|self.heads|, num_entity
+      else: # t == num_step-1
+        logging.debug( " saving predictions")
+        # predictions: tensor of size (batch_size, num_entity[_range])
+        self.predictions = read_from_memory(t,self._range)
+        # mc_predictions: tensor of size (|self.heads|, num_entity[_range])
         self.mc_predictions = tf.matmul(self.multiclass_adapter,self.predictions)
-                       
+    
     self.final_loss = -tf.reduce_sum(self.targets * tf.log(tf.maximum(self.predictions, self.thr)), 1)
      
     if not self.accuracy:
@@ -251,8 +298,6 @@ def defaultOptions():
 #   print "Config"
 #   print "\n".join("%s: %s" % (str(k),str(v)) for k,v in d.iteritems())
   
-  option.max_epoch=10
-  option.min_epoch=5
   option.tag = time.strftime("%y-%m-%d-%H-%M")
   option.datadir="diffruleplugin"
   option.this_expsdir = os.path.join(os.path.join(option.datadir, "exps"), option.tag)
@@ -262,8 +307,6 @@ def defaultOptions():
   if not os.path.exists(option.ckpt_dir):
       os.makedirs(option.ckpt_dir)
   option.model_path = os.path.join(option.ckpt_dir, "model")
-  option.print_per_batch=3
-  option.resplit=False
   option.save()
   return option
 
@@ -292,5 +335,5 @@ def insertDRIntoXC(xc,drmode,options):
     # pulled from _finalizeCompile
     if xc.summaryFile:
       xc.summaryMergeAll = tf.summary.merge_all()
-    return dr      
+    return dr    
     
