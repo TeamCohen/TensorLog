@@ -101,9 +101,9 @@ def generateData(n,trainFile,testFile):
     r = random.Random()
     for i in range(1,n+1):
         for j in range(1,n+1):
-            #target
-            ti = 1 if i<n/2 else n
-            tj = 1 if j<n/2 else n
+            #target - note early version used i,j < n/2 which is a bug
+            ti = 1 if i<=n/2 else n
+            tj = 1 if j<=n/2 else n
             x = nodeName(i,j)
             y = nodeName(ti,tj)
             fp = fpTrain if r.random()<0.67 else fpTest
