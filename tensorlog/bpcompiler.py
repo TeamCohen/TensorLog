@@ -430,6 +430,8 @@ class BPCompiler(object):
             self.varDict[_only(gin.outputs)].connected = True
             assert not gin.definedPred, 'subpredicates must generate an output which is used downstream'
             addOp(ops.AssignPreimageToVar(msgName,mode,self.msgType[msgName]), traceDepth,j,v)
+          elif self.tensorlogProg.plugins.isDefined(mode):
+            addOp(ops.CallPlugin(msgName,[],mode,self.msgType[msgName]), traceDepth,j,v)
           else:
             addOp(ops.AssignVectorToVar(msgName,mode,self.msgType[msgName]), traceDepth,j,v)
 

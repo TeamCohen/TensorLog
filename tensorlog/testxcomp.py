@@ -907,6 +907,41 @@ class TestPlugins(unittest.TestCase):
     plugins.define('double/io', lambda x:2*x, lambda inputType:inputType)
     self.check_learning_with_udp(ruleStrings,plugins)
 
+  def test_kw_i(self):
+    ruleStrings = ['predict(X,Pos) :- assign(Pos,pos,label),hasWord(X,W),poskw(W).',
+                   'predict(X,Neg) :- assign(Neg,neg,label),hasWord(X,W),negkw(W).']
+    plugins = program.Plugins()
+    db = matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"))
+    poskw_v = (db.onehot('little','word') + db.onehot('red','word')).todense()
+    negkw_v = (db.onehot('big','word') + db.onehot('job','word') + db.onehot('huge','word')).todense()
+    plugins.define('poskw/i', lambda:poskw_v, lambda:'word')
+    plugins.define('negkw/i', lambda:negkw_v, lambda:'word')
+    self.check_udp(ruleStrings,plugins)
+   
+  def check_udp(self,ruleStrings,plugins):
+    db = matrixdb.MatrixDB.loadFile(os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"))
+    rules = testtensorlog.rules_from_strings(ruleStrings)
+    prog = program.ProPPRProgram(rules=rules,db=db,plugins=plugins)
+    mode = declare.asMode("predict/io")
+    prog.compile(mode)
+    fun = prog.function[(mode,0)]
+    print "\n".join(fun.pprint())
+    tlog = simple.Compiler(db=db, prog=prog)
+    testData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"))
+    mode = testData.keys()[0]
+    UX,UY = testData[mode]
+    inference = tlog.inference(mode)
+    trueY = tf.placeholder(tf.float32, shape=UY.shape, name='tensorlog/trueY')
+    correct = tf.equal(tf.argmax(trueY,1), tf.argmax(inference,1))
+    accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
+    test_batch_fd = {tlog.input_placeholder_name(mode):UX, trueY.name:UY}
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
+    acc1 = session.run(accuracy, feed_dict=test_batch_fd)
+    print 'final accuracy',acc1
+    session.close()
+
+
   # TOFIX needs some work to pass
   # - you can't do polytree BP with multiple inputs
   # - so there's not a simple fix

@@ -354,8 +354,7 @@ class ProPPRProgram(Program):
 
 class Plugins(object):
   """Holds a collection of user-defined predicates, defined for a
-  particular cross-compiler.  Currently predicates must be binary so
-  the modes are p/io or p/oi.
+  particular cross-compiler.  
   """
 
   def __init__(self):
@@ -372,8 +371,8 @@ class Plugins(object):
     and the output is an expression which defines the output.
     outputType, if given, is the type of the output.
     """
-    m = declare.asMode(mode)
-    self.outputFun[m] = outputFun
+    m = declare.asMode(mode) #could be unary or binary
+    self.outputFun[m] = outputFun  
     self.outputTypeFun[m] = outputTypeFun
     key = (m.functor,m.arity)
     if key not in self.definedFunctorArity:
