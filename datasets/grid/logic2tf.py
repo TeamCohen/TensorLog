@@ -4,80 +4,80 @@ import tensorflow as tf
 import numpy as np
 import random
 
-FRAC_CROSS_QUADRANT_CONNECTIONS_DROPPED = 1.0
-#DEGREE_GIVEN = False
-DEGREE_GIVEN = True
-
+EDGE_WEIGHT = 0.2
+EDGE_FRAC = 1.0 # fraction to keep
+TORUS = True    # wrap edges, so j,1 --> j,n+1 and etc
 
 #
 # simple demo of adding some numeric learning on top of the logic part
 # 
-# this uses a fixed loss on predictions y of y*(degree - 3.0)^2
-# which is like computing degree and then using squared loss against MSE of 3.0
-# could do better by having some other regression problem that learns the offset 3.0
-#
-# better plan:
-#  there are features x1,x2 for each node that reveal degree,
-#  ie ax1 + bx2 = degree + error
-#  to get this, fix a,b let compute x1 ~ N(0,1), error ~ N(0,epsilon)
-#  compute x2 = (degree + error - ax1) / b
-#  then penalize by (ax1 + bx2 - degree)^2
 # 
-# x1,x2 are generated but not tested
 #
-# accuracy is not that great, maybe because the train/test data is out
-# of sync with the loss function, not all the corners are correct for
-# an example, only the closest one.  maybe I should add a distance
-# loss as well?
 
-TARGET_A = 2.0
-TARGET_B = 3.0
-
-from tensorlog import simple
+from tensorlog import simple,program,declare,dbschema
 import expt
+
 
 def setup_tlog(maxD,factFile,trainFile,testFile):
   tlog = simple.Compiler(db=factFile,prog="grid.ppr")
   tlog.prog.db.markAsParameter('edge',2)
   tlog.prog.maxDepth = maxD
+  print 'loading trainData,testData from',trainFile,testFile
   trainData = tlog.load_small_dataset(trainFile)
   testData = tlog.load_small_dataset(testFile)
   return (tlog,trainData,testData)
 
-def trainAndTest(tlog,trainData,testData,epochs):
-  degree = tlog.db.matEncoding[('degree',1)].todense()
-  corner_penalty = np.square(degree - 3.0)
+def trainAndTest(tlog,trainData,testData,epochs,corner='hard'):
   mode = 'path/io'
   predicted_y = tlog.inference(mode)
   actual_y = tlog.target_output_placeholder(mode)
   correct_predictions = tf.equal(tf.argmax(actual_y,1), tf.argmax(predicted_y,1))
   accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
 
-  #unregularized_loss = tlog.loss(mode)
-  if DEGREE_GIVEN:
-    unregularized_loss = tf.reduce_sum(predicted_y * corner_penalty * 10)
-  else:
-    x1 = tlog.db.matEncoding[('x1',1)].todense()
-    x2 = tlog.db.matEncoding[('x2',1)].todense()
-    A = tf.Variable(random.random(), name="A")
-    B = tf.Variable(random.random(), name="B")
-    predicted_degree = A*x1 + B*x2
-    predicted_penalty = np.square(predicted_degree - 3.0)
-    unregularized_loss = tf.reduce_mean(predicted_y * predicted_penalty)
+  if corner=='soft':
+    # adding NULL_ENTITY_NAME cost doesn't seem to help...
+    x1 = tlog.db.matEncoding[('x1',1)] + 10000*tlog.db.onehot(dbschema.NULL_ENTITY_NAME)
+    x2 = tlog.db.matEncoding[('x2',1)] + 10000*tlog.db.onehot(dbschema.NULL_ENTITY_NAME)
+    x1 = x1.todense()
+    x2 = x2.todense()
+    #print 'symbols',map(lambda i:tlog.db.schema.getSymbol('__THING__',i),[0,1,2,3,4,5,6])
+    #print 'x1+x2-2',x1+x2-2
+    loss = tf.reduce_sum(tf.multiply(predicted_y, (x1+x2-2)))
+  else: 
+    loss = tlog.loss(mode)
 
-  optimizer = tf.train.AdagradOptimizer(1.0)
-  #optimizer = tf.train.GradientDescentOptimizer(1.0)
-  train_step = optimizer.minimize(unregularized_loss)
+  #optimizer = tf.train.AdagradOptimizer(0.5)
+  optimizer = tf.train.AdamOptimizer(0.1)
+  train_step = optimizer.minimize(loss)
 
   session = tf.Session()
   session.run(tf.global_variables_initializer())
+
   (ux,uy) = testData[mode]
   test_fd = {tlog.input_placeholder_name(mode):ux, tlog.target_output_placeholder_name(mode):uy}
   acc = session.run(accuracy, feed_dict=test_fd)
+  print corner,'training: initial test acc',acc
 
   (tx,ty) = trainData[mode]
-  train_fd = {tlog.input_placeholder_name(mode):tx, tlog.target_output_placeholder_name(mode):ty}
-  print 'initial test acc',acc
+  if corner=='hard':
+    train_fd = {tlog.input_placeholder_name(mode):tx, tlog.target_output_placeholder_name(mode):ty}
+  else:
+    train_fd = {tlog.input_placeholder_name(mode):tx}  # not using labels
+
+  def show_test_results():
+    if corner=='soft':
+      test_preds = session.run(tf.argmax(predicted_y,1), feed_dict=test_fd)    
+      print 'test best symbols are',map(lambda i:tlog.db.schema.getSymbol('__THING__',i),test_preds)
+      if False:
+        test_scores = session.run(predicted_y, feed_dict=test_fd)    
+        print 'test scores are',test_scores
+        weighted_predictions = session.run(tf.multiply(predicted_y, (x1+x2-2)), feed_dict=test_fd)    
+        print 'test weighted_predictions',weighted_predictions
+        test_loss = session.run(loss,feed_dict=test_fd)    
+        print 'test loss',test_loss
+
+  show_test_results()
+
   t0 = time.time()
   print 'epoch',
   for i in range(epochs):
@@ -85,14 +85,17 @@ def trainAndTest(tlog,trainData,testData,epochs):
     session.run(train_step, feed_dict=train_fd)
     if (i+1)%3==0:
       test_fd = {tlog.input_placeholder_name(mode):ux, tlog.target_output_placeholder_name(mode):uy}
-      train_loss = session.run(unregularized_loss, feed_dict=train_fd)
-      train_acc = session.run(accuracy, feed_dict=train_fd)
-      test_loss = session.run(unregularized_loss, feed_dict=test_fd)
+      train_loss = session.run(loss, feed_dict=train_fd)
+      if corner=='hard':
+        train_acc = session.run(accuracy, feed_dict=train_fd)
+      test_loss = session.run(loss, feed_dict=test_fd)
       test_acc = session.run(accuracy, feed_dict=test_fd)
-      if not DEGREE_GIVEN:
-        hatA,hatB =  session.run([A,B], feed_dict=train_fd)
-        print 'model A,B',hatA,hatB,
-      print 'train loss',train_loss,'acc',train_acc,'test loss',test_loss,'acc',test_acc
+      print 'train loss',train_loss,
+      if corner=='hard':
+        print 'acc',train_acc,
+      print 'test loss',test_loss,'acc',test_acc
+      if train_loss < 10.0:
+        break
       print 'epoch',
   print 'done'
   print 'learning takes',time.time()-t0,'sec'
@@ -100,63 +103,85 @@ def trainAndTest(tlog,trainData,testData,epochs):
   acc = session.run(accuracy, feed_dict=test_fd)
   print 'test acc',acc
 
+  show_test_results()
+
   tlog.set_all_db_params_to_learned_values(session)
   tlog.serialize_db('learned.db')
   return acc
 
-def augmentFacts(inFactFile,n):
-  outFactfile = inFactFile[:-len(".cfacts")] + "_plus_deg.cfacts"
-  nskip = 0
-  nline = 0
-  with open(outFactfile,'w') as outFp:
-    #copy old facts
-    for line in open(inFactFile):
-      nline += 1
-      # edge i1,j1 i2,j2 weight
-      parts = line.strip().split("\t")
-      i1,j1 = map(int,parts[1].split(","))
-      i2,j2 = map(int,parts[2].split(","))
-      if (i1==n/2 and i2==(n/2+1)) or (j1==n/2 and j2==(n/2+1)) and random.random()<=FRAC_CROSS_QUADRANT_CONNECTIONS_DROPPED:
-        #print 'skip',i1,j1,'->',i2,j2,line,
-        nskip += 1
-      else:
-        outFp.write(line)
-    print 'skipped',nskip,'of',nline,'edges'
+def nodeName(i,j):
+    return '%d,%d' % (i,j)
 
-    # compute and write degree
-    def extreme(k): return k==1 or k==n
-    degree = {}
-    for i in range(1,n+1):
-      for j in range(1,n+1):
-        v = "%d,%d" % (i,j)
-        if extreme(i) and extreme(j): 
-          degree[v] = 3.0
-        elif extreme(i) or extreme(j): 
-          degree[v] = 5.0
-        else: 
-          degree[v] = 8.0
-        outFp.write("\t".join(["degree",v,"%.1f" % degree[v]]) + '\n')
-  
-    # compute features x1,x2 which predict degree, approximately, via A*x1 + B*X2 = degree + noise
-    x2 = {}
-    r = random.Random()
-    for v in degree:
-      noisy_d = degree[v] + r.gauss(0.0, 1.0)
-      x1 = r.gauss(1.0, 1.0)
-      x2[v] = (noisy_d - TARGET_A*x1) / TARGET_B
-      outFp.write("\t".join(["x1",v,"%.2f" % x1]) + '\n')
-    for v in x2:
-      outFp.write("\t".join(["x2",v,"%.2f" % x2[v]]) + '\n')
-  return outFactfile
+def genInputs(n):
+    #generate grid
+
+    stem = 'inputs/g%d' % n
+
+    factFile = stem+'_logic.cfacts'
+    trainFile = stem+'_logic-train.exam'
+    testFile = stem+'_logic-test.exam'
+    rnd = random.Random()
+    rnd.seed(0)
+    # generate the facts
+    with open(factFile,'w') as fp:
+      def connect(i1,j1,i2,j2):
+        fp.write('edge\t%s\t%s\t%f\n' % (nodeName(i1,j1),nodeName(i2,j2),EDGE_WEIGHT+rnd.random()*0.02-0.01))
+      #edges
+      for i in range(1,n+1):
+        for j in range(1,n+1):
+          for di in [-1,0,+1]:
+            for dj in [-1,0,+1]:
+              if (1 <= i+di <= n) and (1 <= j+dj <= n) and rnd.random() <= EDGE_FRAC:
+                connect(i,j,i+di,j+dj)
+      if TORUS:
+        for k in range(1,n):
+          connect(k,1,k,n)
+          connect(k,n,k,1)
+          connect(1,k,n,k)
+          connect(n,k,1,k)
+      # x1,x2 are row,col positions
+      for i in range(1,n+1):
+        for j in range(1,n+1):
+          v = nodeName(i,j)
+          x1 = i
+          fp.write('\t'.join(['x1',v,str(x1)]) + '\n')
+      for i in range(1,n+1):
+        for j in range(1,n+1):
+          v = nodeName(i,j)
+          x2 = j
+          fp.write('\t'.join(['x2',v,str(x2)]) + '\n')
+    # data
+    with open(trainFile,'w') as fpTrain,open(testFile,'w') as fpTest:
+      r = random.Random()
+      for i in range(1,n+1):
+        for j in range(1,n+1):
+          ti,tj = 1,1
+          x = nodeName(i,j)
+          y = nodeName(ti,tj)
+          fp = fpTrain if r.random()<0.67 else fpTest
+          fp.write('\t'.join(['path',x,y]) + '\n')
+    return (factFile,trainFile,testFile)
+
+# usage: python logic2tf.py corner-type grid-size num-epochs
+#  corner-type: hard, ie train path(X,Y) so Y='1,1'
+#  corner-type: soft, ie train path(X,Y) to satisfy a numeric loss function, v_y * (x1+x2)
+#    where x1 is x-position, x2 is y-position
 
 def runMain():
-  (goal,n,maxD,epochs) = expt.getargs()
-  assert goal=="acc"
-  (factFile,trainFile,testFile) = expt.genInputs(n)
-  factFile = augmentFacts(factFile,n)
-  print 'using factFile',factFile,'n',n
+  corner = 'hard'
+  n = 6
+  epochs = 30
+  if len(sys.argv)>1:
+    corner = sys.argv[1]
+  if len(sys.argv)>2:
+    n = int(sys.argv[2])
+  if len(sys.argv)>3:
+    epochs = int(sys.argv[3])
+  print 'run',epochs,'epochs',corner,'training on',n,'x',n,'grid','maxdepth',n
+  maxD = n/2
+  (factFile,trainFile,testFile) = genInputs(n)
   (tlog,trainData,testData) = setup_tlog(maxD,factFile,trainFile,testFile)
-  trainAndTest(tlog,trainData,testData,epochs)
+  trainAndTest(tlog,trainData,testData,epochs,corner)
 
 if __name__=="__main__":
   runMain()
