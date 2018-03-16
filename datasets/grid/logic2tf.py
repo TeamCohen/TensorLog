@@ -3,17 +3,21 @@ import time
 import tensorflow as tf
 import numpy as np
 import random
+import getopt
 
-EDGE_WEIGHT = 0.2
+EDGE_WEIGHT = 0.2 # same as standard grid
 EDGE_FRAC = 1.0 # fraction to keep
-TORUS = True    # wrap edges, so j,1 --> j,n+1 and etc
+EDGE_NOISE = 0.00 # dont need this
+NULL_WEIGHT = 10000 # seems to help
+# seems like the system gets stuck and has trouble learning
+# to go to the corners if they are hard to reach
+TORUS = True    # wrap edges, so j,1 <--> j,n and etc
 
 #
-# simple demo of adding some numeric learning on top of the logic part
-# 
-# 
+# simple demo of adding some a numeric function to optimize that calls
+# logic as a subroutine
 #
-
+# TODO: try to simplify - remove edge noise, remove NULL_ENTITY_NAME weights, remove -2 from x1+x2-2, remove torus 
 from tensorlog import simple,program,declare,dbschema
 import expt
 
@@ -27,6 +31,9 @@ def setup_tlog(maxD,factFile,trainFile,testFile):
   testData = tlog.load_small_dataset(testFile)
   return (tlog,trainData,testData)
 
+# corner == 'hard' means use the training data to optimize 
+# corner === 'soft' means to use 
+
 def trainAndTest(tlog,trainData,testData,epochs,corner='hard'):
   mode = 'path/io'
   predicted_y = tlog.inference(mode)
@@ -36,8 +43,8 @@ def trainAndTest(tlog,trainData,testData,epochs,corner='hard'):
 
   if corner=='soft':
     # adding NULL_ENTITY_NAME cost doesn't seem to help...
-    x1 = tlog.db.matEncoding[('x1',1)] + 10000*tlog.db.onehot(dbschema.NULL_ENTITY_NAME)
-    x2 = tlog.db.matEncoding[('x2',1)] + 10000*tlog.db.onehot(dbschema.NULL_ENTITY_NAME)
+    x1 = tlog.db.matEncoding[('x1',1)] + NULL_WEIGHT*tlog.db.onehot(dbschema.NULL_ENTITY_NAME)
+    x2 = tlog.db.matEncoding[('x2',1)] + NULL_WEIGHT*tlog.db.onehot(dbschema.NULL_ENTITY_NAME)
     x1 = x1.todense()
     x2 = x2.todense()
     #print 'symbols',map(lambda i:tlog.db.schema.getSymbol('__THING__',i),[0,1,2,3,4,5,6])
@@ -46,8 +53,10 @@ def trainAndTest(tlog,trainData,testData,epochs,corner='hard'):
   else: 
     loss = tlog.loss(mode)
 
-  #optimizer = tf.train.AdagradOptimizer(0.5)
-  optimizer = tf.train.AdamOptimizer(0.1)
+  if corner=='hard':
+    optimizer = tf.train.AdagradOptimizer(1.0)
+  else:
+    optimizer = tf.train.AdamOptimizer(0.1)
   train_step = optimizer.minimize(loss)
 
   session = tf.Session()
@@ -94,8 +103,6 @@ def trainAndTest(tlog,trainData,testData,epochs,corner='hard'):
       if corner=='hard':
         print 'acc',train_acc,
       print 'test loss',test_loss,'acc',test_acc
-      if train_loss < 10.0:
-        break
       print 'epoch',
   print 'done'
   print 'learning takes',time.time()-t0,'sec'
@@ -125,7 +132,7 @@ def genInputs(n):
     # generate the facts
     with open(factFile,'w') as fp:
       def connect(i1,j1,i2,j2):
-        fp.write('edge\t%s\t%s\t%f\n' % (nodeName(i1,j1),nodeName(i2,j2),EDGE_WEIGHT+rnd.random()*0.02-0.01))
+        fp.write('edge\t%s\t%s\t%f\n' % (nodeName(i1,j1),nodeName(i2,j2),EDGE_WEIGHT+rnd.random()*EDGE_NOISE-EDGE_NOISE/2))
       #edges
       for i in range(1,n+1):
         for j in range(1,n+1):
@@ -167,21 +174,23 @@ def genInputs(n):
 #  corner-type: soft, ie train path(X,Y) to satisfy a numeric loss function, v_y * (x1+x2)
 #    where x1 is x-position, x2 is y-position
 
-def runMain():
-  corner = 'hard'
-  n = 6
-  epochs = 30
-  if len(sys.argv)>1:
-    corner = sys.argv[1]
-  if len(sys.argv)>2:
-    n = int(sys.argv[2])
-  if len(sys.argv)>3:
-    epochs = int(sys.argv[3])
-  print 'run',epochs,'epochs',corner,'training on',n,'x',n,'grid','maxdepth',n
-  maxD = n/2
-  (factFile,trainFile,testFile) = genInputs(n)
-  (tlog,trainData,testData) = setup_tlog(maxD,factFile,trainFile,testFile)
-  trainAndTest(tlog,trainData,testData,epochs,corner)
+def runMain(corner='hard',n='10',epochs='100',repeat='10'):
+  n = int(n)
+  epochs = int(epochs)
+  repeat = int(repeat)
+  print 'run',epochs,'epochs',corner,'training on',n,'x',n,'grid','maxdepth',n/2,'repeating',repeat,'times'
+  accs = []
+  for r in range(repeat):
+    print 'trial',r+1
+    if len(accs)>0: print 'running avg',sum(accs)/len(accs)
+    (factFile,trainFile,testFile) = genInputs(n)
+    (tlog,trainData,testData) = setup_tlog(n/2,factFile,trainFile,testFile)
+    acc = trainAndTest(tlog,trainData,testData,epochs,corner)
+    accs.append(acc)
+  print 'accs',accs,'average',sum(accs)/len(accs)
 
 if __name__=="__main__":
-  runMain()
+  optlist,args = getopt.getopt(sys.argv[1:],"x:",['corner=','n=','epochs=','repeat='])
+  optdict = dict(map(lambda(op,val):(op[2:],val),optlist))
+  print 'optdict',optdict
+  runMain(**optdict)
