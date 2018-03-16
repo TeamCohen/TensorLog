@@ -5,6 +5,9 @@ import numpy as np
 import random
 import getopt
 
+# TODO: tune optimizers per problem
+# save learned_embedding somehow
+
 EDGE_WEIGHT = 0.2 # same as standard grid
 EDGE_FRAC = 1.0 # fraction to keep
 EDGE_NOISE = 0.00 # dont need this
@@ -22,9 +25,49 @@ from tensorlog import simple,program,declare,dbschema
 import expt
 
 
-def setup_tlog(maxD,factFile,trainFile,testFile):
-  tlog = simple.Compiler(db=factFile,prog="grid.ppr")
-  tlog.prog.db.markAsParameter('edge',2)
+def setup_tlog(maxD,factFile,trainFile,testFile,edge):
+  programFile = 'grid.ppr' if edge=='sparse' else 'grid_embedded.ppr'
+  print 'tlog program',programFile
+  tlog = simple.Compiler(db=factFile,prog=programFile)
+  if edge=='sparse':
+    tlog.prog.db.markAsParameter('edge',2)
+  elif edge=='indirect_sparse':
+    # a defined embedded_edge predicate that just call edge
+    tlog.prog.db.markAsParameter('edge',2)
+    embedded_edge_mode = declare.asMode('embedded_edge/io')
+    def embedded_edge_fun(v): 
+      edge_mode = declare.asMode('edge/io')
+      return tlog.xc._vecMatMulExpr(v, tlog.xc._matrix(edge_mode,transpose=False))
+    tlog.prog.plugins.define(embedded_edge_mode,embedded_edge_fun,lambda inputType:inputType)
+  elif edge=='fixed_embedding':
+    pathMatrix = tlog.db.matEncoding[('edge',2)].todense()
+    e1 = tlog.db.matEncoding[('x1',1)].todense()
+    e2 = tlog.db.matEncoding[('x2',1)].todense()
+    A1 = np.repeat(e1,tlog.db.dim(),axis=0)
+    A2 = np.repeat(e2,tlog.db.dim(),axis=0)
+    distance = np.multiply(np.exp((A1.T-A1) + (A2.T-A2)), pathMatrix)
+    embedded_edge_mode = declare.asMode('embedded_edge/io')
+    def embedded_edge_fun(v): 
+      dummy = tf.Variable(1.0, 'dummy')
+      return tf.matmul(v,distance) * dummy
+    tlog.prog.plugins.define(embedded_edge_mode,embedded_edge_fun,lambda inputType:inputType)
+  elif edge=='learned_embedding':
+    pathMatrix = tlog.db.matEncoding[('edge',2)].todense()
+    d = tlog.db.dim()
+    E1 = tf.Variable(np.array(np.random.rand(1,d),dtype=np.float32),name="E1")
+    E2 = tf.Variable(np.array(np.random.rand(1,d),dtype=np.float32),name="E2")
+    A1 = tf.reshape(tf.tile(E1,[1,d]), [d,d])
+    A2 = tf.reshape(tf.tile(E2,[1,d]), [d,d])
+    # save for later
+    tlog.E1 = E1
+    tlog.E2 = E2
+    Distance = tf.multiply( tf.nn.softplus((tf.transpose(A1)-A1) + (tf.transpose(A2)-A2)), pathMatrix)
+    embedded_edge_mode = declare.asMode('embedded_edge/io')
+    def embedded_edge_fun(v): 
+      return tf.matmul(v,Distance)
+    tlog.prog.plugins.define(embedded_edge_mode,embedded_edge_fun,lambda inputType:inputType)
+  else:
+    assert False,'edge should be sparse|indirect_sparse|fixed_embedding|...'
   tlog.prog.maxDepth = maxD
   print 'loading trainData,testData from',trainFile,testFile
   trainData = tlog.load_small_dataset(trainFile)
@@ -34,7 +77,7 @@ def setup_tlog(maxD,factFile,trainFile,testFile):
 # corner == 'hard' means use the training data to optimize 
 # corner === 'soft' means to use 
 
-def trainAndTest(tlog,trainData,testData,epochs,corner='hard'):
+def trainAndTest(tlog,trainData,testData,epochs,corner,edge,n):
   mode = 'path/io'
   predicted_y = tlog.inference(mode)
   actual_y = tlog.target_output_placeholder(mode)
@@ -53,9 +96,11 @@ def trainAndTest(tlog,trainData,testData,epochs,corner='hard'):
   else: 
     loss = tlog.loss(mode)
 
-  if corner=='hard':
+  if corner=='hard' and edge=='sparse':
+    print 'AdagradOptimizer 1.0'
     optimizer = tf.train.AdagradOptimizer(1.0)
   else:
+    print 'AdamOptimizer 0.1'
     optimizer = tf.train.AdamOptimizer(0.1)
   train_step = optimizer.minimize(loss)
 
@@ -74,7 +119,7 @@ def trainAndTest(tlog,trainData,testData,epochs,corner='hard'):
     train_fd = {tlog.input_placeholder_name(mode):tx}  # not using labels
 
   def show_test_results():
-    if corner=='soft':
+    if corner=='soft' or edge!='sparse':
       test_preds = session.run(tf.argmax(predicted_y,1), feed_dict=test_fd)    
       print 'test best symbols are',map(lambda i:tlog.db.schema.getSymbol('__THING__',i),test_preds)
       if False:
@@ -114,6 +159,16 @@ def trainAndTest(tlog,trainData,testData,epochs,corner='hard'):
 
   tlog.set_all_db_params_to_learned_values(session)
   tlog.serialize_db('learned.db')
+
+  if edge=='learned_embedding':
+    E1,E2 = session.run([tlog.E1,tlog.E2],feed_dict=test_fd)
+    print 'E1',E1.shape
+    for i in range(1,n+1):
+      for j in range(1,n+1):
+        v_sym = nodeName(i,j)
+        v_id = tlog.db.schema.getId('__THING__',v_sym)
+        print '%s %.4f %.4f' % (v_sym,E1[0,v_id],E2[0,v_id])
+
   return acc
 
 def nodeName(i,j):
@@ -174,7 +229,7 @@ def genInputs(n):
 #  corner-type: soft, ie train path(X,Y) to satisfy a numeric loss function, v_y * (x1+x2)
 #    where x1 is x-position, x2 is y-position
 
-def runMain(corner='hard',n='10',epochs='100',repeat='10'):
+def runMain(corner='hard',n='10',epochs='100',repeat='1',edge='sparse'):
   n = int(n)
   epochs = int(epochs)
   repeat = int(repeat)
@@ -184,13 +239,13 @@ def runMain(corner='hard',n='10',epochs='100',repeat='10'):
     print 'trial',r+1
     if len(accs)>0: print 'running avg',sum(accs)/len(accs)
     (factFile,trainFile,testFile) = genInputs(n)
-    (tlog,trainData,testData) = setup_tlog(n/2,factFile,trainFile,testFile)
-    acc = trainAndTest(tlog,trainData,testData,epochs,corner)
+    (tlog,trainData,testData) = setup_tlog(n/2,factFile,trainFile,testFile,edge)
+    acc = trainAndTest(tlog,trainData,testData,epochs,corner,edge,n)
     accs.append(acc)
   print 'accs',accs,'average',sum(accs)/len(accs)
 
 if __name__=="__main__":
-  optlist,args = getopt.getopt(sys.argv[1:],"x:",['corner=','n=','epochs=','repeat='])
+  optlist,args = getopt.getopt(sys.argv[1:],"x:",['corner=','n=','epochs=','repeat=','edge='])
   optdict = dict(map(lambda(op,val):(op[2:],val),optlist))
   print 'optdict',optdict
   runMain(**optdict)
