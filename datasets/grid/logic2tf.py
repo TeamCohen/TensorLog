@@ -161,13 +161,14 @@ def trainAndTest(tlog,trainData,testData,epochs,corner,edge,n):
   tlog.serialize_db('learned.db')
 
   if edge=='learned_embedding':
-    E1,E2 = session.run([tlog.E1,tlog.E2],feed_dict=test_fd)
-    print 'E1',E1.shape
-    for i in range(1,n+1):
-      for j in range(1,n+1):
-        v_sym = nodeName(i,j)
-        v_id = tlog.db.schema.getId('__THING__',v_sym)
-        print '%s %.4f %.4f' % (v_sym,E1[0,v_id],E2[0,v_id])
+    with open('learned_embedding.csv','w') as efp:
+      E1,E2 = session.run([tlog.E1,tlog.E2],feed_dict=test_fd)
+      print 'E1',E1.shape
+      for i in range(1,n+1):
+        for j in range(1,n+1):
+          v_sym = nodeName(i,j)
+          v_id = tlog.db.schema.getId('__THING__',v_sym)
+          efp.write('v%d_%d,%d,%.4f,%.4f\n' % (i,j,i+j,E1[0,v_id],E2[0,v_id]))
 
   return acc
 
