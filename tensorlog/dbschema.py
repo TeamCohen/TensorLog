@@ -8,7 +8,7 @@ import logging
 from tensorlog import util
 
 THING = '__THING__' # name of default type
-NULL_ENTITY_NAME = '__NULL__'  #name of out-of-vocabulary marker entity
+NULL_ENTITY_NAME = '__NULL__'  #name of null entity marker
 OOV_ENTITY_NAME = '__OOV__'  #name of out-of-vocabulary marker entity
 
 class AbstractSchema(object):
