@@ -5,22 +5,46 @@ import numpy as np
 import random
 import getopt
 
-# TODO: tune optimizers per problem
-# save learned_embedding somehow
+# 1) demonstrates adding logical inference as an input to a tensorflow
+#  function, and training thru the function to modify fact confidences
+#  (with the --corner soft option)
+# 
+# 2) demonstrates learning an embedding which is used to defined a
+#  logical subconcept, and training the embedding through the logic
+#  (the --edge learned_embedding option)
+#
+# usage: python tfintegration.py --corner C --edge E --n N --epochs T --repeat K
+#
+# C=='hard', train path(X,Y) so Y='1,1' using training data and usual loss
+# C=='soft', train path(X,Y) to satisfy a numeric loss function, v_y * (x1+x2-2)
+#   where x1 is x-position, x2 is y-position of the output Y
+#  
+# E='sparse', normal sparse-matrix edges
+# E!='sparse', use grid_embedded.ppr so edge is the defined predicate embedded_edge
+#   embedded_edge/io(X) is defined as a tensorflow function as follows:
+#
+# indirect_sparse: embedded_edge_fun(v)= v*M_{edge}
+# fixed_embedding: embedded_edge_fun(v) = exp((A1.T-A1) + (A2.T-A2)) o M_{edge}
+#    where A1=repeat(x1,dim); A2=repeat(x2,dim) 
+# learned_embedding: embedded_edge_fun(v) = exp((A1.T-A1) + (A2.T-A2)) o M_{edge}
+#    where x1 and x2 above are replaced with random cell-->float mappings
+#
+# --n N: grid size is N*N default 10
+# --epochs N: default 100
+# --repeat K: default 1
+
+
+# TODO: tune optimizers per problem?
+# TODO: multiple correct targets for each task and non-cross entropy loss function
 
 EDGE_WEIGHT = 0.2 # same as standard grid
 EDGE_FRAC = 1.0 # fraction to keep
 EDGE_NOISE = 0.00 # dont need this
 NULL_WEIGHT = 10000 # seems to help
-# seems like the system gets stuck and has trouble learning
-# to go to the corners if they are hard to reach
+# for soft corners, the system gets stuck and has trouble learning
+# to go to the corners if they are hard to reach so...
 TORUS = True    # wrap edges, so j,1 <--> j,n and etc
 
-#
-# simple demo of adding some a numeric function to optimize that calls
-# logic as a subroutine
-#
-# TODO: try to simplify - remove edge noise, remove NULL_ENTITY_NAME weights, remove -2 from x1+x2-2, remove torus 
 from tensorlog import simple,program,declare,dbschema
 import expt
 
@@ -67,7 +91,7 @@ def setup_tlog(maxD,factFile,trainFile,testFile,edge):
       return tf.matmul(v,Distance)
     tlog.prog.plugins.define(embedded_edge_mode,embedded_edge_fun,lambda inputType:inputType)
   else:
-    assert False,'edge should be sparse|indirect_sparse|fixed_embedding|...'
+    assert False,'edge should be sparse|indirect_sparse|fixed_embedding|learned_embedding|...'
   tlog.prog.maxDepth = maxD
   print 'loading trainData,testData from',trainFile,testFile
   trainData = tlog.load_small_dataset(trainFile)
@@ -166,9 +190,10 @@ def trainAndTest(tlog,trainData,testData,epochs,corner,edge,n):
       print 'E1',E1.shape
       for i in range(1,n+1):
         for j in range(1,n+1):
+          dist = min(i-1,n+1-i) + min(j-1,n+1-j)
           v_sym = nodeName(i,j)
           v_id = tlog.db.schema.getId('__THING__',v_sym)
-          efp.write('v%d_%d,%d,%.4f,%.4f\n' % (i,j,i+j,E1[0,v_id],E2[0,v_id]))
+          efp.write('v%d_%d,%d,%d,%d,%.4f,%.4f\n' % (i,j,i,j,dist,E1[0,v_id],E2[0,v_id]))
 
   return acc
 
@@ -225,10 +250,6 @@ def genInputs(n):
           fp.write('\t'.join(['path',x,y]) + '\n')
     return (factFile,trainFile,testFile)
 
-# usage: python logic2tf.py corner-type grid-size num-epochs
-#  corner-type: hard, ie train path(X,Y) so Y='1,1'
-#  corner-type: soft, ie train path(X,Y) to satisfy a numeric loss function, v_y * (x1+x2)
-#    where x1 is x-position, x2 is y-position
 
 def runMain(corner='hard',n='10',epochs='100',repeat='1',edge='sparse'):
   n = int(n)
