@@ -5,10 +5,15 @@ import numpy as np
 import random
 import getopt
 
-# alternative semantics -- multiple outputs and distributional learning
-# 
+# example of alternative semantics for tensorlog -- learning a
+# multiclass classifier, ie p(X,Y) where there are multiple
+# equally-correct y's for each X.
+#
+# --multiclass True: desired output is 4 cells in nearest corner,
+#   eg (1,1),(1,2),(2,1),(2,2) and proofcounts are passed through
+#   a sigmoid (after adding learned slope and intercept).
 # --n N: grid size is N*N default 10
-# --epochs N: default 100
+# --epochs N: default 1000  -- takes a long time to learn this
 # --repeat K: default 1
 
 
@@ -30,9 +35,9 @@ def setup_tlog(maxD,factFile,trainFile,testFile,multiclass):
 def trainAndTest(tlog,trainData,testData,epochs,n,multiclass):
   mode = 'path/io'
   if multiclass:
-    A = tf.Variable(1.0, "A")
-    B = tf.Variable(0.0, "B")
-    logits = A*tlog.proof_count(mode) + B
+    tlog.A = tf.Variable(1.0, "A")
+    tlog.B = tf.Variable(0.0, "B")
+    logits = tlog.A*tlog.proof_count(mode) + tlog.B
     predicted_y = tf.sigmoid(logits)
   else:
     predicted_y = tlog.inference(mode)
@@ -74,19 +79,23 @@ def trainAndTest(tlog,trainData,testData,epochs,n,multiclass):
   (tx,ty) = trainData[mode]
   train_fd = {tlog.input_placeholder_name(mode):tx, tlog.target_output_placeholder_name(mode):ty}
 
-  def show_test_results():
-    if False:
-      test_preds = session.run(tf.argmax(predicted_y,1), feed_dict=test_fd)    
-      print 'test best symbols are',map(lambda i:tlog.db.schema.getSymbol('__THING__',i),test_preds)
-      if False:
-        test_scores = session.run(predicted_y, feed_dict=test_fd)    
-        print 'test scores are',test_scores
-        weighted_predictions = session.run(tf.multiply(predicted_y, (x1+x2-2)), feed_dict=test_fd)    
-        print 'test weighted_predictions',weighted_predictions
-        test_loss = session.run(loss,feed_dict=test_fd)    
-        print 'test loss',test_loss
-
-  show_test_results()
+  def show_test_results(fd):
+    x = fd[tlog.input_placeholder_name(mode)]
+    if multiclass:
+      actual = session.run(actual_y, feed_dict=fd)
+      predicted = session.run(predicted_y, feed_dict=fd)
+      (nr,nc) = actual.shape
+      assert (nr,nc)==predicted.shape
+      def sym(i): return tlog.db.schema.getSymbol('__THING__',i)
+      for r in range(nr):
+        q = np.argmax(x[r,:])
+        print 'query x',sym(q),
+        prow = set()
+        arow = set()
+        for c in range(nc):
+          if actual[r,c]>=0.5: arow.add(sym(c))
+          if predicted[r,c]>=0.5: prow.add(sym(c))
+        print 'predicted ys',prow
 
   t0 = time.time()
   print 'epoch',
@@ -96,10 +105,8 @@ def trainAndTest(tlog,trainData,testData,epochs,n,multiclass):
     if (i+1)%3==0:
       test_fd = {tlog.input_placeholder_name(mode):ux, tlog.target_output_placeholder_name(mode):uy}
       train_loss = session.run(loss, feed_dict=train_fd)
-      #train_acc = session.run(accuracy, feed_dict=train_fd)
       train_acc = computed_accuracy(train_fd)
       test_loss = session.run(loss, feed_dict=test_fd)
-      #test_acc = session.run(accuracy, feed_dict=test_fd)
       test_acc = computed_accuracy(test_fd)
       print 'train loss',train_loss,
       print 'acc',train_acc,
@@ -108,12 +115,11 @@ def trainAndTest(tlog,trainData,testData,epochs,n,multiclass):
   print 'done'
   print 'learning takes',time.time()-t0,'sec'
 
-  #acc = session.run(accuracy, feed_dict=test_fd)
+  show_test_results(test_fd)
   acc = computed_accuracy(test_fd)
   print 'test acc',acc
 
-  show_test_results()
-
+  print 'A,B',session.run([tlog.A,tlog.B],feed_dict=test_fd)
   tlog.set_all_db_params_to_learned_values(session)
   tlog.serialize_db('learned.db')
 
@@ -151,7 +157,7 @@ def genInputs(n,multiclass):
           fp.write('\t'.join(['path',x] + ys) + '\n')
     return (factFile,trainFile,testFile)
 
-def runMain(n='10',epochs='100',repeat='1',multiclass='False'):
+def runMain(n='10',epochs='1000',repeat='1',multiclass='False'):
   n = int(n)
   epochs = int(epochs)
   repeat = int(repeat)
