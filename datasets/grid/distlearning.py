@@ -9,14 +9,25 @@ import getopt
 # prior probability of an edge
 P_EDGE = 0.25
 
+# demo of learning an approximation of the independent-tuples distribution.
+# 
+# TODO: try different loss functions for distributions, this seems to
+# produce models that are sort of similar in ranking but with probabilities
+# at a different scale.  euclidean distance? jenson-shannon?
+# TODO: output test-set and full-data y's for visualization
+# TODO: why do the actual y's include non-zeros for the filler entities?
+#
+#
 # --gendata M - draw M sample interpretations (ie grids, where edges
 #   are present with probability P_EDGE), compute all pairs (x,y)
 #   where path(x,y) is true, and use this to approximate Pr(path(x,y))
 #   in the independent-tuples model.  Store the result on disk.
-
-# --n N: grid size is N*N default 10
+# 
+# --load F - load Pr(path(x,y)) from disk and train against this
 # --epochs N: default 1000  -- takes a long time to learn this
 # --repeat K: default 1
+#
+# --n N: grid size is N*N default 10
 
 from tensorlog import simple,program,declare,dbschema,masterconfig,matrixdb
 import expt
