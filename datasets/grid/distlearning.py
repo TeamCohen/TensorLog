@@ -16,6 +16,7 @@ P_EDGE = 0.25
 # at a different scale.  euclidean distance? jenson-shannon?
 # TODO: output test-set and full-data y's for visualization
 # TODO: why do the actual y's include non-zeros for the filler entities?
+# TODO: should I normalize this? why?
 #
 #
 # --gendata M - draw M sample interpretations (ie grids, where edges
@@ -124,9 +125,8 @@ def genInputs(n,sampleSize):
     with open(outfile,'w') as fp:
         for r in range(3,d):
             fp.write('%d' % r)
-            norm = sum([s[r,c] for c in range(3,d)])
             for c in range(3,d):
-                fp.write(' %g' % (s[r,c]/norm))
+              fp.write(' %g' % (s[r,c]))
             fp.write('\n')
     return outfile
 
