@@ -17,6 +17,8 @@ import getopt
 # --repeat K: default 1
 
 
+STOP_AT = 1.0
+
 from tensorlog import simple,program,declare,dbschema,masterconfig
 import expt
 
@@ -112,6 +114,9 @@ def trainAndTest(tlog,trainData,testData,epochs,n,multiclass):
       print 'acc',train_acc,
       print 'test loss',test_loss,'acc',test_acc
       print 'epoch',
+      if train_acc >= STOP_AT:
+        print 'halting optimization at train_acc',train_acc
+        break
   print 'done'
   print 'learning takes',time.time()-t0,'sec'
 
@@ -119,11 +124,12 @@ def trainAndTest(tlog,trainData,testData,epochs,n,multiclass):
   acc = computed_accuracy(test_fd)
   print 'test acc',acc
 
-  print 'A,B',session.run([tlog.A,tlog.B],feed_dict=test_fd)
+  if multiclass:
+    print 'A,B',session.run([tlog.A,tlog.B],feed_dict=test_fd)
   tlog.set_all_db_params_to_learned_values(session)
   tlog.serialize_db('learned.db')
 
-  return acc
+  return acc,i
 
 def nodeName(i,j):
     return '%d,%d' % (i,j)
@@ -164,14 +170,17 @@ def runMain(n='10',epochs='1000',repeat='1',multiclass='False'):
   multiclass = True if (multiclass!='False' and multiclass!='0') else False
   print 'run',epochs,'epochs','training on',n,'x',n,'grid','maxdepth',n,'repeating',repeat,'times','multiclass',multiclass
   accs = []
+  stopped_at = []
   for r in range(repeat):
     print 'trial',r+1
     if len(accs)>0: print 'running avg',sum(accs)/len(accs)
     (factFile,trainFile,testFile) = genInputs(n,multiclass)
     (tlog,trainData,testData) = setup_tlog(n,factFile,trainFile,testFile,multiclass)
-    acc = trainAndTest(tlog,trainData,testData,epochs,n,multiclass)
+    acc,i = trainAndTest(tlog,trainData,testData,epochs,n,multiclass)
     accs.append(acc)
+    stopped_at.append(i)
   print 'accs',accs,'average',sum(accs)/len(accs)
+  print 'stopped_at',stopped_at,'average',sum(stopped_at)/len(stopped_at)
 
 if __name__=="__main__":
   optlist,args = getopt.getopt(sys.argv[1:],"x:",['n=','epochs=','repeat=','multiclass='])

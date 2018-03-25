@@ -58,10 +58,15 @@ def trainAndTest(tlog,trainData,testData,epochs,n):
 
   session = tf.Session()
   session.run(tf.global_variables_initializer())
+
   (ux,uy) = testData[mode]
   test_fd = {tlog.input_placeholder_name(mode):ux, tlog.target_output_placeholder_name(mode):uy}
   (tx,ty) = trainData[mode]
   train_fd = {tlog.input_placeholder_name(mode):tx, tlog.target_output_placeholder_name(mode):ty}
+  init_haty = session.run(predicted_y,feed_dict=test_fd)
+  train_loss = session.run(loss, feed_dict=train_fd)
+  test_loss = session.run(loss, feed_dict=test_fd)
+  print 'init train loss',train_loss,'test loss',test_loss
 
   t0 = time.time()
   print 'epoch',
@@ -82,18 +87,31 @@ def trainAndTest(tlog,trainData,testData,epochs,n):
 
   print 'A,B',session.run([tlog.A,tlog.B],feed_dict=test_fd)
   y,haty = session.run([predicted_y,actual_y],feed_dict=test_fd)
-  sio.savemat('testpreds.mat',{'y':y,'haty':haty})
+  sio.savemat('testpreds.mat',{'y':y,'haty':haty,'init_haty':init_haty})
 
   return test_loss
 
 def nodeName(i,j):
     return '%d,%d' % (i,j)
 
+def generateGrid(n,outf):
+    fp = open(outf,'w')
+    #cell types
+    for i in range(1,n+1):
+      for j in range(1,n+1):
+        fp.write('cell\t%s\n' % nodeName(i,j))
+    for i in range(1,n+1):
+        for j in range(1,n+1):
+            for di in [-1,0,+1]:
+                for dj in [-1,0,+1]:
+                    if (1 <= i+di <= n) and (1 <= j+dj <= n):
+                        fp.write('edge\t%s\t%s\t%f\n' % (nodeName(i,j),nodeName(i+di,j+dj),EDGE_WEIGHT))
+
 def genInputs(n,sampleSize):
     #generate grid
     stem = 'inputs/g%d' % n
     baseFactFile = stem+'.cfacts'
-    expt.generateGrid(n,baseFactFile)
+    generateGrid(n,baseFactFile)
     db = matrixdb.MatrixDB.loadFile(baseFactFile)
     e = db.matEncoding[('edge',2)].todense()
     d = db.dim()
@@ -141,7 +159,7 @@ def loadPrecomputed(db,loadFile):
             target_y[r,j+3] = float(p)
     return target_y
 
-def runMain(n='10',epochs='100',repeat='1',gendata='0',load='precomputed-distributions/g10_y-sample-1M.txt'):
+def runMain(n='10',epochs='1000',repeat='1',gendata='0',load='precomputed-distributions/g10_y-sample-1M.txt'):
   n = int(n)
   epochs = int(epochs)
   repeat = int(repeat)

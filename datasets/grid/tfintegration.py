@@ -5,6 +5,8 @@ import numpy as np
 import random
 import getopt
 
+# todo: for visualization, sort everything by cell name
+#
 # 1) demonstrates adding logical inference as an input to a tensorflow
 #  function, and training thru the function to modify fact confidences
 #  (with the --corner soft option)
@@ -212,9 +214,13 @@ def genInputs(n):
     rnd.seed(0)
     # generate the facts
     with open(factFile,'w') as fp:
+      #cell types
+      for i in range(1,n+1):
+        for j in range(1,n+1):
+          fp.write('cell\t%s\n' % nodeName(i,j))
+      #edges
       def connect(i1,j1,i2,j2):
         fp.write('edge\t%s\t%s\t%f\n' % (nodeName(i1,j1),nodeName(i2,j2),EDGE_WEIGHT+rnd.random()*EDGE_NOISE-EDGE_NOISE/2))
-      #edges
       for i in range(1,n+1):
         for j in range(1,n+1):
           for di in [-1,0,+1]:
