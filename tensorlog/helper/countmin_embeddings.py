@@ -1,133 +1,171 @@
 # first draft at code for doing count-min embeddings
 
-import collections
 import numpy as np
+import scipy
+import math
+import random
+import sys
+import getopt
 
-def embedder_matrix(original_dim,embedded_dim,hash_salt):
-  num_hashes = len(hash_salt)
-  def hash_function(d,x): offset = hash("pittsburgh"); return (hash(x+offset)^hash_salt[d]) % embedded_dim
-  h_rows = []
-  for i in range(original_dim):
-    row = [0.0] * embedded_dim
-    for d in range(num_hashes):
-      j = hash_function(d,i)
-      row[j] = 1.0
-    h_rows.append(row)
-  return np.array(h_rows)
+from tensorlog import matrixdb,comline
 
-def sample_matrix(original_dim):
-  m = np.zeros(shape=(original_dim,original_dim))
-  m[0,1] = m[0,3] = 1.0
-  m[1,0] = m[1,2] = 1.0
-  m[2,1] = m[2,5] = 1.0
-  m[3,0] = m[3,4] = 1.0
-  m[4,3] = m[4,7] = 1.0
-  m[5,2] = m[5,8] = 1.0
-  m[6,7] = 1.0
-  m[7,6] = m[7,4] = m[7,8] = 1.0
-  m[8,7] = m[8,5] = 1.0
-  return m
+LOGBASE = 2
+MAX_NUM_HASHES = 100
 
-def show(label,mat,code=None,h=None):
-  print '=' * 10, label, 'shape', mat.shape, '=' * 10
-  print mat
-  if code=='onehot':
-    return pp_decode_onehot(mat)
-  elif code=='embedded':
-    return pp_decode_embedded(mat,h)
-
-def pp_decode_embedded(mat,h):
-  n_rows_m,n_cols_m = mat.shape
-  n_rows_h,n_cols_h = h.shape
-  assert n_cols_m==n_cols_h
-  result = collections.defaultdict(set)
-  for r1 in range(n_rows_m):
-    print 'row',r1,'contains embedding:',
-    for r2 in range(n_rows_h):
-      if np.all(mat[r1,:]>=h[r2,:]):
-        print r2,
-        result[r1].add(r2)
-    print
+def componentwise_min(X,Y):
+  """ my old version scipy doesn't have csr.minimum(other) implemented!
+  """
+  X1 = scipy.sparse.csr_matrix(X)
+  X1.data = np.ones_like(X.data)
+  Y1 = scipy.sparse.csr_matrix(Y)
+  Y1.data = np.ones_like(Y.data)
+  commonIndicesXVals = X.multiply(Y1)
+  commonIndicesYVals = Y.multiply(X1)
+  data = np.minimum(commonIndicesXVals.data,commonIndicesYVals.data)
+  result = scipy.sparse.csr_matrix((data,commonIndicesXVals.indices,commonIndicesXVals.indptr),shape=X1.shape,dtype='float32')
   return result
 
-def pp_decode_onehot(mat):
-  n_rows,n_cols = mat.shape
-  result = collections.defaultdict(set)
-  for r in range(n_rows):
-    print 'row',r,'contains:',
-    for c in range(n_cols):
-      if mat[r,c]!=0:
-        print c,
-        result[r].add(c)
-    print
-  return result
+class Sketcher(object):
 
-def onehot(i,original_dim):
-  v = np.zeros(shape=(1,original_dim))
-  v[0,i] = 1.0
-  return v
+  def __init__(self,db,k,delta):
+    """ Follows notation in my notes.
+    k = max set size
+    delta = prob of any error in unsketch
+    t,m = hash functions map to one of t subranges each of width [1...m]
+    n = original dimension
 
-# summary:
-#
-# let N be original space, M be embedding space
-# H maps k-hot vectors to CM embeddings:
-#   for all i, H[i,j_k]=1 for D distinct hashes of i, { j_1, ..., j_K }
-#
-# 1) to embed a one-hot vector v, compute ev = vH
-# 2) to embed a matrix M mapping i to i' in the original space,
-#    let H1 be a row-normalized version of H, then compute eM = H1^T M H
-#    Then, absent collisions, ev eM ~= (vM) H
-# 3) to see if a row v of an embedded matrix contains i,
-#    test if np.all( v>= u_iH ), where u_i is one-hot for i
-# 4) to estimate (vM)[i,i1] from w = (ev eM), look at
-#    min{ w[ w >= (u_i1)H ] }  ---I think, not tested
+    I usually index 0 ... t with d for some reason
+    """
 
-def run_main():
-  original_dim = 9
-  embedded_dim = 10
+    self.db = db
+    self.n = db.dim()
+    self.k = k
+    self.delta = delta
+    self.m = int(math.ceil(LOGBASE * k))
+    self.t = int(math.ceil(-math.log(delta,LOGBASE)))
+    self.hash_salt = [ random.getrandbits(32) for _ in range(MAX_NUM_HASHES) ]
+    self.offset = hash("389437892342389")
+    self.init_hashmats()
+    print 'n',self.n,'t',self.t,'m',self.m,'sketch size',self.t*self.m,'compression',float(self.n)/(self.t*self.m)
 
-  #hash_salt = [hash("william"),hash("cohen"),hash("rubber duckie")]
-  hash_salt = [hash("william"),hash("cohen")]
-  h = embedder_matrix(original_dim,embedded_dim,hash_salt)
-  show('h',h)
-  m = sample_matrix(original_dim)
-  show('m',m,code='onehot')
-  mh = np.dot(m,h)
-  show('mh',mh,code='embedded',h=h)
-  #this isn't quite right since you need to allow for possibility
-  #of hash collisions in h
-  #hTbyD =  h.transpose()*(1.0/len(hash_salt))
-  oneByD = np.reciprocal(h.sum(1))
-  hTbyD =  h.transpose()*oneByD
-  show('h^T/D',hTbyD)
-  E_m = np.dot(hTbyD,mh)
-  show('E_m',E_m)
+  def init_hashmats(self):
+    """ self.hashmat caches out sketch for each object 0...n
+    self.hashmats[d] is the part that hashes to the d'th subrange.
+    """
+    # self.hashmats[d] is a matrix version of hash_function(d,x)
+    self.hashmats = []
+    # self.hashmat is sum of self.hashmats - init with an empty csr matrix
+    coo_mat = scipy.sparse.coo_matrix(([],([],[])), shape=(self.n,self.m*self.t))
+    self.hashmat = scipy.sparse.csr_matrix(coo_mat,dtype='float32')
+      
+    # cache out each hash function
+    databuf = np.ones(self.n)
+    for d in range(self.t):
+      rowbuf = []
+      colbuf = []
+      for i in range(self.n):
+        j = self.hash_function(d,i)
+        rowbuf.append(i)
+        colbuf.append(j)
+      coo_mat = scipy.sparse.coo_matrix((databuf,(rowbuf,colbuf)), shape=(self.n,self.m*self.t))
+      hd = scipy.sparse.csr_matrix(coo_mat,dtype='float32')
+      self.hashmats.append(hd)
+      self.hashmat = self.hashmat + hd
+      #print 'hashmat',d,type(self.hashmats[d]),self.hashmats[d].shape
+    #print 'hashmat',type(self.hashmat),self.hashmat.shape
 
-  def check_results(i):
-    ui = onehot(i,original_dim)
-    ui_m = np.dot(ui,m)
-    baseline = pp_decode_onehot(ui_m)
-    E_ui = np.dot(ui,h)
-    E_ui_dot_E_m = np.dot(E_ui,E_m)
-    proposed = pp_decode_embedded(E_ui_dot_E_m,h)
-    n = collisions = 0
-    for i in baseline:
-      assert i in proposed
-      for j in baseline[i]:
-        assert j in proposed[i]
-        n += 1
-      for j in proposed[i]:
-        if j not in baseline[i]:
-          collisions += 1
-    print 'row',i,'collisions',collisions,'baseline',baseline,'proposed',proposed
-    return collisions,n
+  def hash_function(self,d,x): 
+    """ The d-th hash function, which maps x into the range [m*d, ..., m*(d+1)]
+    """
+    return ((hash(x + self.offset)^self.hash_salt[d]) % self.m) + self.m*d
 
-  tot = tot_collisions = 0
-  for i in range(original_dim):
-    c,n = check_results(i)
-    tot_collisions += c
-    tot += n
-  print 'tot_collisions',tot_collisions,'tot',tot
+  def sketch(self,X):
+    """ produce a sketch for X
+    """
+    return X.dot(self.hashmat)
+
+  def unsketch(self,S):
+    """ Approximate the matrix that would be sketched as S, i.e., an M so
+    that M*hashmat = S """
+    #print 'unsketching',S.shape,'with h0 shape', self.hashmats[0].shape,self.hashmats[0].transpose().shape
+    result = scipy.sparse.csr_matrix(S.dot(self.hashmats[0].transpose()))
+    #print 'result',type(result),result.shape
+    for d in range(1,self.t):
+      xd = scipy.sparse.csr_matrix(S.dot(self.hashmats[d].transpose()))
+      result = componentwise_min(result,xd)
+    return result
+
+  def follow(self,rel,S):
+    """ The analog of x.dot(M) in sketch space
+    """
+    M = self.db.matEncoding[(rel,2)]
+    return self.unsketch(S).dot(M).dot(self.hashmat)
+
+  def showme(self,**kw): 
+    """ For debugging - print a summary of some objects, especially
+    usedful for checking sparse matrixes
+    """
+    for tag,val in kw.items():
+      try:
+        rows,cols = val.shape
+        print tag,'=',rows,'x',cols,val.__class__.__name__,
+        nz = val.nnz
+        print nz,'nonzeros',
+        if cols==self.db.dim() and nz<10:
+          if rows>1:
+            print self.db.matrixAsSymbolDict(val),
+          else:
+            print self.db.rowAsSymbolDict(val),        
+      except AttributeError:
+        print tag,'=',val
+      print
+
+  def compareRows(self,gold,approx):
+    dGold = self.db.rowAsSymbolDict(gold)
+    dApprox = self.db.rowAsSymbolDict(approx)
+    fp = set(dApprox.keys()) - set(dGold.keys())
+    fn = set(dGold.keys()) - set(dApprox.keys())
+    print 'errors:',len(fp),list(fp)[0:10]
+    if len(fn)>0:
+      print '  also there are false negatives - really?',fn
+
+# example: python countmin_embeddings.py --db  'fb15k.db|../../datasets/fb15k-speed/inputs/fb15k-valid.cfacts'  --x m_x_02md_2 --rel american_football_x_football_coach_position_x_coaches_holding_this_position_x_american_football_x_football_historical_coach_position_x_team --k 50
+# example: python countmin_embeddings.py --db  'g64.db|../../datasets/grid/inputs/g64.cfacts'  --x 25,36 --rel edge --k 10
 
 if __name__ == "__main__":
-  run_main()
+  print 'loading db...'
+  optlist,args = getopt.getopt(sys.argv[1:],'x',["db=","x=", "rel=","k=","delta="])
+  optdict = dict(optlist)
+  #db = matrixdb.MatrixDB.loadFile('g10.cfacts')
+  print 'optdict',optdict
+  db = comline.parseDBSpec(optdict.get('--db','g10.cfacts'))
+  xsym = optdict.get('--x','5,5')
+  rel = optdict.get('--rel','edge')
+  k = int(optdict.get('--k','10'))
+  delta = float(optdict.get('--delta','0.01'))
+
+  M_edge = db.matEncoding[(rel,2)]
+  M_edge.data[M_edge.data>0] = 1.0
+
+  sk = Sketcher(db,k,delta/db.dim())
+
+  def probe(x):
+    # find a sketch for x and then invert it
+    print '-'*60
+    sk_x = sk.sketch(x)
+    approx_x = sk.unsketch(sk_x)
+    sk.showme(x=x,sk_x=sk_x,approx_x=approx_x)
+    sk.compareRows(x,approx_x)
+
+  x = db.onehot(xsym)
+  probe(x)
+  probe(x.dot(M_edge))
+
+  print '-'*60
+  sk_x = sk.sketch(x)
+  sk_nx = sk.follow(rel,sk_x)
+  approx_nx = sk.unsketch(sk_nx)
+  nx = x.dot(M_edge)
+  sk.showme(nx=nx, sk_nx=sk_nx, approx_nx=approx_nx)
+  sk.compareRows(nx,approx_nx)
+
