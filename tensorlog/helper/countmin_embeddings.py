@@ -13,7 +13,8 @@ LOGBASE = 2
 MAX_NUM_HASHES = 100
 
 def componentwise_min(X,Y):
-  """ my old version scipy doesn't have csr.minimum(other) implemented!
+  """ componentwise_min for two scipy matrices
+  - my old version scipy doesn't have csr.minimum(other) implemented!
   """
   X1 = scipy.sparse.csr_matrix(X)
   X1.data = np.ones_like(X.data)
@@ -29,18 +30,21 @@ class Sketcher(object):
 
   def __init__(self,db,k,delta):
     """ Follows notation in my notes.
+    http://www.cs.cmu.edu/~wcohen/10-605/notes/randomized-algs.pdf
+
     k = max set size
     delta = prob of any error in unsketch
     t,m = hash functions map to one of t subranges each of width [1...m]
     n = original dimension
 
-    I usually index 0 ... t with d for some reason
+    I usually index 0 ... t with d for some reason in this code
     """
 
     self.db = db
     self.n = db.dim()
     self.k = k
     self.delta = delta
+    # see comments for unsketch routine
     self.m = int(math.ceil(LOGBASE * k))
     self.t = int(math.ceil(-math.log(delta,LOGBASE)))
     self.hash_salt = [ random.getrandbits(32) for _ in range(MAX_NUM_HASHES) ]
@@ -49,8 +53,15 @@ class Sketcher(object):
     print 'n',self.n,'t',self.t,'m',self.m,'sketch size',self.t*self.m,'compression',float(self.n)/(self.t*self.m)
 
   def init_hashmats(self):
-    """ self.hashmat caches out sketch for each object 0...n
-    self.hashmats[d] is the part that hashes to the d'th subrange.
+    """ self.hashmat caches out sketch for each object 0...n.  So if x is
+    a k-hot vector encoding {i1:w1, ..., ik:wk}, x.dot(hashmat) is the
+    countmin sketch obtained by doing add(i1,w1), .... etc
+
+    The countmin sketch is in t parts, each of the parts is a subrange
+    of width m, and hashmats[d] is the matrix for the d-th hash
+    function, ie it always maps something to the d'th subrange.
+
+    And self.hashmat = sum_d hashmats[d] 
     """
     # self.hashmats[d] is a matrix version of hash_function(d,x)
     self.hashmats = []
@@ -71,8 +82,6 @@ class Sketcher(object):
       hd = scipy.sparse.csr_matrix(coo_mat,dtype='float32')
       self.hashmats.append(hd)
       self.hashmat = self.hashmat + hd
-      #print 'hashmat',d,type(self.hashmats[d]),self.hashmats[d].shape
-    #print 'hashmat',type(self.hashmat),self.hashmat.shape
 
   def hash_function(self,d,x): 
     """ The d-th hash function, which maps x into the range [m*d, ..., m*(d+1)]
@@ -80,23 +89,43 @@ class Sketcher(object):
     return ((hash(x + self.offset)^self.hash_salt[d]) % self.m) + self.m*d
 
   def sketch(self,X):
-    """ produce a sketch for X
+    """ Produce a sketch for X
     """
     return X.dot(self.hashmat)
 
   def unsketch(self,S):
     """ Approximate the matrix that would be sketched as S, i.e., an M so
-    that M*hashmat = S """
-    #print 'unsketching',S.shape,'with h0 shape', self.hashmats[0].shape,self.hashmats[0].transpose().shape
+    that M*hashmat = S.
+
+    The idea is as follows.  Given a sketch S, we can find all the i's
+    in the original space that the d-th hash function would map
+    to a non-zero index in S using S.hashmats[d].transpose()
+    Some of these are noisy and some are from the actual X that was
+    hashed into S.
+
+    How much noise is there? The d-th hash function has k bits set,
+    call then j1,...,jk. (There could be less, if there were
+    collisions in the k-nonzeros of X).  For any particular set bit
+    position j, Pr[hash(d,i)=j] = 1/m, where the probability is taken
+    over positions i.  So Pr[hash(d,i)=j1 v ... hash(d,i)=jk] <= k/m.
+
+    Let m=2k.  Then Pr[hash(d,i)=j1 v ... hash(d,i)=jk] <= 1/2.  An
+    incorrect index i survives in min_d [S.hashmats[d].transpose()]
+    must have been noisy in all t of the individual hashes, so
+    
+    Pr[noisy i in min] <= 2^{-t}
+    
+    So set t so that 2^{-t} < delta  ==> t > log_2(1/delta)
+    """
     result = scipy.sparse.csr_matrix(S.dot(self.hashmats[0].transpose()))
-    #print 'result',type(result),result.shape
     for d in range(1,self.t):
       xd = scipy.sparse.csr_matrix(S.dot(self.hashmats[d].transpose()))
       result = componentwise_min(result,xd)
     return result
 
   def follow(self,rel,S):
-    """ The analog of x.dot(M) in sketch space
+    """ The analog of an operator X.dot(M) in sketch space.  Given S where
+    X.dot(hashmat)=S, return the sketch for X.dot(M).
     """
     M = self.db.matEncoding[(rel,2)]
     return self.unsketch(S).dot(M).dot(self.hashmat)
