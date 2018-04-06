@@ -2,6 +2,11 @@
 
 import numpy as np
 import scipy
+try:
+  ss = scipy.sparse
+except:
+  import scipy.sparse as ss
+    
 import math
 import random
 import sys
@@ -17,14 +22,14 @@ def componentwise_min(X,Y):
   """ componentwise_min for two scipy matrices
   - my old version scipy doesn't have csr.minimum(other) implemented!
   """
-  X1 = scipy.sparse.csr_matrix(X)
+  X1 = ss.csr_matrix(X)
   X1.data = np.ones_like(X.data)
-  Y1 = scipy.sparse.csr_matrix(Y)
+  Y1 = ss.csr_matrix(Y)
   Y1.data = np.ones_like(Y.data)
   commonIndicesXVals = X.multiply(Y1)
   commonIndicesYVals = Y.multiply(X1)
   data = np.minimum(commonIndicesXVals.data,commonIndicesYVals.data)
-  result = scipy.sparse.csr_matrix((data,commonIndicesXVals.indices,commonIndicesXVals.indptr),shape=X1.shape,dtype='float32')
+  result = ss.csr_matrix((data,commonIndicesXVals.indices,commonIndicesXVals.indptr),shape=X1.shape,dtype='float32')
   return result
 
 class Sketcher(object):
@@ -65,8 +70,8 @@ class Sketcher(object):
     # self.hashmats[d] is a matrix version of hash_function(d,x)
     self.hashmats = []
     # self.hashmat is sum of self.hashmats - init with an empty csr matrix
-    coo_mat = scipy.sparse.coo_matrix(([],([],[])), shape=(self.n,self.m*self.t))
-    self.hashmat = scipy.sparse.csr_matrix(coo_mat,dtype='float32')
+    coo_mat = ss.coo_matrix(([],([],[])), shape=(self.n,self.m*self.t))
+    self.hashmat = ss.csr_matrix(coo_mat,dtype='float32')
       
     # cache out each hash function
     databuf = np.ones(self.n)
@@ -77,8 +82,8 @@ class Sketcher(object):
         j = self.hash_function(d,i)
         rowbuf.append(i)
         colbuf.append(j)
-      coo_mat = scipy.sparse.coo_matrix((databuf,(rowbuf,colbuf)), shape=(self.n,self.m*self.t))
-      hd = scipy.sparse.csr_matrix(coo_mat,dtype='float32')
+      coo_mat = ss.coo_matrix((databuf,(rowbuf,colbuf)), shape=(self.n,self.m*self.t))
+      hd = ss.csr_matrix(coo_mat,dtype='float32')
       self.hashmats.append(hd)
       self.hashmat = self.hashmat + hd
 
@@ -116,9 +121,9 @@ class Sketcher(object):
     
     So set t so that 2^{-t} < delta  ==> t > log_2(1/delta)
     """
-    result = scipy.sparse.csr_matrix(S.dot(self.hashmats[0].transpose()))
+    result = ss.csr_matrix(S.dot(self.hashmats[0].transpose()))
     for d in range(1,self.t):
-      xd = scipy.sparse.csr_matrix(S.dot(self.hashmats[d].transpose()))
+      xd = ss.csr_matrix(S.dot(self.hashmats[d].transpose()))
       result = componentwise_min(result,xd)
     return result
 
