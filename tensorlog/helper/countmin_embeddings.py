@@ -43,7 +43,6 @@ class Sketcher(object):
 
     self.db = db
     self.n = db.dim()
-    self.k = k
     self.delta = delta
     # see comments for unsketch routine
     self.m = int(math.ceil(LOGBASE * k))
@@ -128,7 +127,11 @@ class Sketcher(object):
     X.dot(hashmat)=S, return the sketch for X.dot(M).
     """
     M = self.db.matEncoding[(rel,2)]
-    return self.denoise(S.dot(M))
+    return self.sketch(self.unsketch(S).dot(M))
+
+  def describe(self):
+    print self.__class__.__name__,'n',self.n,'t',self.t,'delta',self.delta,
+    print 'm',self.m,'sketch size',self.t*self.m,'compression',float(self.n)/(self.t*self.m)
 
   def showme(self,**kw): 
     """ For debugging - print a summary of some objects, especially
@@ -163,7 +166,7 @@ class Sketcher(object):
     if len(fn)>0:
       print '  also there are false negatives - really?',fn
 
-class CompactSketcher(Sketcher):
+class Sketcher2(Sketcher):
   """
   Slightly different plan - to follow a sketch S thru a relation
   matrix M, look at the coo_matrix version of M, which is basically
@@ -186,7 +189,7 @@ class CompactSketcher(Sketcher):
 
   def __init__(self,db,k,delta):
     # want to make t 2b * as large
-    super(CompactSketcher,self).__init__(db,k,delta)
+    super(Sketcher2,self).__init__(db,k,delta)
     # these are like hashmat, and hashmats, but indexed by the functor
     # for a relation
     self.sketchmatsArg1 = collections.defaultdict(list)
@@ -202,6 +205,7 @@ class CompactSketcher(Sketcher):
         skArg2 = scipy.sparse.coo_matrix(skShape)
         ones = np.ones_like(skRows)
         for d in range(self.t):
+          print 'hash',d+1,'of',self.t,'for',functor
           arrayHasher = np.vectorize(lambda k: self.hash_function(d,k))
           h1d = scipy.sparse.coo_matrix((ones,(skRows,arrayHasher(m.row))),shape=skShape)
           self.sketchmatsArg1[functor].append(scipy.sparse.csr_matrix(h1d))
@@ -209,10 +213,6 @@ class CompactSketcher(Sketcher):
           skArg2 = skArg2 + h2d
         self.sketchmatArg2[rel] = scipy.sparse.csr_matrix(skArg2)
     print 'done'
-
-  def describe(self):
-    print 'n',self.n,'k',self.k,'delta',self.delta,
-    print 'm',self.m,'sketch size',self.t*self.m,'compression',float(self.n)/(self.t*self.m)
 
   def follow(self,rel,S):
     """ The analog of an operator X.dot(M) in sketch space.  Given S where
@@ -234,7 +234,7 @@ class CompactSketcher(Sketcher):
 
 if __name__ == "__main__":
   print 'loading db...'
-  optlist,args = getopt.getopt(sys.argv[1:],'x',["db=","x=", "rel=","k=","delta="])
+  optlist,args = getopt.getopt(sys.argv[1:],'x',["db=","x=", "rel=","k=","delta=","v="])
   optdict = dict(optlist)
   #db = matrixdb.MatrixDB.loadFile('g10.cfacts')
   print 'optdict',optdict
@@ -243,10 +243,15 @@ if __name__ == "__main__":
   rel = optdict.get('--rel','edge')
   k = int(optdict.get('--k','10'))
   delta = float(optdict.get('--delta','0.01'))
+  v = optdict.get('--v','1')
 
   M_edge = db.matEncoding[(rel,2)]
-
-  sk = CompactSketcher(db,k,delta/db.dim())
+  if v=='1':  
+    sk = Sketcher(db,k,delta/db.dim())
+  elif v=='2':
+    sk = Sketcher2(db,k,delta/db.dim())
+  else:
+    assert False,'--v should not be %r' % v
   sk.describe()
 
   def probe(x):
@@ -269,23 +274,3 @@ if __name__ == "__main__":
   nx = x.dot(M_edge)
   sk.showme(nx=nx, sk_nx=sk_nx, approx_nx=approx_nx)
   sk.compareRows(nx,approx_nx)
-
-  # m=3, t=2
-  H = np.array([[0,1,0,1,0,0],[0, 1, 0, 0, 1, 0]])
-  a = np.array([1,0])
-  b = np.array([0,1])
-  # this seems to work 
-  #M = np.array([[0,1],[1,0]])
-  # not this
-  M = np.array([[0,1],[1,1]])
-  sM = 0.5*H.transpose().dot(M).dot(H)
-  sa = a.dot(H)
-  sb = b.dot(H)
-  def clean(M): 
-    M1 = M+0
-    M1[M1>=1] = 1.0
-    M1[M1<1] = 0.0
-    return M1
-  fa = sa.dot(sM)
-  fb = sb.dot(sM)
-
