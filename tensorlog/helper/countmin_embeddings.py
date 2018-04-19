@@ -216,7 +216,7 @@ class Sketcher2(Sketcher):
           self.sketchmatsArg1[functor].append(scipy.sparse.csr_matrix(h1d))
           h2d = scipy.sparse.coo_matrix((ones,(skRows,arrayHasher(m.col))),shape=skShape)
           skArg2 = skArg2 + h2d
-        self.sketchmatArg2[rel] = scipy.sparse.csr_matrix(skArg2)
+        self.sketchmatArg2[functor] = scipy.sparse.csr_matrix(skArg2)
     print 'done'
 
   def follow(self,rel,S):
@@ -239,7 +239,7 @@ class Sketcher2(Sketcher):
 
 if __name__ == "__main__":
   print 'loading db...'
-  optlist,args = getopt.getopt(sys.argv[1:],'x',["db=","x=", "rel=","k=","delta=","v="])
+  optlist,args = getopt.getopt(sys.argv[1:],'x',["db=","x=", "rel=","k=","delta=","v=","seed="])
   optdict = dict(optlist)
   #db = matrixdb.MatrixDB.loadFile('g10.cfacts')
   print 'optdict',optdict
@@ -249,6 +249,8 @@ if __name__ == "__main__":
   k = int(optdict.get('--k','10'))
   delta = float(optdict.get('--delta','0.01'))
   v = optdict.get('--v','1')
+  seed = optdict.get('--seed',-1)
+  if seed>0: random.seed(seed)
 
   M_edge = db.matEncoding[(rel,2)]
   if v=='1':  
