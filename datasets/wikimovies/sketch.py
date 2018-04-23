@@ -11,6 +11,7 @@ def path_1(db,sk,M_edge,rel):
   sketch_p = 0
   n = db.dim()
   k=0
+  errors=[]
   for x in range(n):
       #xsymb = "qtrain%04d"%x#db.asSymbol(x)
       xsymb = db.asSymbol(x)
@@ -26,8 +27,14 @@ def path_1(db,sk,M_edge,rel):
       sketch_t = time.time()
       native_p += native_t-start
       sketch_p += sketch_t - native_t
+      fp,fn = sk.compareRows(a,sk.unsketch(sa),interactive=False)
+      errors.append( (len(fp),len(fn)) )
   print "native qps",k/native_p
   print "sketch qps",k/sketch_p
+  fp = [p for p,n in errors]
+  fn = [n for p,n in errors]
+  print "min / avg / max fp:",min(fp),sum(fp)/k,max(fp)
+  print "#fn > 0:",sum(1 if n>0 else 0 for n in fn )
 
 def probe(db,sk,M_edge,rel):
     q = db.onehot("qtrain0001")
@@ -40,6 +47,7 @@ def path_2(db,sk,M_edges,rel):
   sketch_p = 0
   n = db.dim()
   k=0
+  errors=[]
   for x in range(n):
       #xsymb = "qtrain%04d"%x#db.asSymbol(x)
       xsymb = db.asSymbol(x)
@@ -55,14 +63,20 @@ def path_2(db,sk,M_edges,rel):
       sketch_t = time.time()
       native_p += native_t - start
       sketch_p += sketch_t - native_t
+      fp,fn = sk.compareRows(a,sk.unsketch(sa),interactive=False)
+      errors.append( (len(fp),len(fn)) )
   print "native qps",k/native_p
   print "sketch qps",k/sketch_p
+  fp = [p for p,n in errors]
+  fn = [n for p,n in errors]
+  print "min / avg / max fp:",min(fp),sum(fp)/k,max(fp)
+  print "#fn > 0:",sum(1 if n>0 else 0 for n in fn )
 
-
+defaults = 'sketch-train-250.db|inputs/train-250.cfacts 9'.split()
 def do_expt():
   if len(sys.argv)<2:
       print "sample usage:"
-      print sys.argv[0],"--db 'tmp-cache/train-%d.db|inputs/train-%d.cfacts' --rel mentions_entity,directed_by --k 10 --seed 314159"
+      print sys.argv[0],"--db '%s' --rel mentions_entity,directed_by --k %s --seed 314159" % tuple(defaults)
       exit(0)
       
   optlist,args = getopt.getopt(sys.argv[1:],'x',["db=","x=", "rel=","k=","delta=","seed="])
@@ -72,25 +86,25 @@ def do_expt():
   print 'loading db...'
   #db = matrixdb.MatrixDB.loadFile('g10.cfacts')
   print 'optdict',optdict
-  db = comline.parseDBSpec(optdict.get('--db','g10.cfacts'))
+  db = comline.parseDBSpec(optdict.get('--db',defaults[0]))
   #db.listing()
   print "db nnz:",db.size()
   rels = optdict.get('--rel','mentions_entity,directed_by').split(",")
-  k = int(optdict.get('--k','10'))
+  k = int(optdict.get('--k',defaults[1]))
   delta = float(optdict.get('--delta','0.01'))
   seed = optdict.get('--seed',-1)
-  if seed>0: random.seed(seed)
   
   M_edge = [db.matEncoding[(rel,2)] for rel in rels]
 
   n=db.dim()
   data = []
-  for sclass in [Sketcher2,
-                 #Sketcher,
-                 #FastSketcher,
-                 FastSketcher2]:
+  for sclass in [FastSketcher2,
+                 FastSketcher,
+                 Sketcher2,
+                 Sketcher]:
+      if seed>0: random.seed(seed)
       start = time.time()
-      sk = sclass(db,k,delta/n)
+      sk = sclass(db,k,delta/n,verbose=False)
       sk.describe()
       print "load",time.time()-start,"sec"
       #foo = probe(db,sk,M_edge[0],rels[0])

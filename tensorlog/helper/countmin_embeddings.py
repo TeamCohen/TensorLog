@@ -34,7 +34,7 @@ def componentwise_min(X,Y):
 
 class Sketcher(object):
 
-  def __init__(self,db,k,delta):
+  def __init__(self,db,k,delta,verbose=True):
     """ Follows notation in my notes.
     http://www.cs.cmu.edu/~wcohen/10-605/notes/randomized-algs.pdf
 
@@ -159,7 +159,7 @@ class Sketcher(object):
         print tag,'=',val
       print
 
-  def compareRows(self,gold,approx):
+  def compareRows(self,gold,approx,interactive=True):
     """ For debugging, compare gold and approximate vectors to show how
     different they are
     """
@@ -167,9 +167,12 @@ class Sketcher(object):
     dApprox = self.db.rowAsSymbolDict(approx)
     fp = set(dApprox.keys()) - set(dGold.keys())
     fn = set(dGold.keys()) - set(dApprox.keys())
-    print 'errors:',len(fp),list(fp)[0:10]
-    if len(fn)>0:
-      print '  also there are false negatives - really?',fn
+    if interactive:
+      print 'errors:',len(fp),list(fp)[0:10]
+      if len(fn)>0:
+        print '  also there are false negatives - really?',fn
+    else:
+      return fp,fn
 
 class Sketcher2(Sketcher):
   """
@@ -192,9 +195,9 @@ class Sketcher2(Sketcher):
   sketchmatsArg2[rel][d], since they are never used.
   """
 
-  def __init__(self,db,k,delta):
+  def __init__(self,db,k,delta,verbose=True):
     # want to make t 2b * as large
-    super(Sketcher2,self).__init__(db,k,delta)
+    super(Sketcher2,self).__init__(db,k,delta,verbose)
     # these are like hashmat, and hashmats, but indexed by the functor
     # for a relation
     self.sketchmatsArg1 = collections.defaultdict(list)
@@ -210,7 +213,8 @@ class Sketcher2(Sketcher):
         skArg2 = scipy.sparse.coo_matrix(skShape)
         ones = np.ones_like(skRows)
         for d in range(self.t):
-          print 'hash',d+1,'of',self.t,'for',functor
+          if verbose: print 'hash',d+1,'of',self.t,'for',functor
+          else: print ".",
           arrayHasher = np.vectorize(lambda k: self.hash_function(d,k))
           h1d = scipy.sparse.coo_matrix((ones,(skRows,arrayHasher(m.row))),shape=skShape)
           self.sketchmatsArg1[functor].append(scipy.sparse.csr_matrix(h1d))

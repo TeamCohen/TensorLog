@@ -35,8 +35,8 @@ def global_unsketch(S, hashmat, t, n):
     return s3
 
 class FastSketcher(Sketcher):
-  def __init__(self,db,k,delta):
-    super(FastSketcher, self).__init__(db,k,delta)
+  def __init__(self,db,k,delta,verbose=True):
+    super(FastSketcher, self).__init__(db,k,delta,verbose)
   def unsketch(self,S):
     """ Approximate the matrix that would be sketched as S, i.e., an M so
     that M*hashmat = S.
@@ -45,8 +45,8 @@ class FastSketcher(Sketcher):
     return global_unsketch(S,self.hashmat, self.t, self.n)
 
 class FastSketcher2(Sketcher2):
-  def __init__(self,db,k,delta):
-    super(FastSketcher2,self).__init__(db, k, delta)
+  def __init__(self,db,k,delta,verbose=True):
+    super(FastSketcher2,self).__init__(db, k, delta,verbose)
     self.sketchmatArg1 = {}
     for rel in self.sketchmatsArg1:
       self.sketchmatArg1[rel] = sum(self.sketchmatsArg1[rel])
