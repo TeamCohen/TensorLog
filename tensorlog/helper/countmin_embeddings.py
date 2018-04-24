@@ -13,7 +13,7 @@ import sys
 import getopt
 import collections
 
-from tensorlog import matrixdb,comline,mutil
+from tensorlog import matrixdb,comline,mutil,declare
 
 LOGBASE = 2
 MAX_NUM_HASHES = 1000
@@ -127,12 +127,11 @@ class Sketcher(object):
       result = componentwise_min(result,xd)
     return result
 
-  def follow(self,rel,S, transpose=False):
+  def follow(self,mode,S, transpose=False):
     """ The analog of an operator X.dot(M) in sketch space.  Given S where
     X.dot(hashmat)=S, return the sketch for X.dot(M).
     """
-    M = self.db.matEncoding[(rel,2)]
-    if transpose: M = M.transpose()
+    M = self.db.matrix(mode,transpose)
     return self.sketch(self.unsketch(S).dot(M))
 
   def describe(self):
@@ -205,26 +204,29 @@ class Sketcher2(Sketcher):
     self.sketchmatArg2 = {}
     self.sketchmatWeights = {}
     print 'sketching the db rels....'
-    for (functor,arity),M in db.matEncoding.items():
+    for (functor,arity) in db.matEncoding:
       if arity==2:
-        m = scipy.sparse.coo_matrix(M)
-        self.sketchmatWeights[functor] = scipy.sparse.csr_matrix(m.data.reshape((1,m.nnz)))
-        skShape = (m.nnz,self.m*self.t)  #shape of the sketches we build below
-        skRows = np.arange(m.nnz)        #coo.row for sketches we build
-        skArg2 = scipy.sparse.coo_matrix(skShape)
-        ones = np.ones_like(skRows)
-        for d in range(self.t):
-          if verbose: print 'hash',d+1,'of',self.t,'for',functor
-          else: print ".",
-          arrayHasher = np.vectorize(lambda k: self.hash_function(d,k))
-          h1d = scipy.sparse.coo_matrix((ones,(skRows,arrayHasher(m.row))),shape=skShape)
-          self.sketchmatsArg1[functor].append(scipy.sparse.csr_matrix(h1d))
-          h2d = scipy.sparse.coo_matrix((ones,(skRows,arrayHasher(m.col))),shape=skShape)
-          skArg2 = skArg2 + h2d
-        self.sketchmatArg2[functor] = scipy.sparse.csr_matrix(skArg2)
+        for pat in "io oi".split():
+          mode = declare.asMode("%s/%s"%(functor,pat))
+          M = db.matrix(mode)
+          m = scipy.sparse.coo_matrix(M)
+          self.sketchmatWeights[mode] = scipy.sparse.csr_matrix(m.data.reshape((1,m.nnz)))
+          skShape = (m.nnz,self.m*self.t)  #shape of the sketches we build below
+          skRows = np.arange(m.nnz)        #coo.row for sketches we build
+          skArg2 = scipy.sparse.coo_matrix(skShape)
+          ones = np.ones_like(skRows)
+          for d in range(self.t):
+            if verbose: print 'hash',d+1,'of',self.t,'for',mode
+            else: print ".",
+            arrayHasher = np.vectorize(lambda k: self.hash_function(d,k))
+            h1d = scipy.sparse.coo_matrix((ones,(skRows,arrayHasher(m.row))),shape=skShape)
+            self.sketchmatsArg1[mode].append(scipy.sparse.csr_matrix(h1d))
+            h2d = scipy.sparse.coo_matrix((ones,(skRows,arrayHasher(m.col))),shape=skShape)
+            skArg2 = skArg2 + h2d
+          self.sketchmatArg2[mode] = scipy.sparse.csr_matrix(skArg2)
     print 'done'
 
-  def follow(self,rel,S,transpose=False):
+  def follow(self,mode,S,transpose=False):
     """ The analog of an operator X.dot(M) in sketch space.  Given S where
     X.dot(hashmat)=S, return the sketch for X.dot(M).
     """
@@ -235,14 +237,16 @@ class Sketcher2(Sketcher):
     # Whoops -- to do a transpose here, should we
     #  (1) store forward and backward sketchmats for each relation using the syntax below, or
     #  (2) switch off here to do it in arg1/arg2 order (fwd) or arg2/arg1 order (bwd)
-    
-    nz_indices = scipy.sparse.csr_matrix(S.dot(self.sketchmatsArg1[rel][0].transpose()))
+    if transpose: # do we have a faster way to do this?
+      mode = declare.asMode(str(mode)) # make a copy
+      for i in 0,1: mode.prototype.args[i] = 'i' if mode.prototype.args[i]=='o' else 'o'
+    nz_indices = scipy.sparse.csr_matrix(S.dot(self.sketchmatsArg1[mode][0].transpose()))
     for d in range(1,self.t):
-      in_d = scipy.sparse.csr_matrix(S.dot(self.sketchmatsArg1[rel][d].transpose()))
+      in_d = scipy.sparse.csr_matrix(S.dot(self.sketchmatsArg1[mode][d].transpose()))
       nz_indices = componentwise_min(nz_indices,in_d)
     # multiply these indices by the corresponding weights, and then
     # move back to sketch space
-    return self.sketchmatWeights[rel].multiply(nz_indices).dot(self.sketchmatArg2[rel])
+    return self.sketchmatWeights[mode].multiply(nz_indices).dot(self.sketchmatArg2[mode])
 
 # example: python countmin_embeddings.py --db  'fb15k.db|../../datasets/fb15k-speed/inputs/fb15k-valid.cfacts'  --x m_x_02md_2 --rel american_football_x_football_coach_position_x_coaches_holding_this_position_x_american_football_x_football_historical_coach_position_x_team --k 50
 # example: python countmin_embeddings.py --db  'g64.db|../../datasets/grid/inputs/g64.cfacts'  --x 25,36 --rel edge --k 10
