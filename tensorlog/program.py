@@ -43,6 +43,7 @@ class Program(object):
             return r
         if not calledFromProPPRProgram:
             self.rules.mapRules(checkRule)
+        self.compilerDef = bpcompiler.BPCompiler
 
     def clearFunctionCache(self):
         self.function = {}
@@ -68,12 +69,12 @@ class Program(object):
             elif len(predDef)==1:
                 #instead of a sum of one function, just find the function
                 #for this single predicate
-                c = bpcompiler.BPCompiler(mode,self,depth,predDef[0])
+                c = self.compilerDef(mode,self,depth,predDef[0])
                 self.function[(mode,depth)] = c.getFunction()
             else:
                 #compute a function that will sum up the values of the
                 #clauses
-                ruleFuns = map(lambda r:bpcompiler.BPCompiler(mode,self,depth,r).getFunction(),predDef)
+                ruleFuns = map(lambda r:self.compilerDef(mode,self,depth,r).getFunction(),predDef)
                 self.function[(mode,depth)] = funs.SumFunction(ruleFuns)
             if depth==0:
                 if self.normalize=='softmax':
@@ -264,7 +265,7 @@ class ProPPRProgram(Program):
             # don't assume types for weights have been declared
             for rule in self.rules:
               for m in possibleModes(rule):
-                varTypes = bpcompiler.BPCompiler(m,self,0,rule).inferredTypes()
+                varTypes = self.compilerDef(m,self,0,rule).inferredTypes()
                 for goal in rule.rhs:
                   if goal.arity==1 and (goal.functor,goal.arity) in self.db.paramSet:
                     newType = varTypes.get(goal.args[0])

@@ -22,6 +22,18 @@ conf.produce_ops = True;  conf.help.produce_ops =   "Turn off to debug analysis"
 # functor for the special 'assign(Var,const) predicate
 ASSIGN = 'assign'
 
+# default operator implementations
+DEFAULT_OPS = {
+  'AssignOnehotToVar':ops.AssignOnehotToVar,
+  'CallPlugin':ops.CallPlugin,
+  'VecMatMulOp':ops.VecMatMulOp,
+  'DefinedPredOp':ops.DefinedPredOp,
+  'AssignPreimageToVar':ops.AssignPreimageToVar,
+  'AssignVectorToVar':ops.AssignVectorToVar,
+  'ComponentwiseVecMulOp':ops.ComponentwiseVecMulOp,
+  'WeightedVec':ops.WeightedVec
+  }
+
 #
 # helper classes - info on variables and goals
 #
@@ -88,6 +100,11 @@ class BPCompiler(object):
     self.compiled = False
 
     if conf.strict: self.validateRuleBeforeAnalysis()
+    
+    self._initOperatorImplementations()
+  def _initOperatorImplementations(self):
+    self.opImpl = {}
+    self.opImpl.update(DEFAULT_OPS)
 
   #
   # compile and then access the result of compilation
@@ -363,7 +380,7 @@ class BPCompiler(object):
           # TODO: should unary predicates in general be an input?
           errorMsg = 'output variables without inputs are only allowed for assign/2 or assign/3: %s' % str(self.rule.rhs[gin.index-1])
           assert (mode.functor==ASSIGN and mode.arity>=2 and mode.isOutput(0)), errorMsg
-          addOp(ops.AssignOnehotToVar(msgName,mode), traceDepth,j,v)
+          addOp(self.opImpl['AssignOnehotToVar'](msgName,mode), traceDepth,j,v)
           return msgName
         else:
           # figure out how to forward message from inputs to outputs
@@ -373,13 +390,13 @@ class BPCompiler(object):
               vMsg = msgVar2Goal(vIn,j,traceDepth+1)
               fxs.append(vMsg)
             outType = self.tensorlogProg.plugins.outputType(mode,self.collectInputTypes(j))
-            addOp(ops.CallPlugin(msgName,fxs,mode,dstType=outType), traceDepth,j,v)
+            addOp(self.opImpl['CallPlugin'](msgName,fxs,mode,dstType=outType), traceDepth,j,v)
           else:
             fx = msgVar2Goal(_only(gin.inputs),j,traceDepth+1) #ask for the message forward from the input to goal j
             if not gin.definedPred:
-              addOp(ops.VecMatMulOp(msgName,fx,mode), traceDepth,j,v)
+              addOp(self.opImpl['VecMatMulOp'](msgName,fx,mode), traceDepth,j,v)
             else:
-              addOp(ops.DefinedPredOp(self.tensorlogProg,msgName,fx,mode,self.depth+1), traceDepth,j,v)
+              addOp(self.opImpl['DefinedPredOp'](self.tensorlogProg,msgName,fx,mode,self.depth+1), traceDepth,j,v)
           return msgName
       elif j>0 and v in self.goalDict[j].inputs:
         #message from rhs goal to an input variable of that goal
@@ -391,7 +408,7 @@ class BPCompiler(object):
           return self.varDict[outVar].inputTo
         if gin.outputs and hasOutputVarUsedElsewhere(gin):
           bx = msgVar2Goal(_only(gin.outputs),j,traceDepth+1) #ask for the message backward from the input to goal
-          addOp(ops.VecMatMulOp(msgName,bx,mode,transpose=True), traceDepth,j,v)
+          addOp(self.opImpl['VecMatMulOp'](msgName,bx,mode,transpose=True), traceDepth,j,v)
           return msgName
         else:
           if gin.outputs:
@@ -403,9 +420,9 @@ class BPCompiler(object):
             #this variable now is connected to the main chain
             self.varDict[_only(gin.outputs)].connected = True
             assert not gin.definedPred, 'subpredicates must generate an output which is used downstream'
-            addOp(ops.AssignPreimageToVar(msgName,mode,self.msgType[msgName]), traceDepth,j,v)
+            addOp(self.opImpl['AssignPreimageToVar'](msgName,mode,self.msgType[msgName]), traceDepth,j,v)
           else:
-            addOp(ops.AssignVectorToVar(msgName,mode,self.msgType[msgName]), traceDepth,j,v)
+            addOp(self.opImpl['AssignVectorToVar'](msgName,mode,self.msgType[msgName]), traceDepth,j,v)
 
           return msgName
       else:
@@ -429,7 +446,7 @@ class BPCompiler(object):
       for j2 in vNeighbors[1:]:
         nextProd = makeMessageName('p',v,j,j2) if j2!=vNeighbors[-1] else makeMessageName('fb',v)
         multiplicand = msgGoal2Var(j2,v,traceDepth+1)
-        addOp(ops.ComponentwiseVecMulOp(nextProd,currentProduct,multiplicand), traceDepth,v,j)
+        addOp(self.opImpl['ComponentwiseVecMulOp'](nextProd,currentProduct,multiplicand), traceDepth,v,j)
         currentProduct = nextProd
       return currentProduct
 
@@ -466,7 +483,7 @@ class BPCompiler(object):
     for msg in weighters:
       nextProd = makeMessageName('w',outputVar) if msg==weighters[-1] else makeMessageName('p_%s' % msg,outputVar)
       multiplicand = msg
-      addOp(ops.WeightedVec(nextProd,multiplicand,currentProduct),0,msg,'PSEUDO')
+      addOp(self.opImpl['WeightedVec'](nextProd,multiplicand,currentProduct),0,msg,'PSEUDO')
       currentProduct = nextProd
 
     # save the output and inputs

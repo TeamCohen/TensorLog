@@ -127,11 +127,12 @@ class Sketcher(object):
       result = componentwise_min(result,xd)
     return result
 
-  def follow(self,rel,S):
+  def follow(self,rel,S, transpose=False):
     """ The analog of an operator X.dot(M) in sketch space.  Given S where
     X.dot(hashmat)=S, return the sketch for X.dot(M).
     """
     M = self.db.matEncoding[(rel,2)]
+    if transpose: M = M.transpose()
     return self.sketch(self.unsketch(S).dot(M))
 
   def describe(self):
@@ -223,13 +224,18 @@ class Sketcher2(Sketcher):
         self.sketchmatArg2[functor] = scipy.sparse.csr_matrix(skArg2)
     print 'done'
 
-  def follow(self,rel,S):
+  def follow(self,rel,S,transpose=False):
     """ The analog of an operator X.dot(M) in sketch space.  Given S where
     X.dot(hashmat)=S, return the sketch for X.dot(M).
     """
     # nz_indices will be the indices of the coo_matrix for rel where
     # the row# hashes to something in S - unsketch these indices the
     # way we did before
+    
+    # Whoops -- to do a transpose here, should we
+    #  (1) store forward and backward sketchmats for each relation using the syntax below, or
+    #  (2) switch off here to do it in arg1/arg2 order (fwd) or arg2/arg1 order (bwd)
+    
     nz_indices = scipy.sparse.csr_matrix(S.dot(self.sketchmatsArg1[rel][0].transpose()))
     for d in range(1,self.t):
       in_d = scipy.sparse.csr_matrix(S.dot(self.sketchmatsArg1[rel][d].transpose()))
