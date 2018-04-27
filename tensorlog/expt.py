@@ -87,7 +87,7 @@ class Expt(object):
             def doit():
                 qid=0
                 for mode in testData.modesToLearn():
-                    qid+=Expt.predictionAsProPPRSolutions(savedTestPredictions,mode.functor,prog.db,UP1.getX(mode),UP1.getY(mode),True,qid)
+                    qid+=Expt.predictionAsProPPRSolutions(savedTestPredictions,mode.functor,prog.db,UP1.getX(mode),UP1.getY(mode),True,qid)+1
             Expt.timeAction('saving test predictions', doit)
 
         if savedTestExamples and testData:
