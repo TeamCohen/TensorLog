@@ -26,6 +26,7 @@ def runMain(n):
         session.run(tlog.inference(modeString), feed_dict=fd)
         print 'time',time.time() - start0,'sec'
     tot = time.time() - start0
+    print 'n',sys.argv[1]
     print 'batch size',nQueries
     print 'total query time',tot,'sec'
     print 'queries/sec',nQueries/tot
