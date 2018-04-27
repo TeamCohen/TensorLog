@@ -44,6 +44,7 @@ class Program(object):
         if not calledFromProPPRProgram:
             self.rules.mapRules(checkRule)
         self.compilerDef = bpcompiler.BPCompiler
+        self.softmaxDef = funs.SoftmaxFunction
 
     def clearFunctionCache(self):
         self.function = {}
@@ -78,9 +79,9 @@ class Program(object):
                 self.function[(mode,depth)] = funs.SumFunction(ruleFuns)
             if depth==0:
                 if self.normalize=='softmax':
-                    self.function[(mode,0)] = funs.SoftmaxFunction(self.function[(mode,0)])
+                    self.function[(mode,0)] = self.softmaxDef(self.function[(mode,0)])
                 elif self.normalize=='log+softmax':
-                    self.function[(mode,0)] = funs.SoftmaxFunction(funs.LogFunction(self.function[(mode,0)]))
+                    self.function[(mode,0)] = self.softmaxDef(funs.LogFunction(self.function[(mode,0)]))
                 elif self.normalize=='none':
                     pass
                 else:
