@@ -370,6 +370,7 @@ class Learner(object):
         ok = 0.0
         for i in range(n):
             pi = P.getrow(i)
+            if pi.nnz == 0: continue # no predictions
             yi = Y.getrow(i)
             ti = mutil.mapData(allZerosButArgmax,pi)
             ok += yi.multiply(ti).sum()

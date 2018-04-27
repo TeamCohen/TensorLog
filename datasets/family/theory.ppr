@@ -1,0 +1,154 @@
+# 'adapter' which can be added to a bunch of mutuallly recursive
+# learnedPred rules
+
+i_father(X,Y) :- father(X,Y) {i_father_father}.
+i_husband(X,Y) :- husband(X,Y) {i_husband_husband}.
+i_husband(X,Y) :- wife(Y,X) {i_husband_wife}.
+i_aunt(X,Y) :- aunt(X,Y) {i_aunt_aunt}.
+i_wife(X,Y) :- husband(Y,X) {i_wife_husband}.
+i_mother(X,Y) :- mother(X,Y) {i_mother_mother}.
+i_father(X,Y) :- son(Y,X) {i_father_son}.
+i_uncle(X,Y) :- uncle(X,Y) {i_uncle_uncle}.
+i_mother(X,Y) :- wife(X,Z), father(Z,Y) {i_mother_wife_father}.
+i_father(X,Y) :- daughter(Y,X) {i_father_daughter}.
+i_mother(X,Y) :- daughter(Y,X) {i_mother_daughter}.
+i_wife(X,Y) :- wife(X,Y) {i_wife_wife}.
+i_mother(X,Y) :- son(Y,X) {i_mother_son}.
+i_father(X,Y) :- husband(X,Z), mother(Z,Y) {i_father_husband_mother}.
+i_daughter(X,Y) :- daughter(X,Y) {i_daughter_daughter}.
+i_son(X,Y) :- son(X,Y) {i_son_son}.
+i_uncle(X,Y) :- nephew(Y,X) {i_uncle_nephew}.
+i_uncle(X,Y) :- niece(Y,X) {i_uncle_niece}.
+i_aunt(X,Y) :- niece(Y,X) {i_aunt_niece}.
+i_aunt(X,Y) :- nephew(Y,X) {i_aunt_nephew}.
+i_nephew(X,Y) :- nephew(X,Y) {i_nephew_nephew}.
+i_uncle(X,Y) :- husband(X,Z), aunt(Z,Y) {i_uncle_husband_aunt}.
+i_niece(X,Y) :- niece(X,Y) {i_niece_niece}.
+i_son(X,Y) :- father(Y,X) {i_son_father}.
+i_daughter(X,Y) :- father(Y,X) {i_daughter_father}.
+i_daughter(X,Y) :- mother(Y,X) {i_daughter_mother}.
+i_husband(X,Y) :- father(X,Z), son(Z,Y) {i_husband_father_son}.
+i_husband(X,Y) :- father(X,Z), daughter(Z,Y) {i_husband_father_daughter}.
+i_father(X,Y) :- father(X,Z), brother(Z,Y) {i_father_father_brother}.
+i_brother(X,Y) :- brother(X,Y) {i_brother_brother}.
+i_wife(X,Y) :- aunt(X,Z), niece(Z,Y) {i_wife_aunt_niece}.
+i_wife(X,Y) :- aunt(X,Z), nephew(Z,Y) {i_wife_aunt_nephew}.
+i_wife(X,Y) :- mother(X,Z), daughter(Z,Y) {i_wife_mother_daughter}.
+i_son(X,Y) :- mother(Y,X) {i_son_mother}.
+i_niece(X,Y) :- uncle(Y,X) {i_niece_uncle}.
+i_nephew(X,Y) :- aunt(Y,X) {i_nephew_aunt}.
+i_niece(X,Y) :- aunt(Y,X) {i_niece_aunt}.
+i_aunt(X,Y) :- aunt(X,Z), sister(Z,Y) {i_aunt_aunt_sister}.
+i_aunt(X,Y) :- aunt(X,Z), brother(Z,Y) {i_aunt_aunt_brother}.
+i_husband(X,Y) :- uncle(X,Z), niece(Z,Y) {i_husband_uncle_niece}.
+i_mother(X,Y) :- mother(X,Z), brother(Z,Y) {i_mother_mother_brother}.
+i_brother(X,Y) :- sister(Y,X) {i_brother_sister}.
+i_sister(X,Y) :- sister(X,Y) {i_sister_sister}.
+i_sister(X,Y) :- brother(Y,X) {i_sister_brother}.
+i_son(X,Y) :- brother(X,Z), daughter(Z,Y) {i_son_brother_daughter}.
+i_uncle(X,Y) :- uncle(X,Z), sister(Z,Y) {i_uncle_uncle_sister}.
+i_father(X,Y) :- father(X,Z), sister(Z,Y) {i_father_father_sister}.
+i_son(X,Y) :- son(X,Z), husband(Z,Y) {i_son_son_husband}.
+i_daughter(X,Y) :- daughter(X,Z), wife(Z,Y) {i_daughter_daughter_wife}.
+i_brother(X,Y) :- son(X,Z), mother(Z,Y) {i_brother_son_mother}.
+i_daughter(X,Y) :- daughter(X,Z), husband(Z,Y) {i_daughter_daughter_husband}.
+i_aunt(X,Y) :- wife(X,Z), uncle(Z,Y) {i_aunt_wife_uncle}.
+i_husband(X,Y) :- uncle(X,Z), nephew(Z,Y) {i_husband_uncle_nephew}.
+i_uncle(X,Y) :- uncle(X,Z), brother(Z,Y) {i_uncle_uncle_brother}.
+i_son(X,Y) :- son(X,Z), wife(Z,Y) {i_son_son_wife}.
+i_nephew(X,Y) :- uncle(Y,X) {i_nephew_uncle}.
+i_brother(X,Y) :- son(X,Z), father(Z,Y) {i_brother_son_father}.
+i_niece(X,Y) :- niece(X,Z), husband(Z,Y) {i_niece_niece_husband}.
+i_nephew(X,Y) :- nephew(X,Z), husband(Z,Y) {i_nephew_nephew_husband}.
+i_daughter(X,Y) :- sister(X,Z), son(Z,Y) {i_daughter_sister_son}.
+i_uncle(X,Y) :- brother(X,Z), mother(Z,Y) {i_uncle_brother_mother}.
+i_sister(X,Y) :- niece(X,Z), aunt(Z,Y) {i_sister_niece_aunt}.
+i_father(X,Y) :- brother(X,Z), aunt(Z,Y) {i_father_brother_aunt}.
+i_brother(X,Y) :- nephew(X,Z), aunt(Z,Y) {i_brother_nephew_aunt}.
+i_brother(X,Y) :- nephew(X,Z), uncle(Z,Y) {i_brother_nephew_uncle}.
+i_sister(X,Y) :- daughter(X,Z), mother(Z,Y) {i_sister_daughter_mother}.
+i_sister(X,Y) :- daughter(X,Z), father(Z,Y) {i_sister_daughter_father}.
+i_mother(X,Y) :- sister(X,Z), uncle(Z,Y) {i_mother_sister_uncle}.
+i_daughter(X,Y) :- niece(X,Z), brother(Z,Y) {i_daughter_niece_brother}.
+i_niece(X,Y) :- niece(X,Z), wife(Z,Y) {i_niece_niece_wife}.
+i_son(X,Y) :- nephew(X,Z), brother(Z,Y) {i_son_nephew_brother}.
+i_sister(X,Y) :- niece(X,Z), uncle(Z,Y) {i_sister_niece_uncle}.
+i_nephew(X,Y) :- nephew(X,Z), wife(Z,Y) {i_nephew_nephew_wife}.
+i_wife(X,Y) :- mother(X,Z), son(Z,Y) {i_wife_mother_son}.
+i_mother(X,Y) :- mother(X,Z), sister(Z,Y) {i_mother_mother_sister}.
+i_brother(X,Y) :- uncle(X,Z), daughter(Z,Y) {i_brother_uncle_daughter}.
+i_brother(X,Y) :- father(X,Z), niece(Z,Y) {i_brother_father_niece}.
+i_brother(X,Y) :- father(X,Z), nephew(Z,Y) {i_brother_father_nephew}.
+i_sister(X,Y) :- mother(X,Z), niece(Z,Y) {i_sister_mother_niece}.
+i_sister(X,Y) :- mother(X,Z), nephew(Z,Y) {i_sister_mother_nephew}.
+i_son(X,Y) :- wife(X,Z), husband(Z,Y) {i_son_wife_husband}.
+i_sister(X,Y) :- husband(X,Z), daughter(Z,Y) {i_sister_husband_daughter}.
+i_aunt(X,Y) :- husband(X,Z), wife(Z,Y) {i_aunt_husband_wife}.
+i_husband(X,Y) :- mother(X,Z), aunt(Z,Y) {i_husband_mother_aunt}.
+i_aunt(X,Y) :- husband(X,Z), daughter(Z,Y) {i_aunt_husband_daughter}.
+i_daughter(X,Y) :- mother(X,Z), mother(Z,Y) {i_daughter_mother_mother}.
+i_nephew(X,Y) :- father(X,Z), aunt(Z,Y) {i_nephew_father_aunt}.
+i_niece(X,Y) :- wife(X,Z), son(Z,Y) {i_niece_wife_son}.
+i_uncle(X,Y) :- father(X,Z), father(Z,Y) {i_uncle_father_father}.
+i_brother(X,Y) :- wife(X,Z), husband(Z,Y) {i_brother_wife_husband}.
+i_niece(X,Y) :- father(X,Z), aunt(Z,Y) {i_niece_father_aunt}.
+i_nephew(X,Y) :- uncle(X,Z), son(Z,Y) {i_nephew_uncle_son}.
+i_mother(X,Y) :- father(X,Z), aunt(Z,Y) {i_mother_father_aunt}.
+i_brother(X,Y) :- father(X,Z), father(Z,Y) {i_brother_father_father}.
+i_father(X,Y) :- uncle(X,Z), son(Z,Y) {i_father_uncle_son}.
+i_sister(X,Y) :- father(X,Z), wife(Z,Y) {i_sister_father_wife}.
+i_niece(X,Y) :- father(X,Z), father(Z,Y) {i_niece_father_father}.
+i_niece(X,Y) :- brother(X,Z), wife(Z,Y) {i_niece_brother_wife}.
+i_husband(X,Y) :- wife(X,Z), son(Z,Y) {i_husband_wife_son}.
+i_aunt(X,Y) :- wife(X,Z), son(Z,Y) {i_aunt_wife_son}.
+i_son(X,Y) :- father(X,Z), aunt(Z,Y) {i_son_father_aunt}.
+i_aunt(X,Y) :- uncle(X,Z), son(Z,Y) {i_aunt_uncle_son}.
+i_mother(X,Y) :- father(X,Z), husband(Z,Y) {i_mother_father_husband}.
+i_wife(X,Y) :- father(X,Z), mother(Z,Y) {i_wife_father_mother}.
+i_sister(X,Y) :- uncle(X,Z), son(Z,Y) {i_sister_uncle_son}.
+i_nephew(X,Y) :- father(X,Z), uncle(Z,Y) {i_nephew_father_uncle}.
+i_daughter(X,Y) :- father(X,Z), mother(Z,Y) {i_daughter_father_mother}.
+i_daughter(X,Y) :- father(X,Z), nephew(Z,Y) {i_daughter_father_nephew}.
+i_mother(X,Y) :- uncle(X,Z), son(Z,Y) {i_mother_uncle_son}.
+i_nephew(X,Y) :- wife(X,Z), son(Z,Y) {i_nephew_wife_son}.
+i_sister(X,Y) :- mother(X,Z), uncle(Z,Y) {i_sister_mother_uncle}.
+i_wife(X,Y) :- father(X,Z), aunt(Z,Y) {i_wife_father_aunt}.
+i_niece(X,Y) :- mother(X,Z), niece(Z,Y) {i_niece_mother_niece}.
+i_aunt(X,Y) :- father(X,Z), nephew(Z,Y) {i_aunt_father_nephew}.
+i_mother(X,Y) :- father(X,Z), nephew(Z,Y) {i_mother_father_nephew}.
+i_son(X,Y) :- father(X,Z), mother(Z,Y) {i_son_father_mother}.
+i_uncle(X,Y) :- mother(X,Z), husband(Z,Y) {i_uncle_mother_husband}.
+i_niece(X,Y) :- father(X,Z), mother(Z,Y) {i_niece_father_mother}.
+i_daughter(X,Y) :- husband(X,Z), wife(Z,Y) {i_daughter_husband_wife}.
+i_aunt(X,Y) :- father(X,Z), mother(Z,Y) {i_aunt_father_mother}.
+i_son(X,Y) :- uncle(X,Z), son(Z,Y) {i_son_uncle_son}.
+i_uncle(X,Y) :- niece(X,Z), daughter(Z,Y) {i_uncle_niece_daughter}.
+i_mother(X,Y) :- father(X,Z), father(Z,Y) {i_mother_father_father}.
+i_niece(X,Y) :- sister(X,Z), husband(Z,Y) {i_niece_sister_husband}.
+i_daughter(X,Y) :- father(X,Z), aunt(Z,Y) {i_daughter_father_aunt}.
+i_husband(X,Y) :- nephew(X,Z), daughter(Z,Y) {i_husband_nephew_daughter}.
+i_sister(X,Y) :- wife(X,Z), husband(Z,Y) {i_sister_wife_husband}.
+i_wife(X,Y) :- father(X,Z), niece(Z,Y) {i_wife_father_niece}.
+i_mother(X,Y) :- husband(X,Z), sister(Z,Y) {i_mother_husband_sister}.
+i_mother(X,Y) :- father(X,Z), uncle(Z,Y) {i_mother_father_uncle}.
+i_son(X,Y) :- father(X,Z), uncle(Z,Y) {i_son_father_uncle}.
+i_aunt(X,Y) :- husband(X,Z), sister(Z,Y) {i_aunt_husband_sister}.
+i_aunt(X,Y) :- mother(X,Z), nephew(Z,Y) {i_aunt_mother_nephew}.
+i_mother(X,Y) :- father(X,Z), niece(Z,Y) {i_mother_father_niece}.
+i_daughter(X,Y) :- father(X,Z), niece(Z,Y) {i_daughter_father_niece}.
+i_niece(X,Y) :- wife(X,Z), brother(Z,Y) {i_niece_wife_brother}.
+i_daughter(X,Y) :- father(X,Z), uncle(Z,Y) {i_daughter_father_uncle}.
+i_sister(X,Y) :- mother(X,Z), husband(Z,Y) {i_sister_mother_husband}.
+i_daughter(X,Y) :- nephew(X,Z), daughter(Z,Y) {i_daughter_nephew_daughter}.
+i_niece(X,Y) :- mother(X,Z), nephew(Z,Y) {i_niece_mother_nephew}.
+i_sister(X,Y) :- mother(X,Z), wife(Z,Y) {i_sister_mother_wife}.
+i_father(X,Y) :- mother(X,Z), aunt(Z,Y) {i_father_mother_aunt}.
+i_nephew(X,Y) :- father(X,Z), mother(Z,Y) {i_nephew_father_mother}.
+i_son(X,Y) :- niece(X,Z), son(Z,Y) {i_son_niece_son}.
+i_aunt(X,Y) :- nephew(X,Z), son(Z,Y) {i_aunt_nephew_son}.
+i_uncle(X,Y) :- mother(X,Z), uncle(Z,Y) {i_uncle_mother_uncle}.
+i_daughter(X,Y) :- father(X,Z), wife(Z,Y) {i_daughter_father_wife}.
+i_brother(X,Y) :- father(X,Z), aunt(Z,Y) {i_brother_father_aunt}.
+i_wife(X,Y) :- husband(X,Z), sister(Z,Y) {i_wife_husband_sister}.
+i_wife(X,Y) :- father(X,Z), nephew(Z,Y) {i_wife_father_nephew}.
+i_sister(X,Y) :- brother(X,Z), sister(Z,Y) {i_sister_brother_sister}.

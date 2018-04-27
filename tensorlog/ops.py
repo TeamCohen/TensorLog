@@ -49,9 +49,13 @@ class Op(opfunutil.OperatorOrFunction):
     self._doEval(env,pad)
     pad[self.id].output = env[self.dst]
     if conf.trace:
-      print 'stores',mutil.summary(env[self.dst]),
-      if conf.long_trace>env[self.dst].nnz: print 'holding',env.db.matrixAsSymbolDict(env[self.dst]),
-      if conf.max_trace: print 'max',mutil.maxValue(env[self.dst]),
+      def do_trace(foo):
+        print 'stores',mutil.summary(foo),
+        if conf.long_trace>foo.nnz: print 'holding',env.db.matrixAsSymbolDict(foo),
+        if conf.max_trace: print 'max',mutil.maxValue(foo),
+      do_trace(env[self.dst])
+      if hasattr(self, 'sk'):
+        do_trace(self.sk.unsketch(env[self.dst]))
       print
     if conf.check_nan:
       mutil.checkNoNANs(env[self.dst], context='saving %s' % self.dst)

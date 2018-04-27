@@ -32,11 +32,18 @@ class Function(object):
             print "Invoking:\n%s" % "\n. . ".join(self.pprint())
         pad[self.id].output = self._doEval(db,values,pad)
         if conf.trace:
-            print "Function completed:\n%s" % "\n. . ".join(self.pprint())
-            if conf.long_trace:
-                for k,v in enumerate(values):
-                    print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
-                print '. result :',db.matrixAsSymbolDict(pad[self.id].output)
+            if hasattr(self,'sk'):
+              print "Function completed:\n%s" % "\n. . ".join(self.pprint())
+              if conf.long_trace:
+                  for k,v in enumerate(values):
+                      print '. input',k+1,':',db.matrixAsSymbolDict(self.sk.unsketch(values[k]))
+                  print '. result :',db.matrixAsSymbolDict(self.sk.unsketch(pad[self.id].output))
+            else:
+              print "Function completed:\n%s" % "\n. . ".join(self.pprint())
+              if conf.long_trace:
+                  for k,v in enumerate(values):
+                      print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
+                  print '. result :',db.matrixAsSymbolDict(pad[self.id].output)
         return pad[self.id].output
 
     def backprop(self,delta,gradAccum,pad):

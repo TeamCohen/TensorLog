@@ -4,7 +4,7 @@ import random
 import getopt
 from tensorlog.helper.countmin_embeddings import Sketcher,Sketcher2
 from tensorlog.helper.fast_sketch import FastSketcher, FastSketcher2
-from tensorlog import comline,matrixdb
+from tensorlog import comline,matrixdb,declare
 
 
 
@@ -84,14 +84,15 @@ if __name__ == '__main__':
   if seed>0: random.seed(seed)
   
   M_edge = db.matEncoding[(rel,2)]
-
+  mode = declare.asMode("%s/io"%rel)
   for sclass in [FastSketcher2,
                  FastSketcher,
                  Sketcher2,
-                 Sketcher]:
+                 Sketcher
+  ]:
       start = time.time()
       sk = sclass(db,k,delta/db.dim(),verbose=False)
       sk.describe()
       print "load",time.time()-start,"sec"
-      path_1(db,sk,M_edge,rel)
-      path_2(db,sk,M_edge,rel)
+      path_1(db,sk,M_edge,mode)
+      path_2(db,sk,M_edge,mode)
