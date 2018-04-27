@@ -28,7 +28,9 @@ def componentwise_min(X,Y):
   Y1.data = np.ones_like(Y.data)
   commonIndicesXVals = X.multiply(Y1)
   commonIndicesYVals = Y.multiply(X1)
-  data = np.minimum(commonIndicesXVals.data,commonIndicesYVals.data)
+  commonIndicesXVals.sort_indices()
+  commonIndicesYVals.sort_indices()
+  data = np.minimum(commonIndicesXVals.data,commonIndicesYVals.data) # this depends on the indices being in the same order
   result = ss.csr_matrix((data,commonIndicesXVals.indices,commonIndicesXVals.indptr),shape=X1.shape,dtype='float32')
   return result
 
@@ -95,6 +97,7 @@ class Sketcher(object):
   def sketch(self,X):
     """ Produce a sketch for X
     """
+    #if X.nnz > self.m/LOGBASE: print "Heavy X %d" % X.nnz
     return X.dot(self.hashmat)
 
   def unsketch(self,S):
@@ -167,12 +170,20 @@ class Sketcher(object):
     dApprox = self.db.rowAsSymbolDict(approx)
     fp = set(dApprox.keys()) - set(dGold.keys())
     fn = set(dGold.keys()) - set(dApprox.keys())
+    u = set(dApprox.keys()) - fp
+    err = 0
+    for k in u:
+      ei = dApprox[k] - dGold[k]
+      err += ei*ei
+    err = math.sqrt(err)
     if interactive:
       print 'errors:',len(fp),list(fp)[0:10]
       if len(fn)>0:
         print '  also there are false negatives - really?',fn
+      if err > self.delta:
+        print "weight error",err 
     else:
-      return fp,fn
+      return fp,fn,err
 
 class Sketcher2(Sketcher):
   """
@@ -283,15 +294,26 @@ if __name__ == "__main__":
     sk.showme(x=x,sk_x=sk_x,approx_x=approx_x)
     sk.compareRows(x,approx_x)
 
+  
   x = db.onehot(xsym)
   probe(x)
 
   probe(x.dot(M_edge))
 
   print '-'*60
+  mode = declare.asMode("%s/io"%rel)
   sk_x = sk.sketch(x)
-  sk_nx = sk.follow(rel,sk_x)
+  sk_nx = sk.follow(mode,sk_x)
   approx_nx = sk.unsketch(sk_nx)
   nx = x.dot(M_edge)
   sk.showme(nx=nx, sk_nx=sk_nx, approx_nx=approx_nx)
   sk.compareRows(nx,approx_nx)
+  
+  null = -10*db.nullMatrix(1)
+  xnull = x + null
+  sk_null = sk.sketch(null)
+  sk_xnull = sk_null + sk_x
+  approx_xnull = sk.unsketch(sk_xnull)
+  sk.showme(nx=xnull, xk_nx = sk_xnull, approx_nx = approx_xnull)
+  sk.compareRows(xnull,approx_xnull)
+  
