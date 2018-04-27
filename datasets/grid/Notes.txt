@@ -1,3 +1,38 @@
+depth n/2
+
+python tfintegration.py --repeat 10 --corner soft
+accs [0.8125, 0.84615386, 0.87878788, 0.69565219, 0.9375, 0.81481481, 0.93103451, 0.8974359, 0.89655173, 0.86842108] average 0.857885193825
+
+python tfintegration.py --repeat 10 --corner hard
+accs [1.0, 1.0, 1.0, 0.0, 0.96774191, 1.0, 0.97297299, 1.0, 1.0, 1.0] average 0.894071489573
+
+python tfintegration.py --repeat 10 --corner hard --edge learned_embedding
+accs [1.0, 1.0, 0.97222221, 0.93103451, 1.0, 0.93023258, 1.0, 1.0, 0.94444442, 1.0] average 0.977793371677
+
+python tfintegration.py --repeat 10 --corner soft --edge learned_embedding
+accs [0.0, 0.74074072, 0.0, 0.0, 0.0, 0.0, 0.7368421, 0.2, 0.0, 0.0] average 0.167758281529
+
+python tfintegration.py --repeat 10 --corner hard --edge fixed_embedding --epochs 0
+accs [0.61764705, 0.55172414, 0.64102566, 0.53571427, 0.70833331, 0.5, 0.56410259, 0.58064514, 0.69230771, 0.5] average 0.589149987698
+
+depth n, 100 epochs
+
+python tfintegration.py --repeat 10 --corner hard --edge learned_embedding
+accs [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] average 1.0
+
+python tfintegration.py --repeat 10 --corner hard
+accs [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] average 1.0
+
+python tfintegration.py --repeat 10 --corner soft
+accs [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] average 0.0
+--------------------
+
+Multiclass STOP_AT 1.0
+python multiclass.py --repeat 10 --multiclass True
+accs [0.98998785, 0.98160452, 0.99004853, 0.98560429, 0.99500692, 0.9974829, 0.98486578, 0.98105609, 0.98978025, 0.99244875] average 0.988788586855
+stopped_at [575, 572, 548, 608, 557, 566, 560, 590, 632, 608] average 581
+
+
 Timing results:
 python generate.py 16 g16.cfacts
 python grid-expt.py g16.cfacts n_1_1
