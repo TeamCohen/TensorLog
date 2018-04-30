@@ -97,5 +97,11 @@ class FastSketcher2(Sketcher2):
     # multiply these indices by the corresponding weights, and then
     # move back to sketch space
     return self.sketchmatWeights[mode].multiply(nz_indices).dot(self.sketchmatArg2[mode])
+  def unsketch(self,S):
+    """ Approximate the matrix that would be sketched as S, i.e., an M so
+    that M*hashmat = S.
+    
+    """
+    return global_unsketch(S,self.hashmat, self.t, self.n)
   
   
