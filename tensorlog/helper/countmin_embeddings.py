@@ -23,14 +23,19 @@ def componentwise_min(X,Y):
   - my old version scipy doesn't have csr.minimum(other) implemented!
   """
   X1 = ss.csr_matrix(X)
-  X1.data = np.ones_like(X.data)
+  # if we put a 1 in where X.data was zero, we'll make trouble.
+  # remove those zeros before we go on (but leave X alone, just in case)
+  X1.eliminate_zeros()
+  X1.data = np.ones_like(X1.data)
   Y1 = ss.csr_matrix(Y)
-  Y1.data = np.ones_like(Y.data)
+  Y1.eliminate_zeros()
+  Y1.data = np.ones_like(Y1.data)
   commonIndicesXVals = X.multiply(Y1)
   commonIndicesYVals = Y.multiply(X1)
+   # np.minimum below depends on the indices being in the same order, so make it so
   commonIndicesXVals.sort_indices()
   commonIndicesYVals.sort_indices()
-  data = np.minimum(commonIndicesXVals.data,commonIndicesYVals.data) # this depends on the indices being in the same order
+  data = np.minimum(commonIndicesXVals.data,commonIndicesYVals.data)
   result = ss.csr_matrix((data,commonIndicesXVals.indices,commonIndicesXVals.indptr),shape=X1.shape,dtype='float32')
   return result
 
@@ -127,7 +132,13 @@ class Sketcher(object):
     result = ss.csr_matrix(S.dot(self.hashmats[0].transpose()))
     for d in range(1,self.t):
       xd = ss.csr_matrix(S.dot(self.hashmats[d].transpose()))
-      result = componentwise_min(result,xd)
+      try:
+        result = componentwise_min(result,xd)
+      except ValueError:
+        print "Bad unsketch at hash",d
+        print "result",mutil.pprintSummary(result)
+        print "xd",mutil.pprintSummary(xd)
+        raise
     return result
 
   def follow(self,mode,S, transpose=False):
