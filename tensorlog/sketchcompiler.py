@@ -1,22 +1,20 @@
 from tensorlog import bpcompiler as bc
-from tensorlog.helper.fast_sketch import FastSketcher2 as DefaultSketcher
 from tensorlog import ops,mutil,funs
 import scipy.sparse
-
 
 class SketchCompiler(bc.BPCompiler):
   """Compiles a logical rule + a mode into a sequence of ops.py operations."""
   def __init__(self,lhsMode,tensorlogProg,depth,rule,sketch):
-    super(SketchCompiler,self).__init__(lhsMode, tensorlogProg, depth, rule)
     self.sk = sketch
+    super(SketchCompiler,self).__init__(lhsMode, tensorlogProg, depth, rule)
   def _initOperatorImplementations(self):
     bc.BPCompiler._initOperatorImplementations(self)
-    self.opImpl['AssignPreimageToVar'] = lambda d,m,t=None:    AssignPreimageSketchToVar(d,m,self.sk,t)
-    self.opImpl['AssignVectorToVar']   = lambda d,m,t=None:    AssignVectorSketchToVar(d,m,self.sk,t)
-    self.opImpl['AssignOnehotToVar']   = lambda d,m:           AssignOnehotSketchToVar(d,m,self.sk)
-    self.opImpl['VecMatMulOp']         = lambda d,s,m,t=False: FollowOp(d,s,m,self.sk,t)
-    self.opImpl['WeightedVec']         = lambda d,w,v:         SketchWeightedVec(d,w,v,self.sk)
-    
+    self.opImpl['AssignPreimageToVar'] = AssignPreimageSketchToVar.factory(self.sk)
+    self.opImpl['AssignVectorToVar']   = AssignVectorSketchToVar.factory(self.sk)
+    self.opImpl['AssignOnehotToVar']   = AssignOnehotSketchToVar.factory(self.sk)
+    self.opImpl['VecMatMulOp']         = FollowOp.factory(self.sk)
+    self.opImpl['WeightedVec']         = SketchWeightedVec.factory(self.sk)
+
 class AssignPreimageSketchToVar(ops.AssignPreimageToVar):
   def __init__(self,dst,matMode,sketch,dstType=None):
     super(AssignPreimageSketchToVar,self).__init__(dst, matMode, dstType)
@@ -28,12 +26,17 @@ class AssignPreimageSketchToVar(ops.AssignPreimageToVar):
     assert False,'backprop with preimages not implemented'
   def copy(self):
     return AssignPreimageSketchToVar(self.dst,self.matMode,self.sk)
+  @staticmethod
+  def factory(sk):
+    def wrapper(dst,matMode,dstType=None):
+      return AssignPreimageSketchToVar(dst,matMode,sk,dstType)
+    return wrapper
 
 class AssignVectorSketchToVar(ops.AssignVectorToVar):
   """Mat is a unary predicate like p(X). Assign a row vector which
   encodes p to the variable 'dst'. """
   def __init__(self,dst,matMode,sketch,dstType=None):
-    super(AssignVectorSketchToVar,self).__init__(dst, matMode)
+    super(AssignVectorSketchToVar,self).__init__(dst, matMode, dstType)
     self.sk = sketch
   def _doEval(self,env,pad):
     try:
@@ -48,6 +51,11 @@ class AssignVectorSketchToVar(ops.AssignVectorToVar):
       gradAccum.accum(key,update)
   def copy(self):
     return AssignVectorSketchToVar(self.dst,self.matMode,self.sk)
+  @staticmethod
+  def factory(sk):
+    def wrapper(dst, matMode, dstType=None):
+      return AssignVectorSketchToVar(dst, matMode,sk,dstType)
+    return wrapper
   
 class AssignOnehotSketchToVar(ops.AssignOnehotToVar):
   """Assign a one-hot row encoding of a constant to the dst variable.
@@ -62,6 +70,11 @@ class AssignOnehotSketchToVar(ops.AssignOnehotToVar):
     pass
   def copy(self):
     return AssignOnehotSketchToVar(self.dst,self.mode,self.sk)
+  @staticmethod
+  def factory(sk):
+    def wrapper(dst,mode):
+      return AssignOnehotSketchToVar(dst,mode,sk)
+    return wrapper
 
 class FollowOp(ops.VecMatMulOp):
   """Op of the form "dst = src*mat or dst=src*mat.tranpose()"
@@ -97,6 +110,11 @@ class FollowOp(ops.VecMatMulOp):
       gradAccum.accum(key,update)
   def copy(self):
     return FollowOp(self.dst,self.src,self.matMode,self.sk, self.transpose)
+  @staticmethod
+  def factory(sk):
+    def wrapper(dst,src,matMode,transpose=False):
+      return FollowOp(dst,src,matMode,sk,transpose)
+    return wrapper
 
 
 class SketchWeightedVec(ops.WeightedVec):
@@ -129,6 +147,11 @@ class SketchWeightedVec(ops.WeightedVec):
     env.delta[self.weighter] = mutil.broadcastAndWeightByRowSum(env[self.weighter], tmp)
   def copy(self):
     return SketchWeightedVec(self.dst,self.weighter,self.vec)
+  @staticmethod
+  def factory(sk):
+    def wrapper(dst,weighter,vec):
+      return SketchWeightedVec(dst,weighter,vec,sk)
+    return wrapper
 
 import math
 import numpy as NP
