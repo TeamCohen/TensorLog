@@ -5,7 +5,7 @@ import scipy.sparse as SS
 import scipy.io
 import numpy as np
 from tensorlog import expt,dataset,comline,matrixdb,mutil,program,funs,sketchcompiler,declare
-from tensorlog.helper.sketchadapters import SketchData,SketchLearner
+from tensorlog.helper.sketchadapters import SketchData,SketchLearner,sketchProgram
 from tensorlog.helper.fast_sketch import FastSketcher2# as DefaultSketcher
 from tensorlog.helper.fast_sketch import FastSketcher# as DefaultSketcher
 from tensorlog.helper.countmin_embeddings import Sketcher# as DefaultSketcher
@@ -51,17 +51,17 @@ def setExptParams():
         trainData = trainData.extractMode(mode)
         testData = testData.extractMode(mode)
     
-    skTrain = SketchData(trainData,sketcher,"train")
-    skTest = SketchData(testData,sketcher,"test")
+    skTrain = SketchData(sketcher,trainData,"train")
+    skTest = SketchData(sketcher,testData,"test")
     
     prog = program.ProPPRProgram.loadRules("theory.ppr",db=db)
-    sketchProgram(prog,sketcher)
+    sketchProgram(sketcher,prog)
     prog.setRuleWeights()
     prog.maxDepth=4
     return (prog, skTrain,skTest, sketcher, (k,delta,sketcher_s))
 
 mode = declare.asMode("i_brother/io")
-probe = True
+probe = False
 
 def runMain():
     if not os.path.exists("tmp-cache"): os.mkdir("tmp-cache")
