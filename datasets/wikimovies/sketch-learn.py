@@ -25,7 +25,8 @@ def printMem(msg):
   print "MEMORY",process.memory_info()[0]
 
 import expt as dflt
-
+import random
+random.seed(31415926)
 
 def setExptParams(num):
     matrixdb.conf.ignore_types = True
@@ -48,6 +49,7 @@ def setExptParams(num):
     
     sketcher = sketcher_c(db,int(k),float(delta)/db.dim(),verbose=False)
     sketcher.describe()
+    args = (k,delta,sketcher_s)
 
     trainData = SketchData(sketcher,trainData_native)
     testData = SketchData(sketcher,testData_native)
@@ -59,8 +61,8 @@ def setExptParams(num):
     return {'prog':prog,
             'trainData':trainData,
             'testData':testData,
-            #'targetMode':'answer/io',
-            'savedModel':'learned-model.db',
+            'savedTestPredictions':'tmp-cache/test-%d.solutions.%s.txt' % (num,"-".join(args)),
+            'savedTestExamples':'tmp-cache/test-%d.examples' % num,
             'learner':learner
     }
 
@@ -69,7 +71,7 @@ def memoryTrace(learner,ctr,i=-1,**kw):
 
 def runMain(num=250):
     printMem("baseline")
-    params = setExptParams(num)
+    params = expt.Expt.timeAction('loading params',lambda: setExptParams(num))
     printMem("params loaded")
     result =  expt.Expt(params).run()
     printMem("experiment complete")
@@ -78,9 +80,10 @@ def runMain(num=250):
 def runNative(num=250):
     matrixdb.conf.ignore_types = False
     printMem("baseline")
-    params = dflt.setExptParams(num)
-    printMem("params loaded")
+    params = expt.Expt.timeAction('loading params',lambda: dflt.setExptParams(num))
     params['learner'] = learn.FixedRateGDLearner(params['prog'],regularizer=learn.L2Regularizer(),epochs=10,epochTracer=memoryTrace)
+    params['savedTestPredictions']='tmp-cache/test-%d.solutions.native.txt' % num
+    printMem("params loaded")
     result = expt.Expt(params).run()
     printMem("experiment complete")
     return result
@@ -88,7 +91,13 @@ def runNative(num=250):
 if __name__=="__main__":
     logging.basicConfig(level=logging.INFO)
     masterconfig.masterConfig().matrixdb.allow_weighted_tuples=False
-    acc,loss = runMain() # expect 0.21,0.22
-    print 'acc,loss',acc,loss
-    acc,loss = runNative()
-    print 'acc,loss',acc,loss
+    num=250
+    if len(sys.argv)>1 and sys.argv[1].startswith("num="):
+      num=int(sys.argv[1][4:])
+      sys.argv = [sys.argv[0]] + sys.argv[2:]
+    if len(sys.argv)>1 and sys.argv[1] == 'native':
+      acc,loss = runNative(num)
+      print 'acc,loss',acc,loss
+    else:
+      acc,loss = runMain(num) # expect 0.21,0.22
+      print 'acc,loss',acc,loss
