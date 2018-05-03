@@ -79,6 +79,7 @@ class SketchLearner(learn.FixedRateGDLearner):
         """Return a prediction vector in entity space"""
         P=super(SketchLearner,self).predict(mode,X,pad)
         UP=self.sketcher.unsketch(P)
+        UP.eliminate_zeros()
         #print mode,mutil.pprintSummary(P),mutil.pprintSummary(UP)
         return UP
     def sketch_predict(self,mode,X,pad=None):
