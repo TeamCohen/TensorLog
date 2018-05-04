@@ -46,7 +46,7 @@ class AssignVectorSketchToVar(ops.AssignVectorToVar):
       raise
   def _doBackprop(self,env,gradAccum,pad):
     if env.db.isParameter(self.matMode):
-      update = env.delta[self.dst]
+      update = self.sk.unsketch(env.delta[self.dst])
       key = (self.matMode.functor,self.matMode.arity)
       gradAccum.accum(key,update)
   def copy(self):
@@ -89,7 +89,7 @@ class FollowOp(ops.VecMatMulOp):
     env.delta[self.src] = self.sk.follow(self.matMode, env.delta[self.dst], (not self.transpose))
     mutil.checkCSR(env.delta[self.src],'delta[%s]' % self.src)
     if env.db.isParameter(self.matMode):
-      update = env[self.src].transpose() * (env.delta[self.dst])
+      update = self.sk.unsketch(env[self.src]).transpose() * self.sk.unsketch(env.delta[self.dst])
       update = scipy.sparse.csr_matrix(update)
       # The transpose flag is set in BP when sending a message
       # 'backward' from a goal output to variable, and indicates
@@ -107,7 +107,12 @@ class FollowOp(ops.VecMatMulOp):
       # finally save the update
       key = (self.matMode.functor,self.matMode.arity)
       mutil.checkCSR(update,'update for %s mode %s transpose %s' % (str(key),str(self.matMode),transposeUpdate))
-      gradAccum.accum(key,update)
+      try:
+        gradAccum.accum(key,update)
+      except:
+        print "src",mutil.pprintSummary(env[self.src])
+        print "dst",mutil.pprintSummary(env.delta[self.dst])
+        raise
   def copy(self):
     return FollowOp(self.dst,self.src,self.matMode,self.sk, self.transpose)
   @staticmethod
@@ -203,3 +208,16 @@ class SketchSoftmaxFunction(funs.SoftmaxFunction):
         return result
     def copy(self):
         return SketchSoftmaxFunction(self.fun.copy())
+
+class NullSketchFunction(funs.NullFunction):
+    """Returns an all-zeros vector."""
+
+    def __init__(self,lhsMode,sketch):
+        super(NullSketchFunction,self).__init__(lhsMode)
+        self.sketcher = sketch
+    def _doEval(self,db,values,pad):
+        return self.sketcher.sketch(db.zeros(mutil.numRows(values[0]),self.outputType))
+    def _doBackprop(self,delta,gradAccum,pad):
+        return pad[self.id].output
+    def copy(self):
+        return NullSketchFunction(self.lhsMode,self.sketcher)

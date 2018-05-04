@@ -30,6 +30,7 @@ def sketchProgram(sk, prog):
   """Configure a tensorlog Program object to use Sketch-based compile and softmax machinery"""
   prog.compilerDef = lambda m,p,d,r: sketchcompiler.SketchCompiler(m,p,d,r,sk)
   prog.softmaxDef = lambda f:sketchcompiler.SketchSoftmaxFunction(f,sk)
+  prog.nullDef = lambda m:sketchcompiler.NullSketchFunction(m,sk)
 
 def sketchDataset(sk, dset):
   """Convert an entity-space Dataset object to a SketchDataset (compatible with SketchLearner)"""
@@ -108,12 +109,21 @@ class SketchLearner(learn.FixedRateGDLearner):
         for (functor,arity),delta in paramGrads.items():
             m0 = self.prog.db.getParameter(functor,arity)
             try:
-              # delta is in sketch space; the database is in entity space
-              m1 = m0 + rate * self.sketcher.unsketch(delta)
+              t2 = rate * delta
+              m1 = m0 + t2
             except ValueError:
-              print mutil.pprintSummary(m0)
-              print rate
-              print mutil.pprintSummary(delta)
+              print "ValueError at %s (%s,%d)" % (str(type(self)),functor,arity)
+              print "m0",mutil.pprintSummary(m0)
+              print "rate",rate
+              print "delta",mutil.pprintSummary(delta)
+              print "t2",mutil.pprintSummary(t2)
               raise
             m2 = mutil.mapData(lambda d:np.clip(d,0.0,np.finfo('float32').max), m1)
             self.prog.db.setParameter(functor,arity,m2)
+            
+
+# this is only needed for generating sensical trace output
+def insert_sk_funs(fun,sk):
+    if hasattr(fun,'sk'):return
+    fun.sk = sk
+    for f in fun.children(): insert_sk_funs(f,sk)

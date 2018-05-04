@@ -43,8 +43,11 @@ class Program(object):
             return r
         if not calledFromProPPRProgram:
             self.rules.mapRules(checkRule)
+        
+        # for swapping in Sketch versions
         self.compilerDef = bpcompiler.BPCompiler
         self.softmaxDef = funs.SoftmaxFunction
+        self.nullDef = funs.NullFunction
 
     def clearFunctionCache(self):
         self.function = {}
@@ -62,7 +65,7 @@ class Program(object):
             return self.function[(mode,depth)]
 
         if depth>self.maxDepth:
-            self.function[(mode,depth)] = funs.NullFunction(mode)
+            self.function[(mode,depth)] = self.nullDef(mode)
         else:
             predDef = self.findPredDef(mode)
             if predDef is None or len(predDef)==0:
