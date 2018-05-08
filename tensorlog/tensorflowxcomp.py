@@ -12,6 +12,9 @@ from tensorlog import xcomp
 from tensorlog import expt
 from tensorlog import util
 
+def sanitizeVariableName(name):
+  return name.replace(",","_tfCOMMA_")
+
 class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
   def __init__(self,db,summaryFile=None):
@@ -355,6 +358,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
 
   def _createPlaceholder(self,name,kind,typeName):
     assert kind=='vector'
+    name=sanitizeVariableName(name)
     result = tf.placeholder(tf.float32, shape=[None,self.db.dim(typeName)], name="tensorlog/"+name)
     return result
 
@@ -362,6 +366,7 @@ class DenseMatDenseMsgCrossCompiler(TensorFlowCrossCompiler):
     # parameters are passed through softplus so they don't get pushed to zero
     # we need to undo this transformation when you load them into variables...
     isTrainable = (key in self.db.paramSet)
+    name=sanitizeVariableName(name)
     v = self._reparameterizeAndRecordVar(val,name,isTrainable)
     self._handleExprVar[key] = v
     self._handleExpr[key] = self._reparameterizedVarExpr(v,isTrainable)
@@ -451,6 +456,7 @@ class SparseMatDenseMsgCrossCompiler(DenseMatDenseMsgCrossCompiler):
 
   def _insertHandleExpr(self,key,name,val):
     (functor,arity) = key
+    name=sanitizeVariableName(name)
     isTrainable = (key in self.db.paramSet)
     if arity<2:
       initVal = self._softPlusInverse(val) if isTrainable else val
