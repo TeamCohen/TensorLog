@@ -5,8 +5,6 @@ import numpy as np
 import random
 import getopt
 
-# todo: for visualization, sort everything by cell name
-#
 # 1) demonstrates adding logical inference as an input to a tensorflow
 #  function, and training thru the function to modify fact confidences
 #  (with the --corner soft option)

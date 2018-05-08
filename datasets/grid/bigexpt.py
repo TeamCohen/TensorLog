@@ -1,3 +1,5 @@
+# code for running scalability experiments in JAIR submission
+
 import sys
 import numpy as NP
 import random

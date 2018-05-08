@@ -16,7 +16,6 @@ P_EDGE = 0.25
 # at a different scale.  euclidean distance? jenson-shannon?
 # TODO: output test-set and full-data y's for visualization
 # TODO: why do the actual y's include non-zeros for the filler entities?
-# TODO: should I normalize this? why?
 #
 #
 # --gendata M - draw M sample interpretations (ie grids, where edges
