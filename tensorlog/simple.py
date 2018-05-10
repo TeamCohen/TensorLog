@@ -20,6 +20,7 @@ try:
   from tensorlog import theanoxcomp
 except ImportError:
   logging.warn('Cannot import theanoxcomp')
+from tensorlog.helper import tfsketch
 
 import tensorflow as tf
 
@@ -107,6 +108,8 @@ class Compiler(object):
       self.xc = tensorflowxcomp.SparseMatDenseMsgCrossCompiler(self.prog, summaryFile=summary_file)
     elif target=='theano':
       self.xc = theanoxcomp.SparseMatDenseMsgCrossCompiler(self.prog)
+    elif target=='tensorflow-sketch':
+      self.xc = tfsketch.SketchSMDMCrossCompiler(self.prog, summaryFile=summary_file)
     else:
       assert False,'illegal target %r: valid targets are "tensorflow" and "theano"' % target
 
@@ -172,25 +175,25 @@ class Compiler(object):
   def input_placeholder_name(self,mode):
     """ For tensorflow, the name of the placeholder associated with the input to this function.
     """
-    assert self.target == 'tensorflow'
+    assert self.target.startswith('tensorflow')
     return self.xc.getInputName(declare.asMode(mode))
 
   def input_placeholder(self,mode):
     """ For tensorflow, the placeholder associated with the input to this function.
     """
-    assert self.target == 'tensorflow'
+    assert self.target.startswith('tensorflow')
     return self.xc.getInputPlaceholder(declare.asMode(mode))
 
   def target_output_placeholder_name(self,mode):
     """ For tensorflow, the name of the placeholder associated with the output to this function.
     """
-    assert self.target == 'tensorflow'
+    assert self.target.startswith('tensorflow')
     return self.xc.getTargetOutputName(declare.asMode(mode))
 
   def target_output_placeholder(self,mode):
     """ For tensorflow, the placeholder associated with the output to this function.
     """
-    assert self.target == 'tensorflow'
+    assert self.target.startswith('tensorflow')
     return self.xc.getTargetOutputPlaceholder(declare.asMode(mode))
 
   #
