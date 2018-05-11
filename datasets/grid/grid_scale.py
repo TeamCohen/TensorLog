@@ -51,16 +51,16 @@ def generateData(n,blockSize,trainFile,testFile):
             fp.write('\t'.join(['path',x,y]) + '\n')
 
 # generate all inputs for an accuracy (or timing) experiment
-def genInputs(n,blockSize):
+def genInputs(n,blockSize,build=True):
     #generate grid
     stem = 'inputs/g%dx%d' % (blockSize,n)
 
     factFile = stem+'.cfacts'
     trainFile = stem+'-train.exam'
     testFile = stem+'-test.exam'
-
-    generateGrid(n,blockSize,factFile)
-    generateData(n,blockSize,trainFile,testFile)
+    if build:
+        generateGrid(n,blockSize,factFile)
+        generateData(n,blockSize,trainFile,testFile)
     return (factFile,trainFile,testFile)
 
 # run accuracy experiment

@@ -42,7 +42,7 @@ def retrieveSketcherArgs(argv):
         'sketcher_s':sketcher_s,
         'sketcher_c':sketcher_c
         }
-
+#@profile
 def setup_tlog(maxD,factFile,trainFile,testFile):
     tlog = simple.Compiler(target='tensorflow-sketch',db=factFile,prog='grid.ppr')
     tlog.prog.db.markAsParameter('edge',2)
@@ -68,6 +68,7 @@ def setup_tlog(maxD,factFile,trainFile,testFile):
     testData = SketchData(sketcher,testData_native)
     return (tlog,trainData,testData)
 
+#@profile
 def trainAndTest(tlog,trainData,testData,epochs):
     mode = declare.asMode('path/io')
     predicted_y = tlog.xc.sk.unsketch(tlog.inference(mode))
@@ -117,9 +118,11 @@ def runMain():
       exit(0)
     (goal,n,maxD,epochs) = grid_scale.getargs()
     print 'grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (maxD,n*maxD,epochs,maxD),
-    (factFile,trainFile,testFile) = grid_scale.genInputs(n,maxD)
-    (tlog,trainData,testData) = setup_tlog(maxD,factFile,trainFile,testFile)
-    trainAndTest(tlog,trainData,testData,epochs)
+    (factFile,_,_) = grid_scale.genInputs(n,maxD,build=False)
+    if goal=="acc": 
+        (_,trainFile,testFile) = grid_scale.genInputs(1,maxD,build=False)
+        (tlog,trainData,testData) = setup_tlog(maxD,factFile,trainFile,testFile)
+        trainAndTest(tlog,trainData,testData,epochs)
                                          
 if __name__=="__main__":
     runMain()
