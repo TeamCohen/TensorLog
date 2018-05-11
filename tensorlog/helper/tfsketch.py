@@ -34,28 +34,56 @@ def global_tensor_unsketch(S, hashmat, t, n):
     
     return s3
 
-class Sketcher(ScipySketcher):
+def componentwise_tensor_min(X,Y):
+  """ componentwise_min for two scipy matrices
+  """
+  data = tf.where(X<Y, X, Y)
+  return data
+
+class AbstractTfSketcher(ScipySketcher):
   def __init__(self,db,k,delta,verbose=True):
-    #print "tfsketch.Sketcher init"
-    super(Sketcher,self).__init__(db, k, delta, verbose)
+    super(AbstractTfSketcher,self).__init__(db, k, delta, verbose)
   def init_hashmats(self):
     ScipySketcher.init_hashmats(self)
   def init_xc(self,xc):
     self.xc = xc
     self.native={'hashmat':self.hashmat}
     self.hashmat = self.xc._constantVector('sketch/hashmat',self.hashmat)
+    self.sparseMat = hasattr(self.xc, 'sparseMatInfo')
   def sketch(self, T):
     if T.shape.ndims == 2:
       #print "Expanding dims for tf sketch" 
       T=tf.expand_dims(T, axis=1)
     with tf.control_dependencies([tf.assert_equal(T.shape.ndims, 3, message="At sketch time")]):
       return tf.tensordot(T, self.hashmat, 1)
-  def unsketch(self, Ts):
-    return global_tensor_unsketch(Ts, self.hashmat, self.t, self.n)
   def follow(self, mode, Ts, transpose=False):
     Mt = self.xc._matrix(mode,not transpose)
     MtSt = tf.sparse_tensor_dense_matmul(Mt,tf.transpose(self.unsketch(Ts)))
     return self.sketch(tf.transpose(MtSt))
+  def unsketch(self, S):
+    assert False, "Must override in subclass"
+
+class Sketcher(AbstractTfSketcher):
+  def __init__(self,db,k,delta,verbose=True):
+    super(Sketcher,self).__init__(db, k, delta, verbose)
+  def init_xc(self, xc):
+    AbstractTfSketcher.init_xc(self, xc)
+    def hashmatExpr(mat,i):
+      return self.xc._constantVector('sketch/hashmat_%d'%i,mat)
+    tmp = [hashmatExpr(m,i) for (i,m) in enumerate(self.hashmats)]
+    self.hashmats = tmp
+  def unsketch(self, S):
+    result = tf.tensordot(S, tf.transpose(self.hashmats[0]),1)
+    for d in range(1,self.t):
+      xd = tf.tensordot(S, tf.transpose(self.hashmats[d]),1)
+      result = componentwise_tensor_min(result,xd)
+    return tf.squeeze(result,axis=1)
+
+class FastSketcher(AbstractTfSketcher):
+  def __init__(self,db,k,delta,verbose=True):
+    super(FastSketcher,self).__init__(db, k, delta, verbose)
+  def unsketch(self, Ts):
+    return global_tensor_unsketch(Ts, self.hashmat, self.t, self.n)
 
 def toTfKey(mode):
   return str(mode)
@@ -69,28 +97,22 @@ def copyDict(src,dst):
     dst[key] = src[key]
   return dst
 
-class Sketcher2(Sketcher,ScipySketcher2):
+class FastSketcher2(FastSketcher,ScipySketcher2):
   def __init__(self,db,k,delta,verbose=True):
-    super(Sketcher2,self).__init__(db, k, delta, verbose)
+    super(FastSketcher2,self).__init__(db, k, delta, verbose)
   def init_xc(self, xc):
-    Sketcher.init_xc(self, xc)
+    FastSketcher.init_xc(self, xc)
     
     self.sketchmatArg1 = {}
     for rel in self.sketchmatsArg1:
       self.sketchmatArg1[rel] = sum(self.sketchmatsArg1[rel])
     
-    self.native['sketchmatArg1'] = copyDict(self.sketchmatArg1,{})
-    self.native['sketchmatWeights'] = copyDict(self.sketchmatWeights,{})
-    self.native['sketchmatArgs2'] = copyDict(self.sketchmatArg2, {})
-    
     scipyToTfExpr(self.xc, "a1_", self.sketchmatArg1)
     scipyToTfExpr(self.xc,"a2_",self.sketchmatArg2)
-    #scipyToTfExpr(self.xc,"weights_",self.sketchmatWeights)
     for matMode in self.sketchmatWeights:
       key = (matMode.functor,2)
-      M = self.xc._matrix(matMode) #self.xc._insertHandleExpr(key,"M__"+matMode.getFunctor(),self.sketchmatWeights[matMode])
-      self.sketchmatWeights[matMode] = self.xc._handleExpr[key].values # this might need to be _handleExpr instead
-    self.sparseWeights = hasattr(self.xc, 'sparseMatInfo')
+      _ = self.xc._matrix(matMode) # so that xc does the necessary parameter bookkeeping
+      self.sketchmatWeights[matMode] = self.xc._handleExpr[key].values
   def follow(self,mode,Ts,transpose=False):
     """ The analog of an operator X.dot(M) in sketch space.  Given S where
     X.dot(hashmat)=S, return the sketch for X.dot(M).
@@ -102,15 +124,12 @@ class Sketcher2(Sketcher,ScipySketcher2):
     # nz_indices will be the indices of the coo_matrix for mode where
     # the row# hashes to something in S - unsketch these indices the
     # way we did before
-    follow_n = self.sketchmatWeights[mode].shape[-1]#self.sketchmatWeights[mode].dense_shape[1] if self.sparseWeights else self.sketchmatWeights[mode].shape[1]
+    follow_n = self.sketchmatWeights[mode].shape[-1]
     nz_indices  = global_tensor_unsketch(Ts,self.sketchmatArg1[mode],self.t,follow_n)
     #return nz_indices
     # multiply these indices by the corresponding weights, and then
     # move back to sketch space
-    if False:#self.sparseWeights:
-      byweights = tf.sparse_tensor_dense_matmul(self.sketchmatWeights[mode], nz_indices)
-    else:
-      byweights = tf.multiply(self.sketchmatWeights[mode], nz_indices)
+    byweights = tf.multiply(self.sketchmatWeights[mode], nz_indices)
     ret = tf.tensordot(byweights,self.sketchmatArg2[mode],1)
     retshape = tf.expand_dims(ret,axis=1) 
     with tf.control_dependencies([tf.assert_equal(tf.size(tf.shape(retshape)), 3, message="After follow")]):
@@ -170,7 +189,7 @@ def sketchDataset(sk, dset):
       try:
           x=dset.getX(mode)
           y=dset.getY(mode)
-          xDict[mode] = x.dot(sk.native['hashmat']) # TODO: these need to be 3-tensors
+          xDict[mode] = x.dot(sk.native['hashmat'])
           yDict[mode] = y.dot(sk.native['hashmat'])
       except:
           print 'mode',mode
@@ -187,7 +206,7 @@ class SketchData(ScipySketchData):
 if __name__ == '__main__':
   from tensorlog import simple,declare
   tlog = simple.Compiler(db="g16.db",prog="../../datasets/grid/grid.ppr")
-  sk = Sketcher2(tlog.xc.db,10,0.01)
+  sk = Sketcher(tlog.xc.db,10,0.01)
   sk.describe()
   sk.init_xc(tlog.xc)
   utype = 'THING'
@@ -213,15 +232,19 @@ if __name__ == '__main__':
   session.run(tf.global_variables_initializer())
   x = xs_expr.eval(session=session)
   x_approx = session.run(x_approx_expr,feed_dict={})
+  print "x",x.shape
+  print str(x)
+  print "x_approx",x_approx.shape
+  print str(x_approx)
   xn = xn_expr.eval(session=session)
   Sn = Sn_expr.eval(session=session)
   xn_approx = session.run(xn_approx_expr,feed_dict={})
-#   print "xn_approx"
-#   print str(xn_approx)
-#   print "xn"
-#   print str(xn)
-  print "error"
-  print str(xn_approx - xn)
+  print "xn_approx"
+  print str(xn_approx)
+  print "xn"
+  print str(xn)
+#   print "error"
+#   print str(xn_approx - xn)
     
     
     
