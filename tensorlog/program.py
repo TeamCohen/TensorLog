@@ -7,6 +7,7 @@ import sys
 import logging
 import collections
 import numpy as np
+import os
 
 from tensorlog import bpcompiler
 from tensorlog import config
@@ -165,6 +166,38 @@ class Program(object):
     def loadRules(fileNames,db,plugins=None):
         return Program(db,Program._loadRules(fileNames),plugins=plugins)
 
+    def serialize(self,direc):
+      """ Serialize the rules to a file-like object
+      """
+      if self.plugins and not self.plugins.isempty():
+        logging.warn('plugins can NOT be serialized in %r, so semantics after deserialization might be different!' % direc)
+      if not os.path.exists(direc):
+        os.makedirs(direc)
+      with open(os.path.join(direc,"rules.tlog"),'w') as fp:
+        self.serializeRulesTo(fp)
+      self.db.serialize(os.path.join(direc,"database.db"))
+
+    @staticmethod
+    def deserialize(direc):
+      """ Serialize the rules to a file-like object
+      """
+      db =  matrixdb.MatrixDB.deserialize(os.path.join(direc,"database.db"))
+      with open(os.path.join(direc,"rules.tlog")) as fp:
+        rules = Program.deserializeRulesFrom(fp)
+      return Program(db,rules=rules)
+
+    def serializeRulesTo(self,fileLike):
+      """ Serialize the rules to a file-like object
+      """
+      for r in self.rules:
+        fileLike.write(r.asString(syntax='pythonic') + '\n')
+
+    @staticmethod
+    def deserializeRulesFrom(fileLike):
+      """ Read the rules associated with the program from a filelike
+      """
+      return parser.Parser(syntax='pythonic').parseStream(fileLike)
+
 
 #
 # subclass of Program that corresponds more or less to Proppr....
@@ -321,8 +354,7 @@ class ProPPRProgram(Program):
 
 class Plugins(object):
   """Holds a collection of user-defined predicates, defined for a
-  particular cross-compiler.  Currently predicates must be binary so
-  the modes are p/io or p/oi.
+  particular cross-compiler.  
   """
 
   def __init__(self):
@@ -330,14 +362,17 @@ class Plugins(object):
     self.outputFun = {}
     self.outputTypeFun = {}
 
+  def isempty(self):
+    return not self.definedFunctorArity
+
   def define(self,mode,outputFun,outputTypeFun=None):
     """Define the function associated with a mode.  The definition is a
     function f(x), which inputs a subexpression defining the input,
     and the output is an expression which defines the output.
     outputType, if given, is the type of the output.
     """
-    m = declare.asMode(mode)
-    self.outputFun[m] = outputFun
+    m = declare.asMode(mode) #could be unary or binary
+    self.outputFun[m] = outputFun  
     self.outputTypeFun[m] = outputTypeFun
     key = (m.functor,m.arity)
     if key not in self.definedFunctorArity:

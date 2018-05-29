@@ -175,6 +175,13 @@ class TestSmallProofs(unittest.TestCase):
   def test_back2(self):
     self.inference_check(['p(X,Y):-spouse(X,Y),sister(X,Z1),sister(X,Z2).'],'p(i,o)','william',{'susan': 9.0})
 
+  def test_reorder(self):
+    # X susan, X1 william, Y1 rachel/lottie/sarah, Y william
+    # this ordering is ok
+    self.inference_check(['p(X,Y):-spouse(X,X1),sister(X1,Y1),sister(Y,Y1).'],'p(i,o)','susan',{'william': 3.0})
+    # this needs to be fixed
+    self.inference_check(['p(X,Y):-spouse(X,X1),sister(Y,Y1),sister(X1,Y1).'],'p(i,o)','susan',{'william': 3.0})
+
   def test_rec1(self):
     program.conf.max_depth=4
     self.inference_check(['p(X,Y):-spouse(X,Y).','p(X,Y):-p(Y,X).'], 'p(i,o)','william',{'susan': 5.0})
@@ -751,6 +758,39 @@ class TestProPPR(unittest.TestCase):
         self.assertAlmostEqual(actual[k], expected[k], delta=0.05)
 
 
+class TestProgramSerialization(unittest.TestCase):
+
+  def setUp(self):
+    self.cacheDir = tempfile.mkdtemp()
+
+  def cacheFile(self,fileName):
+    return os.path.join(self.cacheDir,fileName)
+
+  def testFullSerialization(self):
+    db = matrixdb.MatrixDB.uncache(
+        self.cacheFile('textcat.db'),
+        str(os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')))
+    prog = program.ProPPRProgram.loadRules(
+        os.path.join(TEST_DATA_DIR,"textcat.ppr"),
+        db=db)
+    prog.serialize(self.cacheFile('textcat.prog'))
+    roundtripProg = program.Program.deserialize(self.cacheFile('textcat.prog'))
+    self.assertTrue(prog.rules.equals(roundtripProg.rules))
+    self.assertTrue(sorted(prog.db.matEncoding.keys()) == sorted(roundtripProg.db.matEncoding.keys()))
+    self.assertTrue(prog.db.size() == roundtripProg.db.size())
+
+  def testRulesSerialization(self):
+    db = matrixdb.MatrixDB.uncache(
+        self.cacheFile('textcat.db'),
+        str(os.path.join(TEST_DATA_DIR,'textcattoy.cfacts')))
+    prog = program.ProPPRProgram.loadRules(
+        os.path.join(TEST_DATA_DIR,"textcat.ppr"),
+        db=db)
+    with open(self.cacheFile('rules.tlog'),'w') as fp:
+      prog.serializeRulesTo(fp)
+    with open(self.cacheFile('rules.tlog')) as fp:
+      roundtripRules = program.Program.deserializeRulesFrom(fp)
+    self.assertTrue(prog.rules.equals(roundtripRules))
 
 class TestExpt(unittest.TestCase):
 

@@ -1,8 +1,0 @@
-runtime results:
-
-python smokers-expt.py 
-eval t_stress/io time 0.00578594207764 sec
-eval t_influences/io time 0.004075050354 sec
-eval t_cancer_spont/io time 0.00533986091614 sec
-eval t_cancer_smoke/io time 0.00534009933472 sec
-total time 0.0206727981567 sec

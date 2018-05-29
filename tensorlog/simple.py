@@ -141,6 +141,13 @@ class Compiler(object):
     args,expr = self.xc.dataLoss(declare.asMode(mode),inputs=inputs)
     return expr
 
+  def mark_db_predicate_trainable(self,mode):
+    """Declare a predicate to be a trainable parameter.  Mode argument
+    should be of the form predicate/arity, eg link/2.
+    """
+    functor,arity_string = mode.split("/")
+    self.db.markAsParameter(functor,int(arity_string))
+
   def trainable_db_variables(self,mode,for_optimization=False):
     """Return a list of expressions associated with predicates marked as
     parameters/trainable in the tensorlog database.  If
@@ -231,6 +238,10 @@ class Compiler(object):
   def serialize_db(self,dir_name):
     """Save a serialized, quick-to-load version of the database."""
     self.db.serialize(dir_name)
+
+  def serialize_program(self,dir_name):
+    """Save a serialized, quick-to-load version of the program."""
+    self.prog.serialize(dir_name)
 
   #
   # expose other useful routines

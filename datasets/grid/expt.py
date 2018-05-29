@@ -117,9 +117,9 @@ def generateData(n,trainFile,testFile):
     r = random.Random()
     for i in range(1,n+1):
         for j in range(1,n+1):
-            #target
-            ti = 1 if i<n/2 else n
-            tj = 1 if j<n/2 else n
+            #target - note early version used i,j < n/2 which is a bug
+            ti = 1 if i<=n/2 else n
+            tj = 1 if j<=n/2 else n
             x = nodeName(i,j)
             y = nodeName(ti,tj)
             fp = fpTrain if r.random()<0.67 else fpTest
@@ -158,7 +158,7 @@ def genInputs(n):
 def timingExpt(prog):
     times = []
     startNode = nodeName(1,1)
-    for d in [4,8,16,32,64,99]:
+    for d in [4,8,10,16,32,64,99]:
         print 'depth',d,
         ti = interp.Interp(prog)
         ti.prog.maxDepth = d
@@ -174,10 +174,11 @@ def accExpt(prog,trainData,testData,n,maxD,epochs):
     print 'grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (n,n,epochs,maxD)
     prog.db.markAsParameter('edge',2)
     prog.maxDepth = maxD
-    # 20 epochs and rate=0.1 is ok for grid size up to about 10-12
+    # 20 epochs and rate=0.01 is ok for grid size 16 depth 10
     # then it gets sort of chancy
     #learner = learn.FixedRateGDLearner(prog,epochs=epochs,epochTracer=learn.EpochTracer.cheap)
-    learner = plearn.ParallelFixedRateGDLearner(
+    learner = learn.FixedRateGDLearner(prog,epochs=epochs,epochTracer=learn.EpochTracer.cheap,rate=0.01)
+    plearner = plearn.ParallelFixedRateGDLearner(
         prog,
         epochs=epochs,
         parallel=40,
@@ -192,7 +193,9 @@ def accExpt(prog,trainData,testData,n,maxD,epochs):
               'learner':learner,
     }
     NP.seterr(divide='raise')
-    return expt.Expt(params).run()
+    result =  expt.Expt(params).run()
+    timingExpt(prog)
+    return result
 
 def xc_accExpt(prog,trainData,testData,n,maxD,epochs):
 	results = {}
