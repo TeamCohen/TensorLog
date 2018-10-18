@@ -40,7 +40,7 @@ TF_REFERENCE = {
 class TestNative(unittest.TestCase):
     def testIt(self):
         acc,loss = expt.runMain()
-        print "acc",acc
+        print("acc",acc)
         self.assertTrue(acc >= 0.69)
 
 class TestAccTF(unittest.TestCase):
@@ -48,7 +48,7 @@ class TestAccTF(unittest.TestCase):
         self.params = tfexpt.setup_tlog()
     def testIt(self):
         accs = tfexpt.trainAndTest(*self.params)
-        for mode,acc in accs.items():
+        for mode,acc in list(accs.items()):
             self.assertTrue(acc >= TF_REFERENCE[mode],"%s:%g<%g"%(mode,acc,TF_REFERENCE[mode]))
 
 if __name__=='__main__':

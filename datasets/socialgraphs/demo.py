@@ -66,25 +66,25 @@ def runMain(argv):
   (ux,uy) = testData[mode]
   test_fd = {tlog.input_placeholder_name(mode):ux, tlog.target_output_placeholder_name(mode):uy}
   initial_accuracy = session.run(accuracy, feed_dict=test_fd)
-  print 'initial test acc',initial_accuracy
+  print('initial test acc',initial_accuracy)
 
   # run the optimizer for fixed number of epochs
   (tx,ty) = trainData[mode]
   train_fd = {tlog.input_placeholder_name(mode):tx, tlog.target_output_placeholder_name(mode):ty}
   for i in range(opts.epochs):
     session.run(train_step, feed_dict=train_fd)
-    print 'epoch',i+1,'train loss and accuracy',session.run([unregularized_loss,accuracy], feed_dict=train_fd)
+    print('epoch',i+1,'train loss and accuracy',session.run([unregularized_loss,accuracy], feed_dict=train_fd))
 
   # save the learned model
   tlog.set_all_db_params_to_learned_values(session)
   direc = '/tmp/%s-learned-model.prog' % opts.stem
   tlog.serialize_program(direc)
-  print 'learned parameters serialized in',direc
+  print('learned parameters serialized in',direc)
 
   # compute final test performance
   final_accuracy = session.run(accuracy, feed_dict=test_fd)
-  print 'initial test acc',initial_accuracy
-  print 'final test acc',final_accuracy
+  print('initial test acc',initial_accuracy)
+  print('final test acc',final_accuracy)
 
   # return summary of statistics
   return initial_accuracy,final_accuracy

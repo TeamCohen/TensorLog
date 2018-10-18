@@ -42,15 +42,15 @@ def configure_from_command_line(argv):
 
   # override the default options for 'c' using command line arguments,
   # using Python's reflection capabilities
-  argspec = ["%s=" % opt_name for opt_name in c.__dict__.keys()]
+  argspec = ["%s=" % opt_name for opt_name in list(c.__dict__.keys())]
   optlist,_ = getopt.getopt(argv, 'x', argspec)
-  for opt_name,string_val in dict(optlist).items():
+  for opt_name,string_val in list(dict(optlist).items()):
     attr_name = opt_name[2:]
     attr_type = type(getattr(c,attr_name))
     setattr(c, attr_name, attr_type(string_val))
   # echo the current options to stdout
   for attr_name,attr_val in sorted(c.__dict__.items()):
-    print 'option:',attr_name,'set to',attr_val
+    print('option:',attr_name,'set to',attr_val)
   return c
 
 def generate_rules():
@@ -119,7 +119,7 @@ def run_main():
   session.run(tf.global_variables_initializer())
 
   t1 = time.time()
-  print 'compilation and session initialization',(t1-t0)/1000.0,'sec'
+  print('compilation and session initialization',(t1-t0)/1000.0,'sec')
 
   if c.action=='test':
 
@@ -128,11 +128,11 @@ def run_main():
     # Y a desired output.  If the action is to 'test' a learned model
     # then load in the test data and find that x,y pair.
     test_data = tlog.load_small_dataset('inputs/test-%d.exam' % c.num)
-    _,(x,y) = test_data.items()[0]
+    _,(x,y) = list(test_data.items())[0]
     # ... then compute error rate and print it
     test_batch_fd = {tlog.input_placeholder_name(mode):x,
                      tlog.target_output_placeholder(mode):y}
-    print 'test error',100*(1.0 - session.run(accuracy, feed_dict=test_batch_fd)),'%'
+    print('test error',100*(1.0 - session.run(accuracy, feed_dict=test_batch_fd)),'%')
 
   else:
     assert c.action=='train'
@@ -149,19 +149,19 @@ def run_main():
     train_data = tlog.load_big_dataset('inputs/train-%d.exam' % c.num)
 
     t2 = time.time()
-    print 'data loading',(t2-t1),'sec'
+    print('data loading',(t2-t1),'sec')
 
     # finally, run the learner for a fixed number of epochs
     for i in range(c.epochs):
-      print 'starting epoch',i+1,'of',c.epochs,'...'
+      print('starting epoch',i+1,'of',c.epochs,'...')
       b = 0
       for _,(x,y) in tlog.minibatches(train_data,batch_size=c.batch_size):
         train_batch_fd = {tlog.input_placeholder_name(mode):x, tlog.target_output_placeholder_name(mode):y}
         session.run(train_step, feed_dict=train_batch_fd)
-        print 'finished minibatch',b+1,'epoch',i+1,'cumulative training time',(time.time()-t2),'sec'
+        print('finished minibatch',b+1,'epoch',i+1,'cumulative training time',(time.time()-t2),'sec')
         b += 1
     t3 = time.time()
-    print 'learning',(t3-t2),'sec'
+    print('learning',(t3-t2),'sec')
 
     # We have now learned values for all the parameters. This command
     # copies those learned values back into the knowledge
@@ -172,7 +172,7 @@ def run_main():
     # parameters, out to disk in a compact format, which can be read
     # back in when we use the 'test' action
     tlog.serialize_db('learned-model.db')
-    print 'wrote learned model to learned-model.db'
+    print('wrote learned model to learned-model.db')
 
 if __name__ == "__main__":
   run_main()

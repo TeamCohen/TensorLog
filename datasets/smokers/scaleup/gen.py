@@ -9,7 +9,7 @@ BATCHSIZE = 250
 if __name__ == "__main__":
     seeds = [8347342984,901891212,1929282,73454129]
     for n in [100,1000,10000,100000,500000]:
-        print 'generate for n',n,'...'
+        print('generate for n',n,'...')
         with open('query-entities-%d.txt' % n,'w') as fp:
             for tag in 'a b c d'.split():
                 for m in range(BATCHSIZE):

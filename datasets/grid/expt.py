@@ -4,7 +4,7 @@ try:
     import matplotlib.pyplot as plt
     NETWORKX = True
 except Exception:
-    print 'no networkx'
+    print('no networkx')
     NETWORKX = False
 import numpy as NP
 import random
@@ -86,7 +86,7 @@ def visualizeLearned(db,n):
     weightList = sorted(weight.values())
     def colorCode(w):
         return round(10*float(weightList.index(w))/len(weightList))
-    edgeColors = map(lambda e:colorCode(weight.get(e,0)), g.edges())
+    edgeColors = [colorCode(weight.get(e,0)) for e in g.edges()]
 
     pos = {}
     #position the nodes
@@ -159,19 +159,19 @@ def timingExpt(prog):
     times = []
     startNode = nodeName(1,1)
     for d in [4,8,10,16,32,64,99]:
-        print 'depth',d,
+        print('depth',d, end=' ')
         ti = interp.Interp(prog)
         ti.prog.maxDepth = d
         start = time.time()
         ti.prog.evalSymbols(declare.asMode("path/io"), [startNode])
         elapsed = time.time() - start
         times.append(elapsed)
-        print 'time',elapsed,'sec'
+        print('time',elapsed,'sec')
     return times
 
 # run accuracy experiment
 def accExpt(prog,trainData,testData,n,maxD,epochs):
-    print 'grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (n,n,epochs,maxD)
+    print('grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (n,n,epochs,maxD))
     prog.db.markAsParameter('edge',2)
     prog.maxDepth = maxD
     # 20 epochs and rate=0.01 is ok for grid size 16 depth 10
@@ -202,7 +202,7 @@ def xc_accExpt(prog,trainData,testData,n,maxD,epochs):
         for compilerClass in CROSSCOMPILERS:
             
             xc = compilerClass(prog)
-            print expt.fulltype(xc)
+            print(expt.fulltype(xc))
             # compile everything
             for mode in trainData.modesToLearn():
               xc.ensureCompiled(mode)
@@ -222,19 +222,19 @@ def runMain():
     # usage: acc [grid-size] [maxDepth] [epochs]"
     #        time [grid-size] [maxDepth] "
     (goal,n,maxD,epochs) = getargs()
-    print 'args',(goal,n,maxD,epochs)
+    print('args',(goal,n,maxD,epochs))
     (factFile,trainFile,testFile) = genInputs(n)
 
     db = matrixdb.MatrixDB.loadFile(factFile)
     prog = program.Program.loadRules("grid.ppr",db)
 
     if goal=='time':
-        print timingExpt(prog)
+        print(timingExpt(prog))
     elif goal=='acc':
         trainData = dataset.Dataset.loadExamples(prog.db,trainFile)
         testData = dataset.Dataset.loadExamples(prog.db,testFile)
-        print accExpt(prog,trainData,testData,n,maxD,epochs)
-	print "\n".join(["%s: %s" % i for i in xc_accExpt(prog,trainData,testData,n,maxD,epochs).items()])
+        print(accExpt(prog,trainData,testData,n,maxD,epochs))
+	print("\n".join(["%s: %s" % i for i in list(xc_accExpt(prog,trainData,testData,n,maxD,epochs).items())]))
         if VISUALIZE and NETWORKX:
             visualizeLearned(db,n)
     else:

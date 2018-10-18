@@ -11,7 +11,7 @@ if __name__ == "__main__":
       try:
         (_,rel,src,dst) = line.strip().split(" ")
       except ValueError:
-        print 'bad line %r' % line
+        print('bad line %r' % line)
       if src.isdigit(): src = 'node%03d' % int(src)
       if dst.isdigit(): dst = 'node%03d' % int(dst)
       if rel=='e':

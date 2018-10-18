@@ -11,7 +11,7 @@ def scan_solutions():
             n += 1
             tot += float(count)
     qps = 1000.0*n/tot
-    print '==',sys.argv[1],'threads',sys.argv[2],'total',tot,'n',n,'average','%.2f' % (tot/n),'qps','%.2f' % qps
+    print('==',sys.argv[1],'threads',sys.argv[2],'total',tot,'n',n,'average','%.2f' % (tot/n),'qps','%.2f' % qps)
 
 if __name__ == "__main__":
     for line in sys.stdin:
@@ -21,5 +21,5 @@ if __name__ == "__main__":
             _,t = line.strip().split(": ")
     qps = float(n)/(float(t)/1000)
     avg = float(t)/float(n)
-    print '==',sys.argv[1],'threads',sys.argv[2],'total',t,'n',n,'average','%.2f' % avg,'qps','%.2f' % qps
+    print('==',sys.argv[1],'threads',sys.argv[2],'total',t,'n',n,'average','%.2f' % avg,'qps','%.2f' % qps)
 

@@ -73,7 +73,7 @@ STOP_WORDS = set("a the , to of and in his is with ... an on for he who by her w
 
 def simple_tokenize(sent):
   """ Tokenize but add spaces around the commmas."""
-  comma_sep_parts = map(lambda p:p.strip(), sent.split(","))
+  comma_sep_parts = [p.strip() for p in sent.split(",")]
   return " , ".join(comma_sep_parts).split(" ")
 
 class EntityMatcher(object):
@@ -192,7 +192,7 @@ def load_kb():
   for rel in RELS:
     for sub in ERRORS:
       kb[rel][ERRORS[sub]] = kb[rel][sub]
-  print 'loaded kb'
+  print('loaded kb')
   return kb
 
 def write_kb(kb,filename,subject_type,extra_declares=[]):
@@ -253,7 +253,7 @@ def load_questions(stem,em):
     else: logging.warn('weird question %r' % question)
     answers = em.as_entity_list(answer_part, keep_nonentities=False)
     result.append((question,answers))
-  print 'loaded',len(result),'qas'
+  print('loaded',len(result),'qas')
   return result
 
 def check_answers(qas,em):
@@ -267,8 +267,8 @@ def check_answers(qas,em):
       if a not in em.name_set:
         missing += 1
         missing_set.add(a)
-        print 'missing %r' % a,'in',question,answers
-  print 'tot',tot,'missing',missing
+        print('missing %r' % a,'in',question,answers)
+  print('tot',tot,'missing',missing)
   return missing_set
 
 if __name__ == "__main__":
@@ -282,11 +282,11 @@ if __name__ == "__main__":
   # mentions_entity data and parsing the comma-separated answers
   em = EntityMatcher(kb)
   # Echo some status info
-  print len(em.word_set),'plot words'
-  print len(em.name_set),'entity names'
+  print(len(em.word_set),'plot words')
+  print(len(em.name_set),'entity names')
   # Write out the examples
   for s in "dev", "train", "test":
-    print 'writing',s,'examples....'
+    print('writing',s,'examples....')
     qas = load_questions(s,em)
     ex_kb = write_exams(em,qas,s,'tlog-format/%s-%d.exam' % (s,n), n=n)
     extra_declares = ['answer(question_t,entity_t)']

@@ -1,2 +1,0 @@
-path(X,Y) :- embedded_edge(X,Y).
-path(X,Y) :- embedded_edge(X,Z), path(Z,Y).

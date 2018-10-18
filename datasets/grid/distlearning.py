@@ -37,7 +37,7 @@ def setup_tlog(maxD,factFile,trainFile,testFile):
   tlog = simple.Compiler(db=factFile,prog='grid.ppr')
   tlog.prog.db.markAsParameter('edge',2)
   tlog.prog.maxDepth = maxD
-  print 'loading trainData,testData from',trainFile,testFile
+  print('loading trainData,testData from',trainFile,testFile)
   masterconfig.masterConfig().dataset.normalize_outputs = False
   trainData = tlog.load_small_dataset(trainFile)
   testData = tlog.load_small_dataset(testFile)
@@ -65,26 +65,26 @@ def trainAndTest(tlog,trainData,testData,epochs,n):
   init_haty = session.run(predicted_y,feed_dict=test_fd)
   train_loss = session.run(loss, feed_dict=train_fd)
   test_loss = session.run(loss, feed_dict=test_fd)
-  print 'init train loss',train_loss,'test loss',test_loss
+  print('init train loss',train_loss,'test loss',test_loss)
 
   t0 = time.time()
-  print 'epoch',
+  print('epoch', end=' ')
   for i in range(epochs):
-    print i+1,
+    print(i+1, end=' ')
     session.run(train_step, feed_dict=train_fd)
     if (i+1)%3==0:
       test_fd = {tlog.input_placeholder_name(mode):ux, tlog.target_output_placeholder_name(mode):uy}
       train_loss = session.run(loss, feed_dict=train_fd)
       test_loss = session.run(loss, feed_dict=test_fd)
-      print (i+1),'train loss',train_loss,'test loss',test_loss
-      print 'epoch',
-  print 'done'
-  print 'learning takes',time.time()-t0,'sec'
+      print((i+1),'train loss',train_loss,'test loss',test_loss)
+      print('epoch', end=' ')
+  print('done')
+  print('learning takes',time.time()-t0,'sec')
 
   test_loss = session.run(loss, feed_dict=test_fd)
-  print 'test loss',test_loss
+  print('test loss',test_loss)
 
-  print 'A,B',session.run([tlog.A,tlog.B],feed_dict=test_fd)
+  print('A,B',session.run([tlog.A,tlog.B],feed_dict=test_fd))
   y,haty = session.run([predicted_y,actual_y],feed_dict=test_fd)
   sio.savemat('testpreds.mat',{'y':y,'haty':haty,'init_haty':init_haty})
 
@@ -135,9 +135,9 @@ def genInputs(n,sampleSize):
         s += tc
         if (t) % 100 == 0:
             elapsed = time.time()-t0
-            print 'finished',t,'samples in',elapsed,'sec at',(t+1)/elapsed,'samples per sec'
+            print('finished',t,'samples in',elapsed,'sec at',(t+1)/elapsed,'samples per sec')
     s *= 1.0/sampleSize
-    print 'max edges',(d-3)*(d-3),'edges',s.sum(),'frac',s.sum()/((d-3)*(d-3))
+    print('max edges',(d-3)*(d-3),'edges',s.sum(),'frac',s.sum()/((d-3)*(d-3)))
     outfile = stem+'_y.txt'
     with open(outfile,'w') as fp:
         for r in range(3,d):
@@ -150,7 +150,7 @@ def genInputs(n,sampleSize):
 def loadPrecomputed(db,loadFile):
     d = db.dim()
     target_y = np.zeros((d,d))
-    print 'target_y',target_y.shape
+    print('target_y',target_y.shape)
     for line in open(loadFile):
         parts = line.strip().split(" ")
         r = int(parts[0])
@@ -164,14 +164,14 @@ def runMain(n='10',epochs='1000',repeat='1',gendata='0',load='precomputed-distri
   repeat = int(repeat)
   gendata = int(gendata)
   if gendata>0:
-    print 'generating data with',gendata,'trials'
+    print('generating data with',gendata,'trials')
     outfile = genInputs(n,gendata)
-    print 'stored in',outfile
+    print('stored in',outfile)
   else:
     losses = []
     for r in range(repeat):
-        print 'trial',r+1
-        if len(losses)>0: print 'running avg',sum(losses)/len(losses)
+        print('trial',r+1)
+        if len(losses)>0: print('running avg',sum(losses)/len(losses))
         (factFile,trainFile,testFile) = expt.genInputs(n)
         (tlog,trainData,testData) = setup_tlog(n,factFile,trainFile,testFile)
         target_y = loadPrecomputed(tlog.db,load)
@@ -182,10 +182,10 @@ def runMain(n='10',epochs='1000',repeat='1',gendata='0',load='precomputed-distri
         testData[mode] = (ux,np.dot(ux,target_y))
         loss = trainAndTest(tlog,trainData,testData,epochs,n)
         losses.append(loss)
-    print 'losses',losses,'average',sum(losses)/len(losses)
+    print('losses',losses,'average',sum(losses)/len(losses))
 
 if __name__=="__main__":
   optlist,args = getopt.getopt(sys.argv[1:],"x:",['n=','epochs=','repeat=','gendata=', 'load='])
-  optdict = dict(map(lambda(op,val):(op[2:],val),optlist))
-  print 'optdict',optdict
+  optdict = dict([(op_val[0][2:],op_val[1]) for op_val in optlist])
+  print('optdict',optdict)
   runMain(**optdict)

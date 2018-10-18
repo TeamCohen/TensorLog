@@ -7,6 +7,6 @@ if __name__ == "__main__":
         x = "%s_%s" % (i,j)
         i,j = y.split(",")
         y = "%s_%s" % (i,j)
-        print "\t".join([rel,x,y])
+        print("\t".join([rel,x,y]))
 
 

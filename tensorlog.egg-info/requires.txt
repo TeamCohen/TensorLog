@@ -1,0 +1,12 @@
+numpy
+scipy
+pyparsing
+
+[debug]
+pyttk
+
+[xc-tensorflow]
+tensorflow
+
+[xc-theano]
+theano

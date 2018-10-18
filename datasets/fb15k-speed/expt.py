@@ -11,11 +11,11 @@ from tensorlog import opfunutil
 from tensorlog import expt
 
 def setExptParams():
-    print 'loading db....'
+    print('loading db....')
     db = comline.parseDBSpec("tmp-cache/fb15k.db|inputs/fb15k-valid.cfacts")
-    print 'loading program....'
+    print('loading program....')
     prog = comline.parseProgSpec("inputs/fb15k.ppr",db)
-    print 'loading queries....'
+    print('loading queries....')
     queries = fbQueries(prog,db)
     modeSet = set(mode for (mode,_) in queries)
     return (db,prog,modeSet,queries)
@@ -28,7 +28,7 @@ def compileAll(db,prog,modeSet,queries):
             k += 1
             fun = prog.compile(mode)
     fps = k/(time.time() - start)
-    print "compiled",k,"of",len(modeSet),"functions at",fps,"fps"
+    print("compiled",k,"of",len(modeSet),"functions at",fps,"fps")
     return fps
 
 def runNative(db,prog,modeSet,queries):
@@ -41,7 +41,7 @@ def runNative(db,prog,modeSet,queries):
             fun = prog.function[(mode, 0)]
             fun.eval(db, [X], opfunutil.Scratchpad())
     qps = len(queries)/(time.time() - start)
-    print "answered",len(queries),"queries at",qps,"qps"
+    print("answered",len(queries),"queries at",qps,"qps")
     return qps
 
 def runSequential(db,prog,modeSet,queries):
@@ -51,9 +51,9 @@ def runSequential(db,prog,modeSet,queries):
         fun = prog.function[(mode,0)]
         fun.eval(db, [vx], opfunutil.Scratchpad())
         k += 1
-        if not k%100: print "answered",k,"queries"
+        if not k%100: print("answered",k,"queries")
     qps = len(queries)/(time.time() - start)
-    print "answered",len(queries),"queries at",qps,"qps"
+    print("answered",len(queries),"queries at",qps,"qps")
     return qps
 
 def fbQueries(prog,db):
@@ -70,7 +70,7 @@ def fbQueries(prog,db):
           queries.append((mode, vx))
       else:
           ignored += 1
-  print len(queries), "queries loaded", "ignored", ignored
+  print(len(queries), "queries loaded", "ignored", ignored)
   return queries
 
 
@@ -105,7 +105,7 @@ def runCross():
     results = {}
     for compilerClass in CROSSCOMPILERS:
         xc = compilerClass(prog)
-        print expt.fulltype(xc)
+        print(expt.fulltype(xc))
         
         # compileAll
         start = time.time()
@@ -116,7 +116,7 @@ def runCross():
             k += 1
             xc.ensureCompiled(mode)
         fps = k / (time.time() - start)
-        print "compiled",k,"of",len(modeSet),"functions at",fps,"fps"
+        print("compiled",k,"of",len(modeSet),"functions at",fps,"fps")
         
         # runSequential
         start = time.time()
@@ -124,9 +124,9 @@ def runCross():
         for (mode,vx) in queries:
             xc.inferenceFunction(mode)(vx)
             k += 1
-            if not k%100: print "answered",k,"queries"
+            if not k%100: print("answered",k,"queries")
         qps1 = len(queries) / (time.time() - start)
-        print "answered",len(queries),"queries at",qps1,"qps"
+        print("answered",len(queries),"queries at",qps1,"qps")
         
         # runNative
         dset = comline.parseDatasetSpec('tmp-cache/fb15k-valid.dset|inputs/fb15k-valid.examples',db)
@@ -136,7 +136,7 @@ def runCross():
             X = dset.getX(mode)
             xc.inferenceFunction(mode)(X)
         qps2 = len(queries) / (time.time() - start)
-        print "answered",len(queries),"queries at",qps2,"qps"
+        print("answered",len(queries),"queries at",qps2,"qps")
         results[expt.fulltype(xc)] = (fps,qps1,qps2)
     return results
 

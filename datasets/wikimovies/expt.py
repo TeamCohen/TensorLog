@@ -45,11 +45,11 @@ def runMain(num=250):
 
 if __name__=="__main__":
   acc,loss = runMain() # expect 0.21,0.22
-  print 'acc,loss',acc,loss
+  print('acc,loss',acc,loss)
   params = setExptParams(250)
   for compilerClass in CROSSCOMPILERS:
       xc = compilerClass(params['prog'])
-      print expt.fulltype(xc)
+      print(expt.fulltype(xc))
       # compile everything
       mode = declare.asMode(modeString)
       xc.ensureCompiled(mode)
@@ -58,4 +58,4 @@ if __name__=="__main__":
           'savedModel':'learned-model.%s.db' % (expt.fulltype(xc)),
           'learner':learner,
           })
-      print 'acc,loss',expt.Expt(params).run()
+      print('acc,loss',expt.Expt(params).run())

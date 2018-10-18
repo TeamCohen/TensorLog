@@ -51,7 +51,7 @@ import expt
 
 def setup_tlog(maxD,factFile,trainFile,testFile,edge):
   programFile = 'grid.ppr' if edge=='sparse' else 'grid_embedded.ppr'
-  print 'tlog program',programFile
+  print('tlog program',programFile)
   tlog = simple.Compiler(db=factFile,prog=programFile)
   if edge=='sparse':
     tlog.prog.db.markAsParameter('edge',2)
@@ -93,7 +93,7 @@ def setup_tlog(maxD,factFile,trainFile,testFile,edge):
   else:
     assert False,'edge should be sparse|indirect_sparse|fixed_embedding|learned_embedding|...'
   tlog.prog.maxDepth = maxD
-  print 'loading trainData,testData from',trainFile,testFile
+  print('loading trainData,testData from',trainFile,testFile)
   trainData = tlog.load_small_dataset(trainFile)
   testData = tlog.load_small_dataset(testFile)
   return (tlog,trainData,testData)
@@ -121,10 +121,10 @@ def trainAndTest(tlog,trainData,testData,epochs,corner,edge,n):
     loss = tlog.loss(mode)
 
   if corner=='hard' and edge=='sparse':
-    print 'AdagradOptimizer 1.0'
+    print('AdagradOptimizer 1.0')
     optimizer = tf.train.AdagradOptimizer(1.0)
   else:
-    print 'AdamOptimizer 0.1'
+    print('AdamOptimizer 0.1')
     optimizer = tf.train.AdamOptimizer(0.1)
   train_step = optimizer.minimize(loss)
 
@@ -134,7 +134,7 @@ def trainAndTest(tlog,trainData,testData,epochs,corner,edge,n):
   (ux,uy) = testData[mode]
   test_fd = {tlog.input_placeholder_name(mode):ux, tlog.target_output_placeholder_name(mode):uy}
   acc = session.run(accuracy, feed_dict=test_fd)
-  print corner,'training: initial test acc',acc
+  print(corner,'training: initial test acc',acc)
 
   (tx,ty) = trainData[mode]
   if corner=='hard':
@@ -145,21 +145,21 @@ def trainAndTest(tlog,trainData,testData,epochs,corner,edge,n):
   def show_test_results():
     if corner=='soft' or edge!='sparse':
       test_preds = session.run(tf.argmax(predicted_y,1), feed_dict=test_fd)    
-      print 'test best symbols are',map(lambda i:tlog.db.schema.getSymbol('__THING__',i),test_preds)
+      print('test best symbols are',[tlog.db.schema.getSymbol('__THING__',i) for i in test_preds])
       if False:
         test_scores = session.run(predicted_y, feed_dict=test_fd)    
-        print 'test scores are',test_scores
+        print('test scores are',test_scores)
         weighted_predictions = session.run(tf.multiply(predicted_y, (x1+x2-2)), feed_dict=test_fd)    
-        print 'test weighted_predictions',weighted_predictions
+        print('test weighted_predictions',weighted_predictions)
         test_loss = session.run(loss,feed_dict=test_fd)    
-        print 'test loss',test_loss
+        print('test loss',test_loss)
 
   show_test_results()
 
   t0 = time.time()
-  print 'epoch',
+  print('epoch', end=' ')
   for i in range(epochs):
-    print i+1,
+    print(i+1, end=' ')
     session.run(train_step, feed_dict=train_fd)
     if (i+1)%3==0:
       test_fd = {tlog.input_placeholder_name(mode):ux, tlog.target_output_placeholder_name(mode):uy}
@@ -168,16 +168,16 @@ def trainAndTest(tlog,trainData,testData,epochs,corner,edge,n):
         train_acc = session.run(accuracy, feed_dict=train_fd)
       test_loss = session.run(loss, feed_dict=test_fd)
       test_acc = session.run(accuracy, feed_dict=test_fd)
-      print 'train loss',train_loss,
+      print('train loss',train_loss, end=' ')
       if corner=='hard':
-        print 'acc',train_acc,
-      print 'test loss',test_loss,'acc',test_acc
-      print 'epoch',
-  print 'done'
-  print 'learning takes',time.time()-t0,'sec'
+        print('acc',train_acc, end=' ')
+      print('test loss',test_loss,'acc',test_acc)
+      print('epoch', end=' ')
+  print('done')
+  print('learning takes',time.time()-t0,'sec')
 
   acc = session.run(accuracy, feed_dict=test_fd)
-  print 'test acc',acc
+  print('test acc',acc)
 
   show_test_results()
 
@@ -187,7 +187,7 @@ def trainAndTest(tlog,trainData,testData,epochs,corner,edge,n):
   if edge=='learned_embedding':
     with open('learned_embedding.csv','w') as efp:
       E1,E2 = session.run([tlog.E1,tlog.E2],feed_dict=test_fd)
-      print 'E1',E1.shape
+      print('E1',E1.shape)
       for i in range(1,n+1):
         for j in range(1,n+1):
           dist = min(i-1,n+1-i) + min(j-1,n+1-j)
@@ -259,19 +259,19 @@ def runMain(corner='hard',n='10',epochs='100',repeat='1',edge='sparse'):
   n = int(n)
   epochs = int(epochs)
   repeat = int(repeat)
-  print 'run',epochs,'epochs',corner,'training on',n,'x',n,'grid','maxdepth',n/2,'repeating',repeat,'times'
+  print('run',epochs,'epochs',corner,'training on',n,'x',n,'grid','maxdepth',n/2,'repeating',repeat,'times')
   accs = []
   for r in range(repeat):
-    print 'trial',r+1
-    if len(accs)>0: print 'running avg',sum(accs)/len(accs)
+    print('trial',r+1)
+    if len(accs)>0: print('running avg',sum(accs)/len(accs))
     (factFile,trainFile,testFile) = genInputs(n)
     (tlog,trainData,testData) = setup_tlog(n/2,factFile,trainFile,testFile,edge)
     acc = trainAndTest(tlog,trainData,testData,epochs,corner,edge,n)
     accs.append(acc)
-  print 'accs',accs,'average',sum(accs)/len(accs)
+  print('accs',accs,'average',sum(accs)/len(accs))
 
 if __name__=="__main__":
   optlist,args = getopt.getopt(sys.argv[1:],"x:",['corner=','n=','epochs=','repeat=','edge='])
-  optdict = dict(map(lambda(op,val):(op[2:],val),optlist))
-  print 'optdict',optdict
+  optdict = dict([(op_val[0][2:],op_val[1]) for op_val in optlist])
+  print('optdict',optdict)
   runMain(**optdict)

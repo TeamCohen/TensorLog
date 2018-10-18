@@ -23,11 +23,11 @@ def runMain(num=250):
   for i in range(epochs):
       b = 0
       for (_,(TX,TY)) in tlog.minibatches(train_data,batch_size=125):
-          print 'epoch',i+1,'of',epochs,'minibatch',b+1
+          print('epoch',i+1,'of',epochs,'minibatch',b+1)
           train_fd = {tlog.input_placeholder_name(mode):TX, tlog.target_output_placeholder_name(mode):TY}
           session.run(train_step, feed_dict=train_fd)
           b += 1
-  print 'learning time',time.time()-t0,'sec'
+  print('learning time',time.time()-t0,'sec')
 
   predicted_y = tlog.inference(mode)
   actual_y = tlog.target_output_placeholder(mode)
@@ -38,7 +38,7 @@ def runMain(num=250):
   UX,UY = test_data[mode]
   test_fd = {tlog.input_placeholder_name(mode):UX, tlog.target_output_placeholder_name(mode):UY}
   acc = session.run(accuracy, feed_dict=test_fd)
-  print 'test acc',acc
+  print('test acc',acc)
   return acc #expect 27.2
 
 if __name__== "__main__":
