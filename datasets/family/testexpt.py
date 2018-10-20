@@ -7,7 +7,7 @@ class TestNative(unittest.TestCase):
         (self.prog, self.trainData, self.testData) = expt.setExptParams()
     def testIt(self):
         acc,loss = expt.accExpt(self.prog, self.trainData, self.testData)
-        print "acc",acc
+        print("acc",acc)
         self.assertTrue(acc >= 0.71)
 
 TF_EXPECTED = {'i_husband/io':1.0,
@@ -28,7 +28,7 @@ class TestAccTF(unittest.TestCase):
         self.params = tfexpt.setup_tlog()
     def testIt(self):
         accs = tfexpt.trainAndTest(*self.params)
-        for mode,acc in TF_EXPECTED.items():
+        for mode,acc in list(TF_EXPECTED.items()):
             self.assertTrue(accs[mode] >= acc,msg="%s:%g<%g" % (mode,accs[mode],acc))
 
         

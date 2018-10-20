@@ -36,19 +36,19 @@ class Interp(object):
         self.conf = masterconfig.masterConfig()
 
     def help(self):
-        print "ti.helpConfig(): help on configuration options"
-        print "ti.list(foo): foo can be a compiled function, eg \"foo/io\", a predicate definition, eg"
-        print "              \"foo/2\", or a database predicate, also specified as \"foo/2\"."
-        print "ti.list():    list everything."
-        print "ti.eval(\"functor/mode\",\"c\",inputType=type1,outputType=type2): evaluate a function on a database constant c"
+        print("ti.helpConfig(): help on configuration options")
+        print("ti.list(foo): foo can be a compiled function, eg \"foo/io\", a predicate definition, eg")
+        print("              \"foo/2\", or a database predicate, also specified as \"foo/2\".")
+        print("ti.list():    list everything.")
+        print("ti.eval(\"functor/mode\",\"c\",inputType=type1,outputType=type2): evaluate a function on a database constant c")
         if DEBUGGER_AVAILABLE:
-          print "ti.debug(\"functor/mode\",\"c\"): debug the corresponding eval command"
-          print "ti.debugDset(\"functor/mode\"[,test=True]): run debugger on a dataset"
-        print "ti.set(depth=d): reset the max depth"
-        print "ti.set(normalize='none'|'softmax'|'log+softmax'): reset the normalizer"
-        print "ti.set(echo=N): number of top items to print when doing an eval"
-        print "ti.set(trace=True|False): print summary of messages sent in inference"
-        print "ti.set(maxTraceMsg=N): print data in messages if they have fewer than N non-zero entries"
+          print("ti.debug(\"functor/mode\",\"c\"): debug the corresponding eval command")
+          print("ti.debugDset(\"functor/mode\"[,test=True]): run debugger on a dataset")
+        print("ti.set(depth=d): reset the max depth")
+        print("ti.set(normalize='none'|'softmax'|'log+softmax'): reset the normalizer")
+        print("ti.set(echo=N): number of top items to print when doing an eval")
+        print("ti.set(trace=True|False): print summary of messages sent in inference")
+        print("ti.set(maxTraceMsg=N): print data in messages if they have fewer than N non-zero entries")
 
     def set(self,depth=None,echo=None,normalize=None,maxTraceMsg=-1,trace=None):
         if depth!=None:
@@ -81,7 +81,7 @@ class Interp(object):
         mode = declare.ModeDeclaration(parser.Goal(functor,['x']*arity),strict=False)
         rules = self.prog.rules.rulesFor(mode)
         if rules is not None:
-            for r in rules: print r
+            for r in rules: print(r)
             return True
         return False
 
@@ -90,7 +90,7 @@ class Interp(object):
 
     def _listFacts(self,functor,arity):
         if self.db.inDB(functor,arity):
-            print self.db.summary(functor,arity)
+            print(self.db.summary(functor,arity))
             return True
         return False
 
@@ -103,7 +103,7 @@ class Interp(object):
         if key not in self.prog.function:
             self.prog.compile(mode)
         fun = self.prog.function[key]
-        print "\n".join(fun.pprint())
+        print("\n".join(fun.pprint()))
 
     def eval(self,modeSpec,sym,inputType=None,outputType=None):
         mode = declare.asMode(modeSpec)
@@ -113,9 +113,9 @@ class Interp(object):
         tmp = self.prog.evalSymbols(mode,[sym],typeName=inputType)
         result = self.prog.db.rowAsSymbolDict(tmp,typeName=outputType)
         if (self.numTopEcho):
-            top = sorted(map(lambda (key,val):(val,key), result.items()), reverse=True)
+            top = sorted([(key_val[1],key_val[0]) for key_val in list(result.items())], reverse=True)
             for rank in range(min(len(top),self.numTopEcho)):
-                print '%d\t%g\t%s' % (rank+1,top[rank][0],top[rank][1])
+                print('%d\t%g\t%s' % (rank+1,top[rank][0],top[rank][1]))
         return result
 
     def debug(self,modeSpec,sym):
@@ -130,7 +130,7 @@ class Interp(object):
 
     def helpConfig(self):
       self.conf.pprint()
-      print "To set any option above, use something like: ti.conf.funs.trace = True"
+      print("To set any option above, use something like: ti.conf.funs.trace = True")
 
     def debugDset(self,modeSpec,test=False):
       if not DEBUGGER_AVAILABLE:
@@ -139,7 +139,7 @@ class Interp(object):
       assert self.db.isTypeless(),'cannot debug a db with declared types'
       fullDataset = self.testData if test else self.trainData
       if fullDataset==None:
-        print 'train/test dataset is not specified on command line?'
+        print('train/test dataset is not specified on command line?')
       else:
         mode = declare.asMode(modeSpec)
         dset = fullDataset.extractMode(mode)
@@ -160,8 +160,8 @@ if __name__ == "__main__":
         interactiveMode = False
         if sys.flags.interactive: interactiveMode = True
     if interactiveMode:
-        print "Interpreter variable 'ti' set, type ti.help() for help"
+        print("Interpreter variable 'ti' set, type ti.help() for help")
     else:
-        print "Usage: python -i -m tensorlog [opts]"
-        print "- For option help: 'python -m tensorlog --help'"
-        print "- The interpreter is really only useful with the -i option."
+        print("Usage: python -i -m tensorlog [opts]")
+        print("- For option help: 'python -m tensorlog --help'")
+        print("- The interpreter is really only useful with the -i option.")

@@ -267,14 +267,14 @@ def broadcastAndWeightByRowSum(m1,m2):
         return  m1 * m2.sum()
     elif r1==1 and r2>1:
         bm1 = repeat(m1, r2)
-        for i in xrange(r2):
+        for i in range(r2):
             w = m2.data[m2.indptr[i]:m2.indptr[i+1]].sum()
             bm1.data[bm1.indptr[i]:bm1.indptr[i+1]] = m1.data * w
         return bm1
     else:
         assert r1==r2, "broadcastAndWeightByRowSum: r1 must match r2"
         result = m1.copy()
-        for i in xrange(r1):
+        for i in range(r1):
             w = m2.data[m2.indptr[i]:m2.indptr[i+1]].sum()
             result.data[result.indptr[i]:result.indptr[i+1]] *= w
         return result
@@ -331,8 +331,8 @@ if __name__=="__main__":
     for i in range(1,11):
         tmp.append([i] + [0]*3 + [5*i])
     m = SS.csr_matrix(tmp)
-    print m.todense()
+    print(m.todense())
     m2 = shuffleRows(m)
     #print m2.todense()
     for i in range(0,10,4):
-        print selectRows(m2,i,i+4).todense()
+        print(selectRows(m2,i,i+4).todense())

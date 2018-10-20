@@ -25,7 +25,7 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
   def _buildLossExpr(self,mode):
     target_y = self._createPlaceholder(xcomp.TRAINING_TARGET_VARNAME,'vector',self._wsDict[mode].inferenceOutputType)
     self._wsDict[mode].dataLossArgs = self._wsDict[mode].inferenceArgs + [target_y]
-    placeholder = map(lambda x:0*x, self.getParamVariables(mode)) # theano doesn't like it when some paramVariables don't appear in the loss expr
+    placeholder = [0*x for x in self.getParamVariables(mode)] # theano doesn't like it when some paramVariables don't appear in the loss expr
     tmp = self._applyOpToNonzerosOfDense(TT.log,self._wsDict[mode].inferenceExpr)
     self._wsDict[mode].dataLossExpr = (-target_y * tmp).mean()
     self._wsDict[mode].dataLossGradExprs = theano.grad(self._wsDict[mode].dataLossExpr, self.getParamVariables(mode))
@@ -62,10 +62,10 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
       #print theano.printing.debugprint(pyfunReturningList)
       rawUpdates = pyfunReturningList(input1,input2)
       if unwrapOutputs:
-        result = map(lambda key,rawUpdate:(key,self._unwrapUpdate(key,rawUpdate)), self.prog.getParamList(), rawUpdates)
+        result = list(map(lambda key,rawUpdate:(key,self._unwrapUpdate(key,rawUpdate)), self.prog.getParamList(), rawUpdates))
         return result
       else:
-        return zip(self.getParamList(), rawUpdates)
+        return list(zip(self.getParamList(), rawUpdates))
     return closure
 
   def _insertHandleExpr(self,key,name,val,broadcast=False):
@@ -114,15 +114,15 @@ class TheanoCrossCompiler(xcomp.AbstractCrossCompiler):
   
   def show(self,verbose=0):
     """ print a summary of current workspace to stdout """
-    print 'inferenceArgs',self.ws.inferenceArgs
-    print 'inferenceExpr',theano.pp(self.ws.inferenceExpr)
+    print('inferenceArgs',self.ws.inferenceArgs)
+    print('inferenceExpr',theano.pp(self.ws.inferenceExpr))
     if verbose>=1:
-      print 'debugprint inferenceExpr:'
+      print('debugprint inferenceExpr:')
       theano.printing.debugprint(self.ws.inferenceExpr)
       if self.ws.dataLossExpr:
-        print 'dataLossArgs',self.ws.dataLossArgs
-        print 'dataLossExpr',theano.pp(self.ws.dataLossExpr)
-        print 'debugprint dataLossExpr:'
+        print('dataLossArgs',self.ws.dataLossArgs)
+        print('dataLossExpr',theano.pp(self.ws.dataLossExpr))
+        print('debugprint dataLossExpr:')
         theano.printing.debugprint(self.ws.dataLossExpr)
         
   def getLearnedParam(self,key,session=None):
@@ -267,6 +267,6 @@ class FixedRateGDLearner(learnxcomp.BatchEpochsLearner):
       try:
         self.xc.optimizeDataLoss(mode,self.optimizer,X,Y,epochs=epochs)
       except:
-        print "Inference expr:"
-        print theano.pprint(self.xc.ws.inferenceExpr)
+        print("Inference expr:")
+        print(theano.pprint(self.xc.ws.inferenceExpr))
         raise

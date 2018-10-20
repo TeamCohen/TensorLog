@@ -240,7 +240,7 @@ class AbstractCrossCompiler(object):
     such that softplus(V0)=V.
     """
     mode = self.ensureCompiled(mode,inputs=inputs)
-    return map(lambda key:self._handleExprVar[key], self.prog.getParamList())
+    return [self._handleExprVar[key] for key in self.prog.getParamList()]
 
   def getParamHandles(self,mode,inputs=None):
     """Find target-language variables corresponding to DB parameters.
@@ -251,7 +251,7 @@ class AbstractCrossCompiler(object):
     in learning.
     """
     mode = self.ensureCompiled(mode,inputs=inputs)
-    return map(lambda key:self._handleExpr[key], self.prog.getParamList())
+    return [self._handleExpr[key] for key in self.prog.getParamList()]
 
   def parameterFromDBToExpr(self,functor,arity):
     return self._handleExpr.get((functor,arity))
@@ -275,7 +275,7 @@ class AbstractCrossCompiler(object):
 
   def _getParamVariables(self):
     """ Convenience method to find variables corresponding to paramaters """
-    return map(lambda key:self._handleExprVar[key], self.xcomp.prog.getParamList())
+    return [self._handleExprVar[key] for key in self.xcomp.prog.getParamList()]
 
   #
   # these all define the interface to the database.  instead of
@@ -488,7 +488,7 @@ class AbstractCrossCompiler(object):
       return self._vecMatMulExpr(self._ones(self._preimageOnesType(op.matMode)), self._matrix(op.matMode,True))
     elif isinstance(op,ops.CallPlugin):
       pluginFun = self.prog.plugins.definition(op.mode)
-      return apply(pluginFun,map(lambda s:nspacer[s], op.srcs))
+      return pluginFun(*[nspacer[s] for s in op.srcs])
     elif isinstance(op,ops.ComponentwiseVecMulOp):
       return self._componentwiseMulExpr(nspacer[op.src], nspacer[op.src2])
     elif isinstance(op,ops.DefinedPredOp):

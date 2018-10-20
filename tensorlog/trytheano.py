@@ -4,24 +4,24 @@ import theano
 import theano.tensor as T
 import theano.sparse as S
 import theano.sparse.basic as B
-import matrixdb
+from . import matrixdb
 import numpy
 
 def debugVar(v,depth=0,maxdepth=10):
   if depth>maxdepth:
-    print '...'
+    print('...')
   else:
-    print '| '*(depth+1),
-    print 'var: name',v.name,'type',type(v),'def',theano.pp(v)
+    print('| '*(depth+1), end=' ')
+    print('var: name',v.name,'type',type(v),'def',theano.pp(v))
     for a in v.get_parents():
       debugApply(a,depth=depth+1,maxdepth=maxdepth)
 
 def debugApply(a,depth=0,maxdepth=10):
   if depth>maxdepth:
-    print '...'
+    print('...')
   else:
-    print '| '*(depth+1),
-    print 'apply: ',a,'op',type(a.op),'output types',map(type,a.outputs)
+    print('| '*(depth+1), end=' ')
+    print('apply: ',a,'op',type(a.op),'output types',list(map(type,a.outputs)))
     for v in a.inputs:
       debugVar(v,depth=depth+1,maxdepth=maxdepth)
 
@@ -31,18 +31,18 @@ if __name__=="__main__":
     va = db.onehot('william')
     vb = db.onehot('sarah')
 
-    print 'a',va
-    print 'b',vb
-    print 'shape',va.shape
+    print('a',va)
+    print('b',vb)
+    print('shape',va.shape)
 
-    print 'f1: s = x*((x+x)+x)'
+    print('f1: s = x*((x+x)+x)')
     tx = S.csr_matrix('x')
     r1 = B.sp_sum(tx+tx+tx,sparse_grad=True)
     s = tx*r1
     s.name = 's'
     f1 = theano.function(inputs=[tx],outputs=[s])
     w = f1(va)
-    print w[0]
+    print(w[0])
 
     debugVar(s)
 
@@ -57,7 +57,7 @@ if __name__=="__main__":
 #    w = f2(va,vb)
 #    print w[0]
 #
-    print 'f3(w=a), b constant'
+    print('f3(w=a), b constant')
     tw3 = S.csr_matrix('w')  #weighter
     #y = sparse.CSR(data, indices, indptr, shape)
 #    tc3 = S.CSR(vb.data, vb.indices, vb.indptr, vb.shape)

@@ -1,4 +1,4 @@
-import learn as L
+from . import learn as L
 import time
 import sys
 import logging
@@ -15,7 +15,7 @@ class XLearner(L.Learner):
       inferenceFun = self.xc.inferenceFunction(mode)
       result = inferenceFun(X)
     except:
-      print "tlogfun:","\n".join(self.xc.ws.tensorlogFun.pprint())
+      print("tlogfun:","\n".join(self.xc.ws.tensorlogFun.pprint()))
       raise
     return result
   def crossEntropyGrad(self,mode,X,Y,tracerArgs={},pad=None):
@@ -51,7 +51,7 @@ class BatchEpochsLearner(XLearner):
         try:
           self.trainMode(mode,dset.getX(mode),dset.getY(mode),epochs=1)
         except:
-          print "Unexpected error at %s:" % str(args), sys.exc_info()[:2]
+          print("Unexpected error at %s:" % str(args), sys.exc_info()[:2])
           raise
       #self.epochTracer(self,)
     

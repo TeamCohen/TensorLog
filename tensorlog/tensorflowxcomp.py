@@ -164,8 +164,8 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     TX,TY = self._ensureWrapped(TX,TY,False)
 
     lossFun = self.dataLossFunction(targetMode,wrapInputs=False,unwrapOutputs=False)
-    def printLoss(msg,X,Y): print msg,lossFun(X,Y)
-    def printAccuracy(msg,X,Y): print msg,self.accuracy(targetMode,X,Y,wrapped=True)
+    def printLoss(msg,X,Y): print(msg,lossFun(X,Y))
+    def printAccuracy(msg,X,Y): print(msg,self.accuracy(targetMode,X,Y,wrapped=True))
 
     expt.Expt.timeAction('computing train loss',lambda:printLoss('initial train loss',X,Y))
     expt.Expt.timeAction('computing test loss',lambda:printLoss('initial test loss',TX,TY))
@@ -196,7 +196,7 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     if savedTrainExamples:
       expt.Expt.timeAction('saving train examples',lambda:trainData.saveProPPRExamples(savedTrainExamples,prog.db))
     if savedTestPredictions and savedTestExamples:
-      print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' % (savedTestExamples,savedTestPredictions)
+      print('ready for commands like: proppr eval %s %s --metric auc --defaultNeg' % (savedTestExamples,savedTestPredictions))
 
   # debug stuff
 
@@ -206,11 +206,11 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
     if previouslySeen is None:
       previouslySeen=set()
     if depth>maxdepth:
-      print '...'
+      print('...')
     else:
       tab = '| '*(depth+1),
       op = expr.op
-      print '%sexpr:' % tab,expr,'type','op',op.name,'optype',op.type
+      print('%sexpr:' % tab,expr,'type','op',op.name,'optype',op.type)
     if not expr in previouslySeen:
       previouslySeen.add(expr)
       for inp in op.inputs:
@@ -224,16 +224,16 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
       previouslySeen=set()
     def hasGrad(expr):
       try:
-        return all(map(lambda g:g is not None, tf.gradients(expr,vars))),'ok'
+        return all([g is not None for g in tf.gradients(expr,vars)]),'ok'
       except Exception as ex:
         return False,ex
     if depth>maxdepth:
-      print '...'
+      print('...')
     else:
       op = expr.op
       stat,ex = hasGrad(expr)
       tab = '+ ' if stat else '| '
-      print tab*(depth+1),expr,op.name,ex
+      print(tab*(depth+1),expr,op.name,ex)
       if not expr in previouslySeen:
         previouslySeen.add(expr)
         for inp in op.inputs:
@@ -290,9 +290,9 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
         with session.as_default():
           rawUpdates = [expr.eval(feed_dict=bindings) for expr in exprList]
       if unwrapOutputs:
-        return map(lambda key,rawUpdate:(key,self._unwrapUpdate(key,rawUpdate)), self.prog.getParamList(), rawUpdates)
+        return list(map(lambda key,rawUpdate:(key,self._unwrapUpdate(key,rawUpdate)), self.prog.getParamList(), rawUpdates))
       else:
-        return zip(self.prog.getParamList(), rawUpdates)
+        return list(zip(self.prog.getParamList(), rawUpdates))
     return closure
 
   def _callAndUnwrap(self,expr,bindings,unwrapOutputs,session):
@@ -308,8 +308,8 @@ class TensorFlowCrossCompiler(xcomp.AbstractCrossCompiler):
 
   def show(self,verbose=0):
     """ Print a summary of current workspace to stdout """
-    print 'exprArgs',self.ws.inferenceArgs
-    print 'expr',self.ws.inferenceExpr,'type',type(self.ws.inferenceExpr)
+    print('exprArgs',self.ws.inferenceArgs)
+    print('expr',self.ws.inferenceExpr,'type',type(self.ws.inferenceExpr))
     if verbose>=1:
       TensorFlowCrossCompiler.pprintExpr(self.ws.inferenceExpr)
 

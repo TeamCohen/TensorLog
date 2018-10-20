@@ -81,7 +81,7 @@ def genInputs(n):
 # run timing experiment
 def timingExpt(prog,maxD,trainFile,minibatch):
     times = []
-    print 'depth',maxD,'minibatch',minibatch
+    print('depth',maxD,'minibatch',minibatch)
     ti = interp.Interp(prog)
     ti.prog.maxDepth = maxD
     tlog = simple.Compiler(db=prog.db,prog=prog)
@@ -94,19 +94,19 @@ def timingExpt(prog,maxD,trainFile,minibatch):
         quitAfter = 25
     start = time.time()
     for k,(mode,(X0,Y0)) in enumerate(tlog.minibatches(dset,batch_size=batchSize)):
-        print 'batch',k
+        print('batch',k)
         X = scipy.sparse.csr_matrix(X0)
         Y = scipy.sparse.csr_matrix(Y0)
         ti.prog.eval(declare.asMode(mode), [X])
         if k>=quitAfter:
             break
     elapsed = time.time() - start
-    print k*batchSize,'examples','miniBatchSize',batchSize,'time',elapsed,'qps',k*batchSize/elapsed
+    print(k*batchSize,'examples','miniBatchSize',batchSize,'time',elapsed,'qps',k*batchSize/elapsed)
     return elapsed
 
 # run accuracy experiment
 def accExpt(prog,trainFile,testFile,n,maxD,epochs):
-    print 'grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (n,n,epochs,maxD)
+    print('grid-acc-expt: %d x %d grid, %d epochs, maxPath %d' % (n,n,epochs,maxD))
     trainData = dataset.Dataset.loadExamples(prog.db,trainFile)
     testData = dataset.Dataset.loadExamples(prog.db,testFile)
     prog.db.markAsParameter('edge',2)
@@ -132,7 +132,7 @@ def accExpt(prog,trainFile,testFile,n,maxD,epochs):
     NP.seterr(divide='raise')
     t0 = time.time()
     result =  expt.Expt(params).run()
-    print 'elapsed time',time.time()-t0
+    print('elapsed time',time.time()-t0)
     return result
 
 def runMain():
@@ -140,17 +140,17 @@ def runMain():
     # usage: acc [grid-size] [maxDepth] [epochs]"
     #        time [grid-size] [maxDepth] [no-minibatch]"
     (goal,n,maxD,epochsOrMinibatch) = getargs()
-    print 'args',(goal,n,maxD,epochsOrMinibatch)
+    print('args',(goal,n,maxD,epochsOrMinibatch))
     (factFile,trainFile,testFile) = genInputs(n)
 
     db = matrixdb.MatrixDB.loadFile(factFile)
     prog = program.Program.loadRules("grid.ppr",db)
 
     if goal=='time':
-        print timingExpt(prog,maxD,trainFile,epochsOrMinibatch)
+        print(timingExpt(prog,maxD,trainFile,epochsOrMinibatch))
     elif goal=='acc':
-        print accExpt(prog,trainFile,testFile,n,maxD,epochsOrMinibatch)
-        print 'prog.maxDepth',prog.maxDepth
+        print(accExpt(prog,trainFile,testFile,n,maxD,epochsOrMinibatch))
+        print('prog.maxDepth',prog.maxDepth)
     else:
         assert False,'bad goal %s' % goal
 

@@ -105,28 +105,28 @@ class BPCompiler(object):
   #
 
   def showVars(self):
-    print "\t".join("var outOf inputTo outOf inputTo fb".split())
+    print(("\t".join("var outOf inputTo outOf inputTo fb".split())))
     for v in sorted(self.varDict.keys()):
       vin = self.varDict[v]
       def _gs(j):
         if j==None: return 'None'
         else: return str(self.goals[j])
-      print "\t".join([ v, str(vin.outputOf), ",".join(map(str,vin.inputTo)),
+      print(("\t".join([ v, str(vin.outputOf), ",".join(map(str,vin.inputTo)),
                 _gs(vin.outputOf), ",".join(map(_gs,vin.inputTo)),
-                str(vin.connected)])
+                str(vin.connected)])))
 
   def showRule(self):
     #print "\t".join("id goal ins outs roots".split())
     def goalStr(j): return str(self.goalDict[j])
     for j in range(len(self.goals)):
-      print '%2d' % j,'\t ',goalStr(j),'\t',str(self.goals[j]),str(self.toMode(j))
+      print(('%2d' % j,'\t ',goalStr(j),'\t',str(self.goals[j]),str(self.toMode(j))))
 
   def showOps(self):
-    print 'inputs:',",".join(self.inputs)
-    print 'output:',",".join(self.output)
-    print 'compiled to:'
+    print(('inputs:',",".join(self.inputs)))
+    print(('output:',",".join(self.output)))
+    print('compiled to:')
     for op in self.ops:
-      print '\t',op
+      print(('\t',op))
 
 
   #
@@ -351,7 +351,7 @@ class BPCompiler(object):
 
     def addOp(op,traceDepth,msgFrom,msgTo):
       """Add an operation to self.ops, echo if required"""
-      if conf.trace: print '%s+%s' % (('| '*traceDepth),op)
+      if conf.trace: print(('%s+%s' % (('| '*traceDepth),op)))
       def jToGoal(msg): return str(self.goals[msg]) if type(msg)==type(0) else msg
       op.setMessage(jToGoal(msgFrom),jToGoal(msgTo))
       self.ops.append(op)
@@ -372,7 +372,7 @@ class BPCompiler(object):
       is LHS on RHS, and if the variable is an input or
       output."""
       gin = self.goalDict[j]
-      if conf.trace: print '%smsg: %d->%s' % (('| '*traceDepth),j,v)
+      if conf.trace: print(('%smsg: %d->%s' % (('| '*traceDepth),j,v)))
       if j==0 and v in self.goalDict[j].inputs:
         #input port -> input variable - The lhs goal, j==0, is the input factor
         assert parser.isVariableAtom(v),'input must be a variable'
@@ -449,7 +449,7 @@ class BPCompiler(object):
       #connections. Information  propagates back from things the
       #variables are inputTo, unless those goals are CallPlugin's.
       vNeighbors = [j2 for j2 in [vin.outputOf]+list(vin.inputTo) if j2!=j]
-      if conf.trace: print '%smsg from %s to %d, vNeighbors=%r' % ('| '*traceDepth,v,j,vNeighbors)
+      if conf.trace: print(('%smsg from %s to %d, vNeighbors=%r' % ('| '*traceDepth,v,j,vNeighbors)))
       assert len(vNeighbors),'variables should have >=1 neighbor but %s has none: %d' % (v,j)
       #form product of the incoming messages, cleverly
       #generating only the variables we really need
@@ -480,7 +480,7 @@ class BPCompiler(object):
     #heuristic - start with the rightmost unconnected variable,
     #hoping that it's the end of a chain rooted at the input,
     #which should be quicker to evaluate
-    for j in reversed(range(1,len(self.goals))):
+    for j in reversed(list(range(1,len(self.goals)))):
       goalj = self.goals[j]
       for i in range(goalj.arity):
         v = goalj.args[i]
@@ -501,7 +501,7 @@ class BPCompiler(object):
     self.output = currentProduct
     self.outputType = self.msgType[currentProduct]
     self.inputs = list(self.goalDict[0].inputs)
-    self.inputTypes = map(lambda v:self.varDict[v].varType, self.inputs)
+    self.inputTypes = [self.varDict[v].varType for v in self.inputs]
 
 def _only(c):
   """Return only member of a singleton set, or raise an error if the set's not a singleton."""

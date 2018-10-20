@@ -34,7 +34,7 @@ class Dataset(object):
 
     def isSinglePredicate(self):
         """Returns true if all the examples are for a single predicate."""
-        return len(self.xDict.keys())==1
+        return len(list(self.xDict.keys()))==1
 
     def extractMode(self,mode):
         """Return a new Dataset that just contains this mode."""
@@ -43,7 +43,7 @@ class Dataset(object):
 
     def modesToLearn(self):
         """Return list of modes associated with the data."""
-        return self.xDict.keys()
+        return list(self.xDict.keys())
 
     def hasMode(self,mode):
         """True if there are examples of the mode in the dataset."""
@@ -58,7 +58,7 @@ class Dataset(object):
         return self.yDict[mode]
 
     def size(self):
-        return sum(map(lambda m:m.nnz,self.xDict.values())) + sum(map(lambda m:m.nnz,self.yDict.values()))
+        return sum([m.nnz for m in list(self.xDict.values())]) + sum([m.nnz for m in list(self.yDict.values())])
 
     def shuffle(self):
         for mode in self.xDict:
@@ -79,7 +79,7 @@ class Dataset(object):
         for modeIndex,mode in enumerate(modeList):
             numBatches = int(math.ceil( mutil.numRows(self.getX(mode)) / float(batchSize) ))
             modeSampleDict[mode] = NP.ones(numBatches,dtype='int')*modeIndex
-        modeSamples = NP.concatenate(modeSampleDict.values())
+        modeSamples = NP.concatenate(list(modeSampleDict.values()))
         NR.shuffle(modeSamples)
         # finally produce the minibatches
         currentOffset = [0] * len(modeList)
@@ -102,8 +102,8 @@ class Dataset(object):
         """Save the dataset on disk."""
         if not os.path.exists(dir):
             os.mkdir(dir)
-        dx = dict(map(lambda (k,v):(str(k),v), self.xDict.items()))
-        dy = dict(map(lambda (k,v):(str(k),v), self.yDict.items()))
+        dx = dict([(str(k_v[0]),k_v[1]) for k_v in list(self.xDict.items())])
+        dy = dict([(str(k_v[0]),k_v[1]) for k_v in list(self.yDict.items())])
         SIO.savemat(os.path.join(dir,"xDict"),dx,do_compression=True)
         SIO.savemat(os.path.join(dir,"yDict"),dy,do_compression=True)
 
@@ -118,7 +118,7 @@ class Dataset(object):
         #serialization converts modes to strings so convert them
         #back.... it also converts matrices to csr
         for d in (xDict,yDict):
-            for stringKey,mat in d.items():
+            for stringKey,mat in list(d.items()):
                 del d[stringKey]
                 if not stringKey.startswith('__'):
                    d[declare.asMode(stringKey)] = SS.csr_matrix(mat)
@@ -149,13 +149,13 @@ class Dataset(object):
         deserialize it.
         """
         if not os.path.exists(dsetFile):
-            print 'preparing examples from',functorToLearn,'...'
+            print(('preparing examples from',functorToLearn,'...'))
             dset = Dataset.loadMatrix(db,functorToLearn,functorInDB)
-            print 'serializing dsetFile',dsetFile,'...'
+            print(('serializing dsetFile',dsetFile,'...'))
             dset.serialize(dsetFile)
             return dset
         else:
-            print 'de-serializing dsetFile',dsetFile,'...'
+            print(('de-serializing dsetFile',dsetFile,'...'))
             return Dataset.deserialize(dsetFile)
 
     # TODO remove or make type-aware
@@ -251,7 +251,7 @@ class Dataset(object):
               yDatabuf[pred].append( 1.0/len(ys) if conf.normalize_outputs else 1.0)
               yRowbuf[pred].append(row_index)
               yColbuf[pred].append(getId(yType,y))
-        for pred in xDatabuf.keys():
+        for pred in list(xDatabuf.keys()):
           xType = db.schema.getDomain(pred.getFunctor(),2)
           yType = db.schema.getRange(pred.getFunctor(),2)
           nrows = len(xDatabuf[pred])
@@ -269,7 +269,7 @@ class Dataset(object):
     def saveProPPRExamples(self,fileName,db,append=False,mode=None):
         """Convert X and Y to ProPPR examples and store in a file."""
         fp = open(fileName,'a' if append else 'w')
-        modeKeys = [mode] if mode else self.xDict.keys()
+        modeKeys = [mode] if mode else list(self.xDict.keys())
         for mode in modeKeys:
             assert mode in self.yDict, "No mode '%s' in yDict" % mode
             functor,arity = mode.getFunctor(),mode.getArity()
@@ -279,10 +279,10 @@ class Dataset(object):
             for i in range(max(dx.keys())+1):
                 dix = dx[i]
                 diy = dy[i]
-                assert len(dix.keys())==1,'X row %d is not onehot: %r' % (i,dix)
-                x = dix.keys()[0]
+                assert len(list(dix.keys()))==1,'X row %d is not onehot: %r' % (i,dix)
+                x = list(dix.keys())[0]
                 fp.write('%s(%s,Y)' % (theoryPred,x))
-                for y in diy.keys():
+                for y in list(diy.keys()):
                     fp.write('\t+%s(%s,%s)' % (theoryPred,x,y))
                 fp.write('\n')
 

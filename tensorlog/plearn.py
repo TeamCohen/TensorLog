@@ -40,7 +40,7 @@ def _doBackpropTask(task):
     return (mutil.numRows(X),paramGrads)
 
 def _doAcceptNewParams(paramDict):
-    for (functor,arity),value in paramDict.items():
+    for (functor,arity),value in list(paramDict.items()):
         workerLearner.prog.db.setParameter(functor,arity,value)
 
 def _doPredict(miniBatch):
@@ -147,8 +147,7 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
             startTime = time.time()
             #generate the tasks
             miniBatches = list(dset.minibatchIterator(batchSize=self.miniBatchSize))
-            bpInputs = map(lambda (k,b):ParallelFixedRateGDLearner.miniBatchToTask(b,i,k,startTime), 
-                           enumerate(miniBatches))
+            bpInputs = [ParallelFixedRateGDLearner.miniBatchToTask(k_b[1],i,k_b[0],startTime) for k_b in enumerate(miniBatches)]
             totalN = self.totalNumExamples(miniBatches)
             logging.info("created %d minibatch tasks, total of %d examples" % (len(bpInputs),totalN))
             #generate gradients - in parallel
@@ -161,7 +160,7 @@ class ParallelFixedRateGDLearner(learn.FixedRateSGDLearner):
             self.broadcastParameters()
             logging.info("parameters broadcast to workers")
             # status updates
-            epochCounter = learn.GradAccumulator.mergeCounters( map(lambda (n,grads):grads.counter, bpOutputs) )
+            epochCounter = learn.GradAccumulator.mergeCounters( [n_grads[1].counter for n_grads in bpOutputs] )
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
 
 class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
@@ -184,8 +183,7 @@ class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
             startTime = time.time()
             #generate the tasks
             miniBatches = list(dset.minibatchIterator(batchSize=self.miniBatchSize))
-            bpInputs = map(lambda (k,b):ParallelFixedRateGDLearner.miniBatchToTask(b,i,k,startTime), 
-                           enumerate(miniBatches))
+            bpInputs = [ParallelFixedRateGDLearner.miniBatchToTask(k_b[1],i,k_b[0],startTime) for k_b in enumerate(miniBatches)]
             totalN = self.totalNumExamples(miniBatches)
 
             #generate gradients - in parallel
@@ -194,28 +192,28 @@ class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
             # accumulate to sumSquareGrads
             totalGradient = learn.GradAccumulator()
             for (n,paramGrads) in bpOutputs:
-                for (functor,arity),grad in paramGrads.items():
+                for (functor,arity),grad in list(paramGrads.items()):
                     totalGradient.accum((functor,arity), self.meanUpdate(functor,arity,grad,n,totalN))
             sumSquareGrads = sumSquareGrads.addedTo(totalGradient.mapData(NP.square))
             #compute gradient-specific rate
             ratePerParam = sumSquareGrads.mapData(lambda d:d+1e-1).mapData(NP.sqrt).mapData(NP.reciprocal)
 
             # scale down totalGradient by per-feature weight
-            for (functor,arity),grad in totalGradient.items():
+            for (functor,arity),grad in list(totalGradient.items()):
                 totalGradient[(functor,arity)] = grad.multiply(ratePerParam[(functor,arity)])
 
             self.regularizer.regularizeParams(self.prog,totalN)
             for (functor,arity) in self.prog.db.paramList:
                 m = self.prog.db.getParameter(functor,arity)
-                print 'reg',functor,'/',arity,'m shape',m.shape
-                if (functor,arity) in totalGradient.keys():
-                    print 'vs totalGradient shape',totalGradient[(functor,arity)].shape
+                print(('reg',functor,'/',arity,'m shape',m.shape))
+                if (functor,arity) in list(totalGradient.keys()):
+                    print(('vs totalGradient shape',totalGradient[(functor,arity)].shape))
                 else:
-                    print 'not in totalGradient'
+                    print('not in totalGradient')
 
             #cannot use process gradients because I've already scaled them down,
             # need to just add and clip
-            for (functor,arity),grad in totalGradient.items():
+            for (functor,arity),grad in list(totalGradient.items()):
                 m0 = self.prog.db.getParameter(functor,arity)
                 m1 = m0 + self.rate * grad
                 m = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float32').max), m1)
@@ -225,5 +223,5 @@ class ParallelAdaGradLearner(ParallelFixedRateGDLearner):
             self.broadcastParameters()
 
             # status updates
-            epochCounter = learn.GradAccumulator.mergeCounters( map(lambda (n,grads):grads.counter, bpOutputs) )
+            epochCounter = learn.GradAccumulator.mergeCounters( [n_grads[1].counter for n_grads in bpOutputs] )
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)

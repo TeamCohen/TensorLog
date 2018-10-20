@@ -13,7 +13,7 @@ def runMain():
   test_data = tlog.annotate_small_dataset(params['testData'])
   result={}
   for mode in params['trainData'].modesToLearn():
-    print mode
+    print(mode)
     loss = tlog.loss(mode)
     optimizer = tf.train.AdagradOptimizer(0.1)
     train_step = optimizer.minimize(loss)
@@ -24,13 +24,13 @@ def runMain():
     epochs = 10
     for i in range(epochs):
         b = 0
-        print 'epoch',i+1,'of',epochs
+        print('epoch',i+1,'of',epochs)
         for (_,(TX,TY)) in tlog.minibatches(train_data,batch_size=125):
             #print 'epoch',i+1,'of',epochs,'minibatch',b+1
             train_fd = {tlog.input_placeholder_name(mode):TX, tlog.target_output_placeholder_name(mode):TY}
             session.run(train_step, feed_dict=train_fd)
             b += 1
-    print 'learning time',time.time()-t0,'sec'
+    print('learning time',time.time()-t0,'sec')
 
     predicted_y = tlog.inference(mode)
     actual_y = tlog.target_output_placeholder(mode)
@@ -41,13 +41,13 @@ def runMain():
       UX,UY = test_data[modestr]
       test_fd = {tlog.input_placeholder_name(mode):UX, tlog.target_output_placeholder_name(mode):UY}
       acc = session.run(accuracy, feed_dict=test_fd)
-      print modestr,'test acc',acc
+      print(modestr,'test acc',acc)
       result[modestr]= acc
-    else: print mode,'not in test set'
+    else: print(mode,'not in test set')
   return result
 
 if __name__== "__main__":
   accs = runMain()
-  for mode,acc in accs.items():
-    print mode,'acc',acc
+  for mode,acc in list(accs.items()):
+    print(mode,'acc',acc)
   

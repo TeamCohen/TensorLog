@@ -55,14 +55,14 @@ def runMain():
   train_fd = {tlog.input_placeholder_name(mode):tx, tlog.target_output_placeholder_name(mode):ty}
   for i in range(20):
     session.run(train_step, feed_dict=train_fd)
-    print 'epoch',i+1,'train loss and accuracy',session.run([unregularized_loss,accuracy], feed_dict=train_fd)
+    print('epoch',i+1,'train loss and accuracy',session.run([unregularized_loss,accuracy], feed_dict=train_fd))
 
   # test performance
   (ux,uy) = testData[mode]
   test_fd = {tlog.input_placeholder_name(mode):ux, tlog.target_output_placeholder_name(mode):uy}
   acc = session.run(accuracy, feed_dict=test_fd)
 
-  print 'test acc',acc
+  print('test acc',acc)
   return acc
 
 if __name__=="__main__":

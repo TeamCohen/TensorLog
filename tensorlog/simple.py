@@ -302,7 +302,7 @@ class Compiler(object):
     load_big_dataset.
     """
     if isinstance(dataset_obj,dict):
-      return dataset_obj.keys()
+      return list(dataset_obj.keys())
     elif isinstance(dataset_obj,dataset.Dataset):
       return dataset_obj.modesToLearn()
     else:
@@ -317,7 +317,7 @@ class Compiler(object):
       dataset_dict = dataset_obj
       x_dict = {}
       y_dict = {}
-      for mode_str,(x,y) in dataset_dict.items():
+      for mode_str,(x,y) in list(dataset_dict.items()):
         mode = declare.asMode(mode_str)
         x_dict[mode] = self.xc.unwrapInput(x)
         y_dict[mode] = self.xc.unwrapInput(y)
@@ -352,8 +352,8 @@ class Compiler(object):
       (ry,cy) = y.shape
       def rows_per_gigabyte(c): return (1024.0*1024.0*1024.0) / (c*4.0)
       sm = str(m)
-      print 'mode %s: X is sparse %d x %d matrix (about %.1f rows/Gb)' % (sm,rx,cx,rows_per_gigabyte(cx))
-      print 'mode %s: Y is sparse %d x %d matrix (about %.1f rows/Gb)' % (sm,ry,cy,rows_per_gigabyte(cy))
+      print('mode %s: X is sparse %d x %d matrix (about %.1f rows/Gb)' % (sm,rx,cx,rows_per_gigabyte(cx)))
+      print('mode %s: Y is sparse %d x %d matrix (about %.1f rows/Gb)' % (sm,ry,cy,rows_per_gigabyte(cy)))
     return dset
 
 class Builder(object):
@@ -447,7 +447,7 @@ class Builder(object):
           [],
           features=[parser.Goal('weight',[var_name])],
           findall=[parser.Goal(bpcompiler.ASSIGN,[var_name,rule_id,type_name])])
-    return map(goal_builder, Builder._split(space_sep_rule_ids))
+    return list(map(goal_builder, Builder._split(space_sep_rule_ids)))
 
   @staticmethod
   def predicate(predicate_name):
@@ -459,7 +459,7 @@ class Builder(object):
       def builder(*args):
         return RuleWrapper(None,[parser.Goal(pred_name,args)])
       return builder
-    return map(goal_builder, Builder._split(space_sep_predicate_names))
+    return list(map(goal_builder, Builder._split(space_sep_predicate_names)))
 
   def __iadd__(self,other):
     if isinstance(other,parser.Rule):
@@ -581,9 +581,9 @@ class Options(object):
     pass
 
   def set_from_command_line(self,argv):
-    argspec = ["%s=" % opt_name for opt_name in self.__dict__.keys()]
+    argspec = ["%s=" % opt_name for opt_name in list(self.__dict__.keys())]
     optlist,_ = getopt.getopt(argv, 'x', argspec)
-    for opt_name,string_val in dict(optlist).items():
+    for opt_name,string_val in list(dict(optlist).items()):
       attr_name = opt_name[2:]
       attr_type = type(getattr(self, attr_name))
       if attr_type==type(True):
@@ -595,7 +595,7 @@ class Options(object):
     return self.__dict__
 
   def option_usage(self):
-    return " ".join(map(lambda item:"[--%s %r]" % item, self.as_dictionary().items()))
+    return " ".join(["[--%s %r]" % item for item in list(self.as_dictionary().items())])
 
 class Experiment(Options):
 
@@ -622,11 +622,11 @@ class Experiment(Options):
     for i in range(self.epochs):
       b = 0
       for (_,(TX,TY)) in tlog.minibatches(train,batch_size=self.batch_size):
-        print 'epoch',i+1,'of',self.epochs,'minibatch',b+1
+        print('epoch',i+1,'of',self.epochs,'minibatch',b+1)
         train_fd = {tlog.input_placeholder_name(self.mode):TX, tlog.target_output_placeholder_name(self.mode):TY}
         session.run(train_step, feed_dict=train_fd)
         b += 1
-        print 'learning time',time.time()-t0,'sec'
+        print('learning time',time.time()-t0,'sec')
 
     predicted_y = tlog.inference(self.mode)
     actual_y = tlog.target_output_placeholder(self.mode)
@@ -637,7 +637,7 @@ class Experiment(Options):
     UX,UY = test[self.mode]
     test_fd = {tlog.input_placeholder_name(self.mode):UX, tlog.target_output_placeholder_name(self.mode):UY}
     acc = session.run(accuracy, feed_dict=test_fd)
-    print 'test acc',acc
+    print('test acc',acc)
     return acc
 
 if __name__ == "__main__":
@@ -646,4 +646,4 @@ if __name__ == "__main__":
     experiment.set_from_command_line(sys.argv[2:])
     experiment.run()
   else:
-    print "usage: experiment " + Experiment().option_usage()
+    print("usage: experiment " + Experiment().option_usage())

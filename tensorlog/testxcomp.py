@@ -139,7 +139,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
   def _removeZeros(self, sdict):
     if True: return sdict
     e = sdict[None]
-    ret = dict([ (k,v-e) for (k,v) in sdict.items() if v != e])
+    ret = dict([ (k,v-e) for (k,v) in list(sdict.items()) if v != e])
     z = sum(ret.values())
     for k in ret: ret[k] = ret[k]/z
     return ret
@@ -160,7 +160,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
     # setup the next round of tests by compiling a tensorlog
     # Program - this code is lifted from the testtensorlog
     # inference routines
-    print 'xcomp inference for mode',mode_string,'on input',input_symbol
+    print('xcomp inference for mode',mode_string,'on input',input_symbol)
     testtensorlog.softmax_normalize(expected_result_dict)
     rules = parser.RuleCollection()
     for r in ruleStrings:
@@ -174,7 +174,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       xc = compilerClass(prog)
       # evaluate the function and get the output y
       #xc.show()
-      print '== performing eval with',compilerClass,'=='
+      print('== performing eval with',compilerClass,'==')
       inferenceFun = xc.inferenceFunction(mode_string)
       y = inferenceFun(prog.db.onehot(input_symbol))
       # print 'input',xc.getInputName(mode_string),'args,fun
@@ -196,7 +196,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       pc_result_dict = self.db.rowAsSymbolDict(pc)
       if len(pc_result_dict)>0:
         self.check_maxes_in_dicts(pc_result_dict, expected_result_dict)
-      print '== eval checks passed =='
+      print('== eval checks passed ==')
       close_cross_compiler(xc)
 
   def check_maxes_in_dicts(self,actual,expected):
@@ -205,7 +205,7 @@ class TestXCSmallProofs(testtensorlog.TestSmallProofs):
       return set(k for k in d if d[k]==m)
     actualMaxes = maximalElements(actual)
     expectedMaxes = maximalElements(expected)
-    print 'actual',actualMaxes,'expected',expectedMaxes
+    print('actual',actualMaxes,'expected',expectedMaxes)
     for a in actualMaxes:
       self.assertTrue(a in expectedMaxes)
     for a in expectedMaxes:
@@ -343,7 +343,7 @@ class TestXCGrad(testtensorlog.TestGrad):
                      {'feat(r1)': +1,'feat(r2)': -1})
 
   def learnxc_check(self,rule_strings,mode_string,params,xyPairs,expected):
-    print "XLearner loss/grad eval"
+    print("XLearner loss/grad eval")
     rules = testtensorlog.rules_from_strings(rule_strings)
     prog = program.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
@@ -357,22 +357,22 @@ class TestXCGrad(testtensorlog.TestGrad):
       data.add_data_symbols(x,ys)
       for compilerClass in TESTED_COMPILERS:
         xc = compilerClass(prog)
-        print 'learner check for compiler',xc.__class__
+        print('learner check for compiler',xc.__class__)
         learner = learnxc.XLearner(prog,xc)
         paramsWithUpdates = learner.crossEntropyGrad(mode,data.get_x(),data.get_y())
         updates_with_string_keys = {}
         for (functor,arity),up in paramsWithUpdates:
-          print 'testxcomp update for',functor,arity,'is',up
+          print('testxcomp update for',functor,arity,'is',up)
           upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
-          print 'upDict',upDict
-          for fact,grad_of_fact in upDict.items():
+          print('upDict',upDict)
+          for fact,grad_of_fact in list(upDict.items()):
             # need to flip for cross-compilers
             updates_with_string_keys[str(fact)] = -grad_of_fact
         self.check_directions(updates_with_string_keys,expected)
     
 
   def xgrad_check(self,rule_strings,mode_string,params,xyPairs,expected):
-    print "direct loss/grad eval"
+    print("direct loss/grad eval")
     rules = testtensorlog.rules_from_strings(rule_strings)
     prog = program.Program(db=self.db,rules=rules)
     prog.db.clearParameterMarkings()
@@ -383,13 +383,13 @@ class TestXCGrad(testtensorlog.TestGrad):
       data.add_data_symbols(x,ys)
       for compilerClass in TESTED_COMPILERS:
         xc = compilerClass(prog)
-        print 'grad check for compiler',xc.__class__
+        print('grad check for compiler',xc.__class__)
         gradFun = xc.dataLossGradFunction(mode_string)
         updates_with_string_keys = {}
         paramsWithUpdates =  gradFun(data.get_x(),data.get_y())
         for (functor,arity),up in paramsWithUpdates:
           upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
-          for fact,grad_of_fact in upDict.items():
+          for fact,grad_of_fact in list(upDict.items()):
             # need to flip for cross-compilers
             updates_with_string_keys[str(fact)] = -grad_of_fact
         self.check_directions(updates_with_string_keys,expected)
@@ -406,7 +406,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
 
   def evalxc(self,xc,input):
     inferenceFun = xc.inferenceFunction('predict/io')
-    print inferenceFun
+    print(inferenceFun)
     rawPred = inferenceFun(input)
     # trim small numbers to zero
     pred = mutil.mapData(lambda d:np.clip((d - 1e-5),0.00,9999.99), rawPred)
@@ -430,7 +430,7 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       xc.ensureCompiled(self.mode,inputs=None)
       pred = self.prog.eval(self.mode,[self.X])
       d0 = self.prog.db.matrixAsSymbolDict(pred)
-      for i,d in d0.items():
+      for i,d in list(d0.items()):
         uniform = {'pos':0.5,'neg':0.5,}
         self.check_dicts(d,uniform)
       close_cross_compiler(xc)
@@ -445,15 +445,15 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       #xc.compile(self.mode)
       gradFun = xc.dataLossGradFunction('predict/io')
       for i in range(X.shape[0]):
-        print "example",i
+        print("example",i)
         
         updates =  learner.crossEntropyGrad(declare.ModeDeclaration('predict(i,o)'),X[i],Y[i])
         w0 = updates[('weighted',1)].sum(axis=0)
-        print w0
+        print(w0)
         
         updates = gradFun(X[i],Y[i])
         paramKey,w = updates[0]
-        print w
+        print(w)
         # w is different from the w in the corresponding testtensorlog test,
         # which is a crossEntropy gradient for each example, but it should have
         # opposite directions
@@ -513,37 +513,37 @@ class TestXCProPPR(testtensorlog.TestProPPR):
 
       lossFun = xc.dataLossFunction('predict/io')
       loss0 = lossFun(X,Y)
-      print 'initial train data loss',loss0
+      print('initial train data loss',loss0)
       TX,TY = testtensorlog.matrixAsTrainingData(self.labeledData,'test',2)
       loss1 = lossFun(TX,TY)
-      print 'initial test data loss',loss1
+      print('initial test data loss',loss1)
       P = learner.predict('predict/io',X)
       #acc0 = xc.accuracy('predict/io',X,Y)
       acc0 = learner.accuracy(Y,P)
-      print 'initial train accuracy',acc0
+      print('initial train accuracy',acc0)
       TP = learner.predict('predict/io',TX)
       #acc1 = xc.accuracy('predict/io',TX,TY)
       acc1 = learner.accuracy(TY,TP)
-      print 'initial test accuracy',acc1
+      print('initial test accuracy',acc1)
 
-      print 'params to optimize',xc.prog.getParamList()
-      print 'vars to optimize',xc.getParamVariables('predict/io')
+      print('params to optimize',xc.prog.getParamList())
+      print('vars to optimize',xc.getParamVariables('predict/io'))
       
 #       xc.optimizeDataLoss('predict/io', optimizer, X, Y, epochs=20)
       learner.trainMode('predict/io',X,Y)
 
       loss2 = lossFun(X,Y)
-      print 'final train data loss',loss2
+      print('final train data loss',loss2)
       loss3 = lossFun(TX,TY)
-      print 'final test data loss',loss3
+      print('final test data loss',loss3)
       P2 = learner.predict('predict/io',X)
       #acc2 = xc.accuracy('predict/io',X,Y)
       acc2 = learner.accuracy(Y,P2)
-      print 'final train accuracy',acc2
+      print('final train accuracy',acc2)
       TP2 = learner.predict('predict/io',TX)
       #acc3 = xc.accuracy('predict/io',TX,TY)
       acc3 = learner.accuracy(TY,TP2)
-      print 'final test accuracy',acc3
+      print('final test accuracy',acc3)
 
 
       xc.exportAllLearnedParams()
@@ -578,12 +578,12 @@ class TestXCProPPR(testtensorlog.TestProPPR):
       
       learner = TESTED_LEARNERS[compilerClass](self.prog,xc=xc,rate=0.1,epochs=20)
       P = learner.predict(mode,X)
-      print "X",X.shape
-      print "P",P.shape
+      print("X",X.shape)
+      print("P",P.shape)
       self.assertTrue(X.shape==P.shape)
       P = learner.datasetPredict(dataset.Dataset({mode:X},{mode:Y}))
-      print "X",X.shape
-      print "P",P.getX(mode).shape
+      print("X",X.shape)
+      print("P",P.getX(mode).shape)
       self.assertTrue(X.shape==P.getX(mode).shape)
       
       return xc,learner,X,Y,P
@@ -628,11 +628,11 @@ class TestXCOpGen(unittest.TestCase):
         db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
         prog=os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"))
     trainData = tlog.load_small_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
-    mode = trainData.keys()[0]
+    mode = list(trainData.keys())[0]
     docs,labels = trainData[mode]
     xc = tlog.get_cross_compiler()
     ops = xc.possibleOps(docs,'doc')
-    print 'doc ops',ops
+    print('doc ops',ops)
     self.assertTrue(len(ops)==1)
     (words,wordType) = ops[0]
     self.assertTrue(wordType=='word')
@@ -657,7 +657,7 @@ class TestXCOpGen(unittest.TestCase):
         db=os.path.join(testtensorlog.TEST_DATA_DIR,"textcattoy3.cfacts"),
         prog=os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"))
     trainData = tlog.load_small_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
-    mode = trainData.keys()[0]
+    mode = list(trainData.keys())[0]
     docs,labels = trainData[mode]
     xc = tlog.get_cross_compiler()
     ops = xc.possibleOps(docs)
@@ -791,10 +791,10 @@ class TestXCExpt(unittest.TestCase):
       close_cross_compiler(xc)
 
   def checkXC(self,xc,mode,rawInput,expectedCols):
-    print 'matrixdb.conf.ignore_types',matrixdb.conf.ignore_types
+    print('matrixdb.conf.ignore_types',matrixdb.conf.ignore_types)
     db = xc.db
-    for (functor,arity),mat in db.matEncoding.items():
-      print functor,arity,'shape',mat.shape
+    for (functor,arity),mat in list(db.matEncoding.items()):
+      print(functor,arity,'shape',mat.shape)
       r,c = mat.shape
       self.assertEqual(c,expectedCols[functor])
     inferenceFun = xc.inferenceFunction(mode)
@@ -814,11 +814,11 @@ class TestMultiModeXC(unittest.TestCase):
     self.prog.setAllWeights()
 
   def testInScaffold(self):
-    print TESTED_COMPILERS
+    print(TESTED_COMPILERS)
     self.assertTrue(self.dset.modesToLearn() > 1)
     self.prog.setAllWeights()
     for compilerClass in TESTED_COMPILERS:
-      print compilerClass
+      print(compilerClass)
       xc = compilerClass(self.prog)
       # compile everything
       for mode in self.dset.modesToLearn():
@@ -831,7 +831,7 @@ class TestMultiModeXC(unittest.TestCase):
           'learner':learner,
           'savedTestPredictions':'TestMultiModeXC.testInScaffold.%s.solutions.txt'%compilerClass.__name__
           }).run()
-      print testAcc
+      print(testAcc)
 
   @unittest.skipUnless(xctargets.tf,"Tensorflow not available")
   def testIt(self):
@@ -864,7 +864,7 @@ class TestMultiModeXC(unittest.TestCase):
         Y = self.dset.getY(mode)
         Y_ = xc.inferenceFunction(mode)(X)
         acc = xc.accuracy(mode,X,Y)
-        print 'mode',mode,'acc',acc
+        print('mode',mode,'acc',acc)
       session.close()
       close_cross_compiler(xc)
 
@@ -883,13 +883,13 @@ class TestMatParams(unittest.TestCase):
     trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"matchtoy-train.exam"))
     tlog.db.markAsParameter('dabbrev',2)
     factDict = tlog.db.matrixAsPredicateFacts('dabbrev',2,tlog.db.matEncoding[('dabbrev',2)])
-    print 'before learning',len(factDict),'dabbrevs'
+    print('before learning',len(factDict),'dabbrevs')
     self.assertTrue(len(factDict)==5)
     for f in sorted(factDict.keys()):
-      print '>',str(f),factDict[f]
+      print('>',str(f),factDict[f])
 
     # expt pipeline
-    mode = trainData.keys()[0]
+    mode = list(trainData.keys())[0]
     TX,TY = trainData[mode]
     inference = tlog.inference(mode)
     trueY = tf.placeholder(tf.float32, shape=TY.shape, name='tensorlog/trueY')
@@ -900,7 +900,7 @@ class TestMatParams(unittest.TestCase):
     session = tf.Session()
     session.run(tf.global_variables_initializer())
     for i in range(5):
-      print 'epoch',i+1
+      print('epoch',i+1)
       session.run(train_step, feed_dict=train_batch_fd)
     tlog.set_all_db_params_to_learned_values(session)
 #    params = {'prog':prog,'trainData':trainData, 'testData':testData}
@@ -938,7 +938,7 @@ class TestSimple(unittest.TestCase):
         prog=os.path.join(testtensorlog.TEST_DATA_DIR,"textcat3.ppr"))
     trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
     testData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"))
-    mode = trainData.keys()[0]
+    mode = list(trainData.keys())[0]
     TX,TY = trainData[mode]
     UX,UY = testData[mode]
     inference = tlog.inference(mode)
@@ -953,13 +953,13 @@ class TestSimple(unittest.TestCase):
     session = tf.Session()
     session.run(tf.global_variables_initializer())
     acc0 = session.run(accuracy, feed_dict=test_batch_fd)
-    print 'initial accuracy',acc0
+    print('initial accuracy',acc0)
     self.assertTrue(acc0<0.6)
     for i in range(10):
-      print 'epoch',i+1
+      print('epoch',i+1)
       session.run(train_step, feed_dict=train_batch_fd)
     acc1 = session.run(accuracy, feed_dict=test_batch_fd)
-    print 'final accuracy',acc1
+    print('final accuracy',acc1)
     self.assertTrue(acc1>=0.9)
     # test a round-trip serialization
     # saves the db
@@ -984,7 +984,7 @@ class TestSimple(unittest.TestCase):
       session2.run(tf.global_variables_initializer())
       test_batch_fd2 = {tlog2.input_placeholder_name(mode):UX, trueY2.name:UY}
       acc3 = session2.run(accuracy2, feed_dict=test_batch_fd2)
-      print 'accuracy after round-trip serialization',acc3
+      print('accuracy after round-trip serialization',acc3)
       self.assertTrue(acc3>=0.9)
     session.close()
 
@@ -997,7 +997,7 @@ class TestSimple(unittest.TestCase):
   def runTextCatLearner(self,tlog):
     trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
     testData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"))
-    mode = trainData.keys()[0]
+    mode = list(trainData.keys())[0]
     UX,UY = testData[mode]
     inference = tlog.inference(mode)
     trueY = tf.placeholder(tf.float32, shape=UY.shape, name='tensorlog/trueY')
@@ -1010,17 +1010,17 @@ class TestSimple(unittest.TestCase):
     session = tf.Session()
     session.run(tf.global_variables_initializer())
     acc0 = session.run(accuracy, feed_dict=test_batch_fd)
-    print 'initial accuracy',acc0
+    print('initial accuracy',acc0)
     self.assertTrue(acc0<0.6)
     for i in range(10):
-      print 'epoch',i+1,
+      print('epoch',i+1, end=' ')
       for mode,(TX,TY) in tlog.minibatches(trainData,batch_size=2):
-        print '.',
+        print('.', end=' ')
         train_minibatch_fd = {tlog.input_placeholder_name(mode):TX, tlog.target_output_placeholder_name(mode):TY}
         session.run(train_step, feed_dict=train_minibatch_fd)
-      print 'epoch',i+1,'finished'
+      print('epoch',i+1,'finished')
     acc1 = session.run(accuracy, feed_dict=test_batch_fd)
-    print 'final accuracy',acc1
+    print('final accuracy',acc1)
     self.assertTrue(acc1>=0.9)
     session.close()
 
@@ -1100,7 +1100,7 @@ class TestReparameterizationAndTypedLoading(unittest.TestCase):
     session = tf.Session()
     session.run(tf.global_variables_initializer())
     xc.exportAllLearnedParams()
-    print 'exported to xc',db.matEncoding[('r',1)]
+    print('exported to xc',db.matEncoding[('r',1)])
     db_r = db.matEncoding[('r',1)]
     self.approxEqual(db_r[0,idLow], 0.1)
     self.approxEqual(db_r[0,idHi], 0.9)
@@ -1156,10 +1156,10 @@ class TestPlugins(unittest.TestCase):
     mode = declare.asMode("predict/io")
     prog.compile(mode)
     fun = prog.function[(mode,0)]
-    print "\n".join(fun.pprint())
+    print("\n".join(fun.pprint()))
     tlog = simple.Compiler(db=db, prog=prog)
     testData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"))
-    mode = testData.keys()[0]
+    mode = list(testData.keys())[0]
     UX,UY = testData[mode]
     inference = tlog.inference(mode)
     trueY = tf.placeholder(tf.float32, shape=UY.shape, name='tensorlog/trueY')
@@ -1169,7 +1169,7 @@ class TestPlugins(unittest.TestCase):
     session = tf.Session()
     session.run(tf.global_variables_initializer())
     acc1 = session.run(accuracy, feed_dict=test_batch_fd)
-    print 'final accuracy',acc1
+    print('final accuracy',acc1)
     session.close()
 
 
@@ -1198,11 +1198,11 @@ class TestPlugins(unittest.TestCase):
     mode = declare.asMode("predict/io")
     prog.compile(mode)
     fun = prog.function[(mode,0)]
-    print "\n".join(fun.pprint())
+    print("\n".join(fun.pprint()))
     tlog = simple.Compiler(db=db, prog=prog)
     
     data = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"argmax.exam"))
-    mode = data.keys()[0]
+    mode = list(data.keys())[0]
     UX,UY = data[mode]
     inference = tlog.inference(mode)
     trueY = tf.placeholder(tf.float32, shape=UY.shape, name='tensorlog/trueY')
@@ -1212,7 +1212,7 @@ class TestPlugins(unittest.TestCase):
     session = tf.Session()
     session.run(tf.global_variables_initializer())
     acc0 = session.run(accuracy, feed_dict=test_batch_fd)
-    print 'initial accuracy',acc0
+    print('initial accuracy',acc0)
     self.assertTrue(acc0>0.9)
     session.close()
     
@@ -1233,12 +1233,12 @@ class TestPlugins(unittest.TestCase):
     mode = declare.asMode("predict/io")
     prog.compile(mode)
     fun = prog.function[(mode,0)]
-    print "\n".join(fun.pprint())
+    print("\n".join(fun.pprint()))
     tlog = simple.Compiler(db=db, prog=prog)
 
     trainData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytrain.exam"))
     testData = tlog.load_dataset(os.path.join(testtensorlog.TEST_DATA_DIR,"toytest.exam"))
-    mode = trainData.keys()[0]
+    mode = list(trainData.keys())[0]
     TX,TY = trainData[mode]
     UX,UY = testData[mode]
     inference = tlog.inference(mode)
@@ -1253,13 +1253,13 @@ class TestPlugins(unittest.TestCase):
     session = tf.Session()
     session.run(tf.global_variables_initializer())
     acc0 = session.run(accuracy, feed_dict=test_batch_fd)
-    print 'initial accuracy',acc0
+    print('initial accuracy',acc0)
     self.assertTrue(acc0<0.6)
     for i in range(10):
-      print 'epoch',i+1
+      print('epoch',i+1)
       session.run(train_step, feed_dict=train_batch_fd)
     acc1 = session.run(accuracy, feed_dict=test_batch_fd)
-    print 'final accuracy',acc1
+    print('final accuracy',acc1)
     self.assertTrue(acc1>=0.9)
     session.close()
 
@@ -1281,6 +1281,6 @@ if __name__ == "__main__":
   if 'sparse' in sys.argv[1:]:
     TESTED_COMPILERS = [c for c in TESTED_COMPILERS if c.__name__.startswith("Sparse")]
   sys.argv = [a for a in sys.argv if a not in "theano tensorflow dense sparse".split()]
-  print 'TESTED_COMPILERS',TESTED_COMPILERS
+  print('TESTED_COMPILERS',TESTED_COMPILERS)
   
   unittest.main()

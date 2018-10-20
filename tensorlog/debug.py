@@ -5,9 +5,9 @@
 #
 
 import sys
-import Tkinter as TK
-import ttk
-import tkFont
+import tkinter as TK
+import tkinter.ttk
+import tkinter.font
 import time
 
 from tensorlog import comline
@@ -44,7 +44,7 @@ class Debugger(object):
         self.P = self.fun.eval(self.prog.db, [self.X], self.pad)
         # find the symbols that correspond to the inputs
         dd = self.prog.db.matrixAsSymbolDict(self.X)
-        self.xSymbols = [d.keys()[0] for d in dd.values()]
+        self.xSymbols = [list(d.keys())[0] for d in list(dd.values())]
 
         # evaluate the gradient so that's cached
         if gradient:
@@ -56,16 +56,16 @@ class Debugger(object):
     def render(self):
         #set up a window
         self.root = TK.Tk()
-        default_font = tkFont.nametofont("TkDefaultFont")
+        default_font = tkinter.font.nametofont("TkDefaultFont")
         if conf.fontsize:
             default_font.configure(size=conf.fontsize)
         if conf.fontweight:
             default_font.configure(weight=conf.fontweight)
         self.root.option_add("*Font", default_font)
         #labels on the top
-        self.treeLabel = ttk.Label(self.root,text="Listing of %s" % str(self.mode))
+        self.treeLabel = tkinter.ttk.Label(self.root,text="Listing of %s" % str(self.mode))
         self.treeLabel.grid(row=0,column=1,sticky=TK.EW)
-        self.msgLabel = ttk.Label(self.root,text="Details")
+        self.msgLabel = tkinter.ttk.Label(self.root,text="Details")
         self.msgLabel.grid(row=0,column=2,sticky=TK.EW)
         #put a scrollbars on the left and right
         #these don't work now? maybe they worked with pack?
@@ -74,7 +74,7 @@ class Debugger(object):
 #        self.scrollbarR = ttk.Scrollbar(self.root)
 #        self.scrollbarR.grid(row=1,column=4)
         #set up a treeview widget and tie it to the left scrollbar
-        self.tree = ttk.Treeview(self.root)
+        self.tree = tkinter.ttk.Treeview(self.root)
         self.tree.grid(row=1,column=1,sticky=TK.NSEW)
 #        self.tree.config(yscrollcommand=self.scrollbarL.set)
 #        self.scrollbarL.config(command=self.tree.yview)
@@ -96,7 +96,7 @@ class Debugger(object):
 
         # set up another treeview to display the function output/deltas,
         # which will be triggered when you doubleclick
-        self.msg = ttk.Treeview(self.root,height=30)        
+        self.msg = tkinter.ttk.Treeview(self.root,height=30)        
         self.msg["columns"] = ("weight")
         self.msg.heading("weight", text="weight")
         self.msg.grid(row=1,column=2)
@@ -129,7 +129,7 @@ class Debugger(object):
         self.msgItems = set()
         if m!=None:
             dOfD = self.prog.db.matrixAsSymbolDict(m)
-            rowVector = len(dOfD.keys())==1
+            rowVector = len(list(dOfD.keys()))==1
             for r in sorted(dOfD.keys()):
                 rowName = "Row Vector:" if rowVector else self.xSymbols[r]
                 rowChild = self.msg.insert("",r,text=rowName,open=True)
@@ -139,7 +139,7 @@ class Debugger(object):
                         return -dOfD[r][k]
                     else:
                         return k
-                for offset,sym in enumerate(sorted(dOfD[r].keys(), key=sortKey)):
+                for offset,sym in enumerate(sorted(list(dOfD[r].keys()), key=sortKey)):
                     #why are some of these None?
                     if sym!=None:
                         w = dOfD[r][sym]
@@ -150,7 +150,7 @@ class Debugger(object):
         for offset,fun in enumerate(funs):
             description = fun.pprintSummary()
             comment = fun.pprintComment()
-            key = "iid%d" % len(self.treeOutputs.keys())
+            key = "iid%d" % len(list(self.treeOutputs.keys()))
             funOutput = self.pad[fun.id].output
             if self.grad:
                 #todo: clean up
@@ -175,17 +175,17 @@ class Debugger(object):
 if __name__ == "__main__":
 
     def usage():
-        print 'debug.py [usual tensorlog options] mode [inputs]'
+        print('debug.py [usual tensorlog options] mode [inputs]')
 
     optdict,args = comline.parseCommandLine(sys.argv[1:])
     dset = optdict.get('trainData') or optdict.get('testData')
     if dset==None and len(args)<2:
         usage()
-        print 'debug on what input? specify --trainData or give a function input'
+        print('debug on what input? specify --trainData or give a function input')
     elif len(args)<1:
         usage()
     elif dset and len(args)>2:
-        print 'using --trainData not the function input given'
+        print('using --trainData not the function input given')
     elif dset:
         mode = declare.asMode(args[0])
         Debugger(optdict['prog'],mode,dset,gradient=True).mainloop()

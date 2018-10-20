@@ -20,7 +20,7 @@ class Config(object):
         if type(val)!=type(Config()):
             tmp += ' '+repr(val)
         if key in self.help.__dict__:
-            print '%-40s %s' % (tmp,self.help.__dict__[key])
+            print(('%-40s %s' % (tmp,self.help.__dict__[key])))
 
 class ConfigHelp(object):
     """A parallel object that stores help about configurations."""

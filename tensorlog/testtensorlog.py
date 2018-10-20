@@ -48,7 +48,7 @@ def softmax_normalize(expected_result_dict):
 def rules_from_strings(rule_strings):
   """Convert a list of strings to a RuleCollection"""
   for r in rule_strings:
-    print '>',r
+    print('>',r)
     rules = parser.RuleCollection()
     for r in rule_strings:
       rules.add(parser.Parser().parseRule(r))
@@ -136,7 +136,7 @@ class TestInterp(unittest.TestCase):
     self.ti.list("predict/io")
     self.ti.list("hasWord/2")
     self.ti.list()
-    print self.ti.eval("predict/io", "pb")
+    print(self.ti.eval("predict/io", "pb"))
 
 class TestSmallProofs(unittest.TestCase):
 
@@ -224,19 +224,19 @@ class TestSmallProofs(unittest.TestCase):
   #
 
   def inference_check(self,rule_strings,mode_string,inputSymbol,expected_result_dict):
-    print 'testing inference for mode',mode_string,'on input',inputSymbol,'with rules:'
+    print('testing inference for mode',mode_string,'on input',inputSymbol,'with rules:')
     softmax_normalize(expected_result_dict)
     rules = rules_from_strings(rule_strings)
     prog = program.Program(db=self.db,rules=rules)
     mode = declare.ModeDeclaration(mode_string)
     fun = prog.compile(mode)
-    print "\n".join(fun.pprint())
+    print("\n".join(fun.pprint()))
     y1 = prog.evalSymbols(mode,[inputSymbol])
     self.check_dicts(self.db.rowAsSymbolDict(y1), expected_result_dict)
 
 
   def proppr_inference_check(self,weightVec,rule_strings,mode_string,inputSymbol,expected_result_dict):
-    print 'testing inference for mode',mode_string,'on input',inputSymbol,'with proppr rules:'
+    print('testing inference for mode',mode_string,'on input',inputSymbol,'with proppr rules:')
     softmax_normalize(expected_result_dict)
     rules = rules_from_strings(rule_strings)
     prog = program.ProPPRProgram(db=self.db,rules=rules,weights=weightVec)
@@ -251,13 +251,13 @@ class TestSmallProofs(unittest.TestCase):
     return group[0]
 
   def check_dicts(self,actual, expected):
-    print 'actual:  ',actual
+    print('actual:  ',actual)
     if not matrixdb.NULL_ENTITY_NAME in expected:
       expected[matrixdb.NULL_ENTITY_NAME]=0.0
     if expected:
-      print 'expected:',expected
-      self.assertEqual(len(actual.keys()), len(expected.keys()))
-      for k in actual.keys():
+      print('expected:',expected)
+      self.assertEqual(len(list(actual.keys())), len(list(expected.keys())))
+      for k in list(actual.keys()):
         self.assertAlmostEqual(actual[k], expected[k], delta=0.05)
 
 
@@ -288,9 +288,9 @@ class TestMultiRowOps(unittest.TestCase):
     self.predictCheck(rule_strings,mode_string,input_symbols,expected_result_dicts)
 
   def inference_check(self,rule_strings,mode_string,input_symbols,expected_result_dicts):
-    print '\n\ntesting inference for mode',mode_string,'on input',input_symbols,'with rules:'
+    print('\n\ntesting inference for mode',mode_string,'on input',input_symbols,'with rules:')
     for r in rule_strings:
-      print '>',r
+      print('>',r)
     rules = parser.RuleCollection()
     for r in rule_strings:
       rules.add(parser.Parser().parseRule(r))
@@ -303,9 +303,9 @@ class TestMultiRowOps(unittest.TestCase):
       self.check_dicts(self.db.rowAsSymbolDict(y1), expected_result_dicts[i])
 
   def predictCheck(self,rule_strings,mode_string,input_symbols,expected_result_dicts):
-    print '\n\ntesting predictions for mode',mode_string,'on input',input_symbols,'with rules:'
+    print('\n\ntesting predictions for mode',mode_string,'on input',input_symbols,'with rules:')
     for r in rule_strings:
-      print '>',r
+      print('>',r)
     rules = parser.RuleCollection()
     for r in rule_strings:
       rules.add(parser.Parser().parseRule(r))
@@ -313,11 +313,11 @@ class TestMultiRowOps(unittest.TestCase):
     mode = declare.ModeDeclaration(mode_string)
 
     td = []
-    print 'training data:'
+    print('training data:')
     for i in range(len(input_symbols)):
-      sol = expected_result_dicts[i].keys()[0]
+      sol = list(expected_result_dicts[i].keys())[0]
       td.append("\t".join([mode.functor,input_symbols[i],sol]))
-      print td[-1]
+      print(td[-1])
     trainingData = self.db.createPartner()
     trainingData.addLines(td)
     trainSpec = (mode.functor,mode.arity)
@@ -326,11 +326,11 @@ class TestMultiRowOps(unittest.TestCase):
     P0 = learner.predict(mode,X)
 
   def check_dicts(self,actual, expected):
-    print 'actual:  ',actual
+    print('actual:  ',actual)
     if expected:
-      print 'expected:',expected
-      self.assertEqual(len(actual.keys()), len(expected.keys()))
-      for k in actual.keys():
+      print('expected:',expected)
+      self.assertEqual(len(list(actual.keys())), len(list(expected.keys())))
+      for k in list(actual.keys()):
         self.assertAlmostEqual(actual[k], expected[k], delta=0.0001)
 
 class TestMatrixRecursion(unittest.TestCase):
@@ -361,27 +361,27 @@ class TestMatrixRecursion(unittest.TestCase):
                  max_depth=0)
 
   def mat_inference_check(self,rule_strings,mode_string,input_symbols,expected_result_dict,max_depth=None):
-    print 'testing inference for mode',mode_string,'on inputs',input_symbols,'with rules:'
+    print('testing inference for mode',mode_string,'on inputs',input_symbols,'with rules:')
     rules = rules_from_strings(rule_strings)
     prog = program.Program(db=self.db,rules=rules)
     if max_depth!=None: prog.maxDepth=max_depth
     mode = declare.ModeDeclaration(mode_string)
-    X = mutil.stack(map(lambda s:prog.db.onehot(s), input_symbols))
+    X = mutil.stack([prog.db.onehot(s) for s in input_symbols])
     actual = prog.eval(mode,[X])
-    print 'compiled functions',prog.function.keys()
+    print('compiled functions',list(prog.function.keys()))
     self.check_dict_of_dicts(prog.db.matrixAsSymbolDict(actual), expected_result_dict)
 
   def check_dict_of_dicts(self,actual,expected):
-    print 'actual',actual
-    print 'expected',expected
-    self.assertTrue(len(actual.keys())==len(expected.keys()))
-    for r in actual.keys():
+    print('actual',actual)
+    print('expected',expected)
+    self.assertTrue(len(list(actual.keys()))==len(list(expected.keys())))
+    for r in list(actual.keys()):
       da = actual[r]
       de = expected[r]
       if not matrixdb.NULL_ENTITY_NAME in de:
         de[matrixdb.NULL_ENTITY_NAME]=0.0
-      self.assertTrue(len(da.keys())==len(de.keys()))
-      for k in da.keys():
+      self.assertTrue(len(list(da.keys()))==len(list(de.keys())))
+      for k in list(da.keys()):
         self.assertAlmostEqual(da[k],de[k],delta=0.05)
 
 class TestGrad(unittest.TestCase):
@@ -532,19 +532,19 @@ class TestGrad(unittest.TestCase):
     (prog,updates) = self.grad_updates(rule_strings,mode,params,xyPairs)
     #put the gradient into a single fact-string-indexed dictionary
     updates_with_string_keys = {}
-    for (functor,arity),up in updates.items():
-      print 'testtensorlog update for',functor,arity,'is',up
+    for (functor,arity),up in list(updates.items()):
+      print('testtensorlog update for',functor,arity,'is',up)
       upDict = prog.db.matrixAsPredicateFacts(functor,arity,up)
-      print 'upDict',upDict
-      for fact,grad_of_fact in upDict.items():
+      print('upDict',upDict)
+      for fact,grad_of_fact in list(upDict.items()):
         updates_with_string_keys[str(fact)] = grad_of_fact
     self.check_directions(updates_with_string_keys,expected)
 
   def check_directions(self,actual_grad,expected_direction):
     #TODO allow expected to contain zeros?
-    for fact,sign in expected_direction.items():
-      print fact,'expected sign',sign,'grad',actual_grad.get(fact)
-      if not fact in actual_grad: print 'actual_grad',actual_grad
+    for fact,sign in list(expected_direction.items()):
+      print(fact,'expected sign',sign,'grad',actual_grad.get(fact))
+      if not fact in actual_grad: print('actual_grad',actual_grad)
       self.assertTrue(fact in actual_grad)
       self.assertTrue(actual_grad[fact] * sign > 0)
 
@@ -631,7 +631,7 @@ class TestProPPR(unittest.TestCase):
   def testNativeMatrix(self):
     pred = self.prog.eval(self.mode,[self.X])
     d0 = self.prog.db.matrixAsSymbolDict(pred)
-    for i,d in d0.items():
+    for i,d in list(d0.items()):
       uniform = {'pos':0.5,'neg':0.5,}
       self.check_dicts(d,uniform)
 
@@ -671,22 +671,22 @@ class TestProPPR(unittest.TestCase):
     for mode in dset.modesToLearn():
       X = dset.getX(mode)
       Y = dset.getY(mode)
-      print mode
-      print "\tX "+mutil.pprintSummary(X)
-      print "\tY "+mutil.pprintSummary(Y)
+      print(mode)
+      print("\tX "+mutil.pprintSummary(X))
+      print("\tY "+mutil.pprintSummary(Y))
 
     learner = learn.FixedRateGDLearner(self.prog,epochs=5)
     P0 = learner.datasetPredict(dset)
     acc0 = learner.datasetAccuracy(dset,P0)
     xent0 = learner.datasetCrossEntropy(dset,P0)
-    print 'toy train: acc0',acc0,'xent1',xent0
+    print('toy train: acc0',acc0,'xent1',xent0)
 
     learner.train(dset)
 
     P1 = learner.datasetPredict(dset)
     acc1 = learner.datasetAccuracy(dset,P1)
     xent1 = learner.datasetCrossEntropy(dset,P1)
-    print 'toy train: acc1',acc1,'xent1',xent1
+    print('toy train: acc1',acc1,'xent1',xent1)
 
     self.assertTrue(acc0<acc1)
     self.assertTrue(xent0>xent1)
@@ -700,7 +700,7 @@ class TestProPPR(unittest.TestCase):
     P2 = learner.datasetPredict(Udset)
     acc2 = learner.datasetAccuracy(Udset,P2)
     xent2 = learner.datasetCrossEntropy(Udset,P2)
-    print 'toy test: acc2',acc2,'xent2',xent2
+    print('toy test: acc2',acc2,'xent2',xent2)
 
     self.assertTrue(acc2==1)
     ##
@@ -722,13 +722,13 @@ class TestProPPR(unittest.TestCase):
     self.assertTrue(acc0<acc1)
     self.assertTrue(xent0>xent1)
     self.assertTrue(acc1==1)
-    print 'toy train: acc1',acc1,'xent1',xent1
+    print('toy train: acc1',acc1,'xent1',xent1)
 
     TX,TY = matrixAsTrainingData(self.labeledData,'test',2)
     P2 = learner.predict(mode,TX)
     acc2 = learner.accuracy(TY,P2)
     xent2 = learner.crossEntropy(TY,P2,perExample=True)
-    print 'toy test: acc2',acc2,'xent2',xent2
+    print('toy test: acc2',acc2,'xent2',xent2)
     self.assertTrue(acc2==1)
 
   def checkClass(self,d,sym,lab,expected):
@@ -748,13 +748,13 @@ class TestProPPR(unittest.TestCase):
   def check_dicts(self,actual, expected, delta=0.05):
     if not matrixdb.NULL_ENTITY_NAME in actual:
       actual[matrixdb.NULL_ENTITY_NAME]=0.0
-    print 'actual:  ',actual
+    print('actual:  ',actual)
     if expected:
       if not matrixdb.NULL_ENTITY_NAME in expected:
         expected[matrixdb.NULL_ENTITY_NAME]=0.0
-      print 'expected:',expected
-      self.assertEqual(len(actual.keys()), len(expected.keys()))
-      for k in actual.keys():
+      print('expected:',expected)
+      self.assertEqual(len(list(actual.keys())), len(list(expected.keys())))
+      for k in list(actual.keys()):
         self.assertAlmostEqual(actual[k], expected[k], delta=0.05)
 
 
@@ -816,7 +816,7 @@ class TestExpt(unittest.TestCase):
     #test serialization and uncaching by running the experiment 2x
     acc1,xent1 = self.runTCToyExpt()
     acc2,xent2 = self.runTCToyExpt()
-    print 'acc:',acc1,'/',acc2,'xent',xent1,'/',xent2
+    print('acc:',acc1,'/',acc2,'xent',xent1,'/',xent2)
     self.assertAlmostEqual(acc1,acc2)
     self.assertAlmostEqual(acc1,1.0)
     self.assertAlmostEqual(xent1,xent2)
@@ -824,7 +824,7 @@ class TestExpt(unittest.TestCase):
   def testTCToyExpt2(self):
     #test serialization and uncaching by running the experiment 2x
     acc1,xent1 = self.runTCToyExpt2()
-    print 'acc:',acc1,'xent',xent1
+    print('acc:',acc1,'xent',xent1)
     self.assertAlmostEqual(acc1,1.0)
 
   def runTCToyExpt(self):
@@ -834,8 +834,8 @@ class TestExpt(unittest.TestCase):
     db.listing()
     trainData = dataset.Dataset.uncacheMatrix(self.cacheFile('train.dset'),db,'predict/io','train')
     testData = dataset.Dataset.uncacheMatrix(self.cacheFile('test.dset'),db,'predict/io','test')
-    print 'trainData:\n','\n'.join(trainData.pprint())
-    print 'testData"\n','\n'.join(testData.pprint())
+    print('trainData:\n','\n'.join(trainData.pprint()))
+    print('testData"\n','\n'.join(testData.pprint()))
     prog = program.ProPPRProgram.loadRules(
         os.path.join(TEST_DATA_DIR,"textcat.ppr"),
         db=db)
@@ -960,7 +960,7 @@ class TestExpt(unittest.TestCase):
     prog.setRuleWeights(db.ones())
     db.markAsParameter('dabbrev',2)
     factDict = db.matrixAsPredicateFacts('dabbrev',2,db.matEncoding[('dabbrev',2)])
-    print 'before learning',len(factDict),'dabbrevs'
+    print('before learning',len(factDict),'dabbrevs')
     self.assertTrue(len(factDict)==5)
 #    for f in sorted(factDict.keys()):
 #      print '>',str(f),factDict[f]
@@ -968,7 +968,7 @@ class TestExpt(unittest.TestCase):
     params = {'prog':prog,'trainData':trainData, 'testData':testData}
     result = expt.Expt(params).run()
     factDict = db.matrixAsPredicateFacts('dabbrev',2,db.matEncoding[('dabbrev',2)])
-    print 'after learning',len(factDict),'dabbrevs'
+    print('after learning',len(factDict),'dabbrevs')
 #    for f in sorted(factDict.keys()):
 #      print '>',str(f),factDict[f]
     self.assertTrue(len(factDict)>5)
@@ -1017,7 +1017,7 @@ class TestDataset(unittest.TestCase):
     self.assertTrue(m1 in modes); self.assertTrue(m2 in modes)
     x1 = dset.getX(m1); y1 = dset.getY(m1)
     x2 = dset.getX(m2); y2 = dset.getY(m2)
-    ax1,ay1,ax2,ay2 = map(lambda m:self.db.matrixAsSymbolDict(m), (x1,y1,x2,y2))
+    ax1,ay1,ax2,ay2 = [self.db.matrixAsSymbolDict(m) for m in (x1,y1,x2,y2)]
     ex1 = {0: {'r1': 1.0}, 1: {'r3': 1.0}}
     ey1 = {0: {'r1': 0.5, 'r2': 0.5}, 1: {'r4': 0.5, 'r3': 0.5}}
     ex2 = {0: {'a2': 1.0}, 1: {'a4': 1.0}}
@@ -1029,8 +1029,8 @@ class TestDataset(unittest.TestCase):
   def check_dicts(self,actual,expected):
     #print 'actual:  ',actual
     #print 'expected:',expected
-    self.assertEqual(len(actual.keys()), len(expected.keys()))
-    for k in actual.keys():
+    self.assertEqual(len(list(actual.keys())), len(list(expected.keys())))
+    for k in list(actual.keys()):
       self.assertEqual(actual[k], expected[k])
 
 class TestMatrixUtils(unittest.TestCase):
@@ -1047,7 +1047,7 @@ class TestMatrixUtils(unittest.TestCase):
       di = dm[i]
       self.assertTrue('william' in di)
       self.assertTrue('poppy' in di)
-      self.assertEqual(len(di.keys()), 2)
+      self.assertEqual(len(list(di.keys())), 2)
 
 class TestTypes(unittest.TestCase):
 
@@ -1101,8 +1101,8 @@ class TestTypes(unittest.TestCase):
       db3.matEncoding = matrixdb.MatrixDB.deserializeDataFrom(fp)
     with open(os.path.join(direc,'db-params.mat')) as fp:
       pd = matrixdb.MatrixDB.deserializeDataFrom(fp)
-    self.assertTrue(len(pd.keys())==1)
-    self.assertTrue(len(db3.matEncoding.keys())==3)
+    self.assertTrue(len(list(pd.keys()))==1)
+    self.assertTrue(len(list(db3.matEncoding.keys()))==3)
     with open(os.path.join(direc,'db-params.mat')) as fp:
       db3.importSerializedDataFrom(fp)
     self.db = db3
@@ -1133,7 +1133,7 @@ class TestTypes(unittest.TestCase):
         'triple_t':['__NULL__', '__OOV__', 'rxy'],
         'entity_t':['__NULL__', '__OOV__', 'x', 'y'],
     }
-    self.assertEqual(len(expectedSymLists.keys()), len(self.db.schema._stab.keys()))
+    self.assertEqual(len(list(expectedSymLists.keys())), len(list(self.db.schema._stab.keys())))
     for typeName in expectedSymLists:
       self.assertTrue(typeName in self.db.schema.getTypes())
       actualSymList = self.db.schema._stab[typeName].getSymbolList()
@@ -1198,16 +1198,16 @@ class TestTrainableDeclarations(unittest.TestCase):
         "\t".join(["w1","hello"])+"\n",
         "\t".join(["w2","hello","there"])+"\n"
         ])
-    print 'params',db.paramList
+    print('params',db.paramList)
     self.assertTrue(db.isParameter(declare.asMode("w1(i)")))
     self.assertTrue(db.isParameter(declare.asMode("w2(i,i)")))
     self.assertFalse(db.isParameter(declare.asMode("trainable(i,i)")))
     w1 = db.matrixAsPredicateFacts('w1',1,db.getParameter('w1',1))
     w2 = db.matrixAsPredicateFacts('w2',2,db.getParameter('w2',2))
-    self.assertTrue(len(w1.keys())==1)
-    self.assertTrue(str(w1.keys()[0])=="w1(hello)")
-    self.assertTrue(len(w2.keys())==1)
-    self.assertTrue(str(w2.keys()[0])=="w2(hello,there)")
+    self.assertTrue(len(list(w1.keys()))==1)
+    self.assertTrue(str(list(w1.keys())[0])=="w1(hello)")
+    self.assertTrue(len(list(w2.keys()))==1)
+    self.assertTrue(str(list(w2.keys())[0])=="w2(hello,there)")
 
 class TestParser(unittest.TestCase):
 

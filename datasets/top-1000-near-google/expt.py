@@ -53,7 +53,7 @@ def runMain(cross=False):
     if cross:
       for compilerClass in CROSSCOMPILERS:
         xc = compilerClass(prog)
-        print expt.fulltype(xc)
+        print(expt.fulltype(xc))
         
         # compile everything
         #problem = declare.asMode('concept_politicianusendorsedbypoliticianus/io')
@@ -73,4 +73,4 @@ def runMain(cross=False):
 
 if __name__=="__main__":
   acc,loss = runMain('cross' in sys.argv[1:])[0]
-  print 'acc,loss',acc,loss
+  print('acc,loss',acc,loss)

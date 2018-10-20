@@ -37,30 +37,30 @@ def runMain():
     start0 = time.time()
     
     for modeString in modes:
-        print 'eval',modeString,
+        print('eval',modeString, end=' ')
         start = time.time()
         ti.prog.eval(declare.asMode(modeString), [X])
-        print 'time',time.time() - start,'sec'
+        print('time',time.time() - start,'sec')
     tot = time.time() - start0
-    print 'total time',tot,'sec'
+    print('total time',tot,'sec')
     return tot
 
 if __name__=="__main__":
     t = runMain()
-    print 'time',t
+    print('time',t)
 
     (ti,X) = setExptParams()
     for compilerClass in CROSSCOMPILERS:
         start0=time.time()
         xc = compilerClass(ti.prog)
-        print expt.fulltype(xc)
+        print(expt.fulltype(xc))
         # compile everything
         for modeString in modes:
             mode = declare.asMode(modeString)
             xc.ensureCompiled(mode)
-            print 'eval',modeString,
+            print('eval',modeString, end=' ')
             start = time.time()
             xc.inferenceFunction(mode)(X)
-            print 'time',time.time() - start,'sec'
-        print 'total time',expt.fulltype(xc),time.time()-start0,'sec'
+            print('time',time.time() - start,'sec')
+        print('total time',expt.fulltype(xc),time.time()-start0,'sec')
 

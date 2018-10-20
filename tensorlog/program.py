@@ -63,7 +63,7 @@ class Program(object):
             self.function[(mode,depth)] = funs.NullFunction(mode)
         else:
             predDef = self.findPredDef(mode)
-            if predDef is None or len(predDef)==0:
+            if predDef is None or len(list(predDef))==0:
                 assert False,'no rules match mode %s' % mode
             elif len(predDef)==1:
                 #instead of a sum of one function, just find the function
@@ -73,7 +73,7 @@ class Program(object):
             else:
                 #compute a function that will sum up the values of the
                 #clauses
-                ruleFuns = map(lambda r:bpcompiler.BPCompiler(mode,self,depth,r).getFunction(),predDef)
+                ruleFuns = [bpcompiler.BPCompiler(mode,self,depth,r).getFunction() for r in predDef]
                 self.function[(mode,depth)] = funs.SumFunction(ruleFuns)
             if depth==0:
                 if self.normalize=='softmax':
@@ -288,7 +288,7 @@ class ProPPRProgram(Program):
         non-zero weights for all second arguments of hasWord will be
         used to initialize posWeight.  The constant will be epsilon.
         """
-        for paramName,domainModes in self.paramDomains.items():
+        for paramName,domainModes in list(self.paramDomains.items()):
             # we also need to infer a type for the parameter....
             def typeOfWeights(mode):
                 for i in range(mode.arity):
@@ -327,8 +327,8 @@ class ProPPRProgram(Program):
             self.ruleIds.append(constFeature)
         elif rule0.features is not None:
             #format is {foo(F):-...}
-            assert len(rule0.features)==1,'feature generators of the form {a,b: ... } not supported'
-            featureLHS = rule0.features[0]
+            assert len(list(rule0.features))==1,'feature generators of the form {a,b: ... } not supported'
+            featureLHS = list(rule0.features)[0]
             assert featureLHS.arity==1, 'non-constant features must be of the form {foo(X):-...}'
             outputVar = featureLHS.args[0]
             paramName = featureLHS.functor
@@ -399,4 +399,4 @@ class Plugins(object):
   def outputType(self,mode,inputTypes):
     """Returns a function that maps the input types to the output types.
     """
-    return apply(self.outputTypeFun[mode],inputTypes)
+    return self.outputTypeFun[mode](*inputTypes)

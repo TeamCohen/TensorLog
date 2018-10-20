@@ -75,10 +75,10 @@ class TestReuse(unittest.TestCase):
 
   def check_dicts(self,actualMat, expected):
     actual = actualMat[0]
-    print 'actual:  ',actual
-    print 'expected:',expected
-    self.assertEqual(len(actual.keys()), len(expected.keys()))
-    for k in actual.keys():
+    print('actual:  ',actual)
+    print('expected:',expected)
+    self.assertEqual(len(list(actual.keys())), len(list(expected.keys())))
+    for k in list(actual.keys()):
       self.assertAlmostEqual(actual[k], expected[k], delta=0.05)
 
 # stuck in here because I use Builder, lazy me

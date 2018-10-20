@@ -51,7 +51,7 @@ class MatrixDB(object):
     self.startBuffers()
 
   def checkTyping(self):
-    self.schema.checkTyping(self.matEncoding.keys())
+    self.schema.checkTyping(list(self.matEncoding.keys()))
 
   def isTypeless(self):
     return self.schema.isTypeless()
@@ -280,20 +280,20 @@ class MatrixDB(object):
 
   def listing(self):
     for (functor,arity),m in sorted(self.matEncoding.items()):
-      print '%s/%d: %s' % (functor,arity,self.summary(functor,arity))
+      print(('%s/%d: %s' % (functor,arity,self.summary(functor,arity))))
     if not self.isTypeless():
       for (functor,arity),m in sorted(self.matEncoding.items()):
-        typenames = map(lambda i:self.schema.getArgType(functor,arity,i), range(arity))
-        print 'typing: %s(%s)' % (functor,",".join(typenames))
+        typenames = [self.schema.getArgType(functor,arity,i) for i in range(arity)]
+        print(('typing: %s(%s)' % (functor,",".join(typenames))))
 
   def numMatrices(self):
-    return len(self.matEncoding.keys())
+    return len(list(self.matEncoding.keys()))
 
   def size(self):
-    return sum(map(lambda m:m.nnz, self.matEncoding.values()))
+    return sum([m.nnz for m in list(self.matEncoding.values())])
 
   def parameterSize(self):
-    return sum([m.nnz for  ((fun,arity),m) in self.matEncoding.items() if (fun,arity) in self.paramSet])
+    return sum([m.nnz for  ((fun,arity),m) in list(self.matEncoding.items()) if (fun,arity) in self.paramSet])
 
   def createPartner(self):
     """Create a 'partner' datavase, which shares the same symbol table,
@@ -321,9 +321,9 @@ class MatrixDB(object):
     if filter is None:
       d = self.matEncoding
     elif filter=='params':
-      d = dict([(key,m) for (key,m) in self.matEncoding.items() if key in self.paramSet])
+      d = dict([(key,m) for (key,m) in list(self.matEncoding.items()) if key in self.paramSet])
     elif filter=='fixed':
-      d = dict([(key,m) for (key,m) in self.matEncoding.items() if key not in self.paramSet])
+      d = dict([(key,m) for (key,m) in list(self.matEncoding.items()) if key not in self.paramSet])
     else:
       assert False,"illegal filter: legal ones are None, 'params', or 'fixed'"
     self._saveMatDictWithScipy(fileLike,d)
@@ -354,7 +354,7 @@ class MatrixDB(object):
     #serialization/deserialization ends up converting
     #(functor,arity) pairs to strings and csr_matrix to csc_matrix
     #so convert them back....
-    for stringKey,mat in d.items():
+    for stringKey,mat in list(d.items()):
       del d[stringKey]
       if not stringKey.startswith('__'):
         d[eval(stringKey)] = scipy.sparse.csr_matrix(mat,dtype='float32')
@@ -429,7 +429,7 @@ class MatrixDB(object):
 
   def flushBuffers(self):
     """Flush all triples from the buffer."""
-    for f,arity in self._databuf.keys():
+    for f,arity in list(self._databuf.keys()):
       self._flushBuffer(f,arity)
     self._databuf = None
     self.startBuffers()

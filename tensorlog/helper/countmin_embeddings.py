@@ -29,8 +29,8 @@ def sample_matrix(original_dim):
   return m
 
 def show(label,mat,code=None,h=None):
-  print '=' * 10, label, 'shape', mat.shape, '=' * 10
-  print mat
+  print('=' * 10, label, 'shape', mat.shape, '=' * 10)
+  print(mat)
   if code=='onehot':
     return pp_decode_onehot(mat)
   elif code=='embedded':
@@ -42,24 +42,24 @@ def pp_decode_embedded(mat,h):
   assert n_cols_m==n_cols_h
   result = collections.defaultdict(set)
   for r1 in range(n_rows_m):
-    print 'row',r1,'contains embedding:',
+    print('row',r1,'contains embedding:', end=' ')
     for r2 in range(n_rows_h):
       if np.all(mat[r1,:]>=h[r2,:]):
-        print r2,
+        print(r2, end=' ')
         result[r1].add(r2)
-    print
+    print()
   return result
 
 def pp_decode_onehot(mat):
   n_rows,n_cols = mat.shape
   result = collections.defaultdict(set)
   for r in range(n_rows):
-    print 'row',r,'contains:',
+    print('row',r,'contains:', end=' ')
     for c in range(n_cols):
       if mat[r,c]!=0:
-        print c,
+        print(c, end=' ')
         result[r].add(c)
-    print
+    print()
   return result
 
 def onehot(i,original_dim):
@@ -121,7 +121,7 @@ def run_main1():
       for j in proposed[i]:
         if j not in baseline[i]:
           collisions += 1
-    print 'row',i,'collisions',collisions,'baseline',baseline,'proposed',proposed
+    print('row',i,'collisions',collisions,'baseline',baseline,'proposed',proposed)
     return collisions,n
 
   tot = tot_collisions = 0
@@ -129,7 +129,7 @@ def run_main1():
     c,n = check_results(i)
     tot_collisions += c
     tot += n
-  print 'tot_collisions',tot_collisions,'tot',tot
+  print('tot_collisions',tot_collisions,'tot',tot)
 
 if __name__ == "__main__":
   original_dim = 10
@@ -138,8 +138,8 @@ if __name__ == "__main__":
   H = embedder_matrix(original_dim,embedded_dim,hash_salt)
   x = onehot(7,original_dim)
   ex = np.dot(x,H)
-  print 'x',x
-  print 'ex',ex
+  print('x',x)
+  print('ex',ex)
 
 
   

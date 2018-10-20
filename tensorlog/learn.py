@@ -40,9 +40,9 @@ class GradAccumulator(object):
         self.counter = collections.defaultdict(float)
         self.reshaped = False
     def keys(self):
-        return self.runningSum.keys()
+        return list(self.runningSum.keys())
     def items(self):
-        return self.runningSum.items()
+        return list(self.runningSum.items())
     def __getitem__(self,paramName):
         return self.runningSum[paramName]
     def __setitem__(self,paramName,gradient):
@@ -69,7 +69,7 @@ class GradAccumulator(object):
         rows instead of just one.
         """
         if not self.reshaped:
-            for ((functor,arity),mat) in self.items():
+            for ((functor,arity),mat) in list(self.items()):
                 if arity==1:
                     #for a parameter that is a row-vector, we have one
                     #gradient per example, so replace it with the mean
@@ -85,7 +85,7 @@ class GradAccumulator(object):
     def mapData(self,mapFun):
         """Apply some function to every gradient in the accumulator (in place)."""
         result = GradAccumulator()
-        for k,m in self.items():
+        for k,m in list(self.items()):
             result.accum(k, mutil.mapData(mapFun,m))
         return result
 
@@ -95,9 +95,9 @@ class GradAccumulator(object):
         discarding counters.
         """
         result = GradAccumulator()
-        for k,m in self.items():
+        for k,m in list(self.items()):
             result.accum(k, m)
-        for k,m in other.items():
+        for k,m in list(other.items()):
             result.accum(k, m)
         return result
     
@@ -130,7 +130,7 @@ class GradAccumulator(object):
         #reduce with total,min,max, and weighted total
         for counter in counters:
             ctr['counters'] += 1  # merged counters
-            for k,v in counter.items():
+            for k,v in list(counter.items()):
                 keys.add(k)
                 ctr[(k,'tot')] += v
                 ctr[(k,weightedTotalPrefix)] += counter['n']*v
@@ -201,7 +201,7 @@ class Tracer(object):
         and also store them in the gradAccum's counters.
         """
         pairs = Tracer._record(gradAccum,keyValuePairList)
-        print ' '.join(pairs)
+        print((' '.join(pairs)))
 
     @staticmethod
     def _record(gradAccum,keyValuePairList):
@@ -214,7 +214,7 @@ class Tracer(object):
             pairs.append(k)
             pairs.append('%g' % v)
         return pairs
-        print ' '.join(pairs)
+        print((' '.join(pairs)))
 
 
     #
@@ -286,7 +286,7 @@ class EpochTracer(Tracer):
                 pairs.append( ((pref + '.' +k), ctr[(k,pref)]) )
         pairs.append(('minibatches',ctr['counters']))
 
-        print ' '.join(map(lambda (k,v):('%s=%g'%(k,v)), pairs))
+        print((' '.join([('%s=%g'%(k_v[0],k_v[1])) for k_v in pairs])))
 
 
 ##############################################################################
@@ -326,7 +326,7 @@ class Learner(object):
                 #yDict[mode] = self.prog.getPredictFunction(mode).eval(self.prog.db, [X])
                 yDict[mode] = self.predict(mode,X)
             except:
-                print "Trouble with mode %s:" % str(mode), sys.exc_info()[:2]
+                print(("Trouble with mode %s:" % str(mode), sys.exc_info()[:2]))
                 raise
         return dataset.Dataset(xDict,yDict)
 
@@ -445,7 +445,7 @@ class Learner(object):
         and clip negative parameters to zero.
         """ 
         paramGrads.fitParameterShapes()
-        for (functor,arity),delta in paramGrads.items():
+        for (functor,arity),delta in list(paramGrads.items()):
             m0 = self.prog.db.getParameter(functor,arity)
             m1 = m0 + rate * delta
             m2 = mutil.mapData(lambda d:NP.clip(d,0.0,NP.finfo('float32').max), m1)
@@ -498,7 +498,7 @@ class FixedRateGDLearner(Learner):
                     self.applyUpdate(paramGrads,self.rate)
                     GradAccumulator.accumToCounter(epochCounter,paramGrads.counter)
                 except:
-                    print "Unexpected error at %s:" % str(args), sys.exc_info()[:2]
+                    print(("Unexpected error at %s:" % str(args), sys.exc_info()[:2]))
                     raise
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)
             
@@ -531,7 +531,7 @@ class FixedRateSGDLearner(FixedRateGDLearner):
                     self.applyUpdate(paramGrads,self.rate)
                     GradAccumulator.accumToCounter(epochCounter,paramGrads.counter)
                 except:
-                    print "Unexpected error at %s:" % str(args), sys.exc_info()[:2]
+                    print(("Unexpected error at %s:" % str(args), sys.exc_info()[:2]))
                     raise
 
             self.epochTracer(self,epochCounter,i=i,startTime=trainStartTime)

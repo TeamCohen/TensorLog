@@ -10,7 +10,7 @@ from tensorlog import declare
 def tfCompileAll(tlog,modeSet,queries):
   t0 = time.time()
   k = 0
-  print 'compiling',len(modeSet),'modes'
+  print('compiling',len(modeSet),'modes')
   for mode in modeSet:
     if tlog.prog.findPredDef(mode):
       k += 1
@@ -19,7 +19,7 @@ def tfCompileAll(tlog,modeSet,queries):
         sys.stderr.write('compiled %d functions in %f.3 sec\n' % (k,time.time()-t0))
   t1 = time.time()
   fps = k/(t1-t0)
-  print 'tlog compiled',k,'functions at',fps,'fps'
+  print('tlog compiled',k,'functions at',fps,'fps')
   return fps
 
 def runTF(tlog):
@@ -36,7 +36,7 @@ def runTF(tlog):
       k += X.shape[0]
   t1 = time.time()
   qps = k/(t1-t0)
-  print 'tlog executes on',k,'inputs at',qps,'qps'
+  print('tlog executes on',k,'inputs at',qps,'qps')
   return qps
 
 def runMain():

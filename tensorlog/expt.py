@@ -28,7 +28,7 @@ class Expt(object):
         self.config = configDict
 
     def run(self):
-        print 'Expt configuration:',self.config
+        print(('Expt configuration:',self.config))
         return self._run(**self.config)
 
     def _run(self,
@@ -104,8 +104,8 @@ class Expt(object):
                             lambda:trainData.saveProPPRExamples(savedTrainExamples,prog.db))
 
         if savedTestPredictions and savedTestExamples and testData:
-            print 'ready for commands like: proppr eval %s %s --metric auc --defaultNeg' \
-                % (savedTestExamples,savedTestPredictions)
+            print(('ready for commands like: proppr eval %s %s --metric auc --defaultNeg' \
+                % (savedTestExamples,savedTestPredictions)))
 
         return testAcc,testXent
 
@@ -123,10 +123,10 @@ class Expt(object):
             dip = {}
             if i in dp:
                 dip = dp[i]
-            assert len(dix.keys())==1,'X %s row %d is not onehot: %r' % (theoryPred,i,dix)
-            x = dix.keys()[0]
+            assert len(list(dix.keys()))==1,'X %s row %d is not onehot: %r' % (theoryPred,i,dix)
+            x = list(dix.keys())[0]
             fp.write('# proved %d\t%s(%s,X1).\t999 msec\n' % (i+1+start,theoryPred,x))
-            scoresdPs = reversed(sorted([(py,y) for (y,py) in dip.items()]))
+            scoresdPs = reversed(sorted([(py,y) for (y,py) in list(dip.items())]))
             for (r,(py,y)) in enumerate(scoresdPs):
                 fp.write('%d\t%.18f\t%s(%s,%s).\n' % (r+1,py,theoryPred,x,y))
         return n
@@ -135,10 +135,10 @@ class Expt(object):
     def timeAction(msg, act):
         """Do an action encoded as a callable function, return the result,
         while printing the elapsed time to stdout."""
-        print msg,'...'
+        print((msg,'...'))
         start = time.time()
         result = act()
-        print msg,'... done in %.3f sec' % (time.time()-start)
+        print((msg,'... done in %.3f sec' % (time.time()-start)))
         return result
 
     @staticmethod
@@ -146,7 +146,7 @@ class Expt(object):
         """Print accuracy and crossEntropy for some named model on a named eval set."""
         acc = learn.Learner.datasetAccuracy(goldData,predictedData)
         xent = learn.Learner.datasetCrossEntropy(goldData,predictedData,perExample=True)
-        print 'eval',modelMsg,'on',testSet,': acc',acc,'xent/ex',xent
+        print(('eval',modelMsg,'on',testSet,': acc',acc,'xent/ex',xent))
         return (acc,xent)
 
 # a useful main
@@ -170,7 +170,7 @@ if __name__=="__main__":
     )
 
     weightEpsilon = float(optdict.get('--weightEpsilon',1.0))
-    print 'weightEpsilon = ',weightEpsilon
+    print(('weightEpsilon = ',weightEpsilon))
     if '--params' in optdict:
         paramSpecs = optdict['--params'].split(",")
         for spec in paramSpecs:
@@ -185,10 +185,10 @@ if __name__=="__main__":
             #so darn hard to get the number of quotes right in Makefile/shell, so eval 'while'...
             while type(optdict['learnerOpts'])==type(""):
                 optdict['learnerOpts'] = eval(optdict.get('learnerOpts','{}'))
-            print "decoded learner spec to "+repr(optdict['learner'])+" args "+repr(optdict['learnerOpts'])
+            print(("decoded learner spec to "+repr(optdict['learner'])+" args "+repr(optdict['learnerOpts'])))
             learner = optdict['learner'](optdict['prog'], **optdict['learnerOpts'])
         except Exception as ex:
-            print 'exception evaluating learner specification "%s"' % optdict['--learner']
+            print(('exception evaluating learner specification "%s"' % optdict['--learner']))
             traceback.print_exc(file=sys.stdout)
             raise ex
 

@@ -5,5 +5,5 @@ if __name__ == "__main__":
         rel,x,y = line.strip().split("\t")
         i,j = x.split(",")
         x = "%s_%s" % (i,j)
-        print "%s(%s,Y)" % (rel,x)
+        print("%s(%s,Y)" % (rel,x))
 

@@ -38,7 +38,7 @@ def loadExamples(file,db):
 # set up the program
 #
 
-p = tensorlog.ProPPRProgram.load(["test/textcat.ppr","test/textcattoy.cfacts"])
+p = tensorlog.ProPPRProgram.load(["test-data/textcat.ppr","test-data/textcattoy.cfacts"])
 p.setWeights(p.db.ones())
 p.listing()
 
@@ -46,7 +46,7 @@ p.listing()
 # load the data
 #
 
-xs,ys = loadExamples("test/textcattoy-train.examples",p.db)
+xs,ys = loadExamples("test-data/textcattoy-train.examples",p.db)
 
 #returns inputs and outputs that are used to build the prediction
 #function
@@ -56,7 +56,7 @@ scorex = outs[0]  #the actual score vector for x
 
 # something simple to try differentiating
 toyLoss = B.sp_sum(scorex,sparse_grad=True)
-print 'gradToyLoss...'
+print('gradToyLoss...')
 gradToyLoss = T.grad(toyLoss, p.getParamList())
 
 
@@ -66,7 +66,7 @@ gradToyLoss = T.grad(toyLoss, p.getParamList())
 y = S.csr_matrix('y')
 prob = scorex * (1.0/B.sp_sum(scorex, sparse_grad=True))        #scale x to 0-1
 loss = B.sp_sum(-y * B.structured_log(prob),sparse_grad=True)   #cross-entropy loss
-print 'loss...'
+print('loss...')
 theano.printing.debugprint(loss)
 lossFun = theano.function(inputs=[ins[0],y], outputs=[loss])
 
@@ -74,7 +74,7 @@ lossFun = theano.function(inputs=[ins[0],y], outputs=[loss])
 # test one one example
 #
 lossFunResult = lossFun(xs[0],ys[0])
-print 'loss on example 0:',lossFunResult[0]
+print('loss on example 0:',lossFunResult[0])
 
 #
 # compute gradient
@@ -86,5 +86,5 @@ print 'loss on example 0:',lossFunResult[0]
 #ValueError: MulSD.grad returned a term with 2 dimensions, but 0 are required.
 #
 
-print 'gradLoss...'
+print('gradLoss...')
 gradLoss = T.grad(loss, p.getParamList())

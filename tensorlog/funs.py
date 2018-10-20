@@ -29,22 +29,22 @@ class Function(object):
     def eval(self,db,values,pad):
         self._checkDuplications()
         if conf.trace:
-            print "Invoking:\n%s" % "\n. . ".join(self.pprint())
+            print(("Invoking:\n%s" % "\n. . ".join(self.pprint())))
         pad[self.id].output = self._doEval(db,values,pad)
         if conf.trace:
-            print "Function completed:\n%s" % "\n. . ".join(self.pprint())
+            print(("Function completed:\n%s" % "\n. . ".join(self.pprint())))
             if conf.long_trace:
                 for k,v in enumerate(values):
-                    print '. input',k+1,':',db.matrixAsSymbolDict(values[k])
-                print '. result :',db.matrixAsSymbolDict(pad[self.id].output)
+                    print(('. input',k+1,':',db.matrixAsSymbolDict(values[k])))
+                print(('. result :',db.matrixAsSymbolDict(pad[self.id].output)))
         return pad[self.id].output
 
     def backprop(self,delta,gradAccum,pad):
         if conf.trace:
-            print "Backprop:\n%s" % "\n. . ".join(self.pprint())
+            print(("Backprop:\n%s" % "\n. . ".join(self.pprint())))
         pad[self.id].delta = self._doBackprop(delta,gradAccum,pad)
         if conf.trace:
-            print "Backprop completed:\n%s" % "\n. . ".join(self.pprint())
+            print(("Backprop completed:\n%s" % "\n. . ".join(self.pprint())))
         return pad[self.id].delta
 
     def _checkDuplications(self):
@@ -116,7 +116,7 @@ class OpSeqFunction(Function):
         return 'OpSeqFunction(%r,%r,%r)' % (self.opInputs,self.opOutput,shortOps)
     def pprintSummary(self):
         rhs = self.opOutput if self.outputType is None else '%s(%s)' % (self.opOutput,self.outputType)
-        args = map(lambda var,typeName:'%s(%s)'%(var,typeName) if typeName else var, self.opInputs, self.inputTypes)
+        args = list(map(lambda var,typeName:'%s(%s)'%(var,typeName) if typeName else var, self.opInputs, self.inputTypes))
         return '%s = OpSeqFunction(%s)' % (rhs,','.join(args))
     def pprintComment(self):
         return str(self.rule) if self.rule else ''
@@ -207,21 +207,21 @@ class SumFunction(Function):
         rhs = 'SumFunction' if self.outputType is None else 'SumFunction(%s)' % (self.outputType)
         return rhs
     def _doEval(self,db,values,pad):
-        addends = map(lambda f:f.eval(db,values,pad), self.funs)
+        addends = [f.eval(db,values,pad) for f in self.funs]
         accum = addends[0]
         for i in range(1,len(addends)):
             accum = accum + addends[i]
         return accum
     def _doBackprop(self,delta,gradAccum,pad):
-        addends = map(lambda f:f.backprop(delta,gradAccum,pad), self.funs)
+        addends = [f.backprop(delta,gradAccum,pad) for f in self.funs]
         accum = addends[0]
         for i in range(1,len(addends)):
             try:
                 accum = accum + addends[i]
             except:
-                print "accum %s" % mutil.summary(accum)
-                print "addends[%d] %s" % (i,mutil.summary(addends[i]))
-                print "\n".join(self.pprint())
+                print(("accum %s" % mutil.summary(accum)))
+                print(("addends[%d] %s" % (i,mutil.summary(addends[i]))))
+                print(("\n".join(self.pprint())))
                 raise
         return accum
     def children(self):

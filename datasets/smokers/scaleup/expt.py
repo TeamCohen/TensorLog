@@ -22,7 +22,7 @@ def setExptParams(n):
         if len(rows)==BATCHSIZE:
             break
     X = mutil.stack(rows)
-    print len(rows),'queries'
+    print(len(rows),'queries')
     return ti,X,rows
 
 def runMain(n,minibatch):
@@ -31,20 +31,20 @@ def runMain(n,minibatch):
     nQueries = X.shape[0]
     start0 = time.time()
     for modeString in ["t_stress/io", "t_influences/io","t_cancer_spont/io", "t_cancer_smoke/io"]:
-        print 'eval',modeString,
+        print('eval',modeString, end=' ')
         start = time.time()
         if minibatch:
             ti.prog.eval(declare.asMode(modeString), [X])
         else:
             for Xi in rows:
                 ti.prog.eval(declare.asMode(modeString), [Xi])
-        print 'time',time.time() - start,'sec'
+        print('time',time.time() - start,'sec')
     tot = time.time() - start0
-    print 'batch size',len(rows)
-    print 'minibatch',minibatch
-    print 'total query time',tot,'sec'
-    print 'queries/sec',nQueries/tot
-    print '%.2f\t%.2f' % (tot,nQueries/tot)
+    print('batch size',len(rows))
+    print('minibatch',minibatch)
+    print('total query time',tot,'sec')
+    print('queries/sec',nQueries/tot)
+    print('%.2f\t%.2f' % (tot,nQueries/tot))
     return tot
 
 # usage n [no-minibatch]
@@ -57,4 +57,4 @@ if __name__=="__main__":
         minibatch = False
 
     t = runMain(n,minibatch)
-    print 'time',t
+    print('time',t)

@@ -45,14 +45,14 @@ class Op(opfunutil.OperatorOrFunction):
   def eval(self,env,pad):
     """Evaluate an operator inside an environment."""
     if conf.trace:
-      print 'op eval',self,
+      print(('op eval'),self, end=' ')
     self._doEval(env,pad)
     pad[self.id].output = env[self.dst]
     if conf.trace:
-      print 'stores',mutil.summary(env[self.dst]),
-      if conf.long_trace>env[self.dst].nnz: print 'holding',env.db.matrixAsSymbolDict(env[self.dst]),
-      if conf.max_trace: print 'max',mutil.maxValue(env[self.dst]),
-      print
+      print(('stores'),mutil.summary(env[self.dst]), end=' ')
+      if conf.long_trace>env[self.dst].nnz: print(('holding'),env.db.matrixAsSymbolDict(env[self.dst]), end=' ')
+      if conf.max_trace: print(('max'),mutil.maxValue(env[self.dst]), end=' ')
+      print()
     if conf.check_nan:
       mutil.checkNoNANs(env[self.dst], context='saving %s' % self.dst)
 
@@ -62,13 +62,13 @@ class Op(opfunutil.OperatorOrFunction):
     called first.
     """
     if conf.trace:
-      print 'call op bp',self,'delta[',self.dst,'] shape',env.delta[self.dst].get_shape(),
-      if conf.long_trace: print env.db.matrixAsSymbolDict(env.delta[self.dst])
-      else: print
+      print(('call op bp'),self,'delta[',self.dst,'] shape',env.delta[self.dst].get_shape(), end=' ')
+      if conf.long_trace: print((env.db.matrixAsSymbolDict(env.delta[self.dst])))
+      else: print()
     self._doBackprop(env,gradAccum,pad)
     pad[self.id].delta = env.delta[self.dst]
     if conf.trace:
-      print 'end op bp',self
+      print(('end op bp'),self)
 
   def pprint(self,depth=0):
     description = ('%-2d ' % self.id) + self.pprintSummary()

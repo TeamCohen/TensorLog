@@ -20,11 +20,11 @@ class TestNative(unittest.TestCase):
 
   def testIt(self):
     acc,loss = expt.accExpt(self.prog,self.trainData,self.testData,self.n,self.maxD,self.epochs)
-    print 'acc',acc
+    print('acc',acc)
     self.assertTrue(acc >= 0.85)
     times = expt.timingExpt(self.prog)
     for t in times:
-      print 'time',t
+      print('time',t)
       self.assertTrue(t < 0.05)
 
 class TestAccTF(unittest.TestCase):
@@ -36,7 +36,7 @@ class TestAccTF(unittest.TestCase):
 
   def testIt(self):
     acc = tfexpt.trainAndTest(self.tlog,self.trainData,self.testData,self.epochs)
-    print 'acc',acc
+    print('acc',acc)
     self.assertTrue(acc >= 0.85)
 
 if __name__ == "__main__":

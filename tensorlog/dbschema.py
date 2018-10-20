@@ -238,7 +238,7 @@ class TypedSchema(AbstractSchema):
     assert False, 'TypedSchema has no default type! you need to declare types for all predicates'
 
   def getTypes(self):
-    return self._stab.keys()
+    return list(self._stab.keys())
 
   def getDomain(self,functor,arity):
     return self.getArgType(functor,arity,0)

@@ -82,15 +82,15 @@ class Rule(object):
         else:
             varTab = syt.SymbolTable()
             def convertArgs(args):
-                return map(lambda a: -varTab.getId(a) if isVariableAtom(a) else a, args)
+                return [-varTab.getId(a) if isVariableAtom(a) else a for a in args]
             def convertGoal(g):
                 return Goal(g.functor, convertArgs(g.args))
             if self.lhs: self.lhs = convertGoal(self.lhs)
-            self.rhs = map(convertGoal, self.rhs)
+            self.rhs = list(map(convertGoal, self.rhs))
             if self.features:
-                self.features = map(convertGoal, self.features)
+                self.features = list(map(convertGoal, self.features))
             if self.findall:
-                self.findall = map(convertGoal, self.findall)
+                self.findall = list(map(convertGoal, self.findall))
             self.variableList = varTab.getSymbolList()
             self.nvars = len(self.variableList)
 
@@ -124,7 +124,7 @@ class RuleCollection(object):
         self.index[key] += [r]
 
     def size(self):
-        return sum(len(self.index[k]) for k in self.index.keys())
+        return sum(len(self.index[k]) for k in list(self.index.keys()))
 
     def rulesFor(self,g):
         return self.index.get(self._key(g))
@@ -132,16 +132,16 @@ class RuleCollection(object):
     def mapRules(self,mapfun):
         for key in self.index:
             try:
-              self.index[key] = map(mapfun, self.index[key])
+              self.index[key] = list(map(mapfun, self.index[key]))
             except:
-              print "Trouble mapping rule %s:"%key
+              print(("Trouble mapping rule %s:"%key))
               raise
 
     def listing(self):
         for key in self.index:
-            print'% rules for',key
+            print(('% rules for',key))
             for r in self.index[key]:
-                print r.asString(syntax=self.syntax)
+                print((r.asString(syntax=self.syntax)))
 
     def __iter__(self):
         for key in self.index:
@@ -188,7 +188,7 @@ class Parser(object):
 
   def _convertRule(self,ptree):
     if 'rhs' in ptree:
-      tmpRhs = map(self._convertGoal, ptree['rhs'].asList())
+      tmpRhs = list(map(self._convertGoal, ptree['rhs'].asList()))
     else:
       tmpRhs = []
     if not 'features' in ptree:
@@ -196,13 +196,13 @@ class Parser(object):
     else:
       if not 'ffindall' in ptree:
         featureList = ptree['ftemplate'].asList()
-        tmpFeatures = map(self._convertGoal, featureList)
+        tmpFeatures = list(map(self._convertGoal, featureList))
         return Rule(self._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,None)
       else:
         featureList = ptree['ftemplate'].asList()
-        tmpFeatures = map(self._convertGoal, featureList)
+        tmpFeatures = list(map(self._convertGoal, featureList))
         findallList = ptree['ffindall'].asList()[1:]
-        tmpFindall = map(self._convertGoal, findallList)
+        tmpFindall = list(map(self._convertGoal, findallList))
         return Rule(self._convertGoal(ptree['lhs']),tmpRhs,tmpFeatures,tmpFindall)
 
   def parseGoal(self,s):
@@ -211,7 +211,7 @@ class Parser(object):
 
   def parseGoalList(self,s):
     """Convert a string to a goal list."""
-    return map(self._convertGoal, self.goalListNT.parseString(s).asList())
+    return list(map(self._convertGoal, self.goalListNT.parseString(s).asList()))
 
   def parseRule(self,s):
     """Convert a string to a rule."""
@@ -251,12 +251,12 @@ class Parser(object):
         logging.error('unparsed text at end of %s: "...%s"' % (fileLike,unread_text))
       return rules
     except KeyError:
-      print 'error near ',lo,'in',filename
+      print(('error near ',lo,'in',filename))
       return rules
 
 if __name__ == "__main__":
   p = Parser(syntax='pythonic')
 
   for f in sys.argv[1:]:
-    print '\nparsed from file %r:' % f
+    print(('\nparsed from file %r:' % f))
     Parser().parseFile(f).listing()

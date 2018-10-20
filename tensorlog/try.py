@@ -12,7 +12,7 @@ from tensorlog import matrixdb,mutil
 def go():
   db = matrixdb.MatrixDB.loadFile("test-data/textcattoy_corpus.cfacts")
   m = db.matEncoding[('hasWord',2)]
-  print 'm',m.shape,m.nnz
+  print('m',m.shape,m.nnz)
   def tfidf_transform(tf_matrix):
     # implements Salton's TFIDF transformation, ie l2-normalized
     # vector after scaling by: log(tf+1.0) * log(#docs/idf)
@@ -67,14 +67,14 @@ def go1():
   session.run(tf.global_variables_initializer())
   from tensorflow.python.framework import ops
   for v in nz_indices,nz_values,sparse,sm3,dm3a,dm3b:
-    print 'gradient of op',v,ops.get_gradient_function(v.op)
+    print('gradient of op',v,ops.get_gradient_function(v.op))
 
-  print 'dense sm - direct',session.run(sm1)
-  print 'dense sm - with -10 trick',session.run(sm2)
-  print 'sparse sm',session.run(sm3)
-  print 'densified sparse sm - old',session.run(dm3a)
-  print 'densified sparse sm - new',session.run(dm3a)
+  print('dense sm - direct',session.run(sm1))
+  print('dense sm - with -10 trick',session.run(sm2))
+  print('sparse sm',session.run(sm3))
+  print('densified sparse sm - old',session.run(dm3a))
+  print('densified sparse sm - new',session.run(dm3a))
 
 if __name__ == "__main__":
-  print 'trying'
+  print('trying')
   go()

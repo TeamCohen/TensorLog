@@ -7,11 +7,11 @@ from tensorlog import matrixdb
 
 if __name__ == "__main__":
     def usage():
-        print "usage: python -m list --db dbspec [--mode mode]"
-        print "  without mode specified: lists the relations in the database"
-        print "  with mode specified: lists the facts in one relation in .cfacts format"
-        print "usage: python -m list --prog progspec [--ruleIds]"
-        print "  list the all rule ids"
+        print("usage: python -m list --db dbspec [--mode mode]")
+        print("  without mode specified: lists the relations in the database")
+        print("  with mode specified: lists the facts in one relation in .cfacts format")
+        print("usage: python -m list --prog progspec [--ruleIds]")
+        print("  list the all rule ids")
     argspec = ["db=","mode=","prog=","ruleIds"]
     try:
         optlist,args = getopt.getopt(sys.argv[1:], 'x', argspec)
@@ -28,11 +28,11 @@ if __name__ == "__main__":
         arity = int(rest)
         m = db.matEncoding.get((functor,arity))
         assert m is not None,'mode should be of the form functor/arity for something in the database'
-        for goal,weight in db.matrixAsPredicateFacts(functor,arity,m).items():
-            print '\t'.join([goal.functor] + goal.args + ['%g' % (weight)])
+        for goal,weight in list(db.matrixAsPredicateFacts(functor,arity,m).items()):
+            print(('\t'.join([goal.functor] + goal.args + ['%g' % (weight)])))
     elif '--prog' in optdict:
         prog = comline.parseProgSpec(optdict['--prog'],db,proppr=True)
         for rid in prog.ruleIds:
-            print '\t'.join(['ruleid',rid])
+            print(('\t'.join(['ruleid',rid])))
     else:
         usage()

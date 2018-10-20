@@ -37,8 +37,8 @@ def setExptParams():
 def runMain():
     if not os.path.exists("tmp-cache"): os.mkdir("tmp-cache")
     (prog, trainData, testData) = setExptParams()
-    print accExpt(prog,trainData,testData)
-    print "\n".join(["%s: %s" % i for i in xc_accExpt(prog,trainData,testData).items()])
+    print(accExpt(prog,trainData,testData))
+    print("\n".join(["%s: %s" % i for i in list(xc_accExpt(prog,trainData,testData).items())]))
     
 def accExpt(prog,trainData,testData):
     params = {'prog':prog,
@@ -55,7 +55,7 @@ def xc_accExpt(prog,trainData,testData):
     results = {}
     for compilerClass in CROSSCOMPILERS:
         xc = compilerClass(prog)
-        print expt.fulltype(xc)
+        print(expt.fulltype(xc))
         
         # compile everything
         for mode in trainData.modesToLearn():

@@ -20,14 +20,14 @@ def runMain():
     start0 = time.time()
     for modeString in ["t_stress/io", "t_influences/io","t_cancer_spont/io", "t_cancer_smoke/io"]:
         session.run(tf.global_variables_initializer())
-        print 'eval',modeString,
+        print('eval',modeString, end=' ')
         fd = {tlog.input_placeholder_name(modeString):X}
         session.run(tlog.inference(modeString), feed_dict=fd)
-        print 'time',time.time() - start0,'sec'
+        print('time',time.time() - start0,'sec')
     tot = time.time() - start0
-    print 'total time',tot,'sec'
+    print('total time',tot,'sec')
     return tot
 
 if __name__=="__main__":
     t = runMain()
-    print 'time',t
+    print('time',t)

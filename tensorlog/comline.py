@@ -28,7 +28,7 @@ def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]
 
     argspec = ["db=", "proppr", "prog=", "trainData=", "testData=", "help", "logging="]
     try:
-        print "Tensorlog v%s (C) William W. Cohen and Carnegie Mellon University, 2016-2017" % version.VERSION
+        print(("Tensorlog v%s (C) William W. Cohen and Carnegie Mellon University, 2016-2017" % version.VERSION))
         optlist,args = getopt.getopt(argv, 'x', argspec)
         if extraArgConsumer:
             if args:
@@ -38,7 +38,7 @@ def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]
             else:
                 extraOptList = {}
     except getopt.GetoptError:
-        print 'bad option: use "--help" to get help'
+        print('bad option: use "--help" to get help')
         raise
     optdict = dict(optlist)
     if extraArgConsumer:
@@ -46,22 +46,22 @@ def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]
             optdict[k] = v
 
     def usage():
-        print 'options:'
-        print ' --db file.db              - file contains a serialized MatrixDB'
-        print ' --db file1.cfacts1:...    - files are parsable with MatrixDB.loadFile()'
-        print ' --prog file.ppr           - file is parsable as tensorlog rules'
-        print ' --trainData file.exam     - optional: file is parsable with Dataset.loadExamples'
-        print ' --trainData file.dset     - optional: file is a serialized Dataset'
-        print ' --testData file.exam      - optional:'
-        print ' --proppr                  - if present, assume the file has proppr features with'
-        print '                             every rule: {ruleid}, or {all(F): p(X,...),q(...,F)}'
-        print ' --logging level           - level is warn, debug, error, or info'
-        print ''
-        print 'Notes: for --db, --trainData, and --testData, you are allowed to specify either a'
-        print 'serialized, cached object (like \'foo.db\') or a human-readable object that can be'
-        print 'serialized (like \'foo.cfacts\'). In this case you can also write \'foo.db|foo.cfacts\''
-        print 'and the appropriate uncache routine will be used.'
-        print '\n'.join(extraArgUsage)
+        print( 'options:')
+        print( ' --db file.db              - file contains a serialized MatrixDB')
+        print( ' --db file1.cfacts1:...    - files are parsable with MatrixDB.loadFile()')
+        print( ' --prog file.ppr           - file is parsable as tensorlog rules')
+        print( ' --trainData file.exam     - optional: file is parsable with Dataset.loadExamples')
+        print( ' --trainData file.dset     - optional: file is a serialized Dataset')
+        print( ' --testData file.exam      - optional:')
+        print( ' --proppr                  - if present, assume the file has proppr features with')
+        print( '                             every rule: {ruleid}, or {all(F): p(X,...),q(...,F)}')
+        print( ' --logging level           - level is warn, debug, error, or info')
+        print( '')
+        print( 'Notes: for --db, --trainData, and --testData, you are allowed to specify either a')
+        print( 'serialized, cached object (like \'foo.db\') or a human-readable object that can be')
+        print( 'serialized (like \'foo.cfacts\'). In this case you can also write \'foo.db|foo.cfacts\'')
+        print( 'and the appropriate uncache routine will be used.')
+        print(( '\n'.join(extraArgUsage)))
 
     if '--logging' in optdict:
         level = optdict['--logging']
@@ -96,7 +96,7 @@ def parseCommandLine(argv,extraArgConsumer=None,extraArgSpec=[],extraArgUsage=[]
           optdict[key] = parseDatasetSpec(optdict[key],db)
 
     # let these be also indexed by 'train', 'prog', etc, not just '--train','--prog'
-    for key,val in optdict.items():
+    for key,val in list(optdict.items()):
         optdict[key[2:]] = val
 
     status('command line parsed')
